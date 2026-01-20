@@ -1,0 +1,77 @@
+import { Bell, Settings, User, Activity } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+
+export function Header() {
+  return (
+    <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0">
+      {/* Logo & Brand */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Activity className="h-6 w-6 text-primary" />
+          <span className="text-lg font-semibold tracking-tight">MedGemma</span>
+        </div>
+        <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+          Radiology Reporting
+        </Badge>
+      </div>
+
+      {/* Center - Status (optional) */}
+      <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+        <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+        <span>System Online</span>
+      </div>
+
+      {/* Right - Actions */}
+      <div className="flex items-center gap-2">
+        {/* Notifications */}
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="h-5 w-5" />
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center">
+            3
+          </span>
+        </Button>
+
+        {/* Settings */}
+        <Button variant="ghost" size="icon">
+          <Settings className="h-5 w-5" />
+        </Button>
+
+        {/* User Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col">
+                <span>Dr. Radiologe</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  radiologe@klinik.de
+                </span>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Profil</DropdownMenuItem>
+            <DropdownMenuItem>Einstellungen</DropdownMenuItem>
+            <DropdownMenuItem>Keyboard Shortcuts</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive">Abmelden</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </header>
+  );
+}
