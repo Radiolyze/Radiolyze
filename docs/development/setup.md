@@ -13,6 +13,8 @@ docker compose up --build
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000/api/v1/health
+- Orthanc UI: http://localhost:8042
+- DICOMweb: http://localhost:8042/dicom-web
 
 ## Install
 

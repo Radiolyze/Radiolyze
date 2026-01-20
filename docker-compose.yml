@@ -11,6 +11,7 @@ services:
       CORS_ORIGINS: http://localhost:5173
     depends_on:
       - db
+      - orthanc
 
   frontend:
     build:
@@ -26,6 +27,16 @@ services:
       VITE_USE_MOCK_QUEUE: "true"
     depends_on:
       - backend
+      - orthanc
+
+  orthanc:
+    image: jodogne/orthanc-plugins
+    ports:
+      - "8042:8042"
+      - "4242:4242"
+    volumes:
+      - orthanc-data:/var/lib/orthanc/db
+      - ./orthanc/orthanc.json:/etc/orthanc/orthanc.json:ro
 
   db:
     image: postgres:16
@@ -39,4 +50,5 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
 volumes:
+  orthanc-data:
   postgres-data:
