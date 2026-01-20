@@ -45,6 +45,7 @@ export function RightPanel({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <FindingsPanel
+        reportId={report.id}
         findings={findings}
         onFindingsChange={onFindingsChange}
         onSave={onSaveFindings}

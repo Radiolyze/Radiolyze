@@ -11,7 +11,7 @@ Die UI ist in drei Hauptbereiche gegliedert:
 ## UI Komponenten (Auszug)
 
 - `MainLayout`: Layout-Rahmen (Header + 3 Spalten)
-- `DicomViewer`: Viewer UI (Mock, vorbereitet fuer Cornerstone)
+- `DicomViewer`: Cornerstone Stack-Viewer (Tools, W/L Presets, Prefetch)
 - `ProgressOverlay`: ASR/AI/QA Status
 - `FindingsPanel`: ASR gesteuertes Dictation UI
 - `ImpressionPanel`: KI-Entwurf + Freigabe
@@ -21,8 +21,8 @@ Die UI ist in drei Hauptbereiche gegliedert:
 ## State-Management
 
 - UI State lokal in Komponenten
-- Zentraler Report-Status via `useReport` Hook (Mock)
-- ASR Status via `useASR` Hook (Mock)
+- Zentraler Report-Status via `useReport` Hook (QA via API, Findings/Impression lokal)
+- ASR Status via `useASR` Hook (Audio Upload + API Fallback)
 - Tastatur-Shortcuts via `useKeyboardShortcuts`
 
 ## Accessibility
@@ -33,6 +33,6 @@ Die UI ist in drei Hauptbereiche gegliedert:
 
 ## Technische Schulden (bekannt)
 
-- Cornerstone3D ist nicht integriert
-- ASR/AI/QA APIs sind Mock
+- KI/Impression APIs sind Mock
 - Kein echter WebSocket-Stream
+- Queue/Report State ohne Orchestrator-Endpunkte

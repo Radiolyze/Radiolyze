@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import type { ASRResult } from '@/types/radiology';
 import { mockASRTranscripts } from '@/data/mockData';
+import { useAudioInput } from '@/hooks/useAudioInput';
+import { asrClient } from '@/services/asrClient';
 
 type ASRStatus = 'idle' | 'listening' | 'processing';
 
@@ -13,60 +15,95 @@ interface UseASRReturn {
   lastResult: ASRResult | null;
 }
 
-export function useASR(): UseASRReturn {
+interface UseASROptions {
+  reportId?: string;
+}
+
+const buildMockResult = (durationMs: number): ASRResult => {
+  const transcriptIndex = Math.floor(Math.random() * mockASRTranscripts.length);
+  const mockConfidence = Math.min(0.98, 0.85 + (durationMs / 10000) * 0.13);
+
+  return {
+    text: mockASRTranscripts[transcriptIndex],
+    confidence: mockConfidence,
+    timestamp: new Date().toISOString(),
+  };
+};
+
+export function useASR(options: UseASROptions = {}): UseASRReturn {
   const [status, setStatus] = useState<ASRStatus>('idle');
   const [confidence, setConfidence] = useState(0);
   const [lastResult, setLastResult] = useState<ASRResult | null>(null);
   const recordingStartTime = useRef<number>(0);
+  const confidenceIntervalRef = useRef<number | null>(null);
+  const useMockRecordingRef = useRef(false);
+  const audioInput = useAudioInput();
 
-  const startRecording = useCallback(async () => {
-    // In a real implementation, this would access the microphone
-    // For mock, we just simulate the recording state
-    setStatus('listening');
+  const clearConfidenceInterval = useCallback(() => {
+    if (confidenceIntervalRef.current !== null) {
+      clearInterval(confidenceIntervalRef.current);
+      confidenceIntervalRef.current = null;
+    }
+  }, []);
+
+  const startConfidenceInterval = useCallback(() => {
+    clearConfidenceInterval();
     setConfidence(0);
-    recordingStartTime.current = Date.now();
-    
-    // Simulate confidence building up while recording
-    const interval = setInterval(() => {
+    confidenceIntervalRef.current = window.setInterval(() => {
       setConfidence(prev => Math.min(prev + 0.1, 0.98));
     }, 500);
+  }, [clearConfidenceInterval]);
 
-    // Store interval ID for cleanup
-    (window as any).__asrInterval = interval;
-  }, []);
+  const startRecording = useCallback(async () => {
+    if (status !== 'idle') return;
+
+    useMockRecordingRef.current = false;
+    recordingStartTime.current = Date.now();
+    setStatus('listening');
+    startConfidenceInterval();
+
+    try {
+      await audioInput.start();
+    } catch (error) {
+      console.warn('ASR recording failed, using mock transcript.', error);
+      useMockRecordingRef.current = true;
+    }
+  }, [audioInput, startConfidenceInterval, status]);
 
   const stopRecording = useCallback(async (): Promise<ASRResult | null> => {
-    // Clear the confidence interval
-    if ((window as any).__asrInterval) {
-      clearInterval((window as any).__asrInterval);
+    if (status !== 'listening') return null;
+
+    clearConfidenceInterval();
+    setStatus('processing');
+
+    let result: ASRResult | null = null;
+    const duration = Date.now() - recordingStartTime.current;
+
+    if (!useMockRecordingRef.current) {
+      const blob = await audioInput.stop().catch((error) => {
+        console.warn('ASR stop failed, falling back to mock transcript.', error);
+        return null;
+      });
+
+      if (blob) {
+        try {
+          result = await asrClient.transcribeAudio({ audio: blob, reportId: options.reportId });
+        } catch (error) {
+          console.warn('ASR service failed, falling back to mock transcript.', error);
+        }
+      }
     }
 
-    setStatus('processing');
-    
-    // Simulate processing delay (1-2 seconds)
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
-    
-    // Calculate mock recording duration
-    const duration = Date.now() - recordingStartTime.current;
-    
-    // Select a random transcript based on "recording duration"
-    const transcriptIndex = Math.floor(Math.random() * mockASRTranscripts.length);
-    
-    // Generate mock confidence based on "duration" (longer = higher confidence)
-    const mockConfidence = Math.min(0.98, 0.85 + (duration / 10000) * 0.13);
-    
-    const result: ASRResult = {
-      text: mockASRTranscripts[transcriptIndex],
-      confidence: mockConfidence,
-      timestamp: new Date().toISOString(),
-    };
-    
+    if (!result) {
+      result = buildMockResult(duration);
+    }
+
     setLastResult(result);
-    setConfidence(mockConfidence);
+    setConfidence(result.confidence);
     setStatus('idle');
-    
+
     return result;
-  }, []);
+  }, [audioInput, clearConfidenceInterval, options.reportId, status]);
 
   return {
     status,

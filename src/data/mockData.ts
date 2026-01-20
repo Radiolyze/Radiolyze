@@ -262,9 +262,12 @@ export const mockGuidelines: Guideline[] = [
 ];
 
 // Helper function to get age from date of birth
-export function getAge(dateOfBirth: string): number {
-  const today = new Date();
+export function getAge(dateOfBirth: string): number | null {
   const birthDate = new Date(dateOfBirth);
+  if (Number.isNaN(birthDate.getTime())) {
+    return null;
+  }
+  const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -275,7 +278,11 @@ export function getAge(dateOfBirth: string): number {
 
 // Helper to format date
 export function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('de-DE', {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+  return date.toLocaleDateString('de-DE', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

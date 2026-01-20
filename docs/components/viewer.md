@@ -11,8 +11,10 @@ Rolle:
 
 Status:
 
-- Derzeit Mock UI (kein Cornerstone)
-- Vorbereitung fuer DICOMweb und Cornerstone Adapter
+- Cornerstone Stack-Viewer aktiv (DICOMweb WADO-RS)
+- Tools: Zoom/Pan/Measure/W-L
+- W/L Presets + Prefetch aktiv
+- Annotation Export (JSON)
 
 ## ImageControls
 
