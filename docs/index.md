@@ -28,9 +28,10 @@ Die Dokumentation beschreibt:
 Der aktuelle Code enthaelt:
 
 - 3-Spalten-Layout mit Header, Sidebar, Viewer, Right Panel
-- Findings/Impression Panels inkl. ASR- und QA-Status
-- Viewer UI mit Tools, SeriesStack und ProgressOverlay
-- Mock-Daten fuer Queue, Reports, Templates, Guidelines
+- Findings/Impression Panels inkl. ASR- und QA-Status (API angebunden, Fallbacks)
+- Cornerstone Viewer (Stack, Tools, W/L Presets, Prefetch)
+- DICOMweb Queue fuer Studien/Serien (Orthanc QIDO-RS)
+- Annotation Export (JSON)
 
-Die Integration von Orthanc/MedASR/MedGemma ist vorbereitet, aber im UI noch als Mock
-oder Platzhalter umgesetzt.
+Die Integration von Orthanc/MedASR/QA ist aktiv, aber teilweise mit Fallbacks.
+Impression/MedGemma und Orchestrator-Endpunkte sind weiterhin Mock/Platzhalter.

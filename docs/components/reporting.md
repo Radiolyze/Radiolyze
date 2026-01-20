@@ -2,19 +2,19 @@
 
 ## FindingsPanel
 
-- ASR Diktat (Mock)
+- ASR Diktat (Audio Upload + API Fallback)
 - Confidence Bar
 - Edit/Save Mode
 
 ## ImpressionPanel
 
-- AI Draft Anzeige
+- AI Draft Anzeige (aktuell Mock)
 - QA Status/Warnungen
 - Freigabe via Approval Dialog
 
 ## QAChecklist
 
-Collapsible Liste mit QA Checks inkl. Status und Message.
+Collapsible Liste mit QA Checks inkl. Status und Message (API + Fallback).
 
 ## TemplatesPanel
 
