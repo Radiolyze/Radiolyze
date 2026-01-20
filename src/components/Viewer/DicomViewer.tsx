@@ -6,6 +6,7 @@ import {
   Sun,
   ChevronUp,
   ChevronDown,
+  Download,
   Maximize2,
 } from 'lucide-react';
 import type { Series, QAStatus } from '@/types/radiology';
@@ -14,10 +15,17 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { ImageControls, type ViewerToolConfig } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
 import { buildWadorsImageId, orthancClient } from '@/services/orthancClient';
 import { Enums, RenderingEngine, imageLoader, type StackViewport } from '@cornerstonejs/core';
-import { ToolGroupManager, Enums as ToolEnums } from '@cornerstonejs/tools';
+import { ToolGroupManager, Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
 
 interface DicomViewerProps {
   series: Series | null;
@@ -32,6 +40,15 @@ const tools: ViewerToolConfig[] = [
   { id: 'pan', icon: Move, label: 'Pan', shortcut: 'P' },
   { id: 'measure', icon: Ruler, label: 'Messen', shortcut: 'M' },
   { id: 'windowLevel', icon: Sun, label: 'Fenster/Level', shortcut: 'W' },
+];
+
+const windowLevelPresets = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'ct-soft', label: 'CT Weichteil', windowWidth: 400, windowCenter: 40 },
+  { id: 'ct-lung', label: 'CT Lunge', windowWidth: 1500, windowCenter: -600 },
+  { id: 'ct-bone', label: 'CT Knochen', windowWidth: 2500, windowCenter: 480 },
+  { id: 'ct-brain', label: 'CT Gehirn', windowWidth: 80, windowCenter: 40 },
+  { id: 'ct-abdomen', label: 'CT Abdomen', windowWidth: 350, windowCenter: 50 },
 ];
 
 type ASRStatus = 'idle' | 'listening' | 'processing';
@@ -106,6 +123,7 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isFetchingInstances, setIsFetchingInstances] = useState(false);
   const [isInitializingViewer, setIsInitializingViewer] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState(windowLevelPresets[0].id);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const renderingEngineRef = useRef<RenderingEngine | null>(null);
@@ -229,6 +247,77 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
     },
     []
   );
+
+  const applyWindowLevelPreset = useCallback(
+    (presetId: string) => {
+      const viewport = stackViewportRef.current;
+      if (!viewport) {
+        return;
+      }
+
+      if (presetId === 'auto') {
+        viewport.resetProperties();
+        viewport.render();
+        return;
+      }
+
+      const preset = windowLevelPresets.find((item) => item.id === presetId);
+      if (!preset || preset.windowWidth === undefined || preset.windowCenter === undefined) {
+        return;
+      }
+
+      const halfWidth = preset.windowWidth / 2;
+      viewport.setProperties({
+        voiRange: {
+          lower: preset.windowCenter - halfWidth,
+          upper: preset.windowCenter + halfWidth,
+        },
+      });
+      viewport.render();
+    },
+    []
+  );
+
+  const handleExportAnnotations = useCallback(() => {
+    const element = viewportRef.current;
+    if (!element || !series) {
+      return;
+    }
+
+    const annotationTools = [cornerstoneToolNames.length];
+    const annotations = annotationTools.flatMap((toolName) => {
+      const toolAnnotations = annotation.state.getAnnotations(toolName, element) ?? [];
+      return toolAnnotations.map((item) => ({
+        annotationUID: item.annotationUID ?? '',
+        toolName,
+        label: item.data?.label ?? '',
+        handles: item.data?.handles?.points ?? [],
+        cachedStats: item.data?.cachedStats ?? {},
+        metadata: {
+          referencedImageId: item.metadata?.referencedImageId,
+          FrameOfReferenceUID: item.metadata?.FrameOfReferenceUID,
+          sliceIndex: item.metadata?.sliceIndex,
+          viewPlaneNormal: item.metadata?.viewPlaneNormal,
+          viewUp: item.metadata?.viewUp,
+        },
+      }));
+    });
+
+    const payload = {
+      studyId: series.studyId,
+      seriesId: series.id,
+      exportedAt: new Date().toISOString(),
+      annotations,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `annotations-${series.studyId}-${series.id}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [series]);
 
   // Load DICOM image IDs when series changes
   useEffect(() => {
@@ -363,6 +452,8 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
         await viewport.setStack(imageIds, 0);
         viewport.render();
 
+        applyWindowLevelPreset(selectedPresetId);
+
         const camera = viewport.getCamera();
         initialParallelScaleRef.current = camera?.parallelScale ?? null;
       } catch (error) {
@@ -404,6 +495,13 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
     applyToolSelection(activeTool);
   }, [activeTool, applyToolSelection]);
 
+  useEffect(() => {
+    if (!hasStack) {
+      return;
+    }
+    applyWindowLevelPreset(selectedPresetId);
+  }, [applyWindowLevelPreset, hasStack, selectedPresetId]);
+
   // Notify parent of frame changes
   useEffect(() => {
     onFrameChange?.(currentFrame, totalFrames);
@@ -419,6 +517,7 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
 
   const handleReset = useCallback(() => {
     setActiveTool('windowLevel');
+    setSelectedPresetId(windowLevelPresets[0].id);
     setFrameIndex(0);
 
     const viewport = stackViewportRef.current;
@@ -454,13 +553,42 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
   return (
     <div className="h-full flex flex-col bg-viewer relative">
       {/* Toolbar */}
-      <ImageControls
-        tools={tools}
-        activeToolId={activeTool}
-        onToolSelect={(toolId) => setActiveTool(toolId as Tool)}
-        onReset={handleReset}
-        className="absolute top-4 left-4 z-10"
-      />
+      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+        <ImageControls
+          tools={tools}
+          activeToolId={activeTool}
+          onToolSelect={(toolId) => setActiveTool(toolId as Tool)}
+          onReset={handleReset}
+        />
+        <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-2 border border-border">
+          <Select
+            value={selectedPresetId}
+            onValueChange={setSelectedPresetId}
+            disabled={!hasStack}
+          >
+            <SelectTrigger className="h-8 w-[170px] text-xs">
+              <SelectValue placeholder="Fenster/Level" />
+            </SelectTrigger>
+            <SelectContent>
+              {windowLevelPresets.map((preset) => (
+                <SelectItem key={preset.id} value={preset.id}>
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2"
+            onClick={handleExportAnnotations}
+            disabled={!hasStack}
+          >
+            <Download className="h-4 w-4 mr-1" />
+            Export
+          </Button>
+        </div>
+      </div>
 
       {/* Series Info */}
       <div className="absolute top-4 right-4 z-10 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
