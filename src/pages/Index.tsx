@@ -4,26 +4,50 @@ import { LeftSidebar } from '@/components/Sidebar/LeftSidebar';
 import { DicomViewer } from '@/components/Viewer/DicomViewer';
 import { RightPanel } from '@/components/RightPanel/RightPanel';
 import { useReport } from '@/hooks/useReport';
+import { useDicomWebQueue } from '@/hooks/useDicomWebQueue';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { mockQueueItems, mockReports } from '@/data/mockData';
 import type { QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
 
 const Index = () => {
+  const { items: queueItems, isLoading: isQueueLoading, error: queueError } = useDicomWebQueue();
+
   // Current selection state
-  const [selectedQueueItem, setSelectedQueueItem] = useState<QueueItem>(mockQueueItems[0]);
-  const [selectedSeries, setSelectedSeries] = useState<Series | null>(
-    mockQueueItems[0].study.series[0] || null
-  );
+  const [selectedQueueItem, setSelectedQueueItem] = useState<QueueItem | null>(null);
+  const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
 
   // Report state
-  const { report, setReport, qaChecks, generateImpression, runQAChecks } = useReport(mockReports[0]);
-  const [findings, setFindings] = useState(mockReports[0].findingsText);
-  const [impression, setImpression] = useState(mockReports[0].impressionText);
+  const { report, setReport, qaChecks, generateImpression, runQAChecks } = useReport();
+  const [findings, setFindings] = useState('');
+  const [impression, setImpression] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [asrStatus, setAsrStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
   const [asrConfidence, setAsrConfidence] = useState(0);
+
+  useEffect(() => {
+    if (queueError) {
+      toast.error(queueError);
+    }
+  }, [queueError]);
+
+  // Initialize selection when queue items load
+  useEffect(() => {
+    if (queueItems.length === 0) {
+      return;
+    }
+
+    setSelectedQueueItem((prev) => {
+      const nextItem = prev
+        ? queueItems.find((item) => item.id === prev.id) || queueItems[0]
+        : queueItems[0];
+      setSelectedSeries(nextItem.study.series[0] || null);
+      setReport(nextItem.report);
+      setFindings(nextItem.report.findingsText);
+      setImpression(nextItem.report.impressionText);
+      return nextItem;
+    });
+  }, [queueItems, setReport]);
 
   // Update report when queue item changes
   const handleSelectQueueItem = useCallback((item: QueueItem) => {
@@ -92,7 +116,62 @@ const Index = () => {
     }
   }, [findings, impression, report?.id, report?.qaStatus, runQAChecks]);
 
-  if (!report) return null;
+  if (!report || !selectedQueueItem) {
+    return (
+      <MainLayout
+        leftSidebar={
+          <LeftSidebar
+            patient={{ id: 'unknown', name: 'Laden...', dateOfBirth: '', gender: 'O', mrn: '-' }}
+            study={{
+              id: 'unknown',
+              patientId: 'unknown',
+              accessionNumber: '-',
+              modality: 'CT',
+              studyDate: '',
+              studyDescription: isQueueLoading ? 'Lade Studien...' : 'Keine Studien',
+              referringPhysician: '-',
+              series: [],
+            }}
+            queueItems={queueItems}
+            selectedQueueItemId={null}
+            selectedSeriesId={null}
+            onSelectQueueItem={handleSelectQueueItem}
+            onSelectSeries={handleSelectSeries}
+          />
+        }
+        viewer={<DicomViewer series={null} />}
+        rightPanel={
+          <RightPanel
+            report={{
+              id: 'placeholder',
+              studyId: 'placeholder',
+              patientId: 'placeholder',
+              status: 'pending',
+              findingsText: '',
+              impressionText: '',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              qaStatus: 'pending',
+              qaWarnings: [],
+            }}
+            findings={findings}
+            impression={impression}
+            qaChecks={qaChecks}
+            isGeneratingImpression={false}
+            onFindingsChange={setFindings}
+            onImpressionChange={setImpression}
+            onGenerateImpression={handleGenerateImpression}
+            onApprove={handleApprove}
+            onSaveFindings={handleSaveFindings}
+            onAsrStatusChange={(status, confidence) => {
+              setAsrStatus(status);
+              setAsrConfidence(confidence);
+            }}
+          />
+        }
+      />
+    );
+  }
 
   return (
     <MainLayout
@@ -100,7 +179,7 @@ const Index = () => {
         <LeftSidebar
           patient={selectedQueueItem.patient}
           study={selectedQueueItem.study}
-          queueItems={mockQueueItems}
+          queueItems={queueItems}
           selectedQueueItemId={selectedQueueItem.id}
           selectedSeriesId={selectedSeries?.id || null}
           onSelectQueueItem={handleSelectQueueItem}

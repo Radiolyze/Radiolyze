@@ -21,7 +21,7 @@ export function PatientCard({ patient, study }: PatientCardProps) {
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-foreground truncate">{patient.name}</h3>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{age} Jahre</span>
+            <span>{age !== null ? `${age} Jahre` : '—'}</span>
             <span>•</span>
             <span>{patient.gender === 'M' ? 'Männlich' : patient.gender === 'F' ? 'Weiblich' : 'Divers'}</span>
           </div>
