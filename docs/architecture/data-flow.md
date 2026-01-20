@@ -1,0 +1,23 @@
+# Datenfluss
+
+## Befund-Workflow (Soll)
+
+1. **Queue Auswahl**: Radiologe waehlt Study.
+2. **DICOM Load**: Viewer laedt DICOMweb-Stack aus Orthanc.
+3. **ASR Diktat**: Audio -> ASR -> Findings Text.
+4. **AI Draft**: MedGemma + LLM erzeugen Impression.
+5. **QA Checks**: Vollstaendigkeit, Guidelines, Plausibilitaet.
+6. **Review**: Radiologe korrigiert und freigibt.
+7. **Finalize**: DICOM SR wird erzeugt und gespeichert.
+8. **Audit**: Alle Schritte werden in Audit Log geschrieben.
+
+## Datenformate
+
+- DICOM (Bilddaten)
+- JSON (Report, QA, Audit)
+- DICOM SR (Finaler Report)
+
+## Fehlerfall
+
+- Inference Down -> Fallback UI: manuelle Bearbeitung
+- DICOM Load Failure -> Retry oder alternative Quelle
