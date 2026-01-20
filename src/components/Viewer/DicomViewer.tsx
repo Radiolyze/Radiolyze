@@ -16,7 +16,7 @@ import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
 import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
 import { buildWadorsImageId, orthancClient } from '@/services/orthancClient';
-import { Enums, RenderingEngine, type StackViewport } from '@cornerstonejs/core';
+import { Enums, RenderingEngine, imageLoader, type StackViewport } from '@cornerstonejs/core';
 import { ToolGroupManager, Enums as ToolEnums } from '@cornerstonejs/tools';
 
 interface DicomViewerProps {
@@ -113,6 +113,7 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
   const toolGroupRef = useRef<ReturnType<typeof ToolGroupManager.getToolGroup> | null>(null);
   const initialParallelScaleRef = useRef<number | null>(null);
   const activeToolRef = useRef<Tool>(activeTool);
+  const prefetchTimeoutRef = useRef<number | null>(null);
 
   const viewerInstanceId = useMemo(
     () => `dicom-viewer-${Math.random().toString(36).slice(2, 9)}`,
@@ -129,6 +130,53 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
   useEffect(() => {
     activeToolRef.current = activeTool;
   }, [activeTool]);
+
+  useEffect(() => {
+    if (!hasStack) {
+      return;
+    }
+
+    if (prefetchTimeoutRef.current !== null) {
+      clearTimeout(prefetchTimeoutRef.current);
+    }
+
+    prefetchTimeoutRef.current = window.setTimeout(() => {
+      const radius = Math.min(6, Math.max(2, Math.floor(totalFrames / 20)));
+      const start = Math.max(0, currentFrame - radius);
+      const end = Math.min(totalFrames - 1, currentFrame + radius);
+      const prefetchIds: string[] = [];
+
+      for (let index = start; index <= end; index += 1) {
+        if (index === currentFrame) continue;
+        const imageId = imageIds[index];
+        if (imageId) {
+          prefetchIds.push(imageId);
+        }
+      }
+
+      if (prefetchIds.length === 0) {
+        return;
+      }
+
+      prefetchIds.forEach((imageId) => {
+        imageLoader
+          .loadAndCacheImage(imageId, {
+            requestType: Enums.RequestType.Prefetch,
+            priority: 0,
+          })
+          .catch(() => {
+            // Ignore prefetch failures to keep UI responsive.
+          });
+      });
+    }, 150);
+
+    return () => {
+      if (prefetchTimeoutRef.current !== null) {
+        clearTimeout(prefetchTimeoutRef.current);
+        prefetchTimeoutRef.current = null;
+      }
+    };
+  }, [currentFrame, hasStack, imageIds, totalFrames]);
 
   const setFrameIndex = useCallback(
     (index: number) => {
