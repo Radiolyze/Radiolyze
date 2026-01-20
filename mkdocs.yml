@@ -36,7 +36,17 @@ nav:
   - API:
       - Uebersicht: api/overview.md
       - Endpunkte: api/endpoints.md
+      - Schemas: api/schemas.md
       - WebSocket: api/websocket.md
+  - Workflows:
+      - Uebersicht: workflows/overview.md
+      - Fast Reporting: workflows/fast-report.md
+      - Komplexer Fall: workflows/complex-case.md
+      - Batch Reporting: workflows/batch-reporting.md
+  - Compliance:
+      - Checklist: compliance/checklist.md
+      - Audit Logging: compliance/audit-logging.md
+      - EU AI Act Mapping: compliance/eu-ai-act-mapping.md
   - Betrieb:
       - Runbook: operations/runbook.md
       - Security: operations/security.md

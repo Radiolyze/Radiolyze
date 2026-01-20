@@ -19,6 +19,8 @@ Die Dokumentation beschreibt:
 - [Frontend](architecture/frontend.md)
 - [Backend](architecture/backend.md)
 - [Compliance](architecture/compliance.md)
+- [API Schemas](api/schemas.md)
+- [Workflows](workflows/overview.md)
 - [Roadmap](roadmap.md)
 
 ## Projektstatus (Kurz)

@@ -26,3 +26,9 @@ Relevante Artikel:
 - Technische Doku (Architektur, Model Cards, Tests)
 - Audit Log Export (JSON)
 - Sicherheitskonzept (TLS, Auth, RBAC)
+
+## Weitere Dokumente
+
+- [Compliance Checklist](../compliance/checklist.md)
+- [Audit Logging](../compliance/audit-logging.md)
+- [EU AI Act Mapping](../compliance/eu-ai-act-mapping.md)
