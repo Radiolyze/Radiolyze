@@ -8,15 +8,22 @@ import { ReportEditor } from '@/components/Forms/ReportEditor';
 import { cn } from '@/lib/utils';
 
 interface FindingsPanelProps {
+  reportId?: string;
   findings: string;
   onFindingsChange: (text: string) => void;
   onSave?: () => void;
   onAsrStatusChange?: (status: 'idle' | 'listening' | 'processing', confidence: number) => void;
 }
 
-export function FindingsPanel({ findings, onFindingsChange, onSave }: FindingsPanelProps) {
+export function FindingsPanel({
+  reportId,
+  findings,
+  onFindingsChange,
+  onSave,
+  onAsrStatusChange,
+}: FindingsPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const { status, isRecording, confidence, startRecording, stopRecording } = useASR();
+  const { status, isRecording, confidence, startRecording, stopRecording } = useASR({ reportId });
 
   const handleMicClick = useCallback(async () => {
     if (isRecording) {

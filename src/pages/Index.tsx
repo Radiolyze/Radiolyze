@@ -44,11 +44,15 @@ const Index = () => {
     try {
       const result = await generateImpression(findings);
       setImpression(result);
-      await runQAChecks();
+      await runQAChecks({
+        reportId: report?.id,
+        findingsText: findings,
+        impressionText: result,
+      });
     } finally {
       setIsGenerating(false);
     }
-  }, [findings, generateImpression, runQAChecks]);
+  }, [findings, generateImpression, report?.id, runQAChecks]);
 
   const handleApprove = useCallback(async (signature?: string) => {
     const name = signature?.trim();
@@ -80,9 +84,13 @@ const Index = () => {
   // Run QA when impression changes
   useEffect(() => {
     if (impression && report?.qaStatus === 'pending') {
-      runQAChecks();
+      runQAChecks({
+        reportId: report?.id,
+        findingsText: findings,
+        impressionText: impression,
+      });
     }
-  }, [impression, report?.qaStatus, runQAChecks]);
+  }, [findings, impression, report?.id, report?.qaStatus, runQAChecks]);
 
   if (!report) return null;
 
