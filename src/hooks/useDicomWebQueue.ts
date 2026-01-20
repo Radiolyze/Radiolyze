@@ -3,6 +3,7 @@ import type { QueueItem, Report, Series, Study } from '@/types/radiology';
 import { orthancClient } from '@/services/orthancClient';
 import type { DicomJsonRecord } from '@/services/dicomWebMapping';
 import { mapSeriesRecordToSeries, mapStudyRecordToPatient, mapStudyRecordToStudy } from '@/services/dicomWebMapping';
+import { mockQueueItems } from '@/data/mockData';
 
 const buildReport = (study: Study): Report => {
   const now = new Date().toISOString();
@@ -59,12 +60,21 @@ export function useDicomWebQueue() {
 
   useEffect(() => {
     let isActive = true;
+    const useMockQueue = import.meta.env.VITE_USE_MOCK_QUEUE === 'true';
 
     const loadStudies = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
+        if (useMockQueue) {
+          if (isActive) {
+            setItems(mockQueueItems);
+            setIsLoading(false);
+          }
+          return;
+        }
+
         const response = await orthancClient.listStudies();
         const records = Array.isArray(response)
           ? response

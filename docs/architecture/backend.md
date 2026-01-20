@@ -16,6 +16,11 @@ Der Orchestrator steuert:
 - `POST /api/v1/reports/{report_id}/finalize`
 - `GET /api/v1/audit-log`
 
+## Implementierung im Repo
+
+- Backend Code: `backend/`
+- Docker Setup: `docker-compose.yml` (Frontend + Backend + Postgres)
+
 ## DICOM Server (Orthanc)
 
 - DICOM C-STORE fuer Upload

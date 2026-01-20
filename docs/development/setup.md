@@ -5,6 +5,15 @@
 - Node.js 18+
 - npm oder pnpm
 
+## Docker (empfohlen)
+
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000/api/v1/health
+
 ## Install
 
 ```bash

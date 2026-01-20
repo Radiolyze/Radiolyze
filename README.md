@@ -4,6 +4,15 @@
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 
+## Docker quick start
+
+```sh
+docker compose up --build
+```
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000/api/v1/health
+
 ## How can I edit this code?
 
 There are several ways of editing your application.
