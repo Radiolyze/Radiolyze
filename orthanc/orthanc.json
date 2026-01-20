@@ -4,7 +4,10 @@
   "IndexDirectory": "/var/lib/orthanc/db",
   "Plugins": ["/usr/share/orthanc/plugins/"],
   "RemoteAccessAllowed": true,
-  "AuthenticationEnabled": false,
+  "AuthenticationEnabled": true,
+  "RegisteredUsers": {
+    "orthanc": "orthanc"
+  },
   "DicomWeb": {
     "Enable": true,
     "Root": "/dicom-web/"

@@ -24,7 +24,9 @@ services:
       VITE_QA_CHECK_URL: /api/v1/reports/qa-check
       VITE_AUDIT_LOG_URL: /api/v1/audit-log
       VITE_DICOM_WEB_URL: http://localhost:8042/dicom-web
-      VITE_USE_MOCK_QUEUE: "true"
+      VITE_DICOM_WEB_USERNAME: orthanc
+      VITE_DICOM_WEB_PASSWORD: orthanc
+      VITE_USE_MOCK_QUEUE: "false"
     depends_on:
       - backend
       - orthanc
@@ -37,6 +39,22 @@ services:
     volumes:
       - orthanc-data:/var/lib/orthanc/db
       - ./orthanc/orthanc.json:/etc/orthanc/orthanc.json:ro
+    environment:
+      ORTHANC_USERNAME: orthanc
+      ORTHANC_PASSWORD: orthanc
+
+  orthanc-seeder:
+    image: curlimages/curl:8.6.0
+    depends_on:
+      - orthanc
+    volumes:
+      - ./orthanc/seed.sh:/seed/seed.sh:ro
+    environment:
+      ORTHANC_URL: http://orthanc:8042
+      ORTHANC_USERNAME: orthanc
+      ORTHANC_PASSWORD: orthanc
+      ORTHANC_SEED_ENABLED: "true"
+    entrypoint: ["/bin/sh", "/seed/seed.sh"]
 
   db:
     image: postgres:16

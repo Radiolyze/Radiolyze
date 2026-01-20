@@ -15,6 +15,13 @@ docker compose up --build
 - Orthanc UI: http://localhost:8042
 - DICOMweb: http://localhost:8042/dicom-web
 
+Default Orthanc credentials (local dev):
+
+- User: `orthanc`
+- Password: `orthanc`
+
+Beim ersten Start wird automatisch ein kleines DICOM Sample geladen.
+
 ## How can I edit this code?
 
 There are several ways of editing your application.

@@ -16,6 +16,13 @@ docker compose up --build
 - Orthanc UI: http://localhost:8042
 - DICOMweb: http://localhost:8042/dicom-web
 
+Orthanc Login (lokal):
+
+- User: `orthanc`
+- Password: `orthanc`
+
+Beim ersten Start wird automatisch ein kleines DICOM Sample geladen.
+
 ## Install
 
 ```bash
