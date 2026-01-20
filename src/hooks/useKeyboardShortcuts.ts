@@ -15,19 +15,19 @@ interface ShortcutHandlers {
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    // Ignore if typing in input/textarea
+    const { ctrlKey, metaKey, key, shiftKey } = event;
+    const modKey = ctrlKey || metaKey;
+
+    // Ignore if typing in input/textarea unless it is a global shortcut
     if (
       event.target instanceof HTMLInputElement ||
       event.target instanceof HTMLTextAreaElement
     ) {
-      // Allow Ctrl+S to save even in text fields
-      if (!(event.ctrlKey && event.key === 's')) {
+      const allowedKeys = new Set(['s', 'm', 'e', 'Enter']);
+      if (!(modKey && allowedKeys.has(key))) {
         return;
       }
     }
-
-    const { ctrlKey, metaKey, key, shiftKey } = event;
-    const modKey = ctrlKey || metaKey;
 
     // Ctrl+M: Toggle Microphone
     if (modKey && key === 'm') {

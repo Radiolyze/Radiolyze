@@ -75,6 +75,34 @@ export interface QACheck {
   message?: string;
 }
 
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  modality: string;
+  description: string;
+  sections: string[];
+  lastUpdated?: string;
+}
+
+export interface Guideline {
+  id: string;
+  title: string;
+  category: string;
+  summary: string;
+  status: 'pass' | 'warn' | 'info' | 'critical';
+  source?: string;
+}
+
+export interface AuditEvent {
+  id?: string;
+  eventType: string;
+  actorId?: string;
+  reportId?: string;
+  studyId?: string;
+  timestamp?: string;
+  metadata?: Record<string, unknown>;
+}
+
 // Viewer types
 export interface ViewerTool {
   id: string;

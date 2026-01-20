@@ -5,9 +5,10 @@ import { DicomViewer } from '@/components/Viewer/DicomViewer';
 import { RightPanel } from '@/components/RightPanel/RightPanel';
 import { useReport } from '@/hooks/useReport';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { mockQueueItems, mockPatients, mockStudies, mockReports } from '@/data/mockData';
+import { mockQueueItems, mockReports } from '@/data/mockData';
 import type { QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
+import { auditLogger } from '@/services/auditLogger';
 
 const Index = () => {
   // Current selection state
@@ -21,6 +22,8 @@ const Index = () => {
   const [findings, setFindings] = useState(mockReports[0].findingsText);
   const [impression, setImpression] = useState(mockReports[0].impressionText);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [asrStatus, setAsrStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
+  const [asrConfidence, setAsrConfidence] = useState(0);
 
   // Update report when queue item changes
   const handleSelectQueueItem = useCallback((item: QueueItem) => {
@@ -47,13 +50,26 @@ const Index = () => {
     }
   }, [findings, generateImpression, runQAChecks]);
 
-  const handleApprove = useCallback(() => {
-    toast.success('Report freigegeben und abgeschlossen!');
-  }, []);
+  const handleApprove = useCallback(async (signature?: string) => {
+    const name = signature?.trim();
+    toast.success(`Report freigegeben${name ? ` (${name})` : ''}`);
+    await auditLogger.logEvent({
+      eventType: 'report_approved',
+      actorId: name,
+      reportId: report?.id,
+      studyId: report?.studyId,
+      metadata: { signature: name },
+    });
+  }, [report?.id, report?.studyId]);
 
-  const handleSaveFindings = useCallback(() => {
+  const handleSaveFindings = useCallback(async () => {
     toast.success('Befund gespeichert');
-  }, []);
+    await auditLogger.logEvent({
+      eventType: 'findings_saved',
+      reportId: report?.id,
+      studyId: report?.studyId,
+    });
+  }, [report?.id, report?.studyId]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -84,7 +100,15 @@ const Index = () => {
         />
       }
       viewer={
-        <DicomViewer series={selectedSeries} />
+        <DicomViewer
+          series={selectedSeries}
+          progress={{
+            asrStatus,
+            asrConfidence,
+            aiStatus: isGenerating ? 'generating' : 'idle',
+            qaStatus: report.qaStatus,
+          }}
+        />
       }
       rightPanel={
         <RightPanel
@@ -98,6 +122,10 @@ const Index = () => {
           onGenerateImpression={handleGenerateImpression}
           onApprove={handleApprove}
           onSaveFindings={handleSaveFindings}
+          onAsrStatusChange={(status, confidence) => {
+            setAsrStatus(status);
+            setAsrConfidence(confidence);
+          }}
         />
       }
     />

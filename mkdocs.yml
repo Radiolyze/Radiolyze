@@ -1,0 +1,62 @@
+site_name: MedGemma Radiologie Reporting UI
+site_description: Offener Radiologie-Report-Stack mit MedGemma + MedASR
+site_url: https://example.com
+repo_url: https://github.com/lichtbaer/medgemma-insight
+repo_name: lichtbaer/medgemma-insight
+copyright: "Copyright (c) 2026"
+
+theme:
+  name: readthedocs
+  locale: de
+  highlightjs: true
+  navigation_depth: 3
+  collapse_navigation: false
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - tables
+  - fenced_code
+
+nav:
+  - Home: index.md
+  - Architektur:
+      - Uebersicht: architecture/overview.md
+      - Systemkontext: architecture/system-context.md
+      - Frontend: architecture/frontend.md
+      - Backend: architecture/backend.md
+      - Datenfluss: architecture/data-flow.md
+      - Compliance: architecture/compliance.md
+      - Deployment: architecture/deployment.md
+  - Komponenten:
+      - Viewer: components/viewer.md
+      - Reporting: components/reporting.md
+      - UI Library: components/ui.md
+  - API:
+      - Uebersicht: api/overview.md
+      - Endpunkte: api/endpoints.md
+      - Schemas: api/schemas.md
+      - WebSocket: api/websocket.md
+  - Workflows:
+      - Uebersicht: workflows/overview.md
+      - Fast Reporting: workflows/fast-report.md
+      - Komplexer Fall: workflows/complex-case.md
+      - Batch Reporting: workflows/batch-reporting.md
+  - Compliance:
+      - Checklist: compliance/checklist.md
+      - Audit Logging: compliance/audit-logging.md
+      - EU AI Act Mapping: compliance/eu-ai-act-mapping.md
+  - Betrieb:
+      - Runbook: operations/runbook.md
+      - Security: operations/security.md
+      - Observability: operations/observability.md
+  - Entwicklung:
+      - Setup: development/setup.md
+      - Contributing: development/contributing.md
+      - Testing: development/testing.md
+      - Styleguide: development/styleguide.md
+      - ADR-0001: decisions/adr-0001-open-stack.md
+  - Roadmap: roadmap.md
+  - Glossar: glossary.md
+  - FAQ: faq.md

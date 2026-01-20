@@ -1,34 +1,46 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  ZoomIn, 
-  Move, 
-  Ruler, 
-  Sun, 
-  RotateCcw,
+import {
+  ZoomIn,
+  Move,
+  Ruler,
+  Sun,
   ChevronUp,
   ChevronDown,
-  Maximize2
+  Maximize2,
 } from 'lucide-react';
-import type { Series } from '@/types/radiology';
+import type { Series, QAStatus } from '@/types/radiology';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { ImageControls, type ViewerToolConfig } from './ImageControls';
+import { ProgressOverlay } from './ProgressOverlay';
+import { SeriesStack } from './SeriesStack';
 
 interface DicomViewerProps {
   series: Series | null;
   onFrameChange?: (frame: number, total: number) => void;
+  progress?: ViewerProgress;
 }
 
 type Tool = 'zoom' | 'pan' | 'measure' | 'windowLevel';
 
-const tools = [
-  { id: 'zoom' as Tool, icon: ZoomIn, label: 'Zoom', shortcut: 'Z' },
-  { id: 'pan' as Tool, icon: Move, label: 'Pan', shortcut: 'P' },
-  { id: 'measure' as Tool, icon: Ruler, label: 'Messen', shortcut: 'M' },
-  { id: 'windowLevel' as Tool, icon: Sun, label: 'Fenster/Level', shortcut: 'W' },
+const tools: ViewerToolConfig[] = [
+  { id: 'zoom', icon: ZoomIn, label: 'Zoom', shortcut: 'Z' },
+  { id: 'pan', icon: Move, label: 'Pan', shortcut: 'P' },
+  { id: 'measure', icon: Ruler, label: 'Messen', shortcut: 'M' },
+  { id: 'windowLevel', icon: Sun, label: 'Fenster/Level', shortcut: 'W' },
 ];
 
-export function DicomViewer({ series, onFrameChange }: DicomViewerProps) {
+type ASRStatus = 'idle' | 'listening' | 'processing';
+type AIStatus = 'idle' | 'generating' | 'error';
+
+export interface ViewerProgress {
+  asrStatus: ASRStatus;
+  asrConfidence?: number;
+  aiStatus: AIStatus;
+  qaStatus: QAStatus;
+}
+
+export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProps) {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<Tool>('windowLevel');
   const [zoom, setZoom] = useState(1);
@@ -62,6 +74,7 @@ export function DicomViewer({ series, onFrameChange }: DicomViewerProps) {
   const handleReset = useCallback(() => {
     setZoom(1);
     setCurrentFrame(0);
+    setActiveTool('windowLevel');
   }, []);
 
   // Keyboard shortcuts
@@ -98,33 +111,13 @@ export function DicomViewer({ series, onFrameChange }: DicomViewerProps) {
   return (
     <div className="h-full flex flex-col bg-viewer relative">
       {/* Toolbar */}
-      <div className="absolute top-4 left-4 z-10 flex gap-1 bg-card/90 backdrop-blur-sm rounded-lg p-1 border border-border">
-        {tools.map((tool) => (
-          <Button
-            key={tool.id}
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'h-9 w-9',
-              activeTool === tool.id && 'bg-primary text-primary-foreground'
-            )}
-            onClick={() => setActiveTool(tool.id)}
-            title={`${tool.label} (${tool.shortcut})`}
-          >
-            <tool.icon className="h-4 w-4" />
-          </Button>
-        ))}
-        <div className="w-px bg-border mx-1" />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9"
-          onClick={handleReset}
-          title="Reset (R)"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-      </div>
+      <ImageControls
+        tools={tools}
+        activeToolId={activeTool}
+        onToolSelect={(toolId) => setActiveTool(toolId as Tool)}
+        onReset={handleReset}
+        className="absolute top-4 left-4 z-10"
+      />
 
       {/* Series Info */}
       <div className="absolute top-4 right-4 z-10 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
@@ -133,6 +126,16 @@ export function DicomViewer({ series, onFrameChange }: DicomViewerProps) {
           {series.modality} • Serie {series.seriesNumber}
         </p>
       </div>
+
+      {progress && (
+        <ProgressOverlay
+          asrStatus={progress.asrStatus}
+          asrConfidence={progress.asrConfidence}
+          aiStatus={progress.aiStatus}
+          qaStatus={progress.qaStatus}
+          className="absolute top-20 right-4 z-10"
+        />
+      )}
 
       {/* Main Viewer Area */}
       <div 
@@ -214,6 +217,15 @@ export function DicomViewer({ series, onFrameChange }: DicomViewerProps) {
             <ChevronDown className="h-4 w-4" />
           </Button>
         </div>
+      )}
+
+      {totalFrames > 1 && !isLoading && (
+        <SeriesStack
+          totalFrames={totalFrames}
+          currentFrame={currentFrame}
+          onSelectFrame={setCurrentFrame}
+          className="absolute bottom-4 left-4 z-10"
+        />
       )}
 
       {/* Scroll hint */}

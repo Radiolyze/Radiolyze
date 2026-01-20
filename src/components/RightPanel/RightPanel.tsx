@@ -1,7 +1,10 @@
+import { useCallback } from 'react';
 import { FindingsPanel } from './FindingsPanel';
 import { ImpressionPanel } from './ImpressionPanel';
 import { QAChecklist } from './QAChecklist';
-import type { Report, QACheck } from '@/types/radiology';
+import { TemplatesPanel } from './TemplatesPanel';
+import { GuidelinesPanel } from './GuidelinesPanel';
+import type { Report, QACheck, ReportTemplate } from '@/types/radiology';
 
 interface RightPanelProps {
   report: Report;
@@ -12,8 +15,9 @@ interface RightPanelProps {
   onFindingsChange: (text: string) => void;
   onImpressionChange: (text: string) => void;
   onGenerateImpression: () => Promise<void>;
-  onApprove: () => void;
+  onApprove: (signature?: string) => void;
   onSaveFindings?: () => void;
+  onAsrStatusChange?: (status: 'idle' | 'listening' | 'processing', confidence: number) => void;
 }
 
 export function RightPanel({
@@ -27,30 +31,47 @@ export function RightPanel({
   onGenerateImpression,
   onApprove,
   onSaveFindings,
+  onAsrStatusChange,
 }: RightPanelProps) {
+  const handleApplyTemplate = useCallback(
+    (template: ReportTemplate) => {
+      const templateText = template.sections.map((section) => `${section}:\n`).join('\n');
+      const merged = findings ? `${findings}\n\n${templateText}` : templateText;
+      onFindingsChange(merged);
+    },
+    [findings, onFindingsChange]
+  );
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <FindingsPanel
         findings={findings}
         onFindingsChange={onFindingsChange}
         onSave={onSaveFindings}
-      />
-      
-      <ImpressionPanel
-        impression={impression}
-        findings={findings}
-        qaStatus={report.qaStatus}
-        qaWarnings={report.qaWarnings}
-        onImpressionChange={onImpressionChange}
-        onGenerateImpression={onGenerateImpression}
-        onApprove={onApprove}
-        isGenerating={isGeneratingImpression}
+        onAsrStatusChange={onAsrStatusChange}
       />
 
-      <QAChecklist 
-        checks={qaChecks} 
-        isLoading={report.qaStatus === 'checking'} 
-      />
+      <div className="flex-1 overflow-y-auto">
+        <ImpressionPanel
+          impression={impression}
+          findings={findings}
+          qaStatus={report.qaStatus}
+          qaWarnings={report.qaWarnings}
+          onImpressionChange={onImpressionChange}
+          onGenerateImpression={onGenerateImpression}
+          onApprove={onApprove}
+          isGenerating={isGeneratingImpression}
+        />
+
+        <QAChecklist 
+          checks={qaChecks} 
+          isLoading={report.qaStatus === 'checking'} 
+        />
+
+        <TemplatesPanel onApplyTemplate={handleApplyTemplate} />
+
+        <GuidelinesPanel />
+      </div>
     </div>
   );
 }
