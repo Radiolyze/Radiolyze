@@ -1,4 +1,4 @@
-import type { Patient, Study, Series, Report, QueueItem } from '@/types/radiology';
+import type { Patient, Study, Series, Report, QueueItem, ReportTemplate, Guideline } from '@/types/radiology';
 
 // Mock Patients
 export const mockPatients: Patient[] = [
@@ -203,6 +203,62 @@ export const mockQAChecks = [
   { id: 'qa4', name: 'Größenangabe bei Läsionen', status: 'warn' as const, message: 'Empfehlung: Größe in 3 Dimensionen angeben' },
   { id: 'qa5', name: 'Vergleich mit Voruntersuchung', status: 'pass' as const },
   { id: 'qa6', name: 'Fleischner-Kriterien angewandt', status: 'warn' as const, message: 'Bei Lungenrundherd >8mm: Follow-up Empfehlung prüfen' },
+];
+
+// Mock Report Templates
+export const mockTemplates: ReportTemplate[] = [
+  {
+    id: 'tpl-ct-thorax',
+    name: 'CT Thorax Standard',
+    modality: 'CT',
+    description: 'Standardstruktur fuer CT Thorax mit KM.',
+    sections: ['Indikation', 'Technik', 'Befund', 'Beurteilung', 'Empfehlung'],
+    lastUpdated: '2024-01-05',
+  },
+  {
+    id: 'tpl-mr-brain',
+    name: 'MRT Schaedel Standard',
+    modality: 'MR',
+    description: 'Standardstruktur fuer MRT des Schaedels.',
+    sections: ['Indikation', 'Sequenzen', 'Befund', 'Beurteilung'],
+    lastUpdated: '2024-01-07',
+  },
+  {
+    id: 'tpl-cr-cxr',
+    name: 'Roentgen Thorax',
+    modality: 'CR',
+    description: 'Kurzbefund fuer CXR (PA/lat).',
+    sections: ['Indikation', 'Befund', 'Beurteilung'],
+    lastUpdated: '2024-01-02',
+  },
+];
+
+// Mock Guidelines
+export const mockGuidelines: Guideline[] = [
+  {
+    id: 'gl-fleischner-2017',
+    title: 'Fleischner 2017 Pulmonary Nodule',
+    category: 'CT Thorax',
+    summary: 'Follow-up Intervalle nach Groesse und Risiko.',
+    status: 'warn',
+    source: 'Fleischner',
+  },
+  {
+    id: 'gl-acr-incidentals',
+    title: 'ACR Incidental Findings',
+    category: 'CT Abdomen',
+    summary: 'Empfehlungen fuer Zufallsbefunde.',
+    status: 'info',
+    source: 'ACR',
+  },
+  {
+    id: 'gl-rsna-lung-rads',
+    title: 'Lung-RADS',
+    category: 'CT Screening',
+    summary: 'Klassifikation fuer Lungen-Screening.',
+    status: 'pass',
+    source: 'RSNA',
+  },
 ];
 
 // Helper function to get age from date of birth

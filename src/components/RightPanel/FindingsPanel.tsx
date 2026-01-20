@@ -1,15 +1,17 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Mic, MicOff, Edit3, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { ConfidenceBar } from '@/components/Common/ConfidenceBar';
 import { useASR } from '@/hooks/useASR';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { ReportEditor } from '@/components/Forms/ReportEditor';
 import { cn } from '@/lib/utils';
 
 interface FindingsPanelProps {
   findings: string;
   onFindingsChange: (text: string) => void;
   onSave?: () => void;
+  onAsrStatusChange?: (status: 'idle' | 'listening' | 'processing', confidence: number) => void;
 }
 
 export function FindingsPanel({ findings, onFindingsChange, onSave }: FindingsPanelProps) {
@@ -30,6 +32,14 @@ export function FindingsPanel({ findings, onFindingsChange, onSave }: FindingsPa
       await startRecording();
     }
   }, [isRecording, startRecording, stopRecording, findings, onFindingsChange]);
+
+  useKeyboardShortcuts({
+    onToggleMic: handleMicClick,
+  });
+
+  useEffect(() => {
+    onAsrStatusChange?.(status, confidence);
+  }, [status, confidence, onAsrStatusChange]);
 
   const handleSave = useCallback(() => {
     setIsEditing(false);
@@ -108,11 +118,12 @@ export function FindingsPanel({ findings, onFindingsChange, onSave }: FindingsPa
       {/* Content */}
       <div className="flex-1 overflow-hidden min-h-[200px] max-h-[300px]">
         {isEditing ? (
-          <Textarea
+          <ReportEditor
             value={findings}
-            onChange={(e) => onFindingsChange(e.target.value)}
+            onChange={onFindingsChange}
             placeholder="Klicken Sie auf das Mikrofon zum Diktieren oder tippen Sie hier..."
-            className="h-full min-h-[200px] border-0 rounded-none resize-none focus-visible:ring-0 bg-transparent"
+            className="h-full min-h-[200px]"
+            ariaLabel="Befund Text"
           />
         ) : (
           <div className="h-full p-4 overflow-y-auto">

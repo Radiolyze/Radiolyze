@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Edit3, Save, Check, AlertTriangle } from 'lucide-react';
+import { Sparkles, Edit3, Save, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/Common/StatusBadge';
 import type { QAStatus } from '@/types/radiology';
-import { cn } from '@/lib/utils';
+import { ReportEditor } from '@/components/Forms/ReportEditor';
+import { ApprovalDialog } from '@/components/Forms/ApprovalDialog';
 
 interface ImpressionPanelProps {
   impression: string;
@@ -14,7 +14,7 @@ interface ImpressionPanelProps {
   qaWarnings: string[];
   onImpressionChange: (text: string) => void;
   onGenerateImpression: () => Promise<void>;
-  onApprove: () => void;
+  onApprove: (signature?: string) => void;
   isGenerating?: boolean;
 }
 
@@ -109,11 +109,12 @@ export function ImpressionPanel({
       {/* Content */}
       <div className="flex-1 overflow-hidden min-h-[200px]">
         {isEditing ? (
-          <Textarea
+          <ReportEditor
             value={impression}
-            onChange={(e) => onImpressionChange(e.target.value)}
+            onChange={onImpressionChange}
             placeholder="Die KI-generierte Beurteilung erscheint hier..."
-            className="h-full min-h-[200px] border-0 rounded-none resize-none focus-visible:ring-0 bg-transparent"
+            className="h-full min-h-[200px]"
+            ariaLabel="Beurteilung Text"
           />
         ) : (
           <div className="h-full p-4 overflow-y-auto">
@@ -135,15 +136,11 @@ export function ImpressionPanel({
 
       {/* Actions */}
       <div className="p-4 border-t border-border bg-panel-secondary/30 space-y-2">
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={onApprove}
+        <ApprovalDialog
+          onConfirm={onApprove}
           disabled={!canApprove}
-        >
-          <Check className="h-5 w-5 mr-2" />
-          Freigeben & Abschließen
-        </Button>
+          triggerLabel="Freigeben & Abschliessen"
+        />
         
         <div className="flex gap-2">
           <Button
