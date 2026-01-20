@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   ZoomIn,
   Move,
@@ -14,6 +14,10 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { ImageControls, type ViewerToolConfig } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
+import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
+import { buildWadorsImageId, orthancClient } from '@/services/orthancClient';
+import { Enums, RenderingEngine, type StackViewport } from '@cornerstonejs/core';
+import { ToolGroupManager, Enums as ToolEnums } from '@cornerstonejs/tools';
 
 interface DicomViewerProps {
   series: Series | null;
@@ -40,23 +44,317 @@ export interface ViewerProgress {
   qaStatus: QAStatus;
 }
 
+type InstanceInfo = {
+  instanceId: string;
+  frames: number;
+  instanceNumber?: number;
+};
+
+const getTagValue = (entry: Record<string, unknown>, tag: string) => {
+  const tagEntry = entry[tag] as { Value?: unknown[] } | undefined;
+  if (tagEntry && Array.isArray(tagEntry.Value) && tagEntry.Value.length > 0) {
+    return tagEntry.Value[0];
+  }
+  return undefined;
+};
+
+const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
+  if (typeof entry === 'string') {
+    return { instanceId: entry, frames: 1 };
+  }
+
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+
+  const record = entry as Record<string, unknown>;
+  const instanceId =
+    (getTagValue(record, '00080018') as string | undefined) ||
+    (record.SOPInstanceUID as string | undefined) ||
+    (record.instanceId as string | undefined) ||
+    (record.id as string | undefined) ||
+    (record.ID as string | undefined);
+
+  if (!instanceId) {
+    return null;
+  }
+
+  const rawFrames =
+    getTagValue(record, '00280008') ||
+    record.numberOfFrames ||
+    record.NumberOfFrames;
+  const parsedFrames = Number(rawFrames);
+  const frames = Number.isFinite(parsedFrames) && parsedFrames > 1 ? parsedFrames : 1;
+
+  const rawInstanceNumber =
+    getTagValue(record, '00200013') ||
+    record.InstanceNumber;
+  const parsedInstanceNumber = Number(rawInstanceNumber);
+
+  return {
+    instanceId,
+    frames,
+    instanceNumber: Number.isFinite(parsedInstanceNumber) ? parsedInstanceNumber : undefined,
+  };
+};
+
 export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProps) {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<Tool>('windowLevel');
   const [zoom, setZoom] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [imageIds, setImageIds] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isFetchingInstances, setIsFetchingInstances] = useState(false);
+  const [isInitializingViewer, setIsInitializingViewer] = useState(false);
 
-  const totalFrames = series?.frameCount || 1;
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const renderingEngineRef = useRef<RenderingEngine | null>(null);
+  const stackViewportRef = useRef<StackViewport | null>(null);
+  const toolGroupRef = useRef<ReturnType<typeof ToolGroupManager.getToolGroup> | null>(null);
+  const initialParallelScaleRef = useRef<number | null>(null);
+  const activeToolRef = useRef<Tool>(activeTool);
 
-  // Simulate loading
+  const viewerInstanceId = useMemo(
+    () => `dicom-viewer-${Math.random().toString(36).slice(2, 9)}`,
+    []
+  );
+  const renderingEngineId = `${viewerInstanceId}-engine`;
+  const viewportId = `${viewerInstanceId}-viewport`;
+  const toolGroupId = `${viewerInstanceId}-tools`;
+
+  const hasStack = imageIds.length > 0;
+  const totalFrames = hasStack ? imageIds.length : series?.frameCount || 1;
+  const isLoading = isFetchingInstances || isInitializingViewer;
+
   useEffect(() => {
-    if (series) {
-      setIsLoading(true);
+    activeToolRef.current = activeTool;
+  }, [activeTool]);
+
+  const setFrameIndex = useCallback(
+    (index: number) => {
+      if (!hasStack) {
+        setCurrentFrame(0);
+        return;
+      }
+
+      const nextIndex = Math.max(0, Math.min(index, totalFrames - 1));
+      setCurrentFrame(nextIndex);
+
+      const viewport = stackViewportRef.current;
+      if (viewport) {
+        viewport.setImageIdIndex(nextIndex).catch((error) => {
+          console.warn('Failed to change frame', error);
+        });
+      }
+    },
+    [hasStack, totalFrames]
+  );
+
+  const applyToolSelection = useCallback(
+    (tool: Tool) => {
+      const toolGroup = toolGroupRef.current;
+      if (!toolGroup) {
+        return;
+      }
+
+      const toolNameMap: Record<Tool, string> = {
+        zoom: cornerstoneToolNames.zoom,
+        pan: cornerstoneToolNames.pan,
+        measure: cornerstoneToolNames.length,
+        windowLevel: cornerstoneToolNames.windowLevel,
+      };
+
+      const selectedTool = toolNameMap[tool];
+      Object.values(toolNameMap).forEach((toolName) => {
+        if (toolName === selectedTool) {
+          toolGroup.setToolActive(toolName, {
+            bindings: [{ mouseButton: ToolEnums.MouseBindings.Primary }],
+          });
+        } else {
+          toolGroup.setToolPassive(toolName, { removeAllBindings: true });
+        }
+      });
+
+      toolGroup.setToolActive(cornerstoneToolNames.stackScroll, {
+        bindings: [{ mouseButton: ToolEnums.MouseBindings.Wheel }],
+      });
+    },
+    []
+  );
+
+  // Load DICOM image IDs when series changes
+  useEffect(() => {
+    if (!series) {
+      setImageIds([]);
+      setLoadError(null);
       setCurrentFrame(0);
-      const timer = setTimeout(() => setIsLoading(false), 800);
-      return () => clearTimeout(timer);
+      return;
     }
-  }, [series?.id]);
+
+    let isActive = true;
+
+    const loadInstances = async () => {
+      setIsFetchingInstances(true);
+      setLoadError(null);
+      setImageIds([]);
+      setCurrentFrame(0);
+      setZoom(1);
+
+      try {
+        const response = await orthancClient.listInstances(series.studyId, series.id);
+        const rawInstances = Array.isArray(response)
+          ? response
+          : Array.isArray((response as { Instances?: unknown[] }).Instances)
+            ? (response as { Instances: unknown[] }).Instances
+            : [];
+        const parsed = rawInstances
+          .map(getInstanceInfo)
+          .filter((item): item is InstanceInfo => Boolean(item));
+
+        if (parsed.length === 0) {
+          throw new Error('Keine DICOM Instanzen gefunden');
+        }
+
+        parsed.sort((a, b) => {
+          if (a.instanceNumber === undefined || b.instanceNumber === undefined) {
+            return 0;
+          }
+          return a.instanceNumber - b.instanceNumber;
+        });
+
+        const ids = parsed.flatMap((instance) =>
+          Array.from({ length: instance.frames }, (_, index) =>
+            buildWadorsImageId(series.studyId, series.id, instance.instanceId, index + 1)
+          )
+        );
+
+        if (isActive) {
+          setImageIds(ids);
+        }
+      } catch (error) {
+        console.warn('Failed to load DICOM instances', error);
+        if (isActive) {
+          setLoadError('DICOM-Daten konnten nicht geladen werden.');
+          setImageIds([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsFetchingInstances(false);
+        }
+      }
+    };
+
+    loadInstances();
+
+    return () => {
+      isActive = false;
+    };
+  }, [series]);
+
+  // Initialize Cornerstone viewer when image IDs are available
+  useEffect(() => {
+    if (!viewportRef.current || imageIds.length === 0) {
+      return;
+    }
+
+    let isActive = true;
+    const element = viewportRef.current;
+    const handleStackNewImage = (event: Event) => {
+      const detail = (event as CustomEvent<{ imageIdIndex?: number }>).detail;
+      if (detail && typeof detail.imageIdIndex === 'number') {
+        setCurrentFrame(detail.imageIdIndex);
+      }
+    };
+
+    const handleCameraModified = (event: Event) => {
+      const detail = (event as CustomEvent<{ camera?: { parallelScale?: number } }>).detail;
+      const initialScale = initialParallelScaleRef.current;
+      const currentScale = detail?.camera?.parallelScale;
+      if (initialScale && currentScale) {
+        const nextZoom = initialScale / currentScale;
+        if (Number.isFinite(nextZoom)) {
+          setZoom(nextZoom);
+        }
+      }
+    };
+
+    element.addEventListener(Enums.Events.STACK_NEW_IMAGE, handleStackNewImage);
+    element.addEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
+
+    const setupViewer = async () => {
+      setIsInitializingViewer(true);
+      setLoadError(null);
+
+      try {
+        initCornerstone();
+
+        const renderingEngine = new RenderingEngine(renderingEngineId);
+        renderingEngineRef.current = renderingEngine;
+
+        renderingEngine.enableElement({
+          viewportId,
+          type: Enums.ViewportType.STACK,
+          element: viewportRef.current!,
+        });
+
+        const viewport = renderingEngine.getViewport(viewportId) as StackViewport;
+        stackViewportRef.current = viewport;
+
+        const toolGroup = ToolGroupManager.createToolGroup(toolGroupId);
+        toolGroupRef.current = toolGroup;
+
+        toolGroup.addTool(cornerstoneToolNames.stackScroll);
+        toolGroup.addTool(cornerstoneToolNames.pan);
+        toolGroup.addTool(cornerstoneToolNames.zoom);
+        toolGroup.addTool(cornerstoneToolNames.windowLevel);
+        toolGroup.addTool(cornerstoneToolNames.length);
+
+        toolGroup.addViewport(viewportId, renderingEngineId);
+        applyToolSelection(activeToolRef.current);
+
+        await viewport.setStack(imageIds, 0);
+        viewport.render();
+
+        const camera = viewport.getCamera();
+        initialParallelScaleRef.current = camera?.parallelScale ?? null;
+      } catch (error) {
+        console.warn('Cornerstone initialization failed', error);
+        if (isActive) {
+          setLoadError('Viewer konnte nicht initialisiert werden.');
+          setImageIds([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsInitializingViewer(false);
+        }
+      }
+    };
+
+    setupViewer();
+
+    return () => {
+      isActive = false;
+      element.removeEventListener(Enums.Events.STACK_NEW_IMAGE, handleStackNewImage);
+      element.removeEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
+
+      ToolGroupManager.destroyToolGroup(toolGroupId);
+
+      if (renderingEngineRef.current) {
+        renderingEngineRef.current.disableElement(viewportId);
+        renderingEngineRef.current.destroy();
+      }
+
+      renderingEngineRef.current = null;
+      stackViewportRef.current = null;
+      toolGroupRef.current = null;
+      initialParallelScaleRef.current = null;
+    };
+  }, [applyToolSelection, imageIds, renderingEngineId, toolGroupId, viewportId]);
+
+  // Update active tool bindings
+  useEffect(() => {
+    applyToolSelection(activeTool);
+  }, [activeTool, applyToolSelection]);
 
   // Notify parent of frame changes
   useEffect(() => {
@@ -64,18 +362,25 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
   }, [currentFrame, totalFrames, onFrameChange]);
 
   const handlePrevFrame = useCallback(() => {
-    setCurrentFrame(prev => Math.max(0, prev - 1));
-  }, []);
+    setFrameIndex(currentFrame - 1);
+  }, [currentFrame, setFrameIndex]);
 
   const handleNextFrame = useCallback(() => {
-    setCurrentFrame(prev => Math.min(totalFrames - 1, prev + 1));
-  }, [totalFrames]);
+    setFrameIndex(currentFrame + 1);
+  }, [currentFrame, setFrameIndex]);
 
   const handleReset = useCallback(() => {
-    setZoom(1);
-    setCurrentFrame(0);
     setActiveTool('windowLevel');
-  }, []);
+    setFrameIndex(0);
+
+    const viewport = stackViewportRef.current;
+    if (viewport) {
+      viewport.resetCamera({ resetPan: true, resetZoom: true, resetToCenter: true });
+      viewport.resetProperties();
+    }
+
+    setZoom(1);
+  }, [setFrameIndex]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -86,16 +391,6 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
     onMeasureTool: () => setActiveTool('measure'),
     onResetView: handleReset,
   });
-
-  // Handle scroll for frame navigation
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    if (e.deltaY < 0) {
-      handlePrevFrame();
-    } else {
-      handleNextFrame();
-    }
-  }, [handlePrevFrame, handleNextFrame]);
 
   if (!series) {
     return (
@@ -138,58 +433,44 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
       )}
 
       {/* Main Viewer Area */}
-      <div 
-        className="flex-1 flex items-center justify-center cursor-crosshair"
-        onWheel={handleWheel}
-      >
-        {isLoading ? (
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full spinner" />
-            <p className="text-muted-foreground">Lade DICOM-Bilder...</p>
-          </div>
-        ) : (
-          <div 
-            className="relative transition-transform duration-200"
-            style={{ transform: `scale(${zoom})` }}
-          >
-            {/* Mock DICOM Image - Gradient placeholder */}
-            <div className="w-[512px] h-[512px] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-sm relative overflow-hidden">
-              {/* Simulated CT scan patterns */}
-              <div className="absolute inset-0 opacity-30">
-                <div className="absolute top-1/4 left-1/4 w-1/2 h-1/2 rounded-full bg-gradient-radial from-gray-600 to-transparent" />
-                <div className="absolute top-1/3 left-1/3 w-8 h-8 rounded-full bg-gray-400/50" />
-                <div className="absolute bottom-1/3 right-1/3 w-12 h-8 rounded-full bg-gray-500/40 rotate-45" />
-              </div>
-              
-              {/* Grid overlay for medical appearance */}
-              <div 
-                className="absolute inset-0 opacity-10"
-                style={{
-                  backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .05) 75%, rgba(255, 255, 255, .05) 76%, transparent 77%, transparent)',
-                  backgroundSize: '50px 50px',
-                }}
-              />
+      <div className="flex-1 relative bg-viewer">
+        <div ref={viewportRef} className="h-full w-full cursor-crosshair" />
 
-              {/* Frame indicator overlay */}
-              <div className="absolute top-2 left-2 text-xs text-white/70 font-mono">
-                Im: {currentFrame + 1}/{totalFrames}
-              </div>
-              <div className="absolute top-2 right-2 text-xs text-white/70 font-mono">
-                {series.modality}
-              </div>
-              <div className="absolute bottom-2 left-2 text-xs text-white/70 font-mono">
-                W: 400 L: 40
-              </div>
-              <div className="absolute bottom-2 right-2 text-xs text-white/70 font-mono">
-                Zoom: {(zoom * 100).toFixed(0)}%
-              </div>
+        {(loadError || imageIds.length === 0) && !isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-muted-foreground space-y-2">
+              <Maximize2 className="h-12 w-12 mx-auto opacity-50" />
+              <p>{loadError ?? 'Keine DICOM-Bilder geladen'}</p>
+              <p className="text-xs text-muted-foreground">
+                Prüfen Sie DICOMweb-Verbindung und Serien-ID.
+              </p>
             </div>
           </div>
+        )}
+
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-viewer/80">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full spinner" />
+              <p className="text-muted-foreground">Lade DICOM-Bilder...</p>
+            </div>
+          </div>
+        )}
+
+        {hasStack && (
+          <>
+            <div className="absolute bottom-2 left-2 text-xs text-white/70 font-mono">
+              Im: {currentFrame + 1}/{totalFrames}
+            </div>
+            <div className="absolute bottom-2 right-2 text-xs text-white/70 font-mono">
+              Zoom: {(zoom * 100).toFixed(0)}%
+            </div>
+          </>
         )}
       </div>
 
       {/* Frame Navigation */}
-      {totalFrames > 1 && (
+      {hasStack && totalFrames > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-2 border border-border">
           <Button
             variant="ghost"
@@ -219,17 +500,17 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
         </div>
       )}
 
-      {totalFrames > 1 && !isLoading && (
+      {hasStack && totalFrames > 1 && !isLoading && (
         <SeriesStack
           totalFrames={totalFrames}
           currentFrame={currentFrame}
-          onSelectFrame={setCurrentFrame}
+          onSelectFrame={setFrameIndex}
           className="absolute bottom-4 left-4 z-10"
         />
       )}
 
       {/* Scroll hint */}
-      {totalFrames > 1 && !isLoading && (
+      {hasStack && totalFrames > 1 && !isLoading && (
         <div className="absolute bottom-4 right-4 text-xs text-muted-foreground bg-card/90 backdrop-blur-sm rounded px-2 py-1 border border-border">
           Scrollen oder ↑↓ zum Navigieren
         </div>

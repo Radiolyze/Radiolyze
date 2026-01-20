@@ -1,4 +1,11 @@
-const DICOM_WEB_URL = import.meta.env.VITE_DICOM_WEB_URL ?? 'http://localhost:8042/dicom-web';
+export const DICOM_WEB_URL = import.meta.env.VITE_DICOM_WEB_URL ?? 'http://localhost:8042/dicom-web';
+
+export const buildWadorsImageId = (
+  studyId: string,
+  seriesId: string,
+  instanceId: string,
+  frame = 1
+) => `wadors:${DICOM_WEB_URL}/studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/${frame}`;
 
 export const orthancClient = {
   async listSeries(studyId: string) {
