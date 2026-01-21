@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Settings, User, Activity } from 'lucide-react';
+import { Bell, Settings, User, Activity, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,10 +13,22 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { KeyboardShortcutsSheet } from '@/components/Common/KeyboardShortcutsSheet';
 import { NotificationsSheet } from '@/components/Common/NotificationsSheet';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 
 export function Header() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const { preferences, setPreference } = useUserPreferences();
+
+  const themeIcon = preferences.theme === 'dark' ? Moon : preferences.theme === 'light' ? Sun : Monitor;
+  const ThemeIcon = themeIcon;
+
+  const cycleTheme = () => {
+    const themes: Array<'dark' | 'light' | 'system'> = ['dark', 'light', 'system'];
+    const currentIndex = themes.indexOf(preferences.theme);
+    const nextTheme = themes[(currentIndex + 1) % themes.length];
+    setPreference('theme', nextTheme);
+  };
 
   return (
     <>
@@ -40,6 +52,16 @@ export function Header() {
 
         {/* Right - Actions */}
         <div className="flex items-center gap-2">
+          {/* Theme Toggle */}
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={cycleTheme}
+            title={`Theme: ${preferences.theme}`}
+          >
+            <ThemeIcon className="h-5 w-5" />
+          </Button>
+
           {/* Notifications */}
           <Button 
             variant="ghost" 

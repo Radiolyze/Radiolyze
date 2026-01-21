@@ -12,6 +12,7 @@ import {
 import type { Series, QAStatus } from '@/types/radiology';
 import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { ImageControls, type ViewerToolConfig } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
@@ -116,8 +117,9 @@ const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
 };
 
 export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProps) {
+  const { preferences } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
-  const [activeTool, setActiveTool] = useState<Tool>('windowLevel');
+  const [activeTool, setActiveTool] = useState<Tool>(preferences.defaultTool as Tool);
   const [zoom, setZoom] = useState(1);
   const [imageIds, setImageIds] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
