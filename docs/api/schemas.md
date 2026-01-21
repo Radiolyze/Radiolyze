@@ -37,7 +37,7 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "inference_status": "finished",
   "inference_summary": "Automatische Bildanalyse: ...",
   "inference_confidence": 0.84,
-  "inference_model_version": "mock-medgemma-0.1",
+  "inference_model_version": "medgemma-v2",
   "inference_job_id": "job-123",
   "inference_completed_at": "2026-01-20T10:12:00Z"
 }
@@ -61,6 +61,35 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "status": "draft",
   "actorId": "dr-radiologe"
 }
+```
+
+## ReportListResponse
+
+```json
+[
+  {
+    "id": "r-123",
+    "study_id": "st-123",
+    "patient_id": "p-001",
+    "status": "draft",
+    "findings_text": "",
+    "impression_text": "",
+    "created_at": "2026-01-20T10:05:00Z",
+    "updated_at": "2026-01-20T10:05:00Z",
+    "approved_at": null,
+    "approved_by": null,
+    "qa_status": "warn",
+    "qa_warnings": [
+      "Fleischner-Kriterien fuer Rundherd pruefen."
+    ],
+    "inference_status": "finished",
+    "inference_summary": "Automatische Bildanalyse: ...",
+    "inference_confidence": 0.84,
+    "inference_model_version": "medgemma-v2",
+    "inference_job_id": "job-123",
+    "inference_completed_at": "2026-01-20T10:12:00Z"
+  }
+]
 ```
 
 ## ASRResponse
@@ -90,7 +119,7 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
 {
   "text": "Automatische Beurteilung (Entwurf): ...",
   "confidence": 0.88,
-  "model": "mock-impression-v1",
+  "model": "medgemma-v2",
   "generated_at": "2026-01-20T10:11:00Z"
 }
 ```
@@ -126,7 +155,7 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "image_urls": ["https://example.local/images/series-1/frame-1.jpg"],
   "image_paths": ["/data/images/series-1/frame-1.jpg"],
   "requested_by": "system",
-  "model_version": "mock-medgemma-0.1"
+  "model_version": "medgemma-v2"
 }
 ```
 
@@ -139,7 +168,7 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "queued_at": "2026-01-20T10:08:10Z",
   "report_id": "r-123",
   "study_id": "st-123",
-  "model_version": "mock-medgemma-0.1"
+  "model_version": "medgemma-v2"
 }
 ```
 
@@ -155,7 +184,7 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "result": {
     "summary": "Automatische Bildanalyse: ...",
     "confidence": 0.84,
-    "model_version": "mock-medgemma-0.1",
+    "model_version": "medgemma-v2",
     "completed_at": "2026-01-20T10:08:20Z"
   },
   "error": null
@@ -167,7 +196,7 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
 ```json
 {
   "id": "a-123",
-  "event_type": "report_finalized",
+  "event_type": "report_approved",
   "actor_id": "u-001",
   "study_id": "st-123",
   "report_id": "r-123",
@@ -186,7 +215,7 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "reportId": "r-123",
   "payload": {
     "asrStatus": "processing",
-    "aiStatus": "queued",
+    "aiStatus": "processing",
     "qaStatus": "checking"
   },
   "timestamp": "2026-01-20T10:08:12Z"

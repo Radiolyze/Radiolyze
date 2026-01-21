@@ -63,7 +63,7 @@ Die UI ist in drei Hauptbereiche gegliedert:
 
 ## Technische Schulden (bekannt)
 
-- KI/Impression Inferenz weiterhin Mock (Queue vorhanden)
+- KI/Impression Inferenz mit Backend-Anbindung (Mock-Fallback wenn Service deaktiviert)
 - Queue Prioritaeten/Selektion noch clientseitig (kein Queue Endpoint)
 - SR Export ist Draft (JSON/Binary), noch kein C-STORE in Orthanc
 - Notification Read-State nur lokal (kein serverseitiger Status)

@@ -4,11 +4,9 @@
 
 Der WebSocket liefert Live-Events fuer:
 
-- ASR Status (listening/processing)
-- Inference Status (generating/error)
-- QA Status (checking/pass/warn/fail)
-- Report-Queue Updates
-- Batch-Dashboard Statistiken
+- ASR Status (idle/listening/processing)
+- Inference Status (queued/processing/error)
+- QA Status (pending/checking/pass/warn/fail)
 
 ## Endpoint
 
@@ -28,43 +26,10 @@ Status-Update für einen einzelnen Report:
   "reportId": "r-123",
   "payload": {
     "asrStatus": "processing",
-    "aiStatus": "generating",
+    "aiStatus": "processing",
     "qaStatus": "checking"
   },
   "timestamp": "2026-01-20T10:40:12Z"
-}
-```
-
-### report_created (geplant)
-
-Neuer Report in der Queue:
-
-```json
-{
-  "type": "report_created",
-  "reportId": "r-456",
-  "payload": {
-    "patientName": "Mustermann, Max",
-    "studyDescription": "CT Thorax",
-    "modality": "CT"
-  },
-  "timestamp": "2026-01-20T10:41:00Z"
-}
-```
-
-### report_updated (geplant)
-
-Report wurde geändert (Approval, Edit, etc.):
-
-```json
-{
-  "type": "report_updated",
-  "reportId": "r-123",
-  "payload": {
-    "status": "approved",
-    "approvedBy": "Dr. Schmidt"
-  },
-  "timestamp": "2026-01-20T10:42:30Z"
 }
 ```
 
@@ -73,28 +38,27 @@ Report wurde geändert (Approval, Edit, etc.):
 ### useWebSocket Hook
 
 ```typescript
-const { isConnected, lastMessage, error } = useWebSocket('/api/v1/ws');
+const { isConnected, lastEvent } = useWebSocket({
+  onReportStatus: (event) => {
+    // Update local state
+  },
+});
 ```
 
 Features:
-- Automatische Reconnects mit Exponential Backoff
-- Connection-Status für UI-Feedback
+- Automatische Reconnects (Fixed Interval)
+- Connection-Status fuer UI-Feedback
 - Typisierte Event-Handler
 
 ### useReportStatusSync Hook
 
 ```typescript
-useReportStatusSync({
-  onStatusUpdate: (reportId, status) => {
-    // Update local state
-  }
-});
+const { isConnected, getEnhancedItems, getReportStatus } = useReportStatusSync(queueItems);
 ```
 
 Features:
 - Merged Live-Updates in bestehenden State
 - Toast-Notifications bei QA-Events
-- Debounced Updates für Performance
 
 ## UI-Indikatoren
 
