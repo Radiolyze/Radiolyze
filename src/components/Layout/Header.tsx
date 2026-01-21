@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Bell, Settings, User, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,9 +54,11 @@ export function Header() {
           </Button>
 
           {/* Settings */}
-          <Button variant="ghost" size="icon">
-            <Settings className="h-5 w-5" />
-          </Button>
+          <Link to="/settings">
+            <Button variant="ghost" size="icon">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </Link>
 
           {/* User Menu */}
           <DropdownMenu>
