@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Report, QAStatus, QACheck } from '@/types/radiology';
 import { mockAIImpressions, mockQAChecks } from '@/data/mockData';
+import { impressionClient } from '@/services/impressionClient';
 import { qaClient, type QAServiceResponse } from '@/services/qaClient';
 
 const buildChecksFromService = (response: QAServiceResponse): QACheck[] => {
@@ -110,20 +111,45 @@ export function useReport(initialReport?: Report): UseReportReturn {
 
   const generateImpression = useCallback(async (findings: string): Promise<string> => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
-    
-    const impressionIndex = Math.floor(Math.random() * mockAIImpressions.length);
-    const impression = mockAIImpressions[impressionIndex];
-    
-    setReport(prev => prev ? {
-      ...prev,
-      impressionText: impression,
-      updatedAt: new Date().toISOString(),
-    } : null);
-    
-    setIsLoading(false);
-    return impression;
-  }, []);
+
+    try {
+      const response = await impressionClient.generateImpression({
+        reportId: report?.id,
+        findingsText: findings,
+      });
+
+      const impression = response.text?.trim() || '';
+      if (!impression) {
+        throw new Error('Impression response missing text');
+      }
+
+      setReport(prev => prev ? {
+        ...prev,
+        impressionText: impression,
+        updatedAt: new Date().toISOString(),
+        status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
+      } : null);
+
+      return impression;
+    } catch (error) {
+      console.warn('Impression service failed, using mock impression.', error);
+
+      await new Promise(resolve => setTimeout(resolve, 1200 + Math.random() * 800));
+      const impressionIndex = Math.floor(Math.random() * mockAIImpressions.length);
+      const impression = mockAIImpressions[impressionIndex];
+
+      setReport(prev => prev ? {
+        ...prev,
+        impressionText: impression,
+        updatedAt: new Date().toISOString(),
+        status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
+      } : null);
+
+      return impression;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [report?.id]);
 
   const runQAChecks = useCallback(async (input?: {
     reportId?: string;

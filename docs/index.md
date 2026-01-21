@@ -32,6 +32,8 @@ Der aktuelle Code enthaelt:
 - Cornerstone Viewer (Stack, Tools, W/L Presets, Prefetch)
 - DICOMweb Queue fuer Studien/Serien (Orthanc QIDO-RS)
 - Annotation Export (JSON)
+- Docker Compose Stack (Frontend + Backend + Orthanc + Postgres)
+- Orchestrator API (FastAPI) inkl. Audit Logging und QA/Impression Endpoints
 
-Die Integration von Orthanc/MedASR/QA ist aktiv, aber teilweise mit Fallbacks.
-Impression/MedGemma und Orchestrator-Endpunkte sind weiterhin Mock/Platzhalter.
+Orthanc DICOMweb laeuft lokal mit Basic Auth, Sample-DICOM wird automatisch geladen.
+ASR/QA/Impression verwenden im Backend derzeit Mock-Logik als Platzhalter.

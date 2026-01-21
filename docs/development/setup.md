@@ -5,6 +5,24 @@
 - Node.js 18+
 - npm oder pnpm
 
+## Docker (empfohlen)
+
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000/api/v1/health
+- Orthanc UI: http://localhost:8042
+- DICOMweb: http://localhost:8042/dicom-web
+
+Orthanc Login (lokal):
+
+- User: `orthanc`
+- Password: `orthanc`
+
+Beim ersten Start wird automatisch ein kleines DICOM Sample geladen.
+
 ## Install
 
 ```bash

@@ -1,35 +1,45 @@
-# API Endpunkte (Soll)
+# API Endpunkte (Ist)
+
+## Health
+
+`GET /api/v1/health`
+- Health Check fuer Orchestrator
 
 ## Reports
 
 `POST /api/v1/reports/create`
-- Erstellt Report und startet Pipeline
+- Erstellt Report (DB), optional mit `report_id`
 
 `GET /api/v1/reports/{report_id}`
-- Liefert Status und Inhalte
+- Liefert Report Status und Inhalte
 
 `POST /api/v1/reports/{report_id}/finalize`
-- Freigabe durch Radiologe, erzeugt DICOM SR
+- Freigabe durch Radiologe, setzt Status auf `finalized`
+- DICOM SR Export folgt in Phase 4
 
 ## ASR
 
 `POST /api/v1/reports/asr-transcript`
-- Upload von Audio oder Stream
+- Upload von Audio (multipart/form-data: `file`, optional `report_id`)
+- Backend nutzt aktuell Mock-ASR
 
 ## Impression
 
 `POST /api/v1/reports/generate-impression`
-- Generiert KI-Entwurf
+- Generiert KI-Entwurf (aktuell Mock-Logik)
+- Update von `impression_text` im Report, falls `report_id` gesetzt
 
 ## QA
 
 `POST /api/v1/reports/qa-check`
-- QA Pruefungen
+- QA Pruefungen (Mock-Logik)
+- Response enthaelt `checks`, `warnings`, `failures`, `quality_score`
+- Update von `qa_status` und `qa_warnings`, falls `report_id` gesetzt
 
 ## Audit
 
 `POST /api/v1/audit-log`
-- Audit Event schreiben
+- Audit Event schreiben (persistiert in DB)
 
 `GET /api/v1/audit-log?study_id=...`
-- Audit Log lesen
+- Audit Log lesen (Filter `study_id`, `report_id`)

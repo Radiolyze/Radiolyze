@@ -9,6 +9,8 @@
 
 - JWT fuer UI <-> API
 - RBAC fuer Rollen (Radiologe, Admin)
+- Orthanc DICOMweb nutzt Basic Auth (lokal: `orthanc/orthanc`)
+- Zugangsdaten fuer Prod unbedingt rotieren
 
 ## Data Handling
 

@@ -1,0 +1,13 @@
+.git
+.gitignore
+.vscode
+.idea
+node_modules
+dist
+coverage
+backend/__pycache__
+backend/*.db
+backend/.venv
+**/__pycache__
+**/*.pyc
+**/*.pyo

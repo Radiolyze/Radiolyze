@@ -9,8 +9,8 @@ docker compose down
 
 ## Health Checks
 
-- Orthanc: `GET /api/system`
-- FastAPI: `GET /health`
+- Orthanc: `GET /api/system` (Basic Auth: `orthanc/orthanc`)
+- FastAPI: `GET /api/v1/health`
 - Inference: `GET /api/tags` (Ollama) oder `/v1/models` (vLLM)
 
 ## Incident Checklist

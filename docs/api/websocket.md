@@ -8,6 +8,12 @@ Der WebSocket liefert Live-Events fuer:
 - Inference Status (generating/error)
 - QA Status (checking/pass/warn/fail)
 
+## Endpoint
+
+`/api/v1/ws`
+
+Der Server erwartet keine speziellen Client-Events; Nachrichten werden aktuell ignoriert.
+
 ## Beispiel-Event
 
 ```json

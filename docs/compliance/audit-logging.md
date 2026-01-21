@@ -4,6 +4,12 @@
 
 Audit Logs dokumentieren alle KI-gestuetzten Entscheidungen und menschlichen Eingriffe.
 
+## Ist-Stand (Repo)
+
+- Audit Events werden via `/api/v1/audit-log` in der Orchestrator DB gespeichert
+- Felder aktuell: `event_type`, `actor_id`, `report_id`, `study_id`, `timestamp`, `metadata`
+- Hashing/Model-Versionen sind noch nicht verpflichtend (Phase 3)
+
 ## Mindestfelder
 
 - Event Type (z.B. "asr_completed", "report_finalized")
