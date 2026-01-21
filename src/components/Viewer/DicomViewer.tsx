@@ -28,10 +28,20 @@ import { buildWadorsImageId, orthancClient } from '@/services/orthancClient';
 import { Enums, RenderingEngine, imageLoader, type StackViewport } from '@cornerstonejs/core';
 import { ToolGroupManager, Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
 
+export interface ViewportState {
+  zoom: number;
+  pan: { x: number; y: number };
+  windowLevel: { width: number; center: number };
+}
+
 interface DicomViewerProps {
   series: Series | null;
   onFrameChange?: (frame: number, total: number) => void;
   progress?: ViewerProgress;
+  /** Callback when viewport state changes (zoom, pan, window/level) */
+  onViewportChange?: (state: Partial<ViewportState>) => void;
+  /** External viewport state to sync from another viewer */
+  syncState?: Partial<ViewportState>;
 }
 
 type Tool = 'zoom' | 'pan' | 'measure' | 'windowLevel';
@@ -116,7 +126,7 @@ const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
   };
 };
 
-export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProps) {
+export function DicomViewer({ series, onFrameChange, progress, onViewportChange, syncState }: DicomViewerProps) {
   const { preferences } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<Tool>(preferences.defaultTool as Tool);
@@ -134,6 +144,7 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
   const initialParallelScaleRef = useRef<number | null>(null);
   const activeToolRef = useRef<Tool>(activeTool);
   const prefetchTimeoutRef = useRef<number | null>(null);
+  const syncingRef = useRef(false); // Prevent sync loops
 
   const viewerInstanceId = useMemo(
     () => `dicom-viewer-${Math.random().toString(36).slice(2, 9)}`,
@@ -406,19 +417,39 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
     };
 
     const handleCameraModified = (event: Event) => {
-      const detail = (event as CustomEvent<{ camera?: { parallelScale?: number } }>).detail;
+      const detail = (event as CustomEvent<{ camera?: { parallelScale?: number; pan?: number[] } }>).detail;
       const initialScale = initialParallelScaleRef.current;
       const currentScale = detail?.camera?.parallelScale;
+      const panValues = detail?.camera?.pan;
+      
       if (initialScale && currentScale) {
         const nextZoom = initialScale / currentScale;
         if (Number.isFinite(nextZoom)) {
           setZoom(nextZoom);
+          
+          // Emit viewport change if not syncing from external source
+          if (!syncingRef.current && onViewportChange) {
+            const pan = panValues ? { x: panValues[0] || 0, y: panValues[1] || 0 } : { x: 0, y: 0 };
+            onViewportChange({ zoom: nextZoom, pan });
+          }
         }
+      }
+    };
+    
+    const handleVoiModified = (event: Event) => {
+      if (syncingRef.current || !onViewportChange) return;
+      
+      const detail = (event as CustomEvent<{ range?: { lower: number; upper: number } }>).detail;
+      if (detail?.range) {
+        const width = detail.range.upper - detail.range.lower;
+        const center = detail.range.lower + width / 2;
+        onViewportChange({ windowLevel: { width, center } });
       }
     };
 
     element.addEventListener(Enums.Events.STACK_NEW_IMAGE, handleStackNewImage);
     element.addEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
+    element.addEventListener(Enums.Events.VOI_MODIFIED, handleVoiModified);
 
     const setupViewer = async () => {
       setIsInitializingViewer(true);
@@ -477,6 +508,7 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
       isActive = false;
       element.removeEventListener(Enums.Events.STACK_NEW_IMAGE, handleStackNewImage);
       element.removeEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
+      element.removeEventListener(Enums.Events.VOI_MODIFIED, handleVoiModified);
 
       ToolGroupManager.destroyToolGroup(toolGroupId);
 
@@ -508,6 +540,66 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
   useEffect(() => {
     onFrameChange?.(currentFrame, totalFrames);
   }, [currentFrame, totalFrames, onFrameChange]);
+
+  // Apply external sync state
+  useEffect(() => {
+    const viewport = stackViewportRef.current;
+    if (!viewport || !syncState) return;
+
+    syncingRef.current = true;
+
+    try {
+      const camera = viewport.getCamera();
+      const initialScale = initialParallelScaleRef.current;
+      let needsRender = false;
+
+      // Apply zoom
+      if (syncState.zoom !== undefined && initialScale) {
+        const targetParallelScale = initialScale / syncState.zoom;
+        if (camera.parallelScale !== targetParallelScale) {
+          viewport.setCamera({ ...camera, parallelScale: targetParallelScale });
+          needsRender = true;
+        }
+      }
+
+      // Apply pan using panWorld method (Cornerstone3D approach)
+      if (syncState.pan !== undefined) {
+        // Pan is applied via camera focal point offset - we use viewport methods
+        // For stack viewports, pan is controlled via the camera's focalPoint
+        const worldDelta: [number, number, number] = [syncState.pan.x, syncState.pan.y, 0];
+        viewport.setCamera({ 
+          ...camera, 
+          focalPoint: [
+            (camera.focalPoint?.[0] ?? 0) + worldDelta[0],
+            (camera.focalPoint?.[1] ?? 0) + worldDelta[1],
+            camera.focalPoint?.[2] ?? 0
+          ] as [number, number, number]
+        });
+        needsRender = true;
+      }
+
+      // Apply window/level
+      if (syncState.windowLevel !== undefined) {
+        const halfWidth = syncState.windowLevel.width / 2;
+        viewport.setProperties({
+          voiRange: {
+            lower: syncState.windowLevel.center - halfWidth,
+            upper: syncState.windowLevel.center + halfWidth,
+          },
+        });
+        needsRender = true;
+      }
+
+      if (needsRender) {
+        viewport.render();
+      }
+    } finally {
+      // Reset flag after a small delay to allow events to settle
+      requestAnimationFrame(() => {
+        syncingRef.current = false;
+      });
+    }
+  }, [syncState]);
 
   const handlePrevFrame = useCallback(() => {
     setFrameIndex(currentFrame - 1);
