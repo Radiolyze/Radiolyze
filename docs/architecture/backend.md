@@ -12,7 +12,9 @@ Der Orchestrator steuert:
 ### Beispiel-Endpunkte
 
 - `POST /api/v1/reports/create`
+- `GET /api/v1/reports`
 - `GET /api/v1/reports/{report_id}`
+- `PATCH /api/v1/reports/{report_id}`
 - `POST /api/v1/reports/{report_id}/finalize`
 - `GET /api/v1/reports/{report_id}/export-sr?format=json|dicom`
 - `POST /api/v1/inference/queue`
