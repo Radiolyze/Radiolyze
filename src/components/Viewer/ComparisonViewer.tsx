@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DicomViewer, type ViewerProgress } from './DicomViewer';
+import { DicomViewer, type ViewerProgress, type ViewportState } from './DicomViewer';
 import type { Series, Study } from '@/types/radiology';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -26,12 +26,6 @@ interface PriorStudy {
   study: Study;
   label: string;
   date: string;
-}
-
-interface ViewerState {
-  zoom: number;
-  pan: { x: number; y: number };
-  windowLevel: { width: number; center: number };
 }
 
 interface SyncOptions {
@@ -69,10 +63,12 @@ export function ComparisonViewer({
   const [currentFrame, setCurrentFrame] = useState(0);
   const [priorFrame, setPriorFrame] = useState(0);
 
-  // Refs for viewport state synchronization
-  const currentViewerStateRef = useRef<ViewerState | null>(null);
-  const priorViewerStateRef = useRef<ViewerState | null>(null);
-  const syncingRef = useRef(false);
+  // Viewport sync state - what gets passed to the "other" viewer
+  const [currentViewerSyncState, setCurrentViewerSyncState] = useState<Partial<ViewportState>>({});
+  const [priorViewerSyncState, setPriorViewerSyncState] = useState<Partial<ViewportState>>({});
+  
+  // Debounce ref to prevent rapid sync loops
+  const syncDebounceRef = useRef<number | null>(null);
 
   // Get selected prior study and series
   const selectedPriorStudy = priorStudies.find((p) => p.study.id === selectedPriorStudyId);
@@ -115,9 +111,64 @@ export function ComparisonViewer({
     [syncOptions.frames, currentSeries]
   );
 
+  // Handle viewport state changes from current viewer and sync to prior
+  const handleCurrentViewportChange = useCallback(
+    (state: Partial<ViewportState>) => {
+      if (syncDebounceRef.current) {
+        clearTimeout(syncDebounceRef.current);
+      }
+      
+      syncDebounceRef.current = window.setTimeout(() => {
+        const syncState: Partial<ViewportState> = {};
+        if (syncOptions.zoom && state.zoom !== undefined) {
+          syncState.zoom = state.zoom;
+        }
+        if (syncOptions.pan && state.pan !== undefined) {
+          syncState.pan = state.pan;
+        }
+        if (syncOptions.windowLevel && state.windowLevel !== undefined) {
+          syncState.windowLevel = state.windowLevel;
+        }
+        if (Object.keys(syncState).length > 0) {
+          setPriorViewerSyncState(syncState);
+        }
+      }, 16); // ~60fps throttle
+    },
+    [syncOptions]
+  );
+
+  // Handle viewport state changes from prior viewer and sync to current
+  const handlePriorViewportChange = useCallback(
+    (state: Partial<ViewportState>) => {
+      if (syncDebounceRef.current) {
+        clearTimeout(syncDebounceRef.current);
+      }
+      
+      syncDebounceRef.current = window.setTimeout(() => {
+        const syncState: Partial<ViewportState> = {};
+        if (syncOptions.zoom && state.zoom !== undefined) {
+          syncState.zoom = state.zoom;
+        }
+        if (syncOptions.pan && state.pan !== undefined) {
+          syncState.pan = state.pan;
+        }
+        if (syncOptions.windowLevel && state.windowLevel !== undefined) {
+          syncState.windowLevel = state.windowLevel;
+        }
+        if (Object.keys(syncState).length > 0) {
+          setCurrentViewerSyncState(syncState);
+        }
+      }, 16);
+    },
+    [syncOptions]
+  );
+
   const handleEnableCompare = useCallback(() => {
     setIsCompareMode(true);
     setIsSwapped(false);
+    // Reset sync states
+    setCurrentViewerSyncState({});
+    setPriorViewerSyncState({});
     // Auto-select first prior study and series if available
     if (priorStudies.length > 0 && !selectedPriorStudyId) {
       const firstPrior = priorStudies[0];
@@ -131,6 +182,8 @@ export function ComparisonViewer({
   const handleDisableCompare = useCallback(() => {
     setIsCompareMode(false);
     setIsSwapped(false);
+    setCurrentViewerSyncState({});
+    setPriorViewerSyncState({});
   }, []);
 
   const handleSwapViews = useCallback(() => {
@@ -166,6 +219,10 @@ export function ComparisonViewer({
   const rightProgress = isSwapped ? progress : undefined;
   const leftFrameHandler = isSwapped ? handlePriorFrameChange : handleCurrentFrameChange;
   const rightFrameHandler = isSwapped ? handleCurrentFrameChange : handlePriorFrameChange;
+  const leftViewportHandler = isSwapped ? handlePriorViewportChange : handleCurrentViewportChange;
+  const rightViewportHandler = isSwapped ? handleCurrentViewportChange : handlePriorViewportChange;
+  const leftSyncState = isSwapped ? currentViewerSyncState : priorViewerSyncState;
+  const rightSyncState = isSwapped ? priorViewerSyncState : currentViewerSyncState;
 
   // Single viewer mode
   if (!isCompareMode) {
@@ -344,6 +401,8 @@ export function ComparisonViewer({
             series={leftSeries || null}
             progress={leftProgress}
             onFrameChange={leftFrameHandler}
+            onViewportChange={leftViewportHandler}
+            syncState={leftSyncState}
           />
         </div>
 
@@ -367,6 +426,8 @@ export function ComparisonViewer({
               series={rightSeries}
               progress={rightProgress}
               onFrameChange={rightFrameHandler}
+              onViewportChange={rightViewportHandler}
+              syncState={rightSyncState}
             />
           ) : (
             <div className="h-full flex items-center justify-center bg-viewer">
