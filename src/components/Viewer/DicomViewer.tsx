@@ -9,7 +9,7 @@ import {
   Download,
   Maximize2,
 } from 'lucide-react';
-import type { Series, QAStatus } from '@/types/radiology';
+import type { AIStatus, QAStatus, Series } from '@/types/radiology';
 import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
@@ -63,7 +63,6 @@ const windowLevelPresets = [
 ];
 
 type ASRStatus = 'idle' | 'listening' | 'processing';
-type AIStatus = 'idle' | 'generating' | 'error';
 
 export interface ViewerProgress {
   asrStatus: ASRStatus;

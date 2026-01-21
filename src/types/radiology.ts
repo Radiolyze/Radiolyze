@@ -48,6 +48,8 @@ export type ReportStatus = 'pending' | 'in_progress' | 'draft' | 'approved' | 'f
 
 export type QAStatus = 'pending' | 'checking' | 'pass' | 'warn' | 'fail';
 
+export type AIStatus = 'idle' | 'queued' | 'processing' | 'error';
+
 export interface ASRResult {
   text: string;
   confidence: number;

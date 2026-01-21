@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
-import type { Report, QAStatus, QACheck } from '@/types/radiology';
+import type { AIStatus, QACheck, QAStatus, Report } from '@/types/radiology';
 import { mockAIImpressions, mockQAChecks } from '@/data/mockData';
 import { impressionClient } from '@/services/impressionClient';
+import { inferenceClient } from '@/services/inferenceClient';
 import { qaClient, type QAServiceResponse } from '@/services/qaClient';
 
 const buildChecksFromService = (response: QAServiceResponse): QACheck[] => {
@@ -61,13 +62,68 @@ const getQaStatus = (checks: QACheck[], response?: QAServiceResponse): QAStatus 
   return 'pending';
 };
 
+interface GenerateImpressionOptions {
+  reportId?: string;
+  studyId?: string;
+  requestedBy?: string;
+  modelVersion?: string;
+  onStatus?: (status: AIStatus) => void;
+}
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const extractInferenceSummary = (result?: Record<string, unknown> | null) => {
+  if (!result) return '';
+  if (typeof result.summary === 'string') return result.summary.trim();
+  if (typeof result.text === 'string') return result.text.trim();
+  return '';
+};
+
+const mapJobStatusToAiStatus = (status?: string): AIStatus | null => {
+  if (!status) return null;
+  if (status === 'queued' || status === 'deferred' || status === 'scheduled') return 'queued';
+  if (status === 'started') return 'processing';
+  return null;
+};
+
+const pollInferenceResult = async (jobId: string, onStatus?: (status: AIStatus) => void) => {
+  const timeoutMs = 30000;
+  const pollIntervalMs = 1500;
+  const startedAt = Date.now();
+  let lastStatus: AIStatus | null = null;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const response = await inferenceClient.getStatus(jobId);
+    const status = response.status;
+
+    if (status === 'finished') {
+      return response.result;
+    }
+
+    if (status === 'failed') {
+      const message = response.error?.trim() || 'Inference job failed';
+      throw new Error(message);
+    }
+
+    const mappedStatus = mapJobStatusToAiStatus(status);
+    if (mappedStatus && mappedStatus !== lastStatus) {
+      onStatus?.(mappedStatus);
+      lastStatus = mappedStatus;
+    }
+
+    await wait(pollIntervalMs);
+  }
+
+  throw new Error('Inference timeout');
+};
+
 interface UseReportReturn {
   report: Report | null;
   isLoading: boolean;
   qaChecks: QACheck[];
   updateFindings: (text: string) => Promise<void>;
   updateImpression: (text: string) => Promise<void>;
-  generateImpression: (findings: string) => Promise<string>;
+  generateImpression: (findings: string, options?: GenerateImpressionOptions) => Promise<string>;
   runQAChecks: (input?: {
     reportId?: string;
     findingsText?: string;
@@ -109,47 +165,97 @@ export function useReport(initialReport?: Report): UseReportReturn {
     setIsLoading(false);
   }, []);
 
-  const generateImpression = useCallback(async (findings: string): Promise<string> => {
+  const generateImpression = useCallback(async (
+    findings: string,
+    options?: GenerateImpressionOptions
+  ): Promise<string> => {
     setIsLoading(true);
 
+    const reportId = options?.reportId ?? report?.id;
+    const studyId = options?.studyId ?? report?.studyId;
+    const onStatus = options?.onStatus;
+    const requestedBy = options?.requestedBy;
+    const modelVersion = options?.modelVersion;
+    let succeeded = false;
+
     try {
-      const response = await impressionClient.generateImpression({
-        reportId: report?.id,
+      onStatus?.('queued');
+      const queueResponse = await inferenceClient.queueInference({
+        reportId,
+        studyId,
         findingsText: findings,
+        requestedBy,
+        modelVersion,
       });
 
-      const impression = response.text?.trim() || '';
-      if (!impression) {
-        throw new Error('Impression response missing text');
+      const jobId = queueResponse.job_id ?? queueResponse.jobId;
+      if (!jobId) {
+        throw new Error('Inference queue missing job id');
+      }
+
+      const result = await pollInferenceResult(jobId, onStatus);
+      const summary = extractInferenceSummary(result);
+      if (!summary) {
+        throw new Error('Inference result missing summary');
       }
 
       setReport(prev => prev ? {
         ...prev,
-        impressionText: impression,
+        impressionText: summary,
         updatedAt: new Date().toISOString(),
         status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
       } : null);
 
-      return impression;
+      succeeded = true;
+      return summary;
     } catch (error) {
-      console.warn('Impression service failed, using mock impression.', error);
+      console.warn('Inference queue failed, falling back to impression service.', error);
+      onStatus?.('processing');
 
-      await new Promise(resolve => setTimeout(resolve, 1200 + Math.random() * 800));
-      const impressionIndex = Math.floor(Math.random() * mockAIImpressions.length);
-      const impression = mockAIImpressions[impressionIndex];
+      try {
+        const response = await impressionClient.generateImpression({
+          reportId,
+          findingsText: findings,
+        });
 
-      setReport(prev => prev ? {
-        ...prev,
-        impressionText: impression,
-        updatedAt: new Date().toISOString(),
-        status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
-      } : null);
+        const impression = response.text?.trim() || '';
+        if (!impression) {
+          throw new Error('Impression response missing text');
+        }
 
-      return impression;
+        setReport(prev => prev ? {
+          ...prev,
+          impressionText: impression,
+          updatedAt: new Date().toISOString(),
+          status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
+        } : null);
+
+        succeeded = true;
+        return impression;
+      } catch (fallbackError) {
+        console.warn('Impression service failed, using mock impression.', fallbackError);
+
+        await wait(1200 + Math.random() * 800);
+        const impressionIndex = Math.floor(Math.random() * mockAIImpressions.length);
+        const impression = mockAIImpressions[impressionIndex];
+
+        setReport(prev => prev ? {
+          ...prev,
+          impressionText: impression,
+          updatedAt: new Date().toISOString(),
+          status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
+        } : null);
+
+        succeeded = true;
+        return impression;
+      }
     } finally {
       setIsLoading(false);
+      if (succeeded) {
+        onStatus?.('idle');
+      }
     }
-  }, [report?.id]);
+  }, [report?.id, report?.studyId]);
 
   const runQAChecks = useCallback(async (input?: {
     reportId?: string;

@@ -1,10 +1,9 @@
 import { Mic, Sparkles, ShieldCheck, ShieldAlert, ShieldX, Timer } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { QAStatus } from '@/types/radiology';
+import type { AIStatus, QAStatus } from '@/types/radiology';
 
 type ASRStatus = 'idle' | 'listening' | 'processing';
-type AIStatus = 'idle' | 'generating' | 'error';
 
 interface ProgressOverlayProps {
   asrStatus?: ASRStatus;
@@ -88,12 +87,19 @@ export function ProgressOverlay({
           variant="outline"
           className={cn(
             'text-[10px]',
-            aiStatus === 'generating' && 'bg-info/20 text-info border-info/30',
+            aiStatus === 'queued' && 'bg-warning/20 text-warning border-warning/30',
+            aiStatus === 'processing' && 'bg-info/20 text-info border-info/30',
             aiStatus === 'error' && 'bg-destructive/20 text-destructive border-destructive/30',
             aiStatus === 'idle' && 'bg-muted text-muted-foreground'
           )}
         >
-          {aiStatus === 'generating' ? 'Generiert' : aiStatus === 'error' ? 'Fehler' : 'Bereit'}
+          {aiStatus === 'queued'
+            ? 'Wartet'
+            : aiStatus === 'processing'
+              ? 'Analyse'
+              : aiStatus === 'error'
+                ? 'Fehler'
+                : 'Bereit'}
         </Badge>
       </div>
 
