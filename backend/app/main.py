@@ -15,7 +15,8 @@ from rq.job import Job
 from sqlalchemy.orm import Session
 
 from .db import Base, SessionLocal, engine
-from .mock_logic import generate_asr_transcript, generate_impression, run_qa_checks, utc_now
+from .inference_clients import generate_impression_text, transcribe_audio
+from .mock_logic import run_qa_checks, utc_now
 from .models import AuditEvent, InferenceJob, QACheckResult, Report
 from .queue import get_queue, get_redis
 from .schemas import (
@@ -78,6 +79,10 @@ def get_inference_job_timeout() -> int:
 
 def get_inference_result_ttl() -> int:
     return int(os.getenv("INFERENCE_RESULT_TTL", "3600"))
+
+
+def get_model_version() -> str:
+    return os.getenv("INFERENCE_MODEL_VERSION") or os.getenv("VLLM_MODEL_NAME", "mock-medgemma-0.1")
 
 
 def format_datetime(value: datetime | str | None) -> str | None:
@@ -234,8 +239,17 @@ async def asr_transcript(
     report_id: str | None = Form(default=None),
     db: Session = Depends(get_db),
 ) -> ASRResponse:
-    _ = file
-    text, confidence = generate_asr_transcript()
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty audio payload")
+    try:
+        text, confidence, _model_name, _metadata = await transcribe_audio(
+            content=content,
+            filename=file.filename or "audio.wav",
+            content_type=file.content_type,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     timestamp = utc_now()
 
     if report_id:
@@ -256,7 +270,10 @@ async def generate_impression_endpoint(
     payload: ImpressionRequest,
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
-    text, confidence = generate_impression(payload.findings_text)
+    try:
+        text, confidence, model_name, _metadata = generate_impression_text(payload.findings_text)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     generated_at = utc_now()
 
     if payload.report_id:
@@ -276,7 +293,7 @@ async def generate_impression_endpoint(
     return ImpressionResponse(
         text=text,
         confidence=confidence,
-        model="mock-impression-v1",
+        model=model_name,
         generated_at=generated_at,
     )
 
@@ -339,7 +356,7 @@ async def queue_inference(
     requested_by = payload.requested_by or "system"
     study_id = payload.study_id or (report.study_id if report else None)
     findings_text = payload.findings_text or (report.findings_text if report else None)
-    model_version = payload.model_version or os.getenv("INFERENCE_MODEL_VERSION", "mock-medgemma-0.1")
+    model_version = payload.model_version or get_model_version()
     input_hash = compute_input_hash(study_id, findings_text)
     queued_at = utc_now()
 
