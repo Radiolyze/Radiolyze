@@ -5,7 +5,8 @@ from typing import Any
 
 from .db import SessionLocal
 from .mock_logic import generate_inference_summary, utc_now
-from .models import AuditEvent, Report
+from .models import AuditEvent, InferenceJob, Report
+from .ws_events import publish_report_status
 
 
 def _create_audit_event(
@@ -41,6 +42,30 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
 
     db = SessionLocal()
     try:
+        job = None
+        if job_id:
+            job = db.get(InferenceJob, job_id)
+        if not job:
+            job = InferenceJob(
+                id=job_id or str(uuid.uuid4()),
+                report_id=report_id,
+                study_id=study_id,
+                status="queued",
+                model_version=model_version,
+                input_hash=input_hash,
+                queued_at=utc_now(),
+            )
+            db.add(job)
+            db.commit()
+
+        started_at = utc_now()
+        job.status = "started"
+        job.started_at = started_at
+        job.error_message = None
+        db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "processing"})
+
         _create_audit_event(
             db,
             event_type="inference_started",
@@ -48,7 +73,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             report_id=report_id,
             study_id=study_id,
             metadata={
-                "job_id": job_id,
+                "job_id": job.id,
                 "model_version": model_version,
                 "input_hash": input_hash,
             },
@@ -58,6 +83,12 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         completed_at = utc_now()
         output_summary = summary[:240]
 
+        job.status = "finished"
+        job.completed_at = completed_at
+        job.summary_text = summary
+        job.confidence = confidence
+        db.commit()
+
         _create_audit_event(
             db,
             event_type="inference_completed",
@@ -65,7 +96,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             report_id=report_id,
             study_id=study_id,
             metadata={
-                "job_id": job_id,
+                "job_id": job.id,
                 "model_version": model_version,
                 "input_hash": input_hash,
                 "output_summary": output_summary,
@@ -76,8 +107,13 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         if report_id:
             report = db.get(Report, report_id)
             if report:
+                report.impression_text = summary
                 report.updated_at = completed_at
+                if report.status in {"pending", "in_progress"}:
+                    report.status = "draft"
                 db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "idle"})
 
         return {
             "summary": summary,
@@ -86,6 +122,16 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
+        if job_id:
+            job = db.get(InferenceJob, job_id)
+            if job:
+                job.status = "failed"
+                job.completed_at = utc_now()
+                job.error_message = str(exc)
+                db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "error"})
+
         _create_audit_event(
             db,
             event_type="inference_failed",

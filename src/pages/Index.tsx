@@ -30,10 +30,15 @@ const Index = () => {
   const [aiStatus, setAiStatus] = useState<AIStatus>('idle');
   const [asrStatus, setAsrStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
   const [asrConfidence, setAsrConfidence] = useState(0);
-  const isGenerating = aiStatus === 'queued' || aiStatus === 'processing';
   
   // Apply live status updates to current report
   const liveStatus = report ? getReportStatus(report.id) : undefined;
+  const effectiveAiStatus: AIStatus = liveStatus?.aiStatus === 'error'
+    ? 'error'
+    : aiStatus === 'idle'
+      ? liveStatus?.aiStatus ?? 'idle'
+      : aiStatus;
+  const isGenerating = effectiveAiStatus === 'queued' || effectiveAiStatus === 'processing';
 
   useEffect(() => {
     if (queueError) {
@@ -213,7 +218,7 @@ const Index = () => {
           progress={{
             asrStatus: liveStatus?.asrStatus || asrStatus,
             asrConfidence: liveStatus?.asrConfidence ?? asrConfidence,
-            aiStatus,
+            aiStatus: effectiveAiStatus,
             qaStatus: liveStatus?.qaStatus || report.qaStatus,
           }}
         />

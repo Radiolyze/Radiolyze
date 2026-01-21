@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import hashlib
 import os
 import uuid
@@ -14,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from .db import Base, SessionLocal, engine
 from .mock_logic import generate_asr_transcript, generate_impression, run_qa_checks, utc_now
-from .models import AuditEvent, QACheckResult, Report
+from .models import AuditEvent, InferenceJob, QACheckResult, Report
 from .queue import get_queue, get_redis
 from .schemas import (
     ASRResponse,
@@ -33,6 +35,7 @@ from .schemas import (
 )
 from .tasks import run_inference_job
 from .ws import ConnectionManager
+from .ws_events import run_ws_bridge
 
 app = FastAPI(title="Orchestrator API", version="0.1.0")
 
@@ -77,9 +80,11 @@ def get_inference_result_ttl() -> int:
     return int(os.getenv("INFERENCE_RESULT_TTL", "3600"))
 
 
-def format_datetime(value: datetime | None) -> str | None:
+def format_datetime(value: datetime | str | None) -> str | None:
     if not value:
         return None
+    if isinstance(value, str):
+        return value
     return value.isoformat()
 
 
@@ -126,8 +131,18 @@ async def broadcast_status(report_id: str | None, payload: dict[str, Any]) -> No
 
 
 @app.on_event("startup")
-def on_startup() -> None:
+async def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    app.state.ws_bridge_task = asyncio.create_task(run_ws_bridge(manager))
+
+
+@app.on_event("shutdown")
+async def on_shutdown() -> None:
+    task = getattr(app.state, "ws_bridge_task", None)
+    if task:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
 
 
 @app.get("/api/v1/health")
@@ -330,6 +345,19 @@ async def queue_inference(
     )
 
     db.add(
+        InferenceJob(
+            id=job_id,
+            report_id=payload.report_id,
+            study_id=study_id,
+            status="queued",
+            model_version=model_version,
+            input_hash=input_hash,
+            queued_at=queued_at,
+            metadata_json={"requested_by": requested_by},
+        )
+    )
+
+    db.add(
         AuditEvent(
             id=str(uuid.uuid4()),
             event_type="inference_queued",
@@ -369,7 +397,27 @@ async def queue_inference(
 
 
 @app.get("/api/v1/inference/status/{job_id}", response_model=InferenceStatusResponse)
-def inference_status(job_id: str) -> InferenceStatusResponse:
+def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceStatusResponse:
+    job_record = db.get(InferenceJob, job_id)
+    if job_record:
+        result = None
+        if job_record.status == "finished":
+            result = {
+                "summary": job_record.summary_text,
+                "confidence": job_record.confidence,
+                "model_version": job_record.model_version,
+                "completed_at": job_record.completed_at,
+            }
+        return InferenceStatusResponse(
+            job_id=job_record.id,
+            status=job_record.status,
+            queued_at=format_datetime(job_record.queued_at),
+            started_at=format_datetime(job_record.started_at),
+            ended_at=format_datetime(job_record.completed_at),
+            result=result,
+            error=job_record.error_message,
+        )
+
     try:
         job = Job.fetch(job_id, connection=get_redis())
     except NoSuchJobError as exc:
