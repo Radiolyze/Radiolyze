@@ -11,6 +11,8 @@ Die UI nutzt HTTP und WebSocket APIs:
 - Endpunkte fuer Reports, ASR, Impression, QA, Audit implementiert
 - WebSocket Endpoint: `/api/v1/ws`
 - CORS konfigurierbar via `CORS_ORIGINS`
+- vLLM/MedASR Integration via `VLLM_ENABLED` / `MEDASR_ENABLED`
+- Multimodal Inputs: `image_urls` / `image_paths` in Impression und Inference
 
 ## Versionierung
 

@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  backend:
+    environment:
+      VLLM_ENABLED: "true"
+      MEDASR_ENABLED: "true"
+    depends_on:
+      - db
+      - redis
+      - orthanc
+      - vllm-medgemma
+      - medasr
+
+  worker:
+    environment:
+      VLLM_ENABLED: "true"
+    depends_on:
+      - db
+      - redis
+      - vllm-medgemma

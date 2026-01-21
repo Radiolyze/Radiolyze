@@ -22,7 +22,8 @@ Der Orchestrator steuert:
 
 - Backend Code: `backend/`
 - Docker Setup: `docker-compose.yml` (Frontend + Backend + Worker + Redis + Postgres + Orthanc)
-- ASR/Impression/QA nutzen aktuell Mock-Logik als Platzhalter
+- GPU Overlay: `docker-compose.gpu.yml` (vLLM MedGemma + MedASR)
+- ASR/Impression/Inference nutzen vLLM/MedASR wenn aktiviert, sonst Mock-Fallback
 - Inference Queue via RQ Worker + Redis, Ergebnisse werden in Postgres persistiert
 - WebSocket Status-Events werden ueber Redis PubSub an den API-Server gebridged
 
@@ -37,6 +38,14 @@ Der Orchestrator steuert:
 - **MedASR** fuer Diktat
 - **MedGemma** fuer multimodale Bildanalyse
 - Optional: LLM fuer Impression (Mistral/Llama)
+
+### Anbindung (Inference Engine)
+
+- vLLM v1.x als GPU Worker mit OpenAI-kompatibler API
+- MedASR als separater Service (OpenAI Audio API kompatibel)
+- Multimodal Requests via `/v1/chat/completions` (Text + Bild)
+- `image_urls` / `image_paths` fuer multimodale Inputs in Impression + Inference
+- Modellname/Version und Bildanzahl werden im Audit Log persistiert
 
 ## Datenhaltung
 

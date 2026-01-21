@@ -4,9 +4,24 @@ import uuid
 from typing import Any
 
 from .db import SessionLocal
-from .mock_logic import generate_inference_summary, utc_now
+from .inference_clients import generate_inference_summary_text
+from .mock_logic import utc_now
 from .models import AuditEvent, InferenceJob, Report
 from .ws_events import publish_report_status
+
+
+def _build_image_metadata(image_urls: list[str] | None, image_paths: list[str] | None) -> dict[str, Any]:
+    normalized_urls = [url.strip() for url in (image_urls or []) if url and url.strip()]
+    normalized_paths = [path.strip() for path in (image_paths or []) if path and path.strip()]
+    count = len(normalized_urls) + len(normalized_paths)
+    if count == 0:
+        return {}
+    sources = []
+    if normalized_urls:
+        sources.append("url")
+    if normalized_paths:
+        sources.append("path")
+    return {"image_count": count, "image_sources": sources}
 
 
 def _create_audit_event(
@@ -35,10 +50,13 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     report_id = payload.get("report_id")
     study_id = payload.get("study_id")
     findings_text = payload.get("findings_text")
+    image_urls = payload.get("image_urls") or []
+    image_paths = payload.get("image_paths") or []
     requested_by = payload.get("requested_by") or "system"
-    model_version = payload.get("model_version") or "mock-medgemma-0.1"
+    requested_model_version = payload.get("model_version") or "mock-medgemma-0.1"
     input_hash = payload.get("input_hash")
     job_id = payload.get("job_id")
+    image_metadata = _build_image_metadata(image_urls, image_paths)
 
     db = SessionLocal()
     try:
@@ -51,7 +69,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 report_id=report_id,
                 study_id=study_id,
                 status="queued",
-                model_version=model_version,
+                model_version=requested_model_version,
                 input_hash=input_hash,
                 queued_at=utc_now(),
             )
@@ -74,12 +92,19 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             study_id=study_id,
             metadata={
                 "job_id": job.id,
-                "model_version": model_version,
+                "model_version": requested_model_version,
+                "requested_model": requested_model_version,
                 "input_hash": input_hash,
+                **image_metadata,
             },
         )
 
-        summary, confidence = generate_inference_summary(findings_text)
+        summary, confidence, resolved_model, metadata = generate_inference_summary_text(
+            findings_text,
+            model_name=requested_model_version,
+            image_urls=image_urls,
+            image_paths=image_paths,
+        )
         completed_at = utc_now()
         output_summary = summary[:240]
 
@@ -87,6 +112,13 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         job.completed_at = completed_at
         job.summary_text = summary
         job.confidence = confidence
+        job.model_version = resolved_model
+        job.metadata_json = {
+            **(job.metadata_json or {}),
+            **(metadata or {}),
+            "requested_model": requested_model_version,
+            "resolved_model": resolved_model,
+        }
         db.commit()
 
         _create_audit_event(
@@ -97,10 +129,14 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             study_id=study_id,
             metadata={
                 "job_id": job.id,
-                "model_version": model_version,
+                "model_version": requested_model_version,
+                "requested_model": requested_model_version,
+                "resolved_model": resolved_model,
                 "input_hash": input_hash,
                 "output_summary": output_summary,
                 "confidence": confidence,
+                **(metadata or {}),
+                **image_metadata,
             },
         )
 
@@ -118,7 +154,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "summary": summary,
             "confidence": confidence,
-            "model_version": model_version,
+            "model_version": resolved_model,
             "completed_at": completed_at,
         }
     except Exception as exc:
@@ -140,9 +176,11 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             study_id=study_id,
             metadata={
                 "job_id": job_id,
-                "model_version": model_version,
+                "model_version": requested_model_version,
+                "requested_model": requested_model_version,
                 "input_hash": input_hash,
                 "error": str(exc),
+                **image_metadata,
             },
         )
         raise

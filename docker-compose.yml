@@ -11,9 +11,22 @@ services:
       CORS_ORIGINS: http://localhost:5173
       REDIS_URL: redis://redis:6379/0
       INFERENCE_QUEUE_NAME: inference
-      INFERENCE_MODEL_VERSION: mock-medgemma-0.1
+      INFERENCE_MODEL_VERSION: medgemma-radiology
       INFERENCE_JOB_TIMEOUT: "600"
       INFERENCE_RESULT_TTL: "3600"
+      VLLM_ENABLED: "false"
+      VLLM_BASE_URL: http://vllm-medgemma:8000/v1
+      VLLM_MODEL_NAME: medgemma-radiology
+      VLLM_REQUEST_TIMEOUT: "120"
+      VLLM_FALLBACK_TO_MOCK: "true"
+      VLLM_DEFAULT_CONFIDENCE: "0.0"
+      MEDASR_ENABLED: "false"
+      MEDASR_BASE_URL: http://medasr:8001
+      MEDASR_TRANSCRIBE_PATH: /v1/audio/transcriptions
+      MEDASR_MODEL: google/medasr
+      MEDASR_REQUEST_TIMEOUT: "120"
+      MEDASR_FALLBACK_TO_MOCK: "true"
+      MEDASR_DEFAULT_CONFIDENCE: "0.0"
     depends_on:
       - db
       - redis
@@ -27,9 +40,15 @@ services:
       DATABASE_URL: postgresql+psycopg://app:app@db:5432/app
       REDIS_URL: redis://redis:6379/0
       INFERENCE_QUEUE_NAME: inference
-      INFERENCE_MODEL_VERSION: mock-medgemma-0.1
+      INFERENCE_MODEL_VERSION: medgemma-radiology
       INFERENCE_JOB_TIMEOUT: "600"
       INFERENCE_RESULT_TTL: "3600"
+      VLLM_ENABLED: "false"
+      VLLM_BASE_URL: http://vllm-medgemma:8000/v1
+      VLLM_MODEL_NAME: medgemma-radiology
+      VLLM_REQUEST_TIMEOUT: "120"
+      VLLM_FALLBACK_TO_MOCK: "true"
+      VLLM_DEFAULT_CONFIDENCE: "0.0"
     depends_on:
       - db
       - redis
@@ -93,6 +112,62 @@ services:
     ports:
       - "6379:6379"
 
+  vllm-medgemma:
+    image: vllm/vllm-openai:latest
+    profiles: ["gpu"]
+    runtime: nvidia
+    ports:
+      - "8002:8000"
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      VLLM_LOGGING_LEVEL: INFO
+    volumes:
+      - vllm-cache:/root/.cache/huggingface
+    command: >
+      vllm serve google/medgemma-1.5-4b-it
+      --host 0.0.0.0
+      --port 8000
+      --quantization gptq
+      --dtype bfloat16
+      --max-model-len 4096
+      --gpu-memory-utilization 0.85
+      --trust-remote-code
+      --mm-vision-tower google/siglip-so400m-patch14-384
+      --mm-enable-flash-attn
+      --enforce-eager
+      --served-model-name medgemma-radiology
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  medasr:
+    image: vllm/vllm-openai:latest
+    profiles: ["gpu"]
+    runtime: nvidia
+    ports:
+      - "8003:8001"
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      VLLM_LOGGING_LEVEL: INFO
+    volumes:
+      - vllm-cache:/root/.cache/huggingface
+    command: >
+      vllm serve google/medasr
+      --host 0.0.0.0
+      --port 8001
+      --quantization awq
+      --dtype bfloat16
+      --max-model-len 1024
+      --served-model-name medasr
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   orthanc-data:
   postgres-data:
+  vllm-cache:

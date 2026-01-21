@@ -50,6 +50,7 @@ nav:
   - Betrieb:
       - Runbook: operations/runbook.md
       - Security: operations/security.md
+      - Internetnutzung: operations/internet-usage.md
       - Observability: operations/observability.md
   - Entwicklung:
       - Setup: development/setup.md

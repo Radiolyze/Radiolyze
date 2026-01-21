@@ -6,6 +6,18 @@
 npm run test
 ```
 
+## Backend Smoke Check
+
+```bash
+./scripts/smoke-backend.sh
+```
+
+Optional:
+
+```bash
+API_BASE_URL=http://localhost:8000 ./scripts/smoke-backend.sh
+```
+
 ## Empfohlene Bereiche
 
 - ASR/AI Status Handling

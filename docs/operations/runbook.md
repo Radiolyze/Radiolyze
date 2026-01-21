@@ -13,6 +13,14 @@ docker compose down
 - FastAPI: `GET /api/v1/health`
 - Inference: `GET /api/tags` (Ollama) oder `/v1/models` (vLLM)
 
+## GPU Worker (vLLM)
+
+Empfohlen fuer MedGemma (Multimodal). Wichtige Checks:
+
+- `GET /health` oder `/v1/models`
+- GPU Auslastung: `nvidia-smi`
+- vLLM Metrics: `/metrics` (Prometheus)
+
 ## Incident Checklist
 
 1. Status der DICOM Quelle pruefen

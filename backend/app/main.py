@@ -15,7 +15,8 @@ from rq.job import Job
 from sqlalchemy.orm import Session
 
 from .db import Base, SessionLocal, engine
-from .mock_logic import generate_asr_transcript, generate_impression, run_qa_checks, utc_now
+from .inference_clients import generate_impression_text, transcribe_audio
+from .mock_logic import run_qa_checks, utc_now
 from .models import AuditEvent, InferenceJob, QACheckResult, Report
 from .queue import get_queue, get_redis
 from .schemas import (
@@ -67,8 +68,22 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def compute_input_hash(study_id: str | None, findings_text: str | None) -> str:
-    raw = f"{study_id or ''}|{(findings_text or '').strip()}"
+def compute_input_hash(
+    study_id: str | None,
+    findings_text: str | None,
+    image_urls: list[str] | None = None,
+    image_paths: list[str] | None = None,
+) -> str:
+    normalized_urls = [url.strip() for url in (image_urls or []) if url and url.strip()]
+    normalized_paths = [path.strip() for path in (image_paths or []) if path and path.strip()]
+    raw = "|".join(
+        [
+            study_id or "",
+            (findings_text or "").strip(),
+            ",".join(normalized_urls),
+            ",".join(normalized_paths),
+        ]
+    )
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -78,6 +93,24 @@ def get_inference_job_timeout() -> int:
 
 def get_inference_result_ttl() -> int:
     return int(os.getenv("INFERENCE_RESULT_TTL", "3600"))
+
+
+def get_model_version() -> str:
+    return os.getenv("INFERENCE_MODEL_VERSION") or os.getenv("VLLM_MODEL_NAME", "mock-medgemma-0.1")
+
+
+def build_image_metadata(image_urls: list[str] | None, image_paths: list[str] | None) -> dict[str, Any]:
+    normalized_urls = [url.strip() for url in (image_urls or []) if url and url.strip()]
+    normalized_paths = [path.strip() for path in (image_paths or []) if path and path.strip()]
+    count = len(normalized_urls) + len(normalized_paths)
+    if count == 0:
+        return {}
+    sources = []
+    if normalized_urls:
+        sources.append("url")
+    if normalized_paths:
+        sources.append("path")
+    return {"image_count": count, "image_sources": sources}
 
 
 def format_datetime(value: datetime | str | None) -> str | None:
@@ -234,8 +267,17 @@ async def asr_transcript(
     report_id: str | None = Form(default=None),
     db: Session = Depends(get_db),
 ) -> ASRResponse:
-    _ = file
-    text, confidence = generate_asr_transcript()
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty audio payload")
+    try:
+        text, confidence, _model_name, _metadata = await transcribe_audio(
+            content=content,
+            filename=file.filename or "audio.wav",
+            content_type=file.content_type,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     timestamp = utc_now()
 
     if report_id:
@@ -256,7 +298,14 @@ async def generate_impression_endpoint(
     payload: ImpressionRequest,
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
-    text, confidence = generate_impression(payload.findings_text)
+    try:
+        text, confidence, model_name, _metadata = generate_impression_text(
+            payload.findings_text,
+            image_urls=payload.image_urls,
+            image_paths=payload.image_paths,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     generated_at = utc_now()
 
     if payload.report_id:
@@ -276,7 +325,7 @@ async def generate_impression_endpoint(
     return ImpressionResponse(
         text=text,
         confidence=confidence,
-        model="mock-impression-v1",
+        model=model_name,
         generated_at=generated_at,
     )
 
@@ -339,9 +388,12 @@ async def queue_inference(
     requested_by = payload.requested_by or "system"
     study_id = payload.study_id or (report.study_id if report else None)
     findings_text = payload.findings_text or (report.findings_text if report else None)
-    model_version = payload.model_version or os.getenv("INFERENCE_MODEL_VERSION", "mock-medgemma-0.1")
-    input_hash = compute_input_hash(study_id, findings_text)
+    image_urls = payload.image_urls or []
+    image_paths = payload.image_paths or []
+    model_version = payload.model_version or get_model_version()
+    input_hash = compute_input_hash(study_id, findings_text, image_urls, image_paths)
     queued_at = utc_now()
+    image_metadata = build_image_metadata(image_urls, image_paths)
 
     job_id = str(uuid.uuid4())
     job_payload = {
@@ -349,6 +401,8 @@ async def queue_inference(
         "report_id": payload.report_id,
         "study_id": study_id,
         "findings_text": findings_text,
+        "image_urls": image_urls,
+        "image_paths": image_paths,
         "requested_by": requested_by,
         "model_version": model_version,
         "input_hash": input_hash,
@@ -373,7 +427,7 @@ async def queue_inference(
             model_version=model_version,
             input_hash=input_hash,
             queued_at=queued_at,
-            metadata_json={"requested_by": requested_by},
+            metadata_json={"requested_by": requested_by, **image_metadata},
         )
     )
 
@@ -389,6 +443,7 @@ async def queue_inference(
                 "job_id": job_id,
                 "model_version": model_version,
                 "input_hash": input_hash,
+                **image_metadata,
             },
         )
     )

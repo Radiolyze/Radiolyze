@@ -53,6 +53,8 @@ class ASRResponse(ApiBaseModel):
 class ImpressionRequest(ApiBaseModel):
     report_id: str | None = None
     findings_text: str | None = None
+    image_urls: list[str] | None = None
+    image_paths: list[str] | None = None
 
 
 class ImpressionResponse(ApiBaseModel):
@@ -87,6 +89,8 @@ class InferenceQueueRequest(ApiBaseModel):
     report_id: str | None = None
     study_id: str | None = None
     findings_text: str | None = None
+    image_urls: list[str] | None = None
+    image_paths: list[str] | None = None
     requested_by: str | None = None
     model_version: str | None = None
 

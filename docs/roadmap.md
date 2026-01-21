@@ -40,6 +40,8 @@
 
 - [ ] DICOM SR Export
 - [ ] Templates + Guidelines RAG
+- [~] vLLM GPU Worker (Compose + API Integration, Multimodal)
+- [ ] DICOM -> Image Pipeline fuer Multimodal Inference (WADO-RS/JPEG)
 - [x] Batch Reporting Dashboard (Multi-Select, Bulk Actions, Analytics)
 - [x] Report History / Audit Log UI
 - [ ] Observability (Metrics + Tracing)
@@ -47,6 +49,7 @@
 ## Phase 6: Scale & Optimization (22+ Wochen)
 
 - [ ] Performance Optimierung (Web Worker, Streaming)
+- [ ] Medusa/Multi-Token Decoding fuer niedrigere Latenz
 - [ ] Multi-Site Deployment
 - [ ] Advanced Viewer Tools (MPR, Annotation Suite)
 - [ ] Analytics Dashboard
