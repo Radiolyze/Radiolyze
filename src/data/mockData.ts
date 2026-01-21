@@ -53,6 +53,56 @@ export const mockSeries: Series[] = [
   },
 ];
 
+// Prior Studies for comparison (same patient, earlier dates)
+export const mockPriorStudies: Study[] = [
+  {
+    id: 'st1-prior-1',
+    patientId: 'p1',
+    accessionNumber: 'ACC-2023-05421',
+    modality: 'CT',
+    studyDate: '2023-07-15',
+    studyDescription: 'CT Thorax mit KM',
+    referringPhysician: 'Dr. Meier',
+    series: [
+      {
+        id: 's1-prior-1',
+        studyId: 'st1-prior-1',
+        seriesNumber: 1,
+        seriesDescription: 'Axial',
+        modality: 'CT',
+        frameCount: 115,
+      },
+      {
+        id: 's2-prior-1',
+        studyId: 'st1-prior-1',
+        seriesNumber: 2,
+        seriesDescription: 'Coronal',
+        modality: 'CT',
+        frameCount: 75,
+      },
+    ],
+  },
+  {
+    id: 'st1-prior-2',
+    patientId: 'p1',
+    accessionNumber: 'ACC-2023-01234',
+    modality: 'CT',
+    studyDate: '2023-01-10',
+    studyDescription: 'CT Thorax nativ',
+    referringPhysician: 'Dr. Fischer',
+    series: [
+      {
+        id: 's1-prior-2',
+        studyId: 'st1-prior-2',
+        seriesNumber: 1,
+        seriesDescription: 'Axial',
+        modality: 'CT',
+        frameCount: 100,
+      },
+    ],
+  },
+];
+
 // Mock Studies
 export const mockStudies: Study[] = [
   {
