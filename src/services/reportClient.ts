@@ -1,6 +1,7 @@
 import { apiClient } from './apiClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+const REPORTS_CREATE_ENDPOINT = import.meta.env.VITE_REPORTS_CREATE_URL ?? '/api/v1/reports/create';
 const REPORTS_ENDPOINT = import.meta.env.VITE_REPORTS_URL ?? '/api/v1/reports';
 const SR_EXPORT_ENDPOINT = import.meta.env.VITE_SR_EXPORT_URL ?? '/api/v1/reports';
 
@@ -48,7 +49,29 @@ export interface ReportUpdatePayload {
   actorId?: string;
 }
 
+export interface ReportCreatePayload {
+  reportId?: string;
+  studyId: string;
+  patientId: string;
+  status?: string;
+  findingsText?: string;
+  impressionText?: string;
+}
+
 export const reportClient = {
+  async getReport(reportId: string): Promise<ReportResponsePayload> {
+    return apiClient.get<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}`);
+  },
+  async createReport(payload: ReportCreatePayload): Promise<ReportResponsePayload> {
+    return apiClient.post<ReportResponsePayload>(REPORTS_CREATE_ENDPOINT, {
+      report_id: payload.reportId,
+      study_id: payload.studyId,
+      patient_id: payload.patientId,
+      status: payload.status,
+      findings_text: payload.findingsText,
+      impression_text: payload.impressionText,
+    });
+  },
   async finalizeReport(reportId: string, signature?: string): Promise<ReportResponsePayload> {
     return apiClient.post<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}/finalize`, {
       approvedBy: signature,

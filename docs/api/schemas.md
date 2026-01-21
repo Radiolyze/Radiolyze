@@ -52,6 +52,17 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
 }
 ```
 
+## ReportUpdateRequest
+
+```json
+{
+  "findings_text": "Befund ...",
+  "impression_text": "Beurteilung ...",
+  "status": "draft",
+  "actorId": "dr-radiologe"
+}
+```
+
 ## ASRResponse
 
 ```json

@@ -7,11 +7,12 @@ import { useReport } from '@/hooks/useReport';
 import { useDicomWebQueue } from '@/hooks/useDicomWebQueue';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useReportStatusSync } from '@/hooks/useReportStatusSync';
+import { usePriorStudies } from '@/hooks/usePriorStudies';
 import type { AIStatus, QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
 import { reportClient } from '@/services/reportClient';
-import { mockPriorStudies, formatDate } from '@/data/mockData';
+import { formatDate } from '@/data/mockData';
 
 const Index = () => {
   const { items: queueItems, isLoading: isQueueLoading, error: queueError } = useDicomWebQueue();
@@ -169,11 +170,16 @@ const Index = () => {
     onApprove: handleApprove,
   });
 
-  // Get prior studies for current patient
-  const priorStudies = useMemo(() => {
-    if (!selectedQueueItem) return [];
-    return mockPriorStudies.filter((study) => study.patientId === selectedQueueItem.patient.id);
-  }, [selectedQueueItem]);
+  const {
+    priorStudies,
+    error: priorStudiesError,
+  } = usePriorStudies(selectedQueueItem?.patient.id, selectedQueueItem?.study.id);
+
+  useEffect(() => {
+    if (priorStudiesError) {
+      toast.error(priorStudiesError);
+    }
+  }, [priorStudiesError]);
 
   const priorStudiesForViewer = useMemo(
     () =>

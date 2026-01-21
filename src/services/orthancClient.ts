@@ -52,6 +52,11 @@ export const buildWadorsImageId = (
   frame = 1
 ) => `wadors:${buildDicomWebUrl(`studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/${frame}`)}`;
 
+interface ListStudiesOptions {
+  limit?: number;
+  patientId?: string;
+}
+
 export const orthancClient = {
   async listSeries(studyId: string) {
     return fetchDicomWebJson(`studies/${studyId}/series`, { includefield: 'all' });
@@ -74,7 +79,12 @@ export const orthancClient = {
     return response.arrayBuffer();
   },
 
-  async listStudies(limit = 25) {
-    return fetchDicomWebJson('studies', { includefield: 'all', limit });
+  async listStudies(options: ListStudiesOptions = {}) {
+    const { limit = 25, patientId } = options;
+    return fetchDicomWebJson('studies', {
+      includefield: 'all',
+      limit,
+      PatientID: patientId,
+    });
   },
 };

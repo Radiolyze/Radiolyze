@@ -13,6 +13,10 @@
 `GET /api/v1/reports/{report_id}`
 - Liefert Report Status und Inhalte
 
+`PATCH /api/v1/reports/{report_id}`
+- Aktualisiert Findings/Impression/Status eines Reports
+- Schreibt Audit Event (`findings_saved`, `report_amended`, `report_updated`)
+
 `POST /api/v1/reports/{report_id}/finalize`
 - Freigabe durch Radiologe, setzt Status auf `finalized`
 - DICOM SR Export via separatem Endpoint

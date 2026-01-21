@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
-import type { AIStatus, QACheck, QAStatus, Report, ReportStatus } from '@/types/radiology';
+import type { AIStatus, QACheck, QAStatus, Report } from '@/types/radiology';
 import { mockAIImpressions, mockQAChecks } from '@/data/mockData';
 import { impressionClient } from '@/services/impressionClient';
 import { inferenceClient } from '@/services/inferenceClient';
 import { qaClient, type QAServiceResponse } from '@/services/qaClient';
-import { reportClient, type ReportResponsePayload } from '@/services/reportClient';
+import { reportClient } from '@/services/reportClient';
+import { mapReportResponse } from '@/services/reportMapping';
 
 const buildChecksFromService = (response: QAServiceResponse): QACheck[] => {
   if (Array.isArray(response.checks) && response.checks.length > 0) {
@@ -62,37 +63,6 @@ const getQaStatus = (checks: QACheck[], response?: QAServiceResponse): QAStatus 
   if (response?.passes === false) return 'fail';
   return 'pending';
 };
-
-const reportStatusValues: ReportStatus[] = ['pending', 'in_progress', 'draft', 'approved', 'finalized'];
-const qaStatusValues: QAStatus[] = ['pending', 'checking', 'pass', 'warn', 'fail'];
-
-const isReportStatus = (value?: string): value is ReportStatus =>
-  Boolean(value && reportStatusValues.includes(value as ReportStatus));
-
-const isQaStatus = (value?: string): value is QAStatus =>
-  Boolean(value && qaStatusValues.includes(value as QAStatus));
-
-const mapReportResponse = (payload: ReportResponsePayload, existing?: Report | null): Report => ({
-  id: payload.id,
-  studyId: payload.study_id,
-  patientId: payload.patient_id,
-  status: isReportStatus(payload.status) ? payload.status : existing?.status ?? 'pending',
-  findingsText: payload.findings_text ?? existing?.findingsText ?? '',
-  impressionText: payload.impression_text ?? existing?.impressionText ?? '',
-  createdAt: payload.created_at ?? existing?.createdAt ?? new Date().toISOString(),
-  updatedAt: payload.updated_at ?? existing?.updatedAt ?? new Date().toISOString(),
-  approvedAt: payload.approved_at ?? undefined,
-  approvedBy: payload.approved_by ?? undefined,
-  qaStatus: isQaStatus(payload.qa_status) ? payload.qa_status : existing?.qaStatus ?? 'pending',
-  qaWarnings: payload.qa_warnings ?? existing?.qaWarnings ?? [],
-  inferenceStatus: payload.inference_status ?? existing?.inferenceStatus,
-  inferenceSummary: payload.inference_summary ?? existing?.inferenceSummary,
-  inferenceConfidence: payload.inference_confidence ?? existing?.inferenceConfidence,
-  inferenceModelVersion: payload.inference_model_version ?? existing?.inferenceModelVersion,
-  inferenceJobId: payload.inference_job_id ?? existing?.inferenceJobId,
-  inferenceCompletedAt: payload.inference_completed_at ?? existing?.inferenceCompletedAt,
-  aiStatus: existing?.aiStatus,
-});
 
 const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
 

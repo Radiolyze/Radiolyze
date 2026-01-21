@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { QueueItem, Report, Series, Study } from '@/types/radiology';
 import { orthancClient } from '@/services/orthancClient';
+import { ApiError } from '@/services/apiClient';
+import { reportClient } from '@/services/reportClient';
+import { mapReportResponse } from '@/services/reportMapping';
 import type { DicomJsonRecord } from '@/services/dicomWebMapping';
 import { mapSeriesRecordToSeries, mapStudyRecordToPatient, mapStudyRecordToStudy } from '@/services/dicomWebMapping';
 import { mockQueueItems } from '@/data/mockData';
+
+const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
 
 const buildReport = (study: Study): Report => {
   const now = new Date().toISOString();
@@ -53,6 +58,41 @@ const buildFallbackStudy = (studyId: string, patientId: string): Study => ({
   referringPhysician: 'Unbekannt',
   series: [],
 });
+
+const resolveReport = async (study: Study, patientId: string): Promise<Report> => {
+  const reportId = `report-${study.id}`;
+
+  try {
+    const response = await reportClient.getReport(reportId);
+    return mapReportResponse(response);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      try {
+        const response = await reportClient.createReport({
+          reportId,
+          studyId: study.id,
+          patientId,
+          status: 'pending',
+          findingsText: '',
+          impressionText: '',
+        });
+        return mapReportResponse(response);
+      } catch (createError) {
+        if (allowMockFallback) {
+          console.warn('Report create failed, using local report fallback.', createError);
+          return buildReport(study);
+        }
+        throw createError;
+      }
+    }
+
+    if (allowMockFallback) {
+      console.warn('Report fetch failed, using local report fallback.', error);
+      return buildReport(study);
+    }
+    throw error;
+  }
+};
 
 export function useDicomWebQueue() {
   const [items, setItems] = useState<QueueItem[]>([]);
@@ -106,12 +146,15 @@ export function useDicomWebQueue() {
 
         const queueItems = await Promise.all(
           parsedStudies.map(async ({ study, patient }) => {
-            const series = await resolveSeries(study.id);
+            const [series, report] = await Promise.all([
+              resolveSeries(study.id),
+              resolveReport(study, patient.id),
+            ]);
             return {
               id: `queue-${study.id}`,
               patient,
               study: { ...study, series },
-              report: buildReport(study),
+              report,
               priority: 'normal' as const,
             };
           })
