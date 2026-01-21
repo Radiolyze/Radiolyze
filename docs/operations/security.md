@@ -22,3 +22,8 @@
 
 - API Rate Limits fuer Uploads
 - DoS Schutz via NGINX/Ingress
+
+## Internetnutzung
+
+Siehe [Internetnutzung Strategie](internet-usage.md) fuer
+Egress-Policy, Modell-Updates und Audit.

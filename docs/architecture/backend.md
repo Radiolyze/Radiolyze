@@ -38,6 +38,12 @@ Der Orchestrator steuert:
 - **MedGemma** fuer multimodale Bildanalyse
 - Optional: LLM fuer Impression (Mistral/Llama)
 
+### Geplante Anbindung (Inference Engine)
+
+- vLLM v1.x als GPU Worker mit OpenAI-kompatibler API
+- Multimodal Requests via `/v1/chat/completions` (Text + Bild)
+- Modellname/Version werden im Audit Log persistiert
+
 ## Datenhaltung
 
 - PostgreSQL fuer Reports, Audit Events und Inference Jobs

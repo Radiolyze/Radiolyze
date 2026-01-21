@@ -13,6 +13,7 @@
 - Inference Latency
 - QA Pass/Fail Ratio
 - Report Throughput
+- vLLM: request_duration_seconds, queue_length, gpu_memory_utilization
 
 ## Tracing
 

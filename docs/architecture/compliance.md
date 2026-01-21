@@ -32,3 +32,4 @@ Relevante Artikel:
 - [Compliance Checklist](../compliance/checklist.md)
 - [Audit Logging](../compliance/audit-logging.md)
 - [EU AI Act Mapping](../compliance/eu-ai-act-mapping.md)
+- [Internetnutzung Strategie](../operations/internet-usage.md)
