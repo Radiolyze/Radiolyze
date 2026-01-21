@@ -8,7 +8,7 @@ import {
   WindowLevelTool,
   ZoomTool,
 } from '@cornerstonejs/tools';
-import * as dicomImageLoader from '@cornerstonejs/dicom-image-loader';
+import { init as dicomImageLoaderInit } from '@cornerstonejs/dicom-image-loader';
 
 let initialized = false;
 
@@ -34,7 +34,7 @@ export const initCornerstone = () => {
       ? Math.max(1, Math.floor(navigator.hardwareConcurrency / 2))
       : 1;
 
-  dicomImageLoader.init({ maxWebWorkers });
+  dicomImageLoaderInit({ maxWebWorkers });
   initCornerstoneTools();
 
   addTool(PanTool);
