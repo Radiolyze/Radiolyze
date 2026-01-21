@@ -58,6 +58,12 @@ export function RightPanel({
           findings={findings}
           qaStatus={report.qaStatus}
           qaWarnings={report.qaWarnings}
+          inferenceStatus={report.inferenceStatus}
+          inferenceSummary={report.inferenceSummary}
+          inferenceConfidence={report.inferenceConfidence}
+          inferenceModelVersion={report.inferenceModelVersion}
+          inferenceJobId={report.inferenceJobId}
+          inferenceCompletedAt={report.inferenceCompletedAt}
           onImpressionChange={onImpressionChange}
           onGenerateImpression={onGenerateImpression}
           onApprove={onApprove}

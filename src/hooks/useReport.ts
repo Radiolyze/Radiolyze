@@ -79,6 +79,26 @@ const extractInferenceSummary = (result?: Record<string, unknown> | null) => {
   return '';
 };
 
+const extractInferenceConfidence = (result?: Record<string, unknown> | null) => {
+  if (!result) return undefined;
+  if (typeof result.confidence === 'number') return result.confidence;
+  return undefined;
+};
+
+const extractInferenceModel = (result?: Record<string, unknown> | null) => {
+  if (!result) return undefined;
+  if (typeof result.model_version === 'string') return result.model_version;
+  if (typeof result.model === 'string') return result.model;
+  return undefined;
+};
+
+const extractInferenceCompletedAt = (result?: Record<string, unknown> | null) => {
+  if (!result) return undefined;
+  if (typeof result.completed_at === 'string') return result.completed_at;
+  if (typeof result.completedAt === 'string') return result.completedAt;
+  return undefined;
+};
+
 const mapJobStatusToAiStatus = (status?: string): AIStatus | null => {
   if (!status) return null;
   if (status === 'queued' || status === 'deferred' || status === 'scheduled') return 'queued';
@@ -193,23 +213,43 @@ export function useReport(initialReport?: Report): UseReportReturn {
         throw new Error('Inference queue missing job id');
       }
 
+      setReport(prev => prev ? {
+        ...prev,
+        inferenceJobId: jobId,
+        inferenceStatus: queueResponse.status ?? 'queued',
+        inferenceModelVersion: queueResponse.model_version ?? queueResponse.modelVersion ?? modelVersion,
+      } : null);
+
       const result = await pollInferenceResult(jobId, onStatus);
       const summary = extractInferenceSummary(result);
       if (!summary) {
         throw new Error('Inference result missing summary');
       }
 
+      const confidence = extractInferenceConfidence(result);
+      const inferredModel = extractInferenceModel(result);
+      const completedAt = extractInferenceCompletedAt(result);
+
       setReport(prev => prev ? {
         ...prev,
         impressionText: summary,
         updatedAt: new Date().toISOString(),
         status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
+        inferenceStatus: 'finished',
+        inferenceSummary: summary,
+        inferenceConfidence: confidence,
+        inferenceModelVersion: inferredModel ?? prev.inferenceModelVersion ?? modelVersion,
+        inferenceCompletedAt: completedAt,
       } : null);
 
       succeeded = true;
       return summary;
     } catch (error) {
       console.warn('Inference queue failed, falling back to impression service.', error);
+      setReport(prev => prev ? {
+        ...prev,
+        inferenceStatus: 'failed',
+      } : null);
       onStatus?.('processing');
 
       try {
