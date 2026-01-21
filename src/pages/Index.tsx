@@ -50,6 +50,15 @@ const Index = () => {
     setAiStatus('idle');
   }, [report?.id]);
 
+  useEffect(() => {
+    if (!report?.id) return;
+    auditLogger.logEvent({
+      eventType: 'report_opened',
+      reportId: report.id,
+      studyId: report.studyId,
+    });
+  }, [report?.id, report?.studyId]);
+
   // Initialize selection when queue items load
   useEffect(() => {
     if (enhancedQueueItems.length === 0) {

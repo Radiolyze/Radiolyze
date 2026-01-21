@@ -3,10 +3,11 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from .audit import add_audit_event
 from .db import SessionLocal
 from .inference_clients import generate_inference_summary_text
 from .mock_logic import utc_now
-from .models import AuditEvent, InferenceJob, Report
+from .models import InferenceJob, Report
 from .ws_events import publish_report_status
 
 
@@ -22,28 +23,6 @@ def _build_image_metadata(image_urls: list[str] | None, image_paths: list[str] |
     if normalized_paths:
         sources.append("path")
     return {"image_count": count, "image_sources": sources}
-
-
-def _create_audit_event(
-    db,
-    *,
-    event_type: str,
-    actor_id: str | None,
-    report_id: str | None,
-    study_id: str | None,
-    metadata: dict[str, Any] | None,
-) -> None:
-    event = AuditEvent(
-        id=str(uuid.uuid4()),
-        event_type=event_type,
-        actor_id=actor_id,
-        report_id=report_id,
-        study_id=study_id,
-        timestamp=utc_now(),
-        metadata_json=metadata,
-    )
-    db.add(event)
-    db.commit()
 
 
 def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
@@ -84,7 +63,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
 
         publish_report_status(report_id, {"aiStatus": "processing"})
 
-        _create_audit_event(
+        add_audit_event(
             db,
             event_type="inference_started",
             actor_id=requested_by,
@@ -97,7 +76,9 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "input_hash": input_hash,
                 **image_metadata,
             },
+            source="worker",
         )
+        db.commit()
 
         summary, confidence, resolved_model, metadata = generate_inference_summary_text(
             findings_text,
@@ -121,7 +102,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         }
         db.commit()
 
-        _create_audit_event(
+        add_audit_event(
             db,
             event_type="inference_completed",
             actor_id=requested_by,
@@ -138,7 +119,9 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 **(metadata or {}),
                 **image_metadata,
             },
+            source="worker",
         )
+        db.commit()
 
         if report_id:
             report = db.get(Report, report_id)
@@ -168,7 +151,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
 
         publish_report_status(report_id, {"aiStatus": "error"})
 
-        _create_audit_event(
+        add_audit_event(
             db,
             event_type="inference_failed",
             actor_id=requested_by,
@@ -182,7 +165,9 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "error": str(exc),
                 **image_metadata,
             },
+            source="worker",
         )
+        db.commit()
         raise
     finally:
         db.close()
