@@ -15,7 +15,12 @@ import { reportClient } from '@/services/reportClient';
 import { formatDate } from '@/data/mockData';
 
 const Index = () => {
-  const { items: queueItems, isLoading: isQueueLoading, error: queueError } = useDicomWebQueue();
+  const { items: queueItemsRaw, isLoading: isQueueLoading, error: queueError } = useDicomWebQueue();
+  // Defensive: when DICOMweb requests fail, ensure we never call .map on non-arrays.
+  const queueItems = useMemo(
+    () => (Array.isArray(queueItemsRaw) ? queueItemsRaw : []),
+    [queueItemsRaw]
+  );
   
   // WebSocket live status sync
   const { isConnected: wsConnected, getEnhancedItems, getReportStatus } = useReportStatusSync(queueItems);
@@ -171,9 +176,14 @@ const Index = () => {
   });
 
   const {
-    priorStudies,
+    priorStudies: priorStudiesRaw,
     error: priorStudiesError,
   } = usePriorStudies(selectedQueueItem?.patient.id, selectedQueueItem?.study.id);
+
+  const priorStudies = useMemo(
+    () => (Array.isArray(priorStudiesRaw) ? priorStudiesRaw : []),
+    [priorStudiesRaw]
+  );
 
   useEffect(() => {
     if (priorStudiesError) {

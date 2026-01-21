@@ -43,6 +43,7 @@ export function useReportStatusSync(initialItems: QueueItem[] = []) {
 
   // Merge live status with queue items
   const getEnhancedItems = useCallback((items: QueueItem[]): QueueItem[] => {
+    if (!Array.isArray(items)) return [];
     return items.map(item => {
       const liveStatus = statusMap[item.report.id];
       if (!liveStatus) return item;
