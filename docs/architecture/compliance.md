@@ -26,6 +26,7 @@ Relevante Artikel:
 - Technische Doku (Architektur, Model Cards, Tests)
 - Audit Log Export (JSON)
 - Sicherheitskonzept (TLS, Auth, RBAC)
+- Annex IV Template (docs/compliance/annex-iv.md)
 
 ## Weitere Dokumente
 

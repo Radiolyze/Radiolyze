@@ -47,6 +47,7 @@ nav:
       - Checklist: compliance/checklist.md
       - Audit Logging: compliance/audit-logging.md
       - EU AI Act Mapping: compliance/eu-ai-act-mapping.md
+      - Annex IV: compliance/annex-iv.md
   - Betrieb:
       - Runbook: operations/runbook.md
       - Security: operations/security.md
