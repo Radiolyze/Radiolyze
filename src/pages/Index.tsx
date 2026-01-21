@@ -25,7 +25,7 @@ const Index = () => {
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
 
   // Report state
-  const { report, setReport, qaChecks, generateImpression, runQAChecks } = useReport();
+  const { report, setReport, qaChecks, generateImpression, runQAChecks, approveReport } = useReport();
   const [findings, setFindings] = useState('');
   const [impression, setImpression] = useState('');
   const [aiStatus, setAiStatus] = useState<AIStatus>('idle');
@@ -111,15 +111,16 @@ const Index = () => {
 
   const handleApprove = useCallback(async (signature?: string) => {
     const name = signature?.trim();
-    toast.success(`Report freigegeben${name ? ` (${name})` : ''}`);
-    await auditLogger.logEvent({
-      eventType: 'report_approved',
-      actorId: name,
-      reportId: report?.id,
-      studyId: report?.studyId,
-      metadata: { signature: name },
-    });
-  }, [report?.id, report?.studyId]);
+    if (!name) return;
+
+    try {
+      await approveReport(name);
+      toast.success(`Report freigegeben (${name})`);
+    } catch (error) {
+      console.warn('Report finalize failed', error);
+      toast.error('Report-Freigabe fehlgeschlagen');
+    }
+  }, [approveReport]);
 
   const handleSaveFindings = useCallback(async () => {
     toast.success('Befund gespeichert');

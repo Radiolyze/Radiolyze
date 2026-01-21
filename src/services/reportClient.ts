@@ -1,4 +1,7 @@
+import { apiClient } from './apiClient';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+const REPORTS_ENDPOINT = import.meta.env.VITE_REPORTS_URL ?? '/api/v1/reports';
 const SR_EXPORT_ENDPOINT = import.meta.env.VITE_SR_EXPORT_URL ?? '/api/v1/reports';
 
 const buildUrl = (path: string) => new URL(path, API_BASE_URL || window.location.origin).toString();
@@ -17,12 +20,39 @@ export interface SrExportResult {
   contentType: string;
 }
 
+export interface ReportResponsePayload {
+  id: string;
+  study_id: string;
+  patient_id: string;
+  status: string;
+  findings_text: string;
+  impression_text: string;
+  created_at: string;
+  updated_at: string;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  qa_status: string;
+  qa_warnings: string[];
+  inference_status?: string | null;
+  inference_summary?: string | null;
+  inference_confidence?: number | null;
+  inference_model_version?: string | null;
+  inference_job_id?: string | null;
+  inference_completed_at?: string | null;
+}
+
 export const reportClient = {
+  async finalizeReport(reportId: string, signature?: string): Promise<ReportResponsePayload> {
+    return apiClient.post<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}/finalize`, {
+      approvedBy: signature,
+      signature,
+    });
+  },
   async exportStructuredReport(reportId: string, format: SrExportFormat = 'dicom'): Promise<SrExportResult> {
     const response = await fetch(
       buildUrl(`${SR_EXPORT_ENDPOINT}/${reportId}/export-sr?format=${format}`),
       {
-      method: 'GET',
+        method: 'GET',
       }
     );
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -29,15 +29,16 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { auditClient, type AuditEventResponse } from '@/services/auditClient';
 
 // Extended audit event type for display
 interface AuditLogEntry {
   id: string;
   eventType: AuditEventType;
-  actorId: string;
+  actorId?: string;
   actorName: string;
-  reportId: string;
-  studyId: string;
+  reportId?: string;
+  studyId?: string;
   patientName: string;
   accessionNumber: string;
   timestamp: string;
@@ -53,11 +54,13 @@ type AuditEventType =
   | 'qa_check_run'
   | 'report_approved'
   | 'report_amended'
-  | 'report_exported';
+  | 'report_exported'
+  | 'inference_queued'
+  | 'other';
 
-const eventTypeConfig: Record<AuditEventType, { 
-  icon: typeof FileText; 
-  label: string; 
+const eventTypeConfig: Record<AuditEventType, {
+  icon: typeof FileText;
+  label: string;
   color: string;
   bgColor: string;
 }> = {
@@ -70,128 +73,83 @@ const eventTypeConfig: Record<AuditEventType, {
   report_approved: { icon: CheckCircle, label: 'Report freigegeben', color: 'text-success', bgColor: 'bg-success/10' },
   report_amended: { icon: Edit3, label: 'Report korrigiert', color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
   report_exported: { icon: Download, label: 'Report exportiert', color: 'text-muted-foreground', bgColor: 'bg-muted' },
+  inference_queued: { icon: Sparkles, label: 'KI in Queue', color: 'text-info', bgColor: 'bg-info/10' },
+  other: { icon: FileText, label: 'Ereignis', color: 'text-muted-foreground', bgColor: 'bg-muted' },
 };
 
-// Mock audit log data
-const mockAuditLog: AuditLogEntry[] = [
-  {
-    id: '1',
-    eventType: 'report_approved',
-    actorId: 'dr-mueller',
-    actorName: 'Dr. Müller',
-    reportId: 'RPT-2024-001',
-    studyId: 'STU-2024-001',
-    patientName: 'Schmidt, Hans',
-    accessionNumber: 'ACC-12345',
-    timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 min ago
-    metadata: { signature: 'Dr. med. Müller' },
-  },
-  {
-    id: '2',
-    eventType: 'impression_generated',
-    actorId: 'system',
-    actorName: 'MedGemma AI',
-    reportId: 'RPT-2024-001',
-    studyId: 'STU-2024-001',
-    patientName: 'Schmidt, Hans',
-    accessionNumber: 'ACC-12345',
-    timestamp: new Date(Date.now() - 1000 * 60 * 8).toISOString(), // 8 min ago
-    metadata: { model: 'medgemma-v2', confidence: 0.94 },
-  },
-  {
-    id: '3',
-    eventType: 'qa_check_run',
-    actorId: 'system',
-    actorName: 'QA System',
-    reportId: 'RPT-2024-001',
-    studyId: 'STU-2024-001',
-    patientName: 'Schmidt, Hans',
-    accessionNumber: 'ACC-12345',
-    timestamp: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
-    metadata: { status: 'pass', checks: 5 },
-  },
-  {
-    id: '4',
-    eventType: 'findings_saved',
-    actorId: 'dr-mueller',
-    actorName: 'Dr. Müller',
-    reportId: 'RPT-2024-001',
-    studyId: 'STU-2024-001',
-    patientName: 'Schmidt, Hans',
-    accessionNumber: 'ACC-12345',
-    timestamp: new Date(Date.now() - 1000 * 60 * 10).toISOString(), // 10 min ago
-  },
-  {
-    id: '5',
-    eventType: 'asr_transcription',
-    actorId: 'dr-mueller',
-    actorName: 'Dr. Müller',
-    reportId: 'RPT-2024-001',
-    studyId: 'STU-2024-001',
-    patientName: 'Schmidt, Hans',
-    accessionNumber: 'ACC-12345',
-    timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    metadata: { duration: '2:34', confidence: 0.97 },
-  },
-  {
-    id: '6',
-    eventType: 'report_opened',
-    actorId: 'dr-mueller',
-    actorName: 'Dr. Müller',
-    reportId: 'RPT-2024-001',
-    studyId: 'STU-2024-001',
-    patientName: 'Schmidt, Hans',
-    accessionNumber: 'ACC-12345',
-    timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-  },
-  {
-    id: '7',
-    eventType: 'report_approved',
-    actorId: 'dr-bauer',
-    actorName: 'Dr. Bauer',
-    reportId: 'RPT-2024-002',
-    studyId: 'STU-2024-002',
-    patientName: 'Weber, Maria',
-    accessionNumber: 'ACC-12346',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
-    metadata: { signature: 'Dr. med. Bauer' },
-  },
-  {
-    id: '8',
-    eventType: 'report_amended',
-    actorId: 'dr-bauer',
-    actorName: 'Dr. Bauer',
-    reportId: 'RPT-2024-003',
-    studyId: 'STU-2024-003',
-    patientName: 'Fischer, Peter',
-    accessionNumber: 'ACC-12347',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
-    metadata: { reason: 'Nachtrag Messwert' },
-  },
-  {
-    id: '9',
-    eventType: 'report_created',
-    actorId: 'system',
-    actorName: 'System',
-    reportId: 'RPT-2024-004',
-    studyId: 'STU-2024-004',
-    patientName: 'Hoffmann, Klaus',
-    accessionNumber: 'ACC-12348',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-  },
-  {
-    id: '10',
-    eventType: 'report_exported',
-    actorId: 'dr-mueller',
-    actorName: 'Dr. Müller',
-    reportId: 'RPT-2024-005',
-    studyId: 'STU-2024-005',
-    patientName: 'Schneider, Anna',
-    accessionNumber: 'ACC-12349',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3 hours ago
-    metadata: { format: 'PDF' },
-  },
-];
+const knownEventTypes = new Set<AuditEventType>([
+  'report_created',
+  'report_opened',
+  'findings_saved',
+  'impression_generated',
+  'asr_transcription',
+  'qa_check_run',
+  'report_approved',
+  'report_amended',
+  'report_exported',
+  'inference_queued',
+]);
+
+const resolveEventType = (eventType: string): AuditEventType =>
+  knownEventTypes.has(eventType as AuditEventType) ? (eventType as AuditEventType) : 'other';
+
+const getMetadataRecord = (metadata?: Record<string, unknown> | null) =>
+  metadata && typeof metadata === 'object' ? metadata : {};
+
+const getMetadataString = (metadata: Record<string, unknown>, key: string) => {
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : '';
+};
+
+const buildFallbackLabel = (label: string, id?: string | null) =>
+  id ? `${label} ${id.slice(0, 8)}...` : '';
+
+const resolveActorName = (event: AuditEventResponse) => {
+  const metadata = getMetadataRecord(event.metadata);
+  return (
+    getMetadataString(metadata, 'actor_name') ||
+    getMetadataString(metadata, 'signature') ||
+    getMetadataString(metadata, 'approved_by') ||
+    event.actor_id ||
+    'System'
+  );
+};
+
+const resolvePatientName = (event: AuditEventResponse) => {
+  const metadata = getMetadataRecord(event.metadata);
+  const patientName = getMetadataString(metadata, 'patient_name');
+  if (patientName) return patientName;
+
+  const studyFallback = buildFallbackLabel('Studie', event.study_id);
+  if (studyFallback) return studyFallback;
+
+  const reportFallback = buildFallbackLabel('Report', event.report_id);
+  if (reportFallback) return reportFallback;
+
+  return 'Unbekannt';
+};
+
+const resolveAccessionNumber = (event: AuditEventResponse) => {
+  const metadata = getMetadataRecord(event.metadata);
+  const accession = getMetadataString(metadata, 'accession_number');
+  if (accession) return accession;
+  if (event.study_id) return event.study_id.slice(0, 12);
+  if (event.report_id) return event.report_id.slice(0, 12);
+  return '—';
+};
+
+const mapAuditEventToEntry = (event: AuditEventResponse): AuditLogEntry => ({
+  id: event.id,
+  eventType: resolveEventType(event.event_type),
+  actorId: event.actor_id ?? undefined,
+  actorName: resolveActorName(event),
+  reportId: event.report_id ?? undefined,
+  studyId: event.study_id ?? undefined,
+  patientName: resolvePatientName(event),
+  accessionNumber: resolveAccessionNumber(event),
+  timestamp: event.timestamp,
+  metadata: event.metadata ?? undefined,
+});
 
 function formatRelativeTime(timestamp: string): string {
   const now = new Date();
@@ -250,24 +208,60 @@ export default function History() {
   const [searchQuery, setSearchQuery] = useState('');
   const [eventFilter, setEventFilter] = useState<string>('all');
   const [actorFilter, setActorFilter] = useState<string>('all');
+  const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadAuditLog = async () => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const response = await auditClient.listEvents();
+        if (!isActive) return;
+        setAuditEntries(response.map(mapAuditEventToEntry));
+      } catch (error) {
+        console.warn('Failed to load audit log', error);
+        if (isActive) {
+          setErrorMessage('Audit Log konnte nicht geladen werden.');
+          setAuditEntries([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadAuditLog();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   // Get unique actors for filter
   const uniqueActors = useMemo(() => {
-    const actors = new Set(mockAuditLog.map((e) => e.actorName));
+    const actors = new Set(auditEntries.map((e) => e.actorName).filter(Boolean));
     return Array.from(actors);
-  }, []);
+  }, [auditEntries]);
 
   // Filter entries
   const filteredEntries = useMemo(() => {
-    return mockAuditLog.filter((entry) => {
+    return auditEntries.filter((entry) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchesSearch =
-          entry.patientName.toLowerCase().includes(query) ||
-          entry.accessionNumber.toLowerCase().includes(query) ||
-          entry.reportId.toLowerCase().includes(query) ||
-          entry.actorName.toLowerCase().includes(query);
+        const fields = [
+          entry.patientName,
+          entry.accessionNumber,
+          entry.reportId ?? '',
+          entry.studyId ?? '',
+          entry.actorName,
+          entry.actorId ?? '',
+        ];
+        const matchesSearch = fields.some((value) => value.toLowerCase().includes(query));
         if (!matchesSearch) return false;
       }
 
@@ -283,19 +277,20 @@ export default function History() {
 
       return true;
     });
-  }, [searchQuery, eventFilter, actorFilter]);
+  }, [auditEntries, searchQuery, eventFilter, actorFilter]);
 
   // Group by date
   const groupedEntries = useMemo(() => groupByDate(filteredEntries), [filteredEntries]);
 
   // Stats
-  const todayCount = mockAuditLog.filter((e) => {
+  const todayCount = auditEntries.filter((e) => {
     const date = new Date(e.timestamp);
     const today = new Date();
     return date.toDateString() === today.toDateString();
   }).length;
 
-  const approvedCount = mockAuditLog.filter((e) => e.eventType === 'report_approved').length;
+  const approvedCount = auditEntries.filter((e) => e.eventType === 'report_approved').length;
+  const impressionCount = auditEntries.filter((e) => e.eventType === 'impression_generated').length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -350,7 +345,7 @@ export default function History() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {mockAuditLog.filter((e) => e.eventType === 'impression_generated').length}
+                    {impressionCount}
                   </p>
                   <p className="text-sm text-muted-foreground">KI-Beurteilungen</p>
                 </div>
@@ -424,92 +419,107 @@ export default function History() {
           <CardContent className="p-0">
             <ScrollArea className="h-[600px]">
               <div className="p-6 pt-0">
-                {Array.from(groupedEntries.entries()).map(([dateLabel, entries], groupIndex) => (
-                  <div key={dateLabel} className="mb-6">
-                    {/* Date Header */}
-                    <div className="sticky top-0 bg-card z-10 py-2 mb-3">
-                      <h3 className="text-sm font-semibold text-muted-foreground">{dateLabel}</h3>
-                      <Separator className="mt-2" />
-                    </div>
-
-                    {/* Timeline Items */}
-                    <div className="relative pl-8">
-                      {/* Timeline Line */}
-                      <div className="absolute left-3 top-0 bottom-0 w-px bg-border" />
-
-                      {entries.map((entry, index) => {
-                        const config = eventTypeConfig[entry.eventType];
-                        const Icon = config.icon;
-
-                        return (
-                          <div
-                            key={entry.id}
-                            className="relative mb-4 last:mb-0"
-                          >
-                            {/* Timeline Dot */}
-                            <div
-                              className={cn(
-                                'absolute -left-5 w-6 h-6 rounded-full flex items-center justify-center',
-                                config.bgColor
-                              )}
-                            >
-                              <Icon className={cn('h-3 w-3', config.color)} />
-                            </div>
-
-                            {/* Content */}
-                            <div className="bg-accent/30 rounded-lg p-4 hover:bg-accent/50 transition-colors">
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={cn('font-medium', config.color)}>
-                                      {config.label}
-                                    </span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {entry.accessionNumber}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm text-foreground">
-                                    {entry.patientName}
-                                  </p>
-                                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                                    <span className="flex items-center gap-1">
-                                      <User className="h-3 w-3" />
-                                      {entry.actorName}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
-                                      {formatRelativeTime(entry.timestamp)}
-                                    </span>
-                                  </div>
-                                  {entry.metadata && Object.keys(entry.metadata).length > 0 && (
-                                    <div className="mt-2 text-xs text-muted-foreground bg-background/50 rounded px-2 py-1">
-                                      {Object.entries(entry.metadata).map(([key, value]) => (
-                                        <span key={key} className="mr-3">
-                                          <span className="font-medium">{key}:</span>{' '}
-                                          {String(value)}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                  {formatFullDateTime(entry.timestamp)}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-
-                {filteredEntries.length === 0 && (
+                {isLoading ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>Keine Ereignisse gefunden</p>
-                    <p className="text-sm mt-1">Passen Sie die Filter an</p>
+                    <p>Audit Log wird geladen</p>
+                    <p className="text-sm mt-1">Bitte warten...</p>
                   </div>
+                ) : errorMessage ? (
+                  <div className="text-center py-12 text-destructive">
+                    <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-70" />
+                    <p>{errorMessage}</p>
+                  </div>
+                ) : (
+                  <>
+                    {Array.from(groupedEntries.entries()).map(([dateLabel, entries]) => (
+                      <div key={dateLabel} className="mb-6">
+                        {/* Date Header */}
+                        <div className="sticky top-0 bg-card z-10 py-2 mb-3">
+                          <h3 className="text-sm font-semibold text-muted-foreground">{dateLabel}</h3>
+                          <Separator className="mt-2" />
+                        </div>
+
+                        {/* Timeline Items */}
+                        <div className="relative pl-8">
+                          {/* Timeline Line */}
+                          <div className="absolute left-3 top-0 bottom-0 w-px bg-border" />
+
+                          {entries.map((entry) => {
+                            const config = eventTypeConfig[entry.eventType];
+                            const Icon = config.icon;
+
+                            return (
+                              <div
+                                key={entry.id}
+                                className="relative mb-4 last:mb-0"
+                              >
+                                {/* Timeline Dot */}
+                                <div
+                                  className={cn(
+                                    'absolute -left-5 w-6 h-6 rounded-full flex items-center justify-center',
+                                    config.bgColor
+                                  )}
+                                >
+                                  <Icon className={cn('h-3 w-3', config.color)} />
+                                </div>
+
+                                {/* Content */}
+                                <div className="bg-accent/30 rounded-lg p-4 hover:bg-accent/50 transition-colors">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className={cn('font-medium', config.color)}>
+                                          {config.label}
+                                        </span>
+                                        <Badge variant="outline" className="text-xs">
+                                          {entry.accessionNumber}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-sm text-foreground">
+                                        {entry.patientName}
+                                      </p>
+                                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                                        <span className="flex items-center gap-1">
+                                          <User className="h-3 w-3" />
+                                          {entry.actorName}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          <Clock className="h-3 w-3" />
+                                          {formatRelativeTime(entry.timestamp)}
+                                        </span>
+                                      </div>
+                                      {entry.metadata && Object.keys(entry.metadata).length > 0 && (
+                                        <div className="mt-2 text-xs text-muted-foreground bg-background/50 rounded px-2 py-1">
+                                          {Object.entries(entry.metadata).map(([key, value]) => (
+                                            <span key={key} className="mr-3">
+                                              <span className="font-medium">{key}:</span>{' '}
+                                              {String(value)}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                      {formatFullDateTime(entry.timestamp)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+
+                    {filteredEntries.length === 0 && (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                        <p>Keine Ereignisse gefunden</p>
+                        <p className="text-sm mt-1">Passen Sie die Filter an</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </ScrollArea>
