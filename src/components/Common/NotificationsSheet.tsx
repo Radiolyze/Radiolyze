@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -9,57 +9,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, FileText, AlertTriangle, CheckCircle, Clock, Trash2 } from 'lucide-react';
+import { Bell, FileText, AlertTriangle, CheckCircle, Clock, RefreshCw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface Notification {
-  id: string;
-  type: 'report' | 'urgent' | 'system' | 'success';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-}
+import type { Notification } from '@/hooks/useNotifications';
 
 interface NotificationsSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  notifications: Notification[];
+  unreadCount: number;
+  isLoading?: boolean;
+  errorMessage?: string | null;
+  onRefresh?: () => void;
+  onMarkAsRead: (id: string) => void;
+  onMarkAllAsRead: () => void;
+  onClearAll: () => void;
 }
-
-const mockNotifications: Notification[] = [
-  {
-    id: 'n1',
-    type: 'urgent',
-    title: 'Dringender Report',
-    message: 'MRT Schädel für Müller, Anna wartet auf Befundung.',
-    time: 'vor 5 Min.',
-    read: false,
-  },
-  {
-    id: 'n2',
-    type: 'report',
-    title: 'Neuer Report in Queue',
-    message: 'CT Thorax mit KM wurde der Warteschlange hinzugefügt.',
-    time: 'vor 15 Min.',
-    read: false,
-  },
-  {
-    id: 'n3',
-    type: 'success',
-    title: 'Report freigegeben',
-    message: 'Röntgen Thorax für Weber, Klaus wurde erfolgreich freigegeben.',
-    time: 'vor 1 Std.',
-    read: true,
-  },
-  {
-    id: 'n4',
-    type: 'system',
-    title: 'System-Update',
-    message: 'MedGemma v2.1.0 wurde installiert. Neue QA-Checks verfügbar.',
-    time: 'vor 2 Std.',
-    read: true,
-  },
-];
 
 const typeConfig = {
   report: { icon: FileText, color: 'text-primary' },
@@ -68,24 +33,23 @@ const typeConfig = {
   success: { icon: CheckCircle, color: 'text-success' },
 };
 
-export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetProps) {
-  const [notifications, setNotifications] = useState(mockNotifications);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-  };
+export function NotificationsSheet({
+  open,
+  onOpenChange,
+  notifications,
+  unreadCount,
+  isLoading = false,
+  errorMessage,
+  onRefresh,
+  onMarkAsRead,
+  onMarkAllAsRead,
+  onClearAll,
+}: NotificationsSheetProps) {
+  useEffect(() => {
+    if (open) {
+      onRefresh?.();
+    }
+  }, [open, onRefresh]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -111,7 +75,7 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={markAllAsRead}
+                onClick={onMarkAllAsRead}
                 disabled={unreadCount === 0}
                 className="text-xs"
               >
@@ -120,7 +84,7 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearAll}
+                onClick={onClearAll}
                 className="text-xs text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="h-3 w-3 mr-1" />
@@ -130,6 +94,18 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
 
             <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="space-y-2 pb-4">
+                {isLoading && (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
+                    Benachrichtigungen werden geladen...
+                  </div>
+                )}
+                {errorMessage && !isLoading && (
+                  <div className="py-6 text-center text-sm text-destructive">
+                    <AlertTriangle className="h-5 w-5 mx-auto mb-2" />
+                    {errorMessage}
+                  </div>
+                )}
                 {notifications.map((notification) => {
                   const config = typeConfig[notification.type];
                   const Icon = config.icon;
@@ -137,7 +113,7 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
                   return (
                     <button
                       key={notification.id}
-                      onClick={() => markAsRead(notification.id)}
+                      onClick={() => onMarkAsRead(notification.id)}
                       className={cn(
                         'w-full text-left p-3 rounded-lg border transition-colors',
                         notification.read
@@ -172,6 +148,17 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
               </div>
             </ScrollArea>
           </>
+        ) : isLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+            <RefreshCw className="h-10 w-10 text-muted-foreground/50 mb-4 animate-spin" />
+            <p className="text-sm text-muted-foreground">Benachrichtigungen werden geladen</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Bitte warten...</p>
+          </div>
+        ) : errorMessage ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-12 text-destructive">
+            <AlertTriangle className="h-10 w-10 mb-4" />
+            <p className="text-sm">{errorMessage}</p>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
             <Bell className="h-12 w-12 text-muted-foreground/30 mb-4" />

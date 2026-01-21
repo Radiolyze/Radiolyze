@@ -705,6 +705,8 @@ def create_audit_event(payload: AuditEventRequest, db: Session = Depends(get_db)
 def list_audit_events(
     study_id: str | None = None,
     report_id: str | None = None,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[AuditEventResponse]:
     query = db.query(AuditEvent)
@@ -712,7 +714,7 @@ def list_audit_events(
         query = query.filter(AuditEvent.study_id == study_id)
     if report_id:
         query = query.filter(AuditEvent.report_id == report_id)
-    events = query.order_by(AuditEvent.timestamp.desc()).all()
+    events = query.order_by(AuditEvent.timestamp.desc()).offset(offset).limit(limit).all()
     return [serialize_audit_event(event) for event in events]
 
 

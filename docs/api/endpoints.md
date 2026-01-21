@@ -63,5 +63,5 @@
 `POST /api/v1/audit-log`
 - Audit Event schreiben (persistiert in DB)
 
-`GET /api/v1/audit-log?study_id=...`
-- Audit Log lesen (Filter `study_id`, `report_id`)
+`GET /api/v1/audit-log?study_id=...&report_id=...&limit=...&offset=...`
+- Audit Log lesen (Filter `study_id`, `report_id`), Pagination via `limit/offset`

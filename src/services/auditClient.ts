@@ -15,6 +15,8 @@ export interface AuditEventResponse {
 interface ListAuditEventsParams {
   studyId?: string;
   reportId?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export const auditClient = {
@@ -23,6 +25,8 @@ export const auditClient = {
       query: {
         study_id: params.studyId,
         report_id: params.reportId,
+        limit: params.limit,
+        offset: params.offset,
       },
     });
   },
