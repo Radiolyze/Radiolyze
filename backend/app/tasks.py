@@ -10,6 +10,20 @@ from .models import AuditEvent, InferenceJob, Report
 from .ws_events import publish_report_status
 
 
+def _build_image_metadata(image_urls: list[str] | None, image_paths: list[str] | None) -> dict[str, Any]:
+    normalized_urls = [url.strip() for url in (image_urls or []) if url and url.strip()]
+    normalized_paths = [path.strip() for path in (image_paths or []) if path and path.strip()]
+    count = len(normalized_urls) + len(normalized_paths)
+    if count == 0:
+        return {}
+    sources = []
+    if normalized_urls:
+        sources.append("url")
+    if normalized_paths:
+        sources.append("path")
+    return {"image_count": count, "image_sources": sources}
+
+
 def _create_audit_event(
     db,
     *,
@@ -36,10 +50,13 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     report_id = payload.get("report_id")
     study_id = payload.get("study_id")
     findings_text = payload.get("findings_text")
+    image_urls = payload.get("image_urls") or []
+    image_paths = payload.get("image_paths") or []
     requested_by = payload.get("requested_by") or "system"
     requested_model_version = payload.get("model_version") or "mock-medgemma-0.1"
     input_hash = payload.get("input_hash")
     job_id = payload.get("job_id")
+    image_metadata = _build_image_metadata(image_urls, image_paths)
 
     db = SessionLocal()
     try:
@@ -78,12 +95,15 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "model_version": requested_model_version,
                 "requested_model": requested_model_version,
                 "input_hash": input_hash,
+                **image_metadata,
             },
         )
 
         summary, confidence, resolved_model, metadata = generate_inference_summary_text(
             findings_text,
             model_name=requested_model_version,
+            image_urls=image_urls,
+            image_paths=image_paths,
         )
         completed_at = utc_now()
         output_summary = summary[:240]
@@ -116,6 +136,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "output_summary": output_summary,
                 "confidence": confidence,
                 **(metadata or {}),
+                **image_metadata,
             },
         )
 
@@ -159,6 +180,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "requested_model": requested_model_version,
                 "input_hash": input_hash,
                 "error": str(exc),
+                **image_metadata,
             },
         )
         raise

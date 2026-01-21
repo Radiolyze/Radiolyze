@@ -11,6 +11,12 @@
 docker compose up --build
 ```
 
+### GPU Stack (vLLM + MedASR)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile gpu up --build
+```
+
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000/api/v1/health
 - Orthanc UI: http://localhost:8042

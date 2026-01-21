@@ -21,19 +21,21 @@
 
 `POST /api/v1/reports/asr-transcript`
 - Upload von Audio (multipart/form-data: `file`, optional `report_id`)
-- Backend nutzt aktuell Mock-ASR
+- Backend nutzt MedASR wenn aktiviert, sonst Mock-ASR
 
 ## Impression
 
 `POST /api/v1/reports/generate-impression`
-- Generiert KI-Entwurf (aktuell Mock-Logik)
+- Generiert KI-Entwurf (vLLM wenn aktiviert, sonst Mock)
 - Update von `impression_text` im Report, falls `report_id` gesetzt
+- Optional: `image_urls`/`image_paths` fuer Multimodal Inputs
 
 ## Inference
 
 `POST /api/v1/inference/queue`
 - Legt einen Inference Job in der Queue an (RQ + Redis)
 - Gibt `job_id` und Status zurueck
+- Optional: `image_urls`/`image_paths` fuer Multimodal Inputs
 
 `GET /api/v1/inference/status/{job_id}`
 - Liefert Status + Ergebnis (aus DB, Fallback auf RQ Job)

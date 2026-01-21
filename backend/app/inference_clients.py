@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
 import logging
+import mimetypes
 import os
 import time
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -43,6 +46,32 @@ def _compact_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in metadata.items() if value is not None}
 
 
+def _normalize_list(values: list[str] | None) -> list[str]:
+    if not values:
+        return []
+    return [value.strip() for value in values if isinstance(value, str) and value.strip()]
+
+
+def _encode_image_path(path: str) -> str:
+    file_path = Path(path)
+    if not file_path.is_file():
+        raise RuntimeError(f"Image path not found: {path}")
+    mime_type, _ = mimetypes.guess_type(file_path.name)
+    if not mime_type:
+        mime_type = "image/jpeg"
+    encoded = base64.b64encode(file_path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def _build_multimodal_content(prompt: str, image_urls: list[str], image_paths: list[str]) -> list[dict[str, Any]]:
+    content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+    for url in image_urls:
+        content.append({"type": "image_url", "image_url": {"url": url}})
+    for path in image_paths:
+        content.append({"type": "image_url", "image_url": {"url": _encode_image_path(path)}})
+    return content
+
+
 def _vllm_base_url() -> str:
     return os.getenv("VLLM_BASE_URL", "http://vllm-medgemma:8000/v1").rstrip("/")
 
@@ -62,13 +91,28 @@ def _vllm_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {api_key}"}
 
 
-def _vllm_chat_completion(prompt: str, *, model_name: str, system_prompt: str) -> str:
+def _vllm_chat_completion(
+    prompt: str,
+    *,
+    model_name: str,
+    system_prompt: str,
+    image_urls: list[str] | None = None,
+    image_paths: list[str] | None = None,
+) -> str:
     url = f"{_vllm_base_url()}/chat/completions"
+    normalized_urls = _normalize_list(image_urls)
+    normalized_paths = _normalize_list(image_paths)
+    has_images = bool(normalized_urls or normalized_paths)
+    content: str | list[dict[str, Any]]
+    if has_images:
+        content = _build_multimodal_content(prompt, normalized_urls, normalized_paths)
+    else:
+        content = prompt
     payload = {
         "model": model_name,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": content},
         ],
         "max_tokens": _env_int("VLLM_MAX_TOKENS", 512),
         "temperature": _env_float("VLLM_TEMPERATURE", 0.1),
@@ -88,7 +132,13 @@ def _vllm_chat_completion(prompt: str, *, model_name: str, system_prompt: str) -
     return content.strip()
 
 
-def _build_impression_prompt(findings_text: str) -> str:
+def _build_impression_prompt(findings_text: str | None) -> str:
+    findings_text = (findings_text or "").strip()
+    if not findings_text:
+        return os.getenv(
+            "VLLM_IMAGE_IMPRESSION_PROMPT",
+            "Analyze the provided images and draft a concise impression.",
+        )
     return (
         "Create a concise radiology impression based on these findings.\n\n"
         f"Findings:\n{findings_text}\n\n"
@@ -96,7 +146,13 @@ def _build_impression_prompt(findings_text: str) -> str:
     )
 
 
-def _build_summary_prompt(findings_text: str) -> str:
+def _build_summary_prompt(findings_text: str | None) -> str:
+    findings_text = (findings_text or "").strip()
+    if not findings_text:
+        return os.getenv(
+            "VLLM_IMAGE_SUMMARY_PROMPT",
+            "Summarize the imaging findings from the provided images.",
+        )
     return (
         "Summarize the imaging findings in one or two sentences.\n\n"
         f"Findings:\n{findings_text}\n\n"
@@ -104,9 +160,15 @@ def _build_summary_prompt(findings_text: str) -> str:
     )
 
 
-def generate_impression_text(findings_text: str | None) -> tuple[str, float, str, dict[str, Any]]:
+def generate_impression_text(
+    findings_text: str | None,
+    *,
+    image_urls: list[str] | None = None,
+    image_paths: list[str] | None = None,
+) -> tuple[str, float, str, dict[str, Any]]:
     findings_text = (findings_text or "").strip()
-    if not findings_text or not _env_flag("VLLM_ENABLED", False):
+    has_images = bool(_normalize_list(image_urls) or _normalize_list(image_paths))
+    if (not findings_text and not has_images) or not _env_flag("VLLM_ENABLED", False):
         text, confidence = generate_impression(findings_text)
         return text, confidence, "mock-impression-v1", {"provider": "mock"}
 
@@ -120,6 +182,8 @@ def generate_impression_text(findings_text: str | None) -> tuple[str, float, str
                 "VLLM_SYSTEM_PROMPT",
                 "You are a radiology assistant. Respond clearly and concisely.",
             ),
+            image_urls=image_urls,
+            image_paths=image_paths,
         )
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
@@ -132,11 +196,16 @@ def generate_impression_text(findings_text: str | None) -> tuple[str, float, str
         raise RuntimeError("vLLM impression failed") from exc
 
 
-def generate_inference_summary_text(findings_text: str | None, model_name: str | None = None) -> tuple[
-    str, float | None, str, dict[str, Any]
-]:
+def generate_inference_summary_text(
+    findings_text: str | None,
+    model_name: str | None = None,
+    *,
+    image_urls: list[str] | None = None,
+    image_paths: list[str] | None = None,
+) -> tuple[str, float | None, str, dict[str, Any]]:
     findings_text = (findings_text or "").strip()
-    if not findings_text or not _env_flag("VLLM_ENABLED", False):
+    has_images = bool(_normalize_list(image_urls) or _normalize_list(image_paths))
+    if (not findings_text and not has_images) or not _env_flag("VLLM_ENABLED", False):
         text, confidence = generate_inference_summary(findings_text)
         return text, confidence, model_name or "mock-medgemma-0.1", {"provider": "mock"}
 
@@ -150,6 +219,8 @@ def generate_inference_summary_text(findings_text: str | None, model_name: str |
                 "VLLM_SYSTEM_PROMPT",
                 "You are a radiology assistant. Respond clearly and concisely.",
             ),
+            image_urls=image_urls,
+            image_paths=image_paths,
         )
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)

@@ -62,6 +62,17 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
 }
 ```
 
+## ImpressionRequest
+
+```json
+{
+  "report_id": "r-123",
+  "findings_text": "Im CT Thorax ...",
+  "image_urls": ["https://example.local/images/series-1/frame-1.jpg"],
+  "image_paths": ["/data/images/series-1/frame-1.jpg"]
+}
+```
+
 ## ImpressionResponse
 
 ```json
@@ -101,6 +112,8 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "report_id": "r-123",
   "study_id": "st-123",
   "findings_text": "Im CT Thorax ...",
+  "image_urls": ["https://example.local/images/series-1/frame-1.jpg"],
+  "image_paths": ["/data/images/series-1/frame-1.jpg"],
   "requested_by": "system",
   "model_version": "mock-medgemma-0.1"
 }
