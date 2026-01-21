@@ -6,6 +6,7 @@ import { RightPanel } from '@/components/RightPanel/RightPanel';
 import { useReport } from '@/hooks/useReport';
 import { useDicomWebQueue } from '@/hooks/useDicomWebQueue';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useReportStatusSync } from '@/hooks/useReportStatusSync';
 import type { QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
@@ -13,6 +14,10 @@ import { mockPriorStudies, formatDate } from '@/data/mockData';
 
 const Index = () => {
   const { items: queueItems, isLoading: isQueueLoading, error: queueError } = useDicomWebQueue();
+  
+  // WebSocket live status sync
+  const { isConnected: wsConnected, getEnhancedItems, getReportStatus } = useReportStatusSync(queueItems);
+  const enhancedQueueItems = useMemo(() => getEnhancedItems(queueItems), [queueItems, getEnhancedItems]);
 
   // Current selection state
   const [selectedQueueItem, setSelectedQueueItem] = useState<QueueItem | null>(null);
@@ -25,6 +30,9 @@ const Index = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [asrStatus, setAsrStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
   const [asrConfidence, setAsrConfidence] = useState(0);
+  
+  // Apply live status updates to current report
+  const liveStatus = report ? getReportStatus(report.id) : undefined;
 
   useEffect(() => {
     if (queueError) {
@@ -34,21 +42,21 @@ const Index = () => {
 
   // Initialize selection when queue items load
   useEffect(() => {
-    if (queueItems.length === 0) {
+    if (enhancedQueueItems.length === 0) {
       return;
     }
 
     setSelectedQueueItem((prev) => {
       const nextItem = prev
-        ? queueItems.find((item) => item.id === prev.id) || queueItems[0]
-        : queueItems[0];
+        ? enhancedQueueItems.find((item) => item.id === prev.id) || enhancedQueueItems[0]
+        : enhancedQueueItems[0];
       setSelectedSeries(nextItem.study.series[0] || null);
       setReport(nextItem.report);
       setFindings(nextItem.report.findingsText);
       setImpression(nextItem.report.impressionText);
       return nextItem;
     });
-  }, [queueItems, setReport]);
+  }, [enhancedQueueItems, setReport]);
 
   // Update report when queue item changes
   const handleSelectQueueItem = useCallback((item: QueueItem) => {
@@ -134,11 +142,12 @@ const Index = () => {
               referringPhysician: '-',
               series: [],
             }}
-            queueItems={queueItems}
+            queueItems={enhancedQueueItems}
             selectedQueueItemId={null}
             selectedSeriesId={null}
             onSelectQueueItem={handleSelectQueueItem}
             onSelectSeries={handleSelectSeries}
+            wsConnected={wsConnected}
           />
         }
         viewer={<ComparisonViewer currentSeries={null} />}
@@ -181,11 +190,12 @@ const Index = () => {
         <LeftSidebar
           patient={selectedQueueItem.patient}
           study={selectedQueueItem.study}
-          queueItems={queueItems}
+          queueItems={enhancedQueueItems}
           selectedQueueItemId={selectedQueueItem.id}
           selectedSeriesId={selectedSeries?.id || null}
           onSelectQueueItem={handleSelectQueueItem}
           onSelectSeries={handleSelectSeries}
+          wsConnected={wsConnected}
         />
       }
       viewer={
@@ -194,10 +204,10 @@ const Index = () => {
           currentStudy={selectedQueueItem.study}
           priorStudies={priorStudiesForPatient}
           progress={{
-            asrStatus,
-            asrConfidence,
-            aiStatus: isGenerating ? 'generating' : 'idle',
-            qaStatus: report.qaStatus,
+            asrStatus: liveStatus?.asrStatus || asrStatus,
+            asrConfidence: liveStatus?.asrConfidence ?? asrConfidence,
+            aiStatus: liveStatus?.aiStatus || (isGenerating ? 'generating' : 'idle'),
+            qaStatus: liveStatus?.qaStatus || report.qaStatus,
           }}
         />
       }

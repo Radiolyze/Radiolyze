@@ -8,7 +8,6 @@ import {
   WindowLevelTool,
   ZoomTool,
 } from '@cornerstonejs/tools';
-import * as dicomImageLoader from '@cornerstonejs/dicom-image-loader';
 
 let initialized = false;
 
@@ -20,7 +19,7 @@ export const cornerstoneToolNames = {
   stackScroll: StackScrollTool.toolName,
 };
 
-export const initCornerstone = () => {
+export const initCornerstone = async () => {
   if (initialized) {
     return;
   }
@@ -34,7 +33,18 @@ export const initCornerstone = () => {
       ? Math.max(1, Math.floor(navigator.hardwareConcurrency / 2))
       : 1;
 
-  dicomImageLoader.init({ maxWebWorkers });
+  try {
+    // Dynamic import to avoid the star export resolution issue
+    const dicomImageLoader = await import('@cornerstonejs/dicom-image-loader');
+    if (dicomImageLoader.init) {
+      dicomImageLoader.init({ maxWebWorkers });
+    } else if (dicomImageLoader.default?.init) {
+      dicomImageLoader.default.init({ maxWebWorkers });
+    }
+  } catch (err) {
+    console.warn('[cornerstone] DICOM image loader init skipped:', err);
+  }
+
   initCornerstoneTools();
 
   addTool(PanTool);

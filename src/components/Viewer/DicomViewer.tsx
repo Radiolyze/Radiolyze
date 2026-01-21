@@ -425,7 +425,7 @@ export function DicomViewer({ series, onFrameChange, progress }: DicomViewerProp
       setLoadError(null);
 
       try {
-        initCornerstone();
+        await initCornerstone();
 
         const renderingEngine = new RenderingEngine(renderingEngineId);
         renderingEngineRef.current = renderingEngine;

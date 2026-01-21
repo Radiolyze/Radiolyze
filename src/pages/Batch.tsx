@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -19,6 +19,8 @@ import {
   TrendingUp,
   Timer,
   XCircle,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +57,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useWebSocket, ReportStatusEvent } from '@/hooks/useWebSocket';
 import type { ReportStatus, QAStatus } from '@/types/radiology';
 
 interface BatchReport {
@@ -224,10 +227,35 @@ export default function Batch() {
   const [modalityFilter, setModalityFilter] = useState<string>('all');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processProgress, setProcessProgress] = useState(0);
+  const [reports, setReports] = useState(mockBatchReports);
 
-  // Filter reports
+  // WebSocket live updates
+  const handleReportStatus = useCallback((event: ReportStatusEvent) => {
+    const { reportId, payload } = event;
+    
+    setReports(prev => prev.map(report => {
+      if (report.id !== reportId) return report;
+      return {
+        ...report,
+        qaStatus: payload.qaStatus || report.qaStatus,
+      };
+    }));
+
+    // Show toast for QA status changes
+    if (payload.qaStatus === 'fail') {
+      toast.error(`Report ${reportId.slice(0, 8)}... QA fehlgeschlagen`);
+    } else if (payload.qaStatus === 'pass') {
+      toast.success(`Report ${reportId.slice(0, 8)}... QA bestanden`);
+    }
+  }, []);
+
+  const { isConnected: wsConnected } = useWebSocket({
+    onReportStatus: handleReportStatus,
+  });
+
+  // Filter reports - use live reports state
   const filteredReports = useMemo(() => {
-    return mockBatchReports.filter((report) => {
+    return reports.filter((report) => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matches =
@@ -247,27 +275,27 @@ export default function Batch() {
 
       return true;
     });
-  }, [searchQuery, statusFilter, modalityFilter]);
+  }, [searchQuery, statusFilter, modalityFilter, reports]);
 
-  // Stats
+  // Stats - use live reports
   const stats = useMemo(() => {
-    const total = mockBatchReports.length;
-    const pending = mockBatchReports.filter((r) => r.status === 'pending').length;
-    const drafts = mockBatchReports.filter((r) => r.status === 'draft').length;
-    const approved = mockBatchReports.filter((r) => r.status === 'approved' || r.status === 'finalized').length;
-    const avgTurnaround = mockBatchReports
+    const total = reports.length;
+    const pending = reports.filter((r) => r.status === 'pending').length;
+    const drafts = reports.filter((r) => r.status === 'draft').length;
+    const approved = reports.filter((r) => r.status === 'approved' || r.status === 'finalized').length;
+    const avgTurnaround = reports
       .filter((r) => r.turnaroundMinutes)
       .reduce((acc, r) => acc + (r.turnaroundMinutes || 0), 0) / 
-      mockBatchReports.filter((r) => r.turnaroundMinutes).length || 0;
-    const qaWarnings = mockBatchReports.filter((r) => r.qaStatus === 'warn' || r.qaStatus === 'fail').length;
+      reports.filter((r) => r.turnaroundMinutes).length || 0;
+    const qaWarnings = reports.filter((r) => r.qaStatus === 'warn' || r.qaStatus === 'fail').length;
 
     return { total, pending, drafts, approved, avgTurnaround: Math.round(avgTurnaround), qaWarnings };
-  }, []);
+  }, [reports]);
 
   // Unique modalities for filter
   const modalities = useMemo(() => {
-    return Array.from(new Set(mockBatchReports.map((r) => r.modality)));
-  }, []);
+    return Array.from(new Set(reports.map((r) => r.modality)));
+  }, [reports]);
 
   // Selection handlers
   const handleSelectAll = useCallback(() => {
@@ -352,6 +380,21 @@ export default function Batch() {
           <BarChart3 className="h-3 w-3 mr-1" />
           Dashboard
         </Badge>
+        
+        {/* WebSocket connection status */}
+        <div className="ml-auto flex items-center gap-2 text-xs">
+          {wsConnected ? (
+            <>
+              <Wifi className="h-3.5 w-3.5 text-success" />
+              <span className="text-success hidden sm:inline">Live-Updates</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground hidden sm:inline">Verbinden...</span>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Content */}
