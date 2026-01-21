@@ -34,6 +34,7 @@ Der aktuelle Code enthaelt:
 - Annotation Export (JSON)
 - Docker Compose Stack (Frontend + Backend + Orthanc + Postgres)
 - Orchestrator API (FastAPI) inkl. Audit Logging und QA/Impression Endpoints
+- Inference Queue (RQ + Redis) mit persistierten Jobs und Status-Events
 
 Orthanc DICOMweb laeuft lokal mit Basic Auth, Sample-DICOM wird automatisch geladen.
-ASR/QA/Impression verwenden im Backend derzeit Mock-Logik als Platzhalter.
+ASR/QA/Impression/Inferenz verwenden im Backend derzeit Mock-Logik als Platzhalter.

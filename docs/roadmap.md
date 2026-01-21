@@ -16,7 +16,7 @@
 - [x] Orthanc DICOMweb Anbindung (QIDO-RS Studien/Serien + WADO-RS Frames, Basic Auth)
 - [x] Docker Compose Stack (Frontend + Backend + Postgres + Orthanc)
 - [x] WebSocket Live-Updates (Report-Status, QA-Events)
-- [ ] Inference Queue (MedGemma, Impression LLM)
+- [x] Inference Queue (RQ + Redis, Mock Inferenz)
 - [~] Audit Logging (Art. 12 Baseline: API + DB, Felder/Hashing offen)
 
 ## Phase 3: Vergleichsmodus & Priors (6-10 Wochen)

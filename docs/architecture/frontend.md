@@ -57,6 +57,6 @@ Die UI ist in drei Hauptbereiche gegliedert:
 
 ## Technische Schulden (bekannt)
 
-- KI/Impression APIs sind Mock
-- Queue/Report State ohne vollständige Orchestrator-Endpunkte
+- KI/Impression Inferenz weiterhin Mock (Queue vorhanden)
+- Queue/Report State ohne vollstaendige Orchestrator-Sync
 - Prior Studies Timeline noch nicht in Sidebar integriert
