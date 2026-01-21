@@ -30,6 +30,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { auditClient, type AuditEventResponse } from '@/services/auditClient';
+import { useStudyLookup } from '@/hooks/useStudyLookup';
 
 // Extended audit event type for display
 interface AuditLogEntry {
@@ -151,6 +152,12 @@ const mapAuditEventToEntry = (event: AuditEventResponse): AuditLogEntry => ({
   metadata: event.metadata ?? undefined,
 });
 
+const isPlaceholderPatientName = (value: string) =>
+  value === 'Unbekannt' || value.startsWith('Studie ') || value.startsWith('Report ');
+
+const isPlaceholderAccession = (value: string, studyId?: string) =>
+  value === '—' || (studyId ? value === studyId.slice(0, 12) : false);
+
 function formatRelativeTime(timestamp: string): string {
   const now = new Date();
   const date = new Date(timestamp);
@@ -212,6 +219,12 @@ export default function History() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const studyIds = useMemo(
+    () => Array.from(new Set(auditEntries.map((entry) => entry.studyId).filter(Boolean))) as string[],
+    [auditEntries]
+  );
+  const { studyMap, error: studyLookupError } = useStudyLookup(studyIds);
+
   useEffect(() => {
     let isActive = true;
 
@@ -241,15 +254,40 @@ export default function History() {
     };
   }, []);
 
+  useEffect(() => {
+    if (studyLookupError) {
+      console.warn(studyLookupError);
+    }
+  }, [studyLookupError]);
+
   // Get unique actors for filter
   const uniqueActors = useMemo(() => {
     const actors = new Set(auditEntries.map((e) => e.actorName).filter(Boolean));
     return Array.from(actors);
   }, [auditEntries]);
 
+  const displayEntries = useMemo(() => {
+    if (studyIds.length === 0) return auditEntries;
+
+    return auditEntries.map((entry) => {
+      if (!entry.studyId) return entry;
+      const details = studyMap[entry.studyId];
+      if (!details) return entry;
+
+      const patientName = isPlaceholderPatientName(entry.patientName)
+        ? details.patientName
+        : entry.patientName;
+      const accessionNumber = isPlaceholderAccession(entry.accessionNumber, entry.studyId)
+        ? details.accessionNumber
+        : entry.accessionNumber;
+
+      return { ...entry, patientName, accessionNumber };
+    });
+  }, [auditEntries, studyIds.length, studyMap]);
+
   // Filter entries
   const filteredEntries = useMemo(() => {
-    return auditEntries.filter((entry) => {
+    return displayEntries.filter((entry) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -277,7 +315,7 @@ export default function History() {
 
       return true;
     });
-  }, [auditEntries, searchQuery, eventFilter, actorFilter]);
+  }, [displayEntries, searchQuery, eventFilter, actorFilter]);
 
   // Group by date
   const groupedEntries = useMemo(() => groupByDate(filteredEntries), [filteredEntries]);

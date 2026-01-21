@@ -10,6 +10,9 @@
 `POST /api/v1/reports/create`
 - Erstellt Report (DB), optional mit `report_id`
 
+`GET /api/v1/reports?status=...&limit=...&offset=...`
+- Listet Reports (DB), optional Status Filter
+
 `GET /api/v1/reports/{report_id}`
 - Liefert Report Status und Inhalte
 

@@ -58,9 +58,24 @@ export interface ReportCreatePayload {
   impressionText?: string;
 }
 
+interface ReportListParams {
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export const reportClient = {
   async getReport(reportId: string): Promise<ReportResponsePayload> {
     return apiClient.get<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}`);
+  },
+  async listReports(params: ReportListParams = {}): Promise<ReportResponsePayload[]> {
+    return apiClient.get<ReportResponsePayload[]>(REPORTS_ENDPOINT, {
+      query: {
+        status: params.status,
+        limit: params.limit,
+        offset: params.offset,
+      },
+    });
   },
   async createReport(payload: ReportCreatePayload): Promise<ReportResponsePayload> {
     return apiClient.post<ReportResponsePayload>(REPORTS_CREATE_ENDPOINT, {

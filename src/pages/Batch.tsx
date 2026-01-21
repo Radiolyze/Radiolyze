@@ -59,6 +59,9 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useWebSocket, ReportStatusEvent } from '@/hooks/useWebSocket';
 import type { ReportStatus, QAStatus } from '@/types/radiology';
+import { reportClient, type ReportResponsePayload } from '@/services/reportClient';
+import { mapReportResponse } from '@/services/reportMapping';
+import { useStudyLookup } from '@/hooks/useStudyLookup';
 
 interface BatchReport {
   id: string;
@@ -76,127 +79,13 @@ interface BatchReport {
   turnaroundMinutes?: number;
 }
 
-// Mock batch reports data
-const mockBatchReports: BatchReport[] = [
-  {
-    id: 'r1',
-    patientName: 'Schmidt, Hans',
-    mrn: 'MRN-001234',
-    accessionNumber: 'ACC-2024-00001',
-    modality: 'CT',
-    studyDescription: 'CT Thorax mit KM',
-    studyDate: '2024-01-19',
-    status: 'draft',
-    qaStatus: 'pass',
-    assignedTo: 'Dr. Müller',
-    priority: 'normal',
-    createdAt: '2024-01-19T08:30:00Z',
-    turnaroundMinutes: 45,
-  },
-  {
-    id: 'r2',
-    patientName: 'Weber, Maria',
-    mrn: 'MRN-001235',
-    accessionNumber: 'ACC-2024-00002',
-    modality: 'MR',
-    studyDescription: 'MRT Schädel',
-    studyDate: '2024-01-19',
-    status: 'draft',
-    qaStatus: 'pass',
-    assignedTo: 'Dr. Müller',
-    priority: 'urgent',
-    createdAt: '2024-01-19T09:15:00Z',
-    turnaroundMinutes: 32,
-  },
-  {
-    id: 'r3',
-    patientName: 'Fischer, Peter',
-    mrn: 'MRN-001236',
-    accessionNumber: 'ACC-2024-00003',
-    modality: 'CR',
-    studyDescription: 'Röntgen Thorax',
-    studyDate: '2024-01-19',
-    status: 'approved',
-    qaStatus: 'pass',
-    assignedTo: 'Dr. Bauer',
-    priority: 'normal',
-    createdAt: '2024-01-19T07:45:00Z',
-    turnaroundMinutes: 15,
-  },
-  {
-    id: 'r4',
-    patientName: 'Hoffmann, Klaus',
-    mrn: 'MRN-001237',
-    accessionNumber: 'ACC-2024-00004',
-    modality: 'CT',
-    studyDescription: 'CT Abdomen',
-    studyDate: '2024-01-19',
-    status: 'in_progress',
-    qaStatus: 'warn',
-    assignedTo: 'Dr. Müller',
-    priority: 'stat',
-    createdAt: '2024-01-19T10:00:00Z',
-  },
-  {
-    id: 'r5',
-    patientName: 'Schneider, Anna',
-    mrn: 'MRN-001238',
-    accessionNumber: 'ACC-2024-00005',
-    modality: 'US',
-    studyDescription: 'Sono Abdomen',
-    studyDate: '2024-01-19',
-    status: 'pending',
-    qaStatus: 'pending',
-    assignedTo: 'Unzugewiesen',
-    priority: 'normal',
-    createdAt: '2024-01-19T10:30:00Z',
-  },
-  {
-    id: 'r6',
-    patientName: 'Braun, Michael',
-    mrn: 'MRN-001239',
-    accessionNumber: 'ACC-2024-00006',
-    modality: 'CT',
-    studyDescription: 'CT Kopf nativ',
-    studyDate: '2024-01-19',
-    status: 'draft',
-    qaStatus: 'fail',
-    assignedTo: 'Dr. Bauer',
-    priority: 'urgent',
-    createdAt: '2024-01-19T11:00:00Z',
-    turnaroundMinutes: 28,
-  },
-  {
-    id: 'r7',
-    patientName: 'Klein, Sophie',
-    mrn: 'MRN-001240',
-    accessionNumber: 'ACC-2024-00007',
-    modality: 'MR',
-    studyDescription: 'MRT Wirbelsäule',
-    studyDate: '2024-01-19',
-    status: 'draft',
-    qaStatus: 'pass',
-    assignedTo: 'Dr. Müller',
-    priority: 'normal',
-    createdAt: '2024-01-19T11:30:00Z',
-    turnaroundMinutes: 55,
-  },
-  {
-    id: 'r8',
-    patientName: 'Zimmermann, Paul',
-    mrn: 'MRN-001241',
-    accessionNumber: 'ACC-2024-00008',
-    modality: 'CR',
-    studyDescription: 'Röntgen Hand',
-    studyDate: '2024-01-19',
-    status: 'finalized',
-    qaStatus: 'pass',
-    assignedTo: 'Dr. Bauer',
-    priority: 'normal',
-    createdAt: '2024-01-19T06:00:00Z',
-    turnaroundMinutes: 8,
-  },
-];
+const resolveTurnaroundMinutes = (createdAt: string, updatedAt: string) => {
+  const created = Date.parse(createdAt);
+  const updated = Date.parse(updatedAt);
+  if (Number.isNaN(created) || Number.isNaN(updated)) return undefined;
+  const diffMinutes = Math.round((updated - created) / 60000);
+  return diffMinutes > 0 ? diffMinutes : undefined;
+};
 
 const statusConfig: Record<ReportStatus, { label: string; color: string; icon: typeof FileText }> = {
   pending: { label: 'Ausstehend', color: 'bg-muted text-muted-foreground', icon: Clock },
@@ -227,7 +116,98 @@ export default function Batch() {
   const [modalityFilter, setModalityFilter] = useState<string>('all');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processProgress, setProcessProgress] = useState(0);
-  const [reports, setReports] = useState(mockBatchReports);
+  const [reports, setReports] = useState<BatchReport[]>([]);
+  const [reportPayloads, setReportPayloads] = useState<ReportResponsePayload[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const studyIds = useMemo(
+    () => Array.from(new Set(reportPayloads.map((report) => report.study_id).filter(Boolean))),
+    [reportPayloads]
+  );
+  const { studyMap, error: studyLookupError } = useStudyLookup(studyIds);
+
+  useEffect(() => {
+    if (studyLookupError) {
+      toast.error(studyLookupError);
+    }
+  }, [studyLookupError]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadReports = async () => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const response = await reportClient.listReports({ limit: 200 });
+        if (!isActive) return;
+        setReportPayloads(response);
+      } catch (error) {
+        console.warn('Failed to load reports', error);
+        if (isActive) {
+          setErrorMessage('Reports konnten nicht geladen werden.');
+          setReportPayloads([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadReports();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const mappedReports = useMemo(() => {
+    return reportPayloads.map((payload) => {
+      const report = mapReportResponse(payload);
+      const study = studyMap[report.studyId];
+      const fallbackAccession = report.studyId ? report.studyId.slice(0, 8) : '—';
+
+      return {
+        id: report.id,
+        patientName: study?.patientName ?? `Report ${report.id.slice(0, 8)}...`,
+        mrn: study?.mrn ?? report.patientId,
+        accessionNumber: study?.accessionNumber ?? fallbackAccession,
+        modality: study?.modality ?? 'CT',
+        studyDescription: study?.studyDescription ?? 'Unbekannte Studie',
+        studyDate: study?.studyDate ?? report.createdAt.slice(0, 10),
+        status: report.status,
+        qaStatus: report.qaStatus,
+        assignedTo: report.approvedBy ?? 'Unzugewiesen',
+        priority: 'normal' as const,
+        createdAt: report.createdAt,
+        turnaroundMinutes: resolveTurnaroundMinutes(report.createdAt, report.updatedAt),
+      };
+    });
+  }, [reportPayloads, studyMap]);
+
+  useEffect(() => {
+    if (mappedReports.length === 0) {
+      if (!isLoading) {
+        setReports([]);
+      }
+      return;
+    }
+
+    setReports((prev) => {
+      if (prev.length === 0) return mappedReports;
+      const prevMap = new Map(prev.map((report) => [report.id, report]));
+      return mappedReports.map((report) => {
+        const existing = prevMap.get(report.id);
+        if (!existing) return report;
+        return {
+          ...report,
+          qaStatus: existing.qaStatus ?? report.qaStatus,
+        };
+      });
+    });
+  }, [mappedReports, isLoading]);
 
   // WebSocket live updates
   const handleReportStatus = useCallback((event: ReportStatusEvent) => {
@@ -283,10 +263,10 @@ export default function Batch() {
     const pending = reports.filter((r) => r.status === 'pending').length;
     const drafts = reports.filter((r) => r.status === 'draft').length;
     const approved = reports.filter((r) => r.status === 'approved' || r.status === 'finalized').length;
-    const avgTurnaround = reports
-      .filter((r) => r.turnaroundMinutes)
-      .reduce((acc, r) => acc + (r.turnaroundMinutes || 0), 0) / 
-      reports.filter((r) => r.turnaroundMinutes).length || 0;
+  const avgTurnaround = reports
+      .filter((r) => r.turnaroundMinutes !== undefined)
+      .reduce((acc, r) => acc + (r.turnaroundMinutes || 0), 0) /
+      (reports.filter((r) => r.turnaroundMinutes !== undefined).length || 1);
     const qaWarnings = reports.filter((r) => r.qaStatus === 'warn' || r.qaStatus === 'fail').length;
 
     return { total, pending, drafts, approved, avgTurnaround: Math.round(avgTurnaround), qaWarnings };
@@ -619,6 +599,22 @@ export default function Batch() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                        <RefreshCw className="h-8 w-8 mx-auto mb-3 animate-spin" />
+                        <p>Reports werden geladen...</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {errorMessage && !isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-12 text-destructive">
+                        <XCircle className="h-8 w-8 mx-auto mb-3" />
+                        <p>{errorMessage}</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {filteredReports.map((report) => {
                     const statusConf = statusConfig[report.status];
                     const qaConf = qaStatusConfig[report.qaStatus];
@@ -685,7 +681,7 @@ export default function Batch() {
                     );
                   })}
 
-                  {filteredReports.length === 0 && (
+                  {filteredReports.length === 0 && !isLoading && !errorMessage && (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-12">
                         <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />

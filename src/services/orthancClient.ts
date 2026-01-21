@@ -55,6 +55,7 @@ export const buildWadorsImageId = (
 interface ListStudiesOptions {
   limit?: number;
   patientId?: string;
+  studyId?: string;
 }
 
 export const orthancClient = {
@@ -80,11 +81,12 @@ export const orthancClient = {
   },
 
   async listStudies(options: ListStudiesOptions = {}) {
-    const { limit = 25, patientId } = options;
+    const { limit = 25, patientId, studyId } = options;
     return fetchDicomWebJson('studies', {
       includefield: 'all',
       limit,
       PatientID: patientId,
+      StudyInstanceUID: studyId,
     });
   },
 };

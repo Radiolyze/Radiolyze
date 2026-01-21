@@ -238,6 +238,20 @@ def create_report(payload: ReportCreateRequest, db: Session = Depends(get_db)) -
     return serialize_report(report, inference_job)
 
 
+@app.get("/api/v1/reports", response_model=list[ReportResponse])
+def list_reports(
+    status: str | None = None,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> list[ReportResponse]:
+    query = db.query(Report)
+    if status:
+        query = query.filter(Report.status == status)
+    reports = query.order_by(Report.created_at.desc()).offset(offset).limit(limit).all()
+    return [serialize_report(report, get_latest_inference_job(db, report.id)) for report in reports]
+
+
 @app.get("/api/v1/reports/{report_id}", response_model=ReportResponse)
 def get_report(report_id: str, db: Session = Depends(get_db)) -> ReportResponse:
     report = db.get(Report, report_id)
