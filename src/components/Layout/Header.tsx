@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Settings, User, Activity, Sun, Moon, Monitor } from 'lucide-react';
+import { Bell, Settings, User, Activity, Sun, Moon, Monitor, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -74,6 +74,13 @@ export function Header() {
               3
             </span>
           </Button>
+
+          {/* History */}
+          <Link to="/history">
+            <Button variant="ghost" size="icon" title="Report-Historie">
+              <History className="h-5 w-5" />
+            </Button>
+          </Link>
 
           {/* Settings */}
           <Link to="/settings">
