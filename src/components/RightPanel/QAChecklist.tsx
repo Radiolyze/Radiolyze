@@ -1,4 +1,4 @@
-import { CheckCircle, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle, ChevronDown, EyeOff } from 'lucide-react';
 import type { QACheck } from '@/types/radiology';
 import { cn } from '@/lib/utils';
 import {
@@ -7,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { useState } from 'react';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 
 interface QAChecklistProps {
   checks: QACheck[];
@@ -27,10 +28,42 @@ const statusColors = {
 
 export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { preferences } = useUserPreferences();
 
   const passCount = checks.filter(c => c.status === 'pass').length;
   const warnCount = checks.filter(c => c.status === 'warn').length;
   const failCount = checks.filter(c => c.status === 'fail').length;
+
+  // If QA warnings are disabled and all checks pass, hide the component
+  if (!preferences.showQAWarnings && warnCount === 0 && failCount === 0) {
+    return null;
+  }
+
+  // Show compact view when warnings are disabled but there are issues
+  if (!preferences.showQAWarnings && (warnCount > 0 || failCount > 0)) {
+    return (
+      <div className="px-4 py-3 border-t border-border flex items-center gap-2 text-sm">
+        <EyeOff className="h-4 w-4 text-muted-foreground" />
+        <span className="text-muted-foreground">QA-Warnungen ausgeblendet</span>
+        {(warnCount > 0 || failCount > 0) && (
+          <div className="flex items-center gap-1.5 text-xs ml-auto">
+            {warnCount > 0 && (
+              <span className="flex items-center gap-0.5 text-warning">
+                <AlertTriangle className="h-3 w-3" />
+                {warnCount}
+              </span>
+            )}
+            {failCount > 0 && (
+              <span className="flex items-center gap-0.5 text-destructive">
+                <XCircle className="h-3 w-3" />
+                {failCount}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
