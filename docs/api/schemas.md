@@ -1,16 +1,18 @@
-# API Schemas
+# API Schemas (Ist)
 
-Diese Schemas dienen als Referenz fuer die geplanten REST-Endpunkte.
-Sie sind bewusst einfach gehalten und koennen spaeter als OpenAPI exportiert werden.
+Diese Schemas spiegeln die aktuell implementierten Endpunkte wider.
+Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
 
 ## ReportCreateRequest
 
 ```json
 {
   "study_id": "st-123",
-  "modality": "CT",
-  "radiologist_id": "u-001",
-  "audio_url": "https://storage.local/audio/123.webm"
+  "patient_id": "p-001",
+  "status": "pending",
+  "findings_text": "",
+  "impression_text": "",
+  "report_id": "r-optional"
 }
 ```
 
@@ -18,16 +20,20 @@ Sie sind bewusst einfach gehalten und koennen spaeter als OpenAPI exportiert wer
 
 ```json
 {
-  "report_id": "r-123",
-  "status": "pending",
+  "id": "r-123",
+  "study_id": "st-123",
+  "patient_id": "p-001",
+  "status": "draft",
   "findings_text": "",
   "impression_text": "",
-  "confidence_scores": {
-    "asr": 0.94,
-    "ai": 0.91
-  },
   "created_at": "2026-01-20T10:05:00Z",
-  "updated_at": "2026-01-20T10:05:00Z"
+  "updated_at": "2026-01-20T10:05:00Z",
+  "approved_at": null,
+  "approved_by": null,
+  "qa_status": "warn",
+  "qa_warnings": [
+    "Fleischner-Kriterien fuer Rundherd pruefen."
+  ]
 }
 ```
 
@@ -35,9 +41,29 @@ Sie sind bewusst einfach gehalten und koennen spaeter als OpenAPI exportiert wer
 
 ```json
 {
-  "radiologist_approval": true,
-  "radiologist_edits": "Impression: ...",
+  "approvedBy": "Dr. Radiologe",
   "signature": "Dr. Radiologe"
+}
+```
+
+## ASRResponse
+
+```json
+{
+  "text": "Im CT Thorax mit Kontrastmittel ...",
+  "confidence": 0.92,
+  "timestamp": "2026-01-20T10:10:00Z"
+}
+```
+
+## ImpressionResponse
+
+```json
+{
+  "text": "Automatische Beurteilung (Entwurf): ...",
+  "confidence": 0.88,
+  "model": "mock-impression-v1",
+  "generated_at": "2026-01-20T10:11:00Z"
 }
 ```
 
@@ -48,28 +74,33 @@ Sie sind bewusst einfach gehalten und koennen spaeter als OpenAPI exportiert wer
   "passes": true,
   "failures": [],
   "warnings": [
-    "Follow-up Empfehlung pruefen"
+    "Fleischner-Kriterien fuer Rundherd pruefen."
   ],
-  "quality_score": 85
+  "quality_score": 78,
+  "checks": [
+    {
+      "id": "qa-findings",
+      "name": "Findings vorhanden",
+      "status": "pass",
+      "message": null
+    }
+  ]
 }
 ```
 
-## AuditLogEntry
+## AuditLogEntry (Response)
 
 ```json
 {
+  "id": "a-123",
   "event_type": "report_finalized",
   "actor_id": "u-001",
   "study_id": "st-123",
   "report_id": "r-123",
-  "model_version": "medgemma-1.5-4b-it",
-  "inference_time_ms": 6234,
-  "input_hash": "sha256:...",
-  "output_summary": "Impression: ...",
-  "changes": {
+  "timestamp": "2026-01-20T10:12:00Z",
+  "metadata": {
     "qa_score": 85
-  },
-  "timestamp": "2026-01-20T10:12:00Z"
+  }
 }
 ```
 
