@@ -18,4 +18,23 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  worker: {
+    format: "es",
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        format: "es",
+      },
+    },
+  },
+  optimizeDeps: {
+    exclude: [
+      "@cornerstonejs/dicom-image-loader",
+      "@cornerstonejs/codec-libjpeg-turbo-8bit",
+      "@cornerstonejs/codec-charls",
+      "@cornerstonejs/codec-openjpeg",
+      "@cornerstonejs/codec-openjph",
+    ],
+  },
 }));
