@@ -25,7 +25,15 @@ const Index = () => {
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
 
   // Report state
-  const { report, setReport, qaChecks, generateImpression, runQAChecks, approveReport } = useReport();
+  const {
+    report,
+    setReport,
+    qaChecks,
+    generateImpression,
+    runQAChecks,
+    approveReport,
+    updateFindings,
+  } = useReport();
   const [findings, setFindings] = useState('');
   const [impression, setImpression] = useState('');
   const [aiStatus, setAiStatus] = useState<AIStatus>('idle');
@@ -123,13 +131,17 @@ const Index = () => {
   }, [approveReport]);
 
   const handleSaveFindings = useCallback(async () => {
-    toast.success('Befund gespeichert');
-    await auditLogger.logEvent({
-      eventType: 'findings_saved',
-      reportId: report?.id,
-      studyId: report?.studyId,
-    });
-  }, [report?.id, report?.studyId]);
+    if (!report?.id) {
+      return;
+    }
+    try {
+      await updateFindings(findings);
+      toast.success('Befund gespeichert');
+    } catch (error) {
+      console.warn('Findings update failed', error);
+      toast.error('Befund speichern fehlgeschlagen');
+    }
+  }, [findings, report?.id, updateFindings]);
 
   const handleExportSr = useCallback(async (format: 'json' | 'dicom') => {
     if (!report?.id) {

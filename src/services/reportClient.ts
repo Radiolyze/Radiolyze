@@ -41,11 +41,26 @@ export interface ReportResponsePayload {
   inference_completed_at?: string | null;
 }
 
+export interface ReportUpdatePayload {
+  findingsText?: string;
+  impressionText?: string;
+  status?: string;
+  actorId?: string;
+}
+
 export const reportClient = {
   async finalizeReport(reportId: string, signature?: string): Promise<ReportResponsePayload> {
     return apiClient.post<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}/finalize`, {
       approvedBy: signature,
       signature,
+    });
+  },
+  async updateReport(reportId: string, payload: ReportUpdatePayload): Promise<ReportResponsePayload> {
+    return apiClient.patch<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}`, {
+      findings_text: payload.findingsText,
+      impression_text: payload.impressionText,
+      status: payload.status,
+      actorId: payload.actorId,
     });
   },
   async exportStructuredReport(reportId: string, format: SrExportFormat = 'dicom'): Promise<SrExportResult> {

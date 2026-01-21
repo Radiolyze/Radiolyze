@@ -33,6 +33,7 @@ from .schemas import (
     QACheckRequest,
     ReportCreateRequest,
     ReportFinalizeRequest,
+    ReportUpdateRequest,
     ReportResponse,
 )
 from .sr import build_sr_export
@@ -242,6 +243,62 @@ def get_report(report_id: str, db: Session = Depends(get_db)) -> ReportResponse:
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+    inference_job = get_latest_inference_job(db, report.id)
+    return serialize_report(report, inference_job)
+
+
+@app.patch("/api/v1/reports/{report_id}", response_model=ReportResponse)
+async def update_report(
+    report_id: str,
+    payload: ReportUpdateRequest,
+    db: Session = Depends(get_db),
+) -> ReportResponse:
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    updated_fields: list[str] = []
+    if payload.findings_text is not None:
+        report.findings_text = payload.findings_text
+        updated_fields.append("findings_text")
+    if payload.impression_text is not None:
+        report.impression_text = payload.impression_text
+        updated_fields.append("impression_text")
+    if payload.status is not None:
+        report.status = payload.status
+        updated_fields.append("status")
+
+    if updated_fields:
+        now = utc_now()
+        report.updated_at = now
+        if payload.status is None and report.status in {"pending", "in_progress"}:
+            report.status = "draft"
+
+        event_type = "report_updated"
+        if "findings_text" in updated_fields:
+            event_type = "findings_saved"
+        elif "impression_text" in updated_fields:
+            event_type = "report_amended"
+
+        add_audit_event(
+            db,
+            event_type=event_type,
+            actor_id=payload.actor_id,
+            report_id=report_id,
+            study_id=report.study_id,
+            metadata={"updated_fields": updated_fields},
+            timestamp=now,
+            source="api",
+        )
+        db.commit()
+        db.refresh(report)
+
+        if payload.status is None and report.status in {"draft", "pending", "in_progress"}:
+            await broadcast_status(
+                report_id,
+                {"qaStatus": report.qa_status, "aiStatus": "idle", "asrStatus": "idle"},
+            )
+
     inference_job = get_latest_inference_job(db, report.id)
     return serialize_report(report, inference_job)
 

@@ -23,6 +23,13 @@ class ReportFinalizeRequest(ApiBaseModel):
     signature: str | None = None
 
 
+class ReportUpdateRequest(ApiBaseModel):
+    findings_text: str | None = None
+    impression_text: str | None = None
+    status: str | None = None
+    actor_id: str | None = Field(default=None, alias="actorId")
+
+
 class ReportResponse(ApiBaseModel):
     id: str
     study_id: str

@@ -194,30 +194,46 @@ export function useReport(initialReport?: Report): UseReportReturn {
 
   const updateFindings = useCallback(async (text: string) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    setReport(prev => prev ? {
-      ...prev,
-      findingsText: text,
-      updatedAt: new Date().toISOString(),
-      status: 'draft',
-    } : null);
-    
-    setIsLoading(false);
-  }, []);
+
+    try {
+      if (report?.id) {
+        const response = await reportClient.updateReport(report.id, {
+          findingsText: text,
+        });
+        setReport(prev => (prev ? mapReportResponse(response, prev) : mapReportResponse(response)));
+      } else {
+        setReport(prev => prev ? {
+          ...prev,
+          findingsText: text,
+          updatedAt: new Date().toISOString(),
+          status: 'draft',
+        } : null);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [report?.id]);
 
   const updateImpression = useCallback(async (text: string) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    setReport(prev => prev ? {
-      ...prev,
-      impressionText: text,
-      updatedAt: new Date().toISOString(),
-    } : null);
-    
-    setIsLoading(false);
-  }, []);
+
+    try {
+      if (report?.id) {
+        const response = await reportClient.updateReport(report.id, {
+          impressionText: text,
+        });
+        setReport(prev => (prev ? mapReportResponse(response, prev) : mapReportResponse(response)));
+      } else {
+        setReport(prev => prev ? {
+          ...prev,
+          impressionText: text,
+          updatedAt: new Date().toISOString(),
+        } : null);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [report?.id]);
 
   const generateImpression = useCallback(async (
     findings: string,
