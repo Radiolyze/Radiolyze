@@ -18,7 +18,7 @@ interface RightPanelProps {
   onApprove: (signature?: string) => void;
   onSaveFindings?: () => void;
   onAsrStatusChange?: (status: 'idle' | 'listening' | 'processing', confidence: number) => void;
-  onExportSr?: () => void;
+  onExportSr?: (format: 'json' | 'dicom') => void;
 }
 
 export function RightPanel({

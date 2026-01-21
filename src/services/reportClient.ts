@@ -9,6 +9,8 @@ const getFileNameFromDisposition = (value: string | null) => {
   return match?.[1] ?? null;
 };
 
+export type SrExportFormat = 'json' | 'dicom';
+
 export interface SrExportResult {
   blob: Blob;
   fileName: string;
@@ -16,10 +18,13 @@ export interface SrExportResult {
 }
 
 export const reportClient = {
-  async exportStructuredReport(reportId: string): Promise<SrExportResult> {
-    const response = await fetch(buildUrl(`${SR_EXPORT_ENDPOINT}/${reportId}/export-sr`), {
+  async exportStructuredReport(reportId: string, format: SrExportFormat = 'dicom'): Promise<SrExportResult> {
+    const response = await fetch(
+      buildUrl(`${SR_EXPORT_ENDPOINT}/${reportId}/export-sr?format=${format}`),
+      {
       method: 'GET',
-    });
+      }
+    );
 
     if (!response.ok) {
       const message = await response.text();
@@ -27,10 +32,11 @@ export const reportClient = {
     }
 
     const blob = await response.blob();
-    const contentType = response.headers.get('content-type') || 'application/dicom+json';
+    const fallbackType = format === 'dicom' ? 'application/dicom' : 'application/dicom+json';
+    const contentType = response.headers.get('content-type') || fallbackType;
     const fileName =
       getFileNameFromDisposition(response.headers.get('content-disposition')) ??
-      `report-${reportId}-sr.json`;
+      `report-${reportId}-sr.${format === 'dicom' ? 'dcm' : 'json'}`;
 
     return { blob, fileName, contentType };
   },

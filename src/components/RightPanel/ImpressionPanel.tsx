@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Edit3, Save, AlertTriangle, Download } from 'lucide-react';
+import { Sparkles, Edit3, Save, AlertTriangle, Download, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { StatusBadge } from '@/components/Common/StatusBadge';
 import type { QAStatus } from '@/types/radiology';
 import { ReportEditor } from '@/components/Forms/ReportEditor';
@@ -23,7 +29,7 @@ interface ImpressionPanelProps {
   onImpressionChange: (text: string) => void;
   onGenerateImpression: () => Promise<void>;
   onApprove: (signature?: string) => void;
-  onExportSr?: () => void;
+  onExportSr?: (format: 'json' | 'dicom') => void;
   isGenerating?: boolean;
 }
 
@@ -212,16 +218,30 @@ export function ImpressionPanel({
         />
 
         {onExportSr && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={onExportSr}
-            disabled={!impression && !findings}
-          >
-            <Download className="h-4 w-4 mr-1.5" />
-            DICOM SR exportieren
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-between"
+                disabled={!impression && !findings}
+              >
+                <span className="flex items-center">
+                  <Download className="h-4 w-4 mr-1.5" />
+                  DICOM SR exportieren
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => onExportSr('dicom')}>
+                DICOM SR (Binary)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExportSr('json')}>
+                DICOM SR (JSON)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         
         <div className="flex gap-2">

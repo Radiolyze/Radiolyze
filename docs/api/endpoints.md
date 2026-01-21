@@ -17,9 +17,9 @@
 - Freigabe durch Radiologe, setzt Status auf `finalized`
 - DICOM SR Export via separatem Endpoint
 
-`GET /api/v1/reports/{report_id}/export-sr`
-- Exportiert einen DICOM SR Entwurf als `application/dicom+json`
-- Erstellt einen Audit Event `report_exported`
+`GET /api/v1/reports/{report_id}/export-sr?format=json|dicom`
+- Exportiert einen DICOM SR Entwurf als JSON (`application/dicom+json`) oder Binary (`application/dicom`)
+- Erstellt einen Audit Event `report_exported` mit Format
 
 ## ASR
 

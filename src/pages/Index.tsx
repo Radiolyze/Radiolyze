@@ -130,20 +130,20 @@ const Index = () => {
     });
   }, [report?.id, report?.studyId]);
 
-  const handleExportSr = useCallback(async () => {
+  const handleExportSr = useCallback(async (format: 'json' | 'dicom') => {
     if (!report?.id) {
       return;
     }
 
     try {
-      const result = await reportClient.exportStructuredReport(report.id);
+      const result = await reportClient.exportStructuredReport(report.id, format);
       const url = URL.createObjectURL(result.blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = result.fileName;
       link.click();
       URL.revokeObjectURL(url);
-      toast.success('DICOM SR exportiert');
+      toast.success(`DICOM SR exportiert (${format.toUpperCase()})`);
     } catch (error) {
       console.warn('DICOM SR export failed', error);
       toast.error('DICOM SR Export fehlgeschlagen');

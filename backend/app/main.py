@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Response, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
@@ -288,20 +288,25 @@ async def finalize_report(
 def export_structured_report(
     report_id: str,
     actor_id: str | None = None,
+    export_format: str = Query("json", alias="format"),
     db: Session = Depends(get_db),
 ) -> Response:
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    content, filename, media_type = build_sr_export(report)
+    normalized = export_format.lower()
+    if normalized not in {"json", "dicom"}:
+        raise HTTPException(status_code=400, detail="Unsupported SR export format")
+
+    content, filename, media_type = build_sr_export(report, normalized)
     add_audit_event(
         db,
         event_type="report_exported",
         actor_id=actor_id or report.approved_by,
         report_id=report.id,
         study_id=report.study_id,
-        metadata={"format": "dicom-sr-json", "file_name": filename},
+        metadata={"format": normalized, "file_name": filename},
         source="api",
     )
     db.commit()
