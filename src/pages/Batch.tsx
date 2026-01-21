@@ -307,33 +307,97 @@ export default function Batch() {
 
     const total = selectedIds.size;
     let processed = 0;
+    let approved = 0;
+    let failed = 0;
 
     for (const id of selectedIds) {
-      // Simulate processing delay
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      processed++;
-      setProcessProgress((processed / total) * 100);
+      const report = reports.find((item) => item.id === id);
+      if (!report || report.status !== 'draft' || report.qaStatus !== 'pass') {
+        processed++;
+        setProcessProgress((processed / total) * 100);
+        continue;
+      }
+
+      try {
+        const response = await reportClient.finalizeReport(id, 'Batch');
+        const updated = mapReportResponse(response);
+        approved++;
+        setReports((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: updated.status,
+                  qaStatus: updated.qaStatus,
+                  assignedTo: updated.approvedBy ?? item.assignedTo,
+                  turnaroundMinutes: resolveTurnaroundMinutes(updated.createdAt, updated.updatedAt),
+                }
+              : item
+          )
+        );
+      } catch (error) {
+        console.warn('Failed to finalize report', error);
+        failed++;
+      } finally {
+        processed++;
+        setProcessProgress((processed / total) * 100);
+      }
     }
 
     setIsProcessing(false);
     setProcessProgress(0);
     setSelectedIds(new Set());
-    toast.success(`${total} Reports wurden freigegeben`);
-  }, [selectedIds]);
 
-  const handleBulkExport = useCallback(() => {
+    if (approved > 0) {
+      toast.success(`${approved} Reports wurden freigegeben`);
+    }
+    if (failed > 0) {
+      toast.error(`${failed} Reports konnten nicht freigegeben werden`);
+    }
+  }, [reports, selectedIds]);
+
+  const handleBulkExport = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    toast.success(`${selectedIds.size} Reports werden exportiert...`);
-    // Simulated export
-    setTimeout(() => {
+    setIsProcessing(true);
+    setProcessProgress(0);
+
+    const ids = Array.from(selectedIds);
+    const total = ids.length;
+    let processed = 0;
+    let failed = 0;
+
+    for (const id of ids) {
+      try {
+        const result = await reportClient.exportStructuredReport(id, 'dicom');
+        const url = URL.createObjectURL(result.blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = result.fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.warn('Bulk export failed', error);
+        failed++;
+      } finally {
+        processed++;
+        setProcessProgress((processed / total) * 100);
+      }
+    }
+
+    setIsProcessing(false);
+    setProcessProgress(0);
+    setSelectedIds(new Set());
+
+    if (failed === 0) {
       toast.success('Export abgeschlossen');
-    }, 1500);
+    } else {
+      toast.error(`${failed} Exporte fehlgeschlagen`);
+    }
   }, [selectedIds]);
 
   const handleBulkDelete = useCallback(() => {
     if (selectedIds.size === 0) return;
-    setSelectedIds(new Set());
-    toast.success(`${selectedIds.size} Reports wurden gelöscht`);
+    toast.error('Löschen ist aktuell nicht verfügbar');
   }, [selectedIds]);
 
   const isAllSelected = filteredReports.length > 0 && selectedIds.size === filteredReports.length;
