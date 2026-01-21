@@ -94,6 +94,8 @@ const mapReportResponse = (payload: ReportResponsePayload, existing?: Report | n
   aiStatus: existing?.aiStatus,
 });
 
+const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
+
 interface GenerateImpressionOptions {
   reportId?: string;
   studyId?: string;
@@ -188,7 +190,7 @@ interface UseReportReturn {
 export function useReport(initialReport?: Report): UseReportReturn {
   const [report, setReport] = useState<Report | null>(initialReport || null);
   const [isLoading, setIsLoading] = useState(false);
-  const [qaChecks, setQaChecks] = useState<QACheck[]>(mockQAChecks);
+  const [qaChecks, setQaChecks] = useState<QACheck[]>(allowMockFallback ? mockQAChecks : []);
 
   const updateFindings = useCallback(async (text: string) => {
     setIsLoading(true);
@@ -305,6 +307,12 @@ export function useReport(initialReport?: Report): UseReportReturn {
         succeeded = true;
         return impression;
       } catch (fallbackError) {
+        if (!allowMockFallback) {
+          console.warn('Impression service failed.', fallbackError);
+          onStatus?.('error');
+          throw fallbackError;
+        }
+
         console.warn('Impression service failed, using mock impression.', fallbackError);
 
         await wait(1200 + Math.random() * 800);
@@ -357,6 +365,22 @@ export function useReport(initialReport?: Report): UseReportReturn {
 
       return { status, checks, warnings };
     } catch (error) {
+      if (!allowMockFallback) {
+        console.warn('QA check failed.', error);
+        const checks: QACheck[] = [];
+        const warnings = ['QA-Prüfung fehlgeschlagen'];
+        const status: QAStatus = 'warn';
+
+        setQaChecks(checks);
+        setReport(prev => prev ? {
+          ...prev,
+          qaStatus: status,
+          qaWarnings: warnings,
+        } : null);
+
+        return { status, checks, warnings };
+      }
+
       console.warn('QA check failed, using mock checks.', error);
 
       const checks = mockQAChecks;
