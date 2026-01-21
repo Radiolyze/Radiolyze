@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { DicomWebSettings } from '@/components/Settings/DicomWebSettings';
 import { toast } from 'sonner';
 
 export default function Settings() {
@@ -63,6 +64,9 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* DICOMweb Server Configuration */}
+        <DicomWebSettings />
 
         {/* Display Section */}
         <Card>

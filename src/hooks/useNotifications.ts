@@ -134,7 +134,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   const refreshTimeoutRef = useRef<number | null>(null);
 
   const studyIds = useMemo(
-    () => Array.from(new Set(events.map((event) => event.study_id).filter(Boolean))) as string[],
+    () => Array.from(new Set((Array.isArray(events) ? events : []).map((event) => event.study_id).filter(Boolean))) as string[],
     [events]
   );
   const { studyMap } = useStudyLookup(studyIds);
@@ -188,7 +188,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   }, [dismissedIds]);
 
   const notifications = useMemo(() => {
-    return events
+    const safeEvents = Array.isArray(events) ? events : [];
+    return safeEvents
       .filter((event) => !dismissedIds.has(event.id))
       .map((event) => {
         const studyInfo = event.study_id ? studyMap[event.study_id] : undefined;

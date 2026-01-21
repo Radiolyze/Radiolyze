@@ -20,14 +20,20 @@ interface ListAuditEventsParams {
 }
 
 export const auditClient = {
-  async listEvents(params: ListAuditEventsParams = {}) {
-    return apiClient.get<AuditEventResponse[]>(AUDIT_ENDPOINT, {
-      query: {
-        study_id: params.studyId,
-        report_id: params.reportId,
-        limit: params.limit,
-        offset: params.offset,
-      },
-    });
+  async listEvents(params: ListAuditEventsParams = {}): Promise<AuditEventResponse[]> {
+    try {
+      const response = await apiClient.get<AuditEventResponse[] | unknown>(AUDIT_ENDPOINT, {
+        query: {
+          study_id: params.studyId,
+          report_id: params.reportId,
+          limit: params.limit,
+          offset: params.offset,
+        },
+      });
+      // Guard against non-array responses (e.g., HTML fallback from dev server)
+      return Array.isArray(response) ? response : [];
+    } catch {
+      return [];
+    }
   },
 };
