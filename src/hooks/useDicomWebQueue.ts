@@ -18,6 +18,7 @@ const buildReport = (study: Study): Report => {
     updatedAt: now,
     qaStatus: 'pending',
     qaWarnings: [],
+    aiStatus: 'idle',
   };
 };
 

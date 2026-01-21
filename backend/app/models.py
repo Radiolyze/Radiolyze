@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import JSON, String, Text
+from sqlalchemy import Float, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -48,4 +48,22 @@ class AuditEvent(Base):
     report_id: Mapped[str | None] = mapped_column(String, nullable=True)
     study_id: Mapped[str | None] = mapped_column(String, nullable=True)
     timestamp: Mapped[str] = mapped_column(String, nullable=False)
+    metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+
+
+class InferenceJob(Base):
+    __tablename__ = "inference_jobs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    report_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    study_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    model_version: Mapped[str] = mapped_column(String, nullable=False)
+    input_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    summary_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    queued_at: Mapped[str] = mapped_column(String, nullable=False)
+    started_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    completed_at: Mapped[str | None] = mapped_column(String, nullable=True)
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)

@@ -17,6 +17,7 @@ Die Architektur nutzt einen offenen, privacy-erhaltenden Stack:
 - **ASR**: MedASR (lokal oder GPU-Cluster)
 - **Inference**: MedGemma (multimodal), optional LLM fuer Impression
 - **RAG**: Guidelines, Templates, institutionelle Inhalte
+- **Queue/Worker**: RQ + Redis fuer Inference Jobs und Status-Events
 
 ## Architekturprinzipien
 

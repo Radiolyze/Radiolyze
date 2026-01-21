@@ -13,6 +13,13 @@ ASR_TRANSCRIPTS = [
     "Im Vergleich zur Voruntersuchung vom 15.07.2023 zeigt sich eine Groessenprogredienz des bekannten Rundherdes.",
 ]
 
+INFERENCE_SUMMARIES = [
+    "Kein Hinweis auf akute Pathologie in den sichtbaren Bereichen.",
+    "Diskrete basale Atelektasen beidseits, sonst unauffaellig.",
+    "Rundherd rechts apikal, Verlaufskontrolle empfohlen.",
+    "Hinweis auf degenerative Veraenderungen ohne Frakturzeichen.",
+]
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -37,6 +44,19 @@ def generate_impression(findings_text: str | None) -> tuple[str, float]:
         f"{first_sentence}. Weitere Abklaerung je nach klinischem Kontext empfohlen."
     )
     return impression, round(random.uniform(0.78, 0.92), 2)
+
+
+def generate_inference_summary(findings_text: str | None) -> tuple[str, float]:
+    findings_text = (findings_text or "").strip()
+    summary = ""
+    if findings_text:
+        summary = findings_text.split(".")[0].strip()
+    if not summary:
+        summary = random.choice(INFERENCE_SUMMARIES)
+    else:
+        summary = f"Automatische Bildanalyse: {summary}."
+    confidence = round(random.uniform(0.76, 0.9), 2)
+    return summary, confidence
 
 
 def run_qa_checks(findings_text: str | None, impression_text: str | None) -> tuple[list[QACheck], list[str], list[str], float]:

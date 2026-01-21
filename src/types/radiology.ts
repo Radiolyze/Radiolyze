@@ -42,11 +42,20 @@ export interface Report {
   approvedBy?: string;
   qaStatus: QAStatus;
   qaWarnings: string[];
+  aiStatus?: AIStatus;
+  inferenceStatus?: string;
+  inferenceSummary?: string;
+  inferenceConfidence?: number;
+  inferenceModelVersion?: string;
+  inferenceJobId?: string;
+  inferenceCompletedAt?: string;
 }
 
 export type ReportStatus = 'pending' | 'in_progress' | 'draft' | 'approved' | 'finalized';
 
 export type QAStatus = 'pending' | 'checking' | 'pass' | 'warn' | 'fail';
+
+export type AIStatus = 'idle' | 'queued' | 'processing' | 'error';
 
 export interface ASRResult {
   text: string;

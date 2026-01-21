@@ -29,6 +29,15 @@
 - Generiert KI-Entwurf (aktuell Mock-Logik)
 - Update von `impression_text` im Report, falls `report_id` gesetzt
 
+## Inference
+
+`POST /api/v1/inference/queue`
+- Legt einen Inference Job in der Queue an (RQ + Redis)
+- Gibt `job_id` und Status zurueck
+
+`GET /api/v1/inference/status/{job_id}`
+- Liefert Status + Ergebnis (aus DB, Fallback auf RQ Job)
+
 ## QA
 
 `POST /api/v1/reports/qa-check`

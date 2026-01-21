@@ -14,13 +14,17 @@ Der Orchestrator steuert:
 - `POST /api/v1/reports/create`
 - `GET /api/v1/reports/{report_id}`
 - `POST /api/v1/reports/{report_id}/finalize`
+- `POST /api/v1/inference/queue`
+- `GET /api/v1/inference/status/{job_id}`
 - `GET /api/v1/audit-log`
 
 ## Implementierung im Repo
 
 - Backend Code: `backend/`
-- Docker Setup: `docker-compose.yml` (Frontend + Backend + Postgres + Orthanc)
+- Docker Setup: `docker-compose.yml` (Frontend + Backend + Worker + Redis + Postgres + Orthanc)
 - ASR/Impression/QA nutzen aktuell Mock-Logik als Platzhalter
+- Inference Queue via RQ Worker + Redis, Ergebnisse werden in Postgres persistiert
+- WebSocket Status-Events werden ueber Redis PubSub an den API-Server gebridged
 
 ## DICOM Server (Orthanc)
 
@@ -36,5 +40,5 @@ Der Orchestrator steuert:
 
 ## Datenhaltung
 
-- PostgreSQL fuer Reports und Audit Events
-- Redis fuer Queueing/Cache
+- PostgreSQL fuer Reports, Audit Events und Inference Jobs
+- Redis fuer Queueing und WebSocket Events

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import hashlib
 import os
 import uuid
 from datetime import datetime, timezone
@@ -7,15 +10,21 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from rq.exceptions import NoSuchJobError
+from rq.job import Job
 from sqlalchemy.orm import Session
 
 from .db import Base, SessionLocal, engine
 from .mock_logic import generate_asr_transcript, generate_impression, run_qa_checks, utc_now
-from .models import AuditEvent, QACheckResult, Report
+from .models import AuditEvent, InferenceJob, QACheckResult, Report
+from .queue import get_queue, get_redis
 from .schemas import (
     ASRResponse,
     AuditEventRequest,
     AuditEventResponse,
+    InferenceQueueRequest,
+    InferenceQueueResponse,
+    InferenceStatusResponse,
     ImpressionRequest,
     ImpressionResponse,
     QAResponse,
@@ -24,7 +33,9 @@ from .schemas import (
     ReportFinalizeRequest,
     ReportResponse,
 )
+from .tasks import run_inference_job
 from .ws import ConnectionManager
+from .ws_events import run_ws_bridge
 
 app = FastAPI(title="Orchestrator API", version="0.1.0")
 
@@ -56,7 +67,39 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def serialize_report(report: Report) -> ReportResponse:
+def compute_input_hash(study_id: str | None, findings_text: str | None) -> str:
+    raw = f"{study_id or ''}|{(findings_text or '').strip()}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def get_inference_job_timeout() -> int:
+    return int(os.getenv("INFERENCE_JOB_TIMEOUT", "600"))
+
+
+def get_inference_result_ttl() -> int:
+    return int(os.getenv("INFERENCE_RESULT_TTL", "3600"))
+
+
+def format_datetime(value: datetime | str | None) -> str | None:
+    if not value:
+        return None
+    if isinstance(value, str):
+        return value
+    return value.isoformat()
+
+
+def get_latest_inference_job(db: Session, report_id: str | None) -> InferenceJob | None:
+    if not report_id:
+        return None
+    return (
+        db.query(InferenceJob)
+        .filter(InferenceJob.report_id == report_id)
+        .order_by(InferenceJob.queued_at.desc())
+        .first()
+    )
+
+
+def serialize_report(report: Report, inference_job: InferenceJob | None = None) -> ReportResponse:
     return ReportResponse(
         id=report.id,
         study_id=report.study_id,
@@ -70,6 +113,12 @@ def serialize_report(report: Report) -> ReportResponse:
         approved_by=report.approved_by,
         qa_status=report.qa_status,
         qa_warnings=report.qa_warnings or [],
+        inference_status=inference_job.status if inference_job else None,
+        inference_summary=inference_job.summary_text if inference_job else None,
+        inference_confidence=inference_job.confidence if inference_job else None,
+        inference_model_version=inference_job.model_version if inference_job else None,
+        inference_job_id=inference_job.id if inference_job else None,
+        inference_completed_at=inference_job.completed_at if inference_job else None,
     )
 
 
@@ -99,8 +148,18 @@ async def broadcast_status(report_id: str | None, payload: dict[str, Any]) -> No
 
 
 @app.on_event("startup")
-def on_startup() -> None:
+async def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    app.state.ws_bridge_task = asyncio.create_task(run_ws_bridge(manager))
+
+
+@app.on_event("shutdown")
+async def on_shutdown() -> None:
+    task = getattr(app.state, "ws_bridge_task", None)
+    if task:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
 
 
 @app.get("/api/v1/health")
@@ -129,7 +188,8 @@ def create_report(payload: ReportCreateRequest, db: Session = Depends(get_db)) -
     db.add(report)
     db.commit()
     db.refresh(report)
-    return serialize_report(report)
+    inference_job = get_latest_inference_job(db, report.id)
+    return serialize_report(report, inference_job)
 
 
 @app.get("/api/v1/reports/{report_id}", response_model=ReportResponse)
@@ -137,7 +197,8 @@ def get_report(report_id: str, db: Session = Depends(get_db)) -> ReportResponse:
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    return serialize_report(report)
+    inference_job = get_latest_inference_job(db, report.id)
+    return serialize_report(report, inference_job)
 
 
 @app.post("/api/v1/reports/{report_id}/finalize", response_model=ReportResponse)
@@ -158,12 +219,13 @@ async def finalize_report(
 
     db.commit()
     db.refresh(report)
+    inference_job = get_latest_inference_job(db, report.id)
 
     await broadcast_status(
         report_id,
         {"qaStatus": report.qa_status, "aiStatus": "idle", "asrStatus": "idle"},
     )
-    return serialize_report(report)
+    return serialize_report(report, inference_job)
 
 
 @app.post("/api/v1/reports/asr-transcript", response_model=ASRResponse)
@@ -260,6 +322,144 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
         warnings=warnings,
         quality_score=score,
         checks=checks,
+    )
+
+
+@app.post("/api/v1/inference/queue", response_model=InferenceQueueResponse)
+async def queue_inference(
+    payload: InferenceQueueRequest,
+    db: Session = Depends(get_db),
+) -> InferenceQueueResponse:
+    report = None
+    if payload.report_id:
+        report = db.get(Report, payload.report_id)
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+
+    requested_by = payload.requested_by or "system"
+    study_id = payload.study_id or (report.study_id if report else None)
+    findings_text = payload.findings_text or (report.findings_text if report else None)
+    model_version = payload.model_version or os.getenv("INFERENCE_MODEL_VERSION", "mock-medgemma-0.1")
+    input_hash = compute_input_hash(study_id, findings_text)
+    queued_at = utc_now()
+
+    job_id = str(uuid.uuid4())
+    job_payload = {
+        "job_id": job_id,
+        "report_id": payload.report_id,
+        "study_id": study_id,
+        "findings_text": findings_text,
+        "requested_by": requested_by,
+        "model_version": model_version,
+        "input_hash": input_hash,
+    }
+
+    queue = get_queue()
+    job = queue.enqueue(
+        run_inference_job,
+        job_payload,
+        job_id=job_id,
+        job_timeout=get_inference_job_timeout(),
+        result_ttl=get_inference_result_ttl(),
+        failure_ttl=get_inference_result_ttl(),
+    )
+
+    db.add(
+        InferenceJob(
+            id=job_id,
+            report_id=payload.report_id,
+            study_id=study_id,
+            status="queued",
+            model_version=model_version,
+            input_hash=input_hash,
+            queued_at=queued_at,
+            metadata_json={"requested_by": requested_by},
+        )
+    )
+
+    db.add(
+        AuditEvent(
+            id=str(uuid.uuid4()),
+            event_type="inference_queued",
+            actor_id=requested_by,
+            report_id=payload.report_id,
+            study_id=study_id,
+            timestamp=queued_at,
+            metadata_json={
+                "job_id": job_id,
+                "model_version": model_version,
+                "input_hash": input_hash,
+            },
+        )
+    )
+
+    if report:
+        if report.status == "pending":
+            report.status = "in_progress"
+        report.updated_at = queued_at
+
+    db.commit()
+
+    if payload.report_id:
+        await broadcast_status(
+            payload.report_id,
+            {"aiStatus": "queued", "qaStatus": report.qa_status if report else "pending", "asrStatus": "idle"},
+        )
+
+    return InferenceQueueResponse(
+        job_id=job.id,
+        status=job.get_status(),
+        queued_at=queued_at,
+        report_id=payload.report_id,
+        study_id=study_id,
+        model_version=model_version,
+    )
+
+
+@app.get("/api/v1/inference/status/{job_id}", response_model=InferenceStatusResponse)
+def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceStatusResponse:
+    job_record = db.get(InferenceJob, job_id)
+    if job_record:
+        result = None
+        if job_record.status == "finished":
+            result = {
+                "summary": job_record.summary_text,
+                "confidence": job_record.confidence,
+                "model_version": job_record.model_version,
+                "completed_at": job_record.completed_at,
+            }
+        return InferenceStatusResponse(
+            job_id=job_record.id,
+            status=job_record.status,
+            queued_at=format_datetime(job_record.queued_at),
+            started_at=format_datetime(job_record.started_at),
+            ended_at=format_datetime(job_record.completed_at),
+            result=result,
+            error=job_record.error_message,
+        )
+
+    try:
+        job = Job.fetch(job_id, connection=get_redis())
+    except NoSuchJobError as exc:
+        raise HTTPException(status_code=404, detail="Inference job not found") from exc
+
+    error = None
+    if job.is_failed:
+        if job.exc_info:
+            error = job.exc_info.splitlines()[-1]
+        else:
+            error = "Inference job failed"
+
+    result = job.result if job.is_finished else None
+
+    return InferenceStatusResponse(
+        job_id=job.id,
+        status=job.get_status(),
+        queued_at=format_datetime(job.enqueued_at),
+        started_at=format_datetime(job.started_at),
+        ended_at=format_datetime(job.ended_at),
+        result=result,
+        error=error,
     )
 
 

@@ -9,9 +9,30 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://app:app@db:5432/app
       CORS_ORIGINS: http://localhost:5173
+      REDIS_URL: redis://redis:6379/0
+      INFERENCE_QUEUE_NAME: inference
+      INFERENCE_MODEL_VERSION: mock-medgemma-0.1
+      INFERENCE_JOB_TIMEOUT: "600"
+      INFERENCE_RESULT_TTL: "3600"
     depends_on:
       - db
+      - redis
       - orthanc
+
+  worker:
+    build:
+      context: ./backend
+    command: ["python", "-m", "app.worker"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://app:app@db:5432/app
+      REDIS_URL: redis://redis:6379/0
+      INFERENCE_QUEUE_NAME: inference
+      INFERENCE_MODEL_VERSION: mock-medgemma-0.1
+      INFERENCE_JOB_TIMEOUT: "600"
+      INFERENCE_RESULT_TTL: "3600"
+    depends_on:
+      - db
+      - redis
 
   frontend:
     build:
@@ -66,6 +87,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 
 volumes:
   orthanc-data:

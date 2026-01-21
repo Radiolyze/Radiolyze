@@ -17,11 +17,13 @@ Docker Compose liefert aktuell:
 
 - Frontend (Vite)
 - Backend (FastAPI Orchestrator)
+- Worker (RQ Inference)
+- Redis (Queue + WS Events)
 - Orthanc (DICOM + DICOMweb, Basic Auth)
 - Orthanc Seeder (Sample-DICOM Import)
 - PostgreSQL
 
-Optionale Services (noch offen): GPU Worker, Redis, NGINX.
+Optionale Services (noch offen): GPU Worker, NGINX.
 
 ### Orthanc Hinweise
 

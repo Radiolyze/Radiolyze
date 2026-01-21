@@ -1,0 +1,150 @@
+from __future__ import annotations
+
+import uuid
+from typing import Any
+
+from .db import SessionLocal
+from .mock_logic import generate_inference_summary, utc_now
+from .models import AuditEvent, InferenceJob, Report
+from .ws_events import publish_report_status
+
+
+def _create_audit_event(
+    db,
+    *,
+    event_type: str,
+    actor_id: str | None,
+    report_id: str | None,
+    study_id: str | None,
+    metadata: dict[str, Any] | None,
+) -> None:
+    event = AuditEvent(
+        id=str(uuid.uuid4()),
+        event_type=event_type,
+        actor_id=actor_id,
+        report_id=report_id,
+        study_id=study_id,
+        timestamp=utc_now(),
+        metadata_json=metadata,
+    )
+    db.add(event)
+    db.commit()
+
+
+def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
+    report_id = payload.get("report_id")
+    study_id = payload.get("study_id")
+    findings_text = payload.get("findings_text")
+    requested_by = payload.get("requested_by") or "system"
+    model_version = payload.get("model_version") or "mock-medgemma-0.1"
+    input_hash = payload.get("input_hash")
+    job_id = payload.get("job_id")
+
+    db = SessionLocal()
+    try:
+        job = None
+        if job_id:
+            job = db.get(InferenceJob, job_id)
+        if not job:
+            job = InferenceJob(
+                id=job_id or str(uuid.uuid4()),
+                report_id=report_id,
+                study_id=study_id,
+                status="queued",
+                model_version=model_version,
+                input_hash=input_hash,
+                queued_at=utc_now(),
+            )
+            db.add(job)
+            db.commit()
+
+        started_at = utc_now()
+        job.status = "started"
+        job.started_at = started_at
+        job.error_message = None
+        db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "processing"})
+
+        _create_audit_event(
+            db,
+            event_type="inference_started",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job.id,
+                "model_version": model_version,
+                "input_hash": input_hash,
+            },
+        )
+
+        summary, confidence = generate_inference_summary(findings_text)
+        completed_at = utc_now()
+        output_summary = summary[:240]
+
+        job.status = "finished"
+        job.completed_at = completed_at
+        job.summary_text = summary
+        job.confidence = confidence
+        db.commit()
+
+        _create_audit_event(
+            db,
+            event_type="inference_completed",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job.id,
+                "model_version": model_version,
+                "input_hash": input_hash,
+                "output_summary": output_summary,
+                "confidence": confidence,
+            },
+        )
+
+        if report_id:
+            report = db.get(Report, report_id)
+            if report:
+                report.impression_text = summary
+                report.updated_at = completed_at
+                if report.status in {"pending", "in_progress"}:
+                    report.status = "draft"
+                db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "idle"})
+
+        return {
+            "summary": summary,
+            "confidence": confidence,
+            "model_version": model_version,
+            "completed_at": completed_at,
+        }
+    except Exception as exc:
+        if job_id:
+            job = db.get(InferenceJob, job_id)
+            if job:
+                job.status = "failed"
+                job.completed_at = utc_now()
+                job.error_message = str(exc)
+                db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "error"})
+
+        _create_audit_event(
+            db,
+            event_type="inference_failed",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job_id,
+                "model_version": model_version,
+                "input_hash": input_hash,
+                "error": str(exc),
+            },
+        )
+        raise
+    finally:
+        db.close()

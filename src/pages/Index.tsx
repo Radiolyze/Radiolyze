@@ -7,7 +7,7 @@ import { useReport } from '@/hooks/useReport';
 import { useDicomWebQueue } from '@/hooks/useDicomWebQueue';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useReportStatusSync } from '@/hooks/useReportStatusSync';
-import type { QueueItem, Series } from '@/types/radiology';
+import type { AIStatus, QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
 import { mockPriorStudies, formatDate } from '@/data/mockData';
@@ -27,18 +27,28 @@ const Index = () => {
   const { report, setReport, qaChecks, generateImpression, runQAChecks } = useReport();
   const [findings, setFindings] = useState('');
   const [impression, setImpression] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiStatus, setAiStatus] = useState<AIStatus>('idle');
   const [asrStatus, setAsrStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
   const [asrConfidence, setAsrConfidence] = useState(0);
   
   // Apply live status updates to current report
   const liveStatus = report ? getReportStatus(report.id) : undefined;
+  const effectiveAiStatus: AIStatus = liveStatus?.aiStatus === 'error'
+    ? 'error'
+    : aiStatus === 'idle'
+      ? liveStatus?.aiStatus ?? 'idle'
+      : aiStatus;
+  const isGenerating = effectiveAiStatus === 'queued' || effectiveAiStatus === 'processing';
 
   useEffect(() => {
     if (queueError) {
       toast.error(queueError);
     }
   }, [queueError]);
+
+  useEffect(() => {
+    setAiStatus('idle');
+  }, [report?.id]);
 
   // Initialize selection when queue items load
   useEffect(() => {
@@ -72,20 +82,22 @@ const Index = () => {
   }, []);
 
   const handleGenerateImpression = useCallback(async () => {
-    if (!findings) return;
-    setIsGenerating(true);
+    if (!findings || isGenerating) return;
+
     try {
-      const result = await generateImpression(findings);
+      const result = await generateImpression(findings, { onStatus: setAiStatus });
       setImpression(result);
       await runQAChecks({
         reportId: report?.id,
         findingsText: findings,
         impressionText: result,
       });
-    } finally {
-      setIsGenerating(false);
+    } catch (error) {
+      console.warn('Failed to generate impression', error);
+      setAiStatus('error');
+      toast.error('KI-Analyse fehlgeschlagen');
     }
-  }, [findings, generateImpression, report?.id, runQAChecks]);
+  }, [findings, generateImpression, isGenerating, report?.id, runQAChecks]);
 
   const handleApprove = useCallback(async (signature?: string) => {
     const name = signature?.trim();
@@ -206,7 +218,7 @@ const Index = () => {
           progress={{
             asrStatus: liveStatus?.asrStatus || asrStatus,
             asrConfidence: liveStatus?.asrConfidence ?? asrConfidence,
-            aiStatus: liveStatus?.aiStatus || (isGenerating ? 'generating' : 'idle'),
+            aiStatus: effectiveAiStatus,
             qaStatus: liveStatus?.qaStatus || report.qaStatus,
           }}
         />

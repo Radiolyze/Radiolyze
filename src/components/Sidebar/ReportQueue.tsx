@@ -1,5 +1,5 @@
-import { FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import type { QueueItem } from '@/types/radiology';
+import { FileText, Clock, CheckCircle, Sparkles } from 'lucide-react';
+import type { AIStatus, QueueItem } from '@/types/radiology';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/data/mockData';
@@ -44,6 +44,13 @@ const priorityConfig = {
   stat: { label: 'STAT', className: 'bg-destructive/20 text-destructive border-destructive/30' },
 };
 
+const aiStatusConfig: Record<AIStatus, { label: string; className: string }> = {
+  idle: { label: 'KI bereit', className: 'bg-muted text-muted-foreground' },
+  queued: { label: 'KI wartet', className: 'bg-warning/20 text-warning border-warning/30' },
+  processing: { label: 'KI analysiert', className: 'bg-info/20 text-info border-info/30' },
+  error: { label: 'KI Fehler', className: 'bg-destructive/20 text-destructive border-destructive/30' },
+};
+
 export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueueProps) {
   const pendingCount = items.filter(i => i.report.status === 'pending' || i.report.status === 'in_progress').length;
 
@@ -66,6 +73,8 @@ export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueue
           const status = statusConfig[item.report.status];
           const priority = priorityConfig[item.priority];
           const StatusIcon = status.icon;
+          const aiStatus = item.report.aiStatus;
+          const aiConfig = aiStatus ? aiStatusConfig[aiStatus] : null;
 
           return (
             <button
@@ -94,6 +103,12 @@ export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueue
                     <StatusIcon className="h-3 w-3 mr-1" />
                     {status.label}
                   </Badge>
+                  {aiStatus && aiStatus !== 'idle' && aiConfig && (
+                    <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', aiConfig.className)}>
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      {aiConfig.label}
+                    </Badge>
+                  )}
                   {priority && (
                     <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', priority.className)}>
                       {priority.label}

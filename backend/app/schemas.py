@@ -36,6 +36,12 @@ class ReportResponse(ApiBaseModel):
     approved_by: str | None = None
     qa_status: str
     qa_warnings: list[str]
+    inference_status: str | None = None
+    inference_summary: str | None = None
+    inference_confidence: float | None = None
+    inference_model_version: str | None = None
+    inference_job_id: str | None = None
+    inference_completed_at: str | None = None
 
 
 class ASRResponse(ApiBaseModel):
@@ -75,6 +81,33 @@ class QAResponse(ApiBaseModel):
     warnings: list[str]
     quality_score: float | None = None
     checks: list[QACheck]
+
+
+class InferenceQueueRequest(ApiBaseModel):
+    report_id: str | None = None
+    study_id: str | None = None
+    findings_text: str | None = None
+    requested_by: str | None = None
+    model_version: str | None = None
+
+
+class InferenceQueueResponse(ApiBaseModel):
+    job_id: str
+    status: str
+    queued_at: str
+    report_id: str | None = None
+    study_id: str | None = None
+    model_version: str
+
+
+class InferenceStatusResponse(ApiBaseModel):
+    job_id: str
+    status: str
+    queued_at: str | None = None
+    started_at: str | None = None
+    ended_at: str | None = None
+    result: dict[str, Any] | None = None
+    error: str | None = None
 
 
 class AuditEventRequest(ApiBaseModel):

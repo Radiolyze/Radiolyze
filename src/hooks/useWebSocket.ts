@@ -1,9 +1,10 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createWsClient } from '@/services/wsClient';
+import type { AIStatus } from '@/types/radiology';
 
 export interface ReportStatusPayload {
   asrStatus?: 'idle' | 'listening' | 'processing';
-  aiStatus?: 'idle' | 'generating' | 'error';
+  aiStatus?: AIStatus;
   qaStatus?: 'pending' | 'checking' | 'pass' | 'warn' | 'fail';
   asrConfidence?: number;
 }
