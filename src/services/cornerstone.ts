@@ -8,7 +8,7 @@ import {
   WindowLevelTool,
   ZoomTool,
 } from '@cornerstonejs/tools';
-import dicomImageLoader from '@cornerstonejs/dicom-image-loader';
+import * as dicomImageLoader from '@cornerstonejs/dicom-image-loader';
 
 let initialized = false;
 
