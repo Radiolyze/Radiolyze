@@ -88,7 +88,18 @@ def format_datetime(value: datetime | str | None) -> str | None:
     return value.isoformat()
 
 
-def serialize_report(report: Report) -> ReportResponse:
+def get_latest_inference_job(db: Session, report_id: str | None) -> InferenceJob | None:
+    if not report_id:
+        return None
+    return (
+        db.query(InferenceJob)
+        .filter(InferenceJob.report_id == report_id)
+        .order_by(InferenceJob.queued_at.desc())
+        .first()
+    )
+
+
+def serialize_report(report: Report, inference_job: InferenceJob | None = None) -> ReportResponse:
     return ReportResponse(
         id=report.id,
         study_id=report.study_id,
@@ -102,6 +113,12 @@ def serialize_report(report: Report) -> ReportResponse:
         approved_by=report.approved_by,
         qa_status=report.qa_status,
         qa_warnings=report.qa_warnings or [],
+        inference_status=inference_job.status if inference_job else None,
+        inference_summary=inference_job.summary_text if inference_job else None,
+        inference_confidence=inference_job.confidence if inference_job else None,
+        inference_model_version=inference_job.model_version if inference_job else None,
+        inference_job_id=inference_job.id if inference_job else None,
+        inference_completed_at=inference_job.completed_at if inference_job else None,
     )
 
 
@@ -171,7 +188,8 @@ def create_report(payload: ReportCreateRequest, db: Session = Depends(get_db)) -
     db.add(report)
     db.commit()
     db.refresh(report)
-    return serialize_report(report)
+    inference_job = get_latest_inference_job(db, report.id)
+    return serialize_report(report, inference_job)
 
 
 @app.get("/api/v1/reports/{report_id}", response_model=ReportResponse)
@@ -179,7 +197,8 @@ def get_report(report_id: str, db: Session = Depends(get_db)) -> ReportResponse:
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    return serialize_report(report)
+    inference_job = get_latest_inference_job(db, report.id)
+    return serialize_report(report, inference_job)
 
 
 @app.post("/api/v1/reports/{report_id}/finalize", response_model=ReportResponse)
@@ -200,12 +219,13 @@ async def finalize_report(
 
     db.commit()
     db.refresh(report)
+    inference_job = get_latest_inference_job(db, report.id)
 
     await broadcast_status(
         report_id,
         {"qaStatus": report.qa_status, "aiStatus": "idle", "asrStatus": "idle"},
     )
-    return serialize_report(report)
+    return serialize_report(report, inference_job)
 
 
 @app.post("/api/v1/reports/asr-transcript", response_model=ASRResponse)

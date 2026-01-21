@@ -52,6 +52,7 @@ export function useReportStatusSync(initialItems: QueueItem[] = []) {
         report: {
           ...item.report,
           qaStatus: liveStatus.qaStatus || item.report.qaStatus,
+          aiStatus: liveStatus.aiStatus || item.report.aiStatus,
         },
       };
     });

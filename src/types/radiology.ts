@@ -42,6 +42,13 @@ export interface Report {
   approvedBy?: string;
   qaStatus: QAStatus;
   qaWarnings: string[];
+  aiStatus?: AIStatus;
+  inferenceStatus?: string;
+  inferenceSummary?: string;
+  inferenceConfidence?: number;
+  inferenceModelVersion?: string;
+  inferenceJobId?: string;
+  inferenceCompletedAt?: string;
 }
 
 export type ReportStatus = 'pending' | 'in_progress' | 'draft' | 'approved' | 'finalized';

@@ -36,6 +36,12 @@ class ReportResponse(ApiBaseModel):
     approved_by: str | None = None
     qa_status: str
     qa_warnings: list[str]
+    inference_status: str | None = None
+    inference_summary: str | None = None
+    inference_confidence: float | None = None
+    inference_model_version: str | None = None
+    inference_job_id: str | None = None
+    inference_completed_at: str | None = None
 
 
 class ASRResponse(ApiBaseModel):
