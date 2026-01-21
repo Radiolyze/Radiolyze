@@ -4,7 +4,7 @@
 
 Die UI ist in drei Hauptbereiche gegliedert:
 
-- **Left Sidebar**: Patient, Serien, Queue, WebSocket-Status
+- **Left Sidebar**: Patient, Voruntersuchungen, Serien, Queue, WebSocket-Status
 - **Viewer**: DICOM Anzeige, Tools, Seriennavigation, Vergleichsmodus
 - **Right Panel**: Findings, Impression, QA, Templates, Guidelines
 
@@ -15,7 +15,7 @@ Die UI ist in drei Hauptbereiche gegliedert:
 - `ComparisonViewer`: Split-View für Prior Studies Vergleich
 - `ProgressOverlay`: ASR/AI/QA Status
 - `FindingsPanel`: ASR gesteuertes Dictation UI
-- `ImpressionPanel`: KI-Entwurf + Freigabe
+- `ImpressionPanel`: KI-Entwurf + Freigabe + SR Export
 - `TemplatesPanel`: Institutions-Templates
 - `GuidelinesPanel`: Leitlinienhinweise
 
@@ -59,4 +59,4 @@ Die UI ist in drei Hauptbereiche gegliedert:
 
 - KI/Impression Inferenz weiterhin Mock (Queue vorhanden)
 - Queue/Report State ohne vollstaendige Orchestrator-Sync
-- Prior Studies Timeline noch nicht in Sidebar integriert
+- SR Export ist Draft (JSON/Binary), noch kein C-STORE in Orthanc

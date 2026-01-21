@@ -17,7 +17,7 @@
 - [x] Docker Compose Stack (Frontend + Backend + Postgres + Orthanc)
 - [x] WebSocket Live-Updates (Report-Status, QA-Events)
 - [x] Inference Queue (RQ + Redis, Mock Inferenz)
-- [~] Audit Logging (Art. 12 Baseline: API + DB, Felder/Hashing offen)
+- [~] Audit Logging (API + Worker Events, Felder/Hashing offen)
 
 ## Phase 3: Vergleichsmodus & Priors (6-10 Wochen)
 
@@ -26,19 +26,19 @@
 - [x] Frame-Synchronisierung (proportional)
 - [x] Swap Views (Layout tauschen)
 - [x] Viewport-Synchronisierung (Zoom, Pan, Window/Level)
-- [ ] Prior Studies Timeline in Sidebar
-- [ ] Automatische Matching-Vorschläge
+- [x] Prior Studies Timeline in Sidebar
+- [x] Automatische Matching-Vorschläge
 
 ## Phase 4: Compliance Ready (10-14 Wochen)
 
-- [~] Human Oversight Dialog + Audit Trail (Dialog vorhanden, Audit Trail ausbauen)
-- [ ] EU AI Act Dokumentation (Annex IV)
+- [~] Human Oversight Dialog + Audit Trail (Dialog vorhanden, Audit Trail erweitert)
+- [~] EU AI Act Dokumentation (Annex IV Template, Inhalte offen)
 - [ ] Drift Monitoring (Post-Market)
-- [ ] Security Hardening (TLS, RBAC)
+- [~] Security Hardening (Baseline Doku, TLS/RBAC Umsetzung offen)
 
 ## Phase 5: Production (14-22 Wochen)
 
-- [ ] DICOM SR Export
+- [~] DICOM SR Export (JSON + Binary Export, Archivierung offen)
 - [ ] Templates + Guidelines RAG
 - [~] vLLM GPU Worker (Compose + API Integration, Multimodal)
 - [ ] DICOM -> Image Pipeline fuer Multimodal Inference (WADO-RS/JPEG)

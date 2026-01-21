@@ -32,9 +32,12 @@ Der aktuelle Code enthaelt:
 - Cornerstone Viewer (Stack, Tools, W/L Presets, Prefetch)
 - DICOMweb Queue fuer Studien/Serien (Orthanc QIDO-RS)
 - Annotation Export (JSON)
+- Prior Studies Timeline + Matching-Vorschlaege in der Sidebar
 - Docker Compose Stack (Frontend + Backend + Orthanc + Postgres)
 - Orchestrator API (FastAPI) inkl. Audit Logging und QA/Impression Endpoints
 - Inference Queue (RQ + Redis) mit persistierten Jobs und Status-Events
+- DICOM SR Export (JSON + Binary Draft)
+- Annex IV Template + Security Baseline in der Compliance Doku
 
 Orthanc DICOMweb laeuft lokal mit Basic Auth, Sample-DICOM wird automatisch geladen.
 ASR/QA/Impression/Inferenz verwenden im Backend derzeit Mock-Logik als Platzhalter.
