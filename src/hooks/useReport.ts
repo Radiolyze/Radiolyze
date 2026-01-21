@@ -4,6 +4,8 @@ import { mockAIImpressions, mockQAChecks } from '@/data/mockData';
 import { impressionClient } from '@/services/impressionClient';
 import { inferenceClient } from '@/services/inferenceClient';
 import { qaClient, type QAServiceResponse } from '@/services/qaClient';
+import { reportClient } from '@/services/reportClient';
+import { mapReportResponse } from '@/services/reportMapping';
 
 const buildChecksFromService = (response: QAServiceResponse): QACheck[] => {
   if (Array.isArray(response.checks) && response.checks.length > 0) {
@@ -61,6 +63,8 @@ const getQaStatus = (checks: QACheck[], response?: QAServiceResponse): QAStatus 
   if (response?.passes === false) return 'fail';
   return 'pending';
 };
+
+const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
 
 interface GenerateImpressionOptions {
   reportId?: string;
@@ -156,34 +160,50 @@ interface UseReportReturn {
 export function useReport(initialReport?: Report): UseReportReturn {
   const [report, setReport] = useState<Report | null>(initialReport || null);
   const [isLoading, setIsLoading] = useState(false);
-  const [qaChecks, setQaChecks] = useState<QACheck[]>(mockQAChecks);
+  const [qaChecks, setQaChecks] = useState<QACheck[]>(allowMockFallback ? mockQAChecks : []);
 
   const updateFindings = useCallback(async (text: string) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    setReport(prev => prev ? {
-      ...prev,
-      findingsText: text,
-      updatedAt: new Date().toISOString(),
-      status: 'draft',
-    } : null);
-    
-    setIsLoading(false);
-  }, []);
+
+    try {
+      if (report?.id) {
+        const response = await reportClient.updateReport(report.id, {
+          findingsText: text,
+        });
+        setReport(prev => (prev ? mapReportResponse(response, prev) : mapReportResponse(response)));
+      } else {
+        setReport(prev => prev ? {
+          ...prev,
+          findingsText: text,
+          updatedAt: new Date().toISOString(),
+          status: 'draft',
+        } : null);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [report?.id]);
 
   const updateImpression = useCallback(async (text: string) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    setReport(prev => prev ? {
-      ...prev,
-      impressionText: text,
-      updatedAt: new Date().toISOString(),
-    } : null);
-    
-    setIsLoading(false);
-  }, []);
+
+    try {
+      if (report?.id) {
+        const response = await reportClient.updateReport(report.id, {
+          impressionText: text,
+        });
+        setReport(prev => (prev ? mapReportResponse(response, prev) : mapReportResponse(response)));
+      } else {
+        setReport(prev => prev ? {
+          ...prev,
+          impressionText: text,
+          updatedAt: new Date().toISOString(),
+        } : null);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [report?.id]);
 
   const generateImpression = useCallback(async (
     findings: string,
@@ -273,6 +293,12 @@ export function useReport(initialReport?: Report): UseReportReturn {
         succeeded = true;
         return impression;
       } catch (fallbackError) {
+        if (!allowMockFallback) {
+          console.warn('Impression service failed.', fallbackError);
+          onStatus?.('error');
+          throw fallbackError;
+        }
+
         console.warn('Impression service failed, using mock impression.', fallbackError);
 
         await wait(1200 + Math.random() * 800);
@@ -325,6 +351,22 @@ export function useReport(initialReport?: Report): UseReportReturn {
 
       return { status, checks, warnings };
     } catch (error) {
+      if (!allowMockFallback) {
+        console.warn('QA check failed.', error);
+        const checks: QACheck[] = [];
+        const warnings = ['QA-Prüfung fehlgeschlagen'];
+        const status: QAStatus = 'warn';
+
+        setQaChecks(checks);
+        setReport(prev => prev ? {
+          ...prev,
+          qaStatus: status,
+          qaWarnings: warnings,
+        } : null);
+
+        return { status, checks, warnings };
+      }
+
       console.warn('QA check failed, using mock checks.', error);
 
       const checks = mockQAChecks;
@@ -343,19 +385,16 @@ export function useReport(initialReport?: Report): UseReportReturn {
   }, [report?.findingsText, report?.id, report?.impressionText]);
 
   const approveReport = useCallback(async (signature: string) => {
+    if (!report?.id) return;
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setReport(prev => prev ? {
-      ...prev,
-      status: 'approved',
-      approvedAt: new Date().toISOString(),
-      approvedBy: signature,
-      updatedAt: new Date().toISOString(),
-    } : null);
-    
-    setIsLoading(false);
-  }, []);
+
+    try {
+      const response = await reportClient.finalizeReport(report.id, signature);
+      setReport(prev => (prev ? mapReportResponse(response, prev) : mapReportResponse(response)));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [report?.id]);
 
   return {
     report,

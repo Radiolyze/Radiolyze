@@ -5,6 +5,7 @@ import { useAudioInput } from '@/hooks/useAudioInput';
 import { asrClient } from '@/services/asrClient';
 
 type ASRStatus = 'idle' | 'listening' | 'processing';
+const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
 
 interface UseASRReturn {
   status: ASRStatus;
@@ -65,10 +66,18 @@ export function useASR(options: UseASROptions = {}): UseASRReturn {
     try {
       await audioInput.start();
     } catch (error) {
-      console.warn('ASR recording failed, using mock transcript.', error);
-      useMockRecordingRef.current = true;
+      if (allowMockFallback) {
+        console.warn('ASR recording failed, using mock transcript.', error);
+        useMockRecordingRef.current = true;
+      } else {
+        console.warn('ASR recording failed.', error);
+        clearConfidenceInterval();
+        setStatus('idle');
+        setConfidence(0);
+        useMockRecordingRef.current = false;
+      }
     }
-  }, [audioInput, startConfidenceInterval, status]);
+  }, [audioInput, clearConfidenceInterval, startConfidenceInterval, status]);
 
   const stopRecording = useCallback(async (): Promise<ASRResult | null> => {
     if (status !== 'listening') return null;
@@ -95,12 +104,20 @@ export function useASR(options: UseASROptions = {}): UseASRReturn {
     }
 
     if (!result) {
-      result = buildMockResult(duration);
+      if (allowMockFallback) {
+        result = buildMockResult(duration);
+      } else {
+        console.warn('ASR failed and mock fallback is disabled.');
+      }
     }
 
     setLastResult(result);
-    setConfidence(result.confidence);
     setStatus('idle');
+    if (!result) {
+      setConfidence(0);
+      return null;
+    }
+    setConfidence(result.confidence);
 
     return result;
   }, [audioInput, clearConfidenceInterval, options.reportId, status]);

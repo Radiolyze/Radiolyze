@@ -40,4 +40,5 @@ Der aktuelle Code enthaelt:
 - Annex IV Template + Security Baseline in der Compliance Doku
 
 Orthanc DICOMweb laeuft lokal mit Basic Auth, Sample-DICOM wird automatisch geladen.
-ASR/QA/Impression/Inferenz verwenden im Backend derzeit Mock-Logik als Platzhalter.
+ASR/Impression/Inferenz nutzen MedASR/MedGemma wenn aktiviert, sonst Mock-Fallbacks.
+QA verwendet derzeit regelbasierte Mock-Checks.

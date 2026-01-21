@@ -1,4 +1,8 @@
+import { apiClient } from './apiClient';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+const REPORTS_CREATE_ENDPOINT = import.meta.env.VITE_REPORTS_CREATE_URL ?? '/api/v1/reports/create';
+const REPORTS_ENDPOINT = import.meta.env.VITE_REPORTS_URL ?? '/api/v1/reports';
 const SR_EXPORT_ENDPOINT = import.meta.env.VITE_SR_EXPORT_URL ?? '/api/v1/reports';
 
 const buildUrl = (path: string) => new URL(path, API_BASE_URL || window.location.origin).toString();
@@ -17,12 +21,91 @@ export interface SrExportResult {
   contentType: string;
 }
 
+export interface ReportResponsePayload {
+  id: string;
+  study_id: string;
+  patient_id: string;
+  status: string;
+  findings_text: string;
+  impression_text: string;
+  created_at: string;
+  updated_at: string;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  qa_status: string;
+  qa_warnings: string[];
+  inference_status?: string | null;
+  inference_summary?: string | null;
+  inference_confidence?: number | null;
+  inference_model_version?: string | null;
+  inference_job_id?: string | null;
+  inference_completed_at?: string | null;
+}
+
+export interface ReportUpdatePayload {
+  findingsText?: string;
+  impressionText?: string;
+  status?: string;
+  actorId?: string;
+}
+
+export interface ReportCreatePayload {
+  reportId?: string;
+  studyId: string;
+  patientId: string;
+  status?: string;
+  findingsText?: string;
+  impressionText?: string;
+}
+
+interface ReportListParams {
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export const reportClient = {
+  async getReport(reportId: string): Promise<ReportResponsePayload> {
+    return apiClient.get<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}`);
+  },
+  async listReports(params: ReportListParams = {}): Promise<ReportResponsePayload[]> {
+    return apiClient.get<ReportResponsePayload[]>(REPORTS_ENDPOINT, {
+      query: {
+        status: params.status,
+        limit: params.limit,
+        offset: params.offset,
+      },
+    });
+  },
+  async createReport(payload: ReportCreatePayload): Promise<ReportResponsePayload> {
+    return apiClient.post<ReportResponsePayload>(REPORTS_CREATE_ENDPOINT, {
+      report_id: payload.reportId,
+      study_id: payload.studyId,
+      patient_id: payload.patientId,
+      status: payload.status,
+      findings_text: payload.findingsText,
+      impression_text: payload.impressionText,
+    });
+  },
+  async finalizeReport(reportId: string, signature?: string): Promise<ReportResponsePayload> {
+    return apiClient.post<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}/finalize`, {
+      approvedBy: signature,
+      signature,
+    });
+  },
+  async updateReport(reportId: string, payload: ReportUpdatePayload): Promise<ReportResponsePayload> {
+    return apiClient.patch<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}`, {
+      findings_text: payload.findingsText,
+      impression_text: payload.impressionText,
+      status: payload.status,
+      actorId: payload.actorId,
+    });
+  },
   async exportStructuredReport(reportId: string, format: SrExportFormat = 'dicom'): Promise<SrExportResult> {
     const response = await fetch(
       buildUrl(`${SR_EXPORT_ENDPOINT}/${reportId}/export-sr?format=${format}`),
       {
-      method: 'GET',
+        method: 'GET',
       }
     );
 

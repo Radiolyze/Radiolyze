@@ -2,7 +2,8 @@
 
 ## Ist die UI produktionsreif?
 
-Nein. Die UI ist eine Referenzimplementierung mit Mock-Daten.
+Nein. Die UI ist eine Referenzimplementierung und nicht produktionsreif
+(kein Auth/RBAC, einige Fallbacks und Open Issues).
 
 ## Kann ich den Stack On-Prem betreiben?
 
@@ -14,4 +15,4 @@ Durch Audit Logging, Human Oversight, technische Dokumentation und Monitoring.
 
 ## Ist Cornerstone bereits integriert?
 
-Noch nicht. Der Viewer ist als Mock implementiert und vorbereitet fuer Integration.
+Ja. Cornerstone ist integriert (Stack Viewer, Tools, W/L Presets); Advanced Tools sind noch offen.

@@ -8,7 +8,7 @@
 
 ## ImpressionPanel
 
-- AI Draft Anzeige (aktuell Mock)
+- AI Draft Anzeige (Inference/Impression API, optionaler Mock-Fallback)
 - QA Status/Warnungen
 - Freigabe via Approval Dialog
 - DICOM SR Export (JSON Draft + Binary)

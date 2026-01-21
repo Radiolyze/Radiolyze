@@ -7,11 +7,12 @@ import { useReport } from '@/hooks/useReport';
 import { useDicomWebQueue } from '@/hooks/useDicomWebQueue';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useReportStatusSync } from '@/hooks/useReportStatusSync';
+import { usePriorStudies } from '@/hooks/usePriorStudies';
 import type { AIStatus, QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
 import { reportClient } from '@/services/reportClient';
-import { mockPriorStudies, formatDate } from '@/data/mockData';
+import { formatDate } from '@/data/mockData';
 
 const Index = () => {
   const { items: queueItems, isLoading: isQueueLoading, error: queueError } = useDicomWebQueue();
@@ -25,7 +26,15 @@ const Index = () => {
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
 
   // Report state
-  const { report, setReport, qaChecks, generateImpression, runQAChecks } = useReport();
+  const {
+    report,
+    setReport,
+    qaChecks,
+    generateImpression,
+    runQAChecks,
+    approveReport,
+    updateFindings,
+  } = useReport();
   const [findings, setFindings] = useState('');
   const [impression, setImpression] = useState('');
   const [aiStatus, setAiStatus] = useState<AIStatus>('idle');
@@ -111,24 +120,29 @@ const Index = () => {
 
   const handleApprove = useCallback(async (signature?: string) => {
     const name = signature?.trim();
-    toast.success(`Report freigegeben${name ? ` (${name})` : ''}`);
-    await auditLogger.logEvent({
-      eventType: 'report_approved',
-      actorId: name,
-      reportId: report?.id,
-      studyId: report?.studyId,
-      metadata: { signature: name },
-    });
-  }, [report?.id, report?.studyId]);
+    if (!name) return;
+
+    try {
+      await approveReport(name);
+      toast.success(`Report freigegeben (${name})`);
+    } catch (error) {
+      console.warn('Report finalize failed', error);
+      toast.error('Report-Freigabe fehlgeschlagen');
+    }
+  }, [approveReport]);
 
   const handleSaveFindings = useCallback(async () => {
-    toast.success('Befund gespeichert');
-    await auditLogger.logEvent({
-      eventType: 'findings_saved',
-      reportId: report?.id,
-      studyId: report?.studyId,
-    });
-  }, [report?.id, report?.studyId]);
+    if (!report?.id) {
+      return;
+    }
+    try {
+      await updateFindings(findings);
+      toast.success('Befund gespeichert');
+    } catch (error) {
+      console.warn('Findings update failed', error);
+      toast.error('Befund speichern fehlgeschlagen');
+    }
+  }, [findings, report?.id, updateFindings]);
 
   const handleExportSr = useCallback(async (format: 'json' | 'dicom') => {
     if (!report?.id) {
@@ -156,11 +170,16 @@ const Index = () => {
     onApprove: handleApprove,
   });
 
-  // Get prior studies for current patient
-  const priorStudies = useMemo(() => {
-    if (!selectedQueueItem) return [];
-    return mockPriorStudies.filter((study) => study.patientId === selectedQueueItem.patient.id);
-  }, [selectedQueueItem]);
+  const {
+    priorStudies,
+    error: priorStudiesError,
+  } = usePriorStudies(selectedQueueItem?.patient.id, selectedQueueItem?.study.id);
+
+  useEffect(() => {
+    if (priorStudiesError) {
+      toast.error(priorStudiesError);
+    }
+  }, [priorStudiesError]);
 
   const priorStudiesForViewer = useMemo(
     () =>

@@ -14,11 +14,22 @@ import { Badge } from '@/components/ui/badge';
 import { KeyboardShortcutsSheet } from '@/components/Common/KeyboardShortcutsSheet';
 import { NotificationsSheet } from '@/components/Common/NotificationsSheet';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export function Header() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { preferences, setPreference } = useUserPreferences();
+  const {
+    notifications,
+    unreadCount,
+    isLoading: notificationsLoading,
+    errorMessage: notificationsError,
+    refresh: refreshNotifications,
+    markAsRead,
+    markAllAsRead,
+    clearAll,
+  } = useNotifications();
 
   const themeIcon = preferences.theme === 'dark' ? Moon : preferences.theme === 'light' ? Sun : Monitor;
   const ThemeIcon = themeIcon;
@@ -70,9 +81,11 @@ export function Header() {
             onClick={() => setNotificationsOpen(true)}
           >
             <Bell className="h-5 w-5" />
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center">
-              3
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </Button>
 
           {/* Batch Dashboard */}
@@ -129,7 +142,18 @@ export function Header() {
 
       {/* Sheets */}
       <KeyboardShortcutsSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-      <NotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
+      <NotificationsSheet
+        open={notificationsOpen}
+        onOpenChange={setNotificationsOpen}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        isLoading={notificationsLoading}
+        errorMessage={notificationsError}
+        onRefresh={refreshNotifications}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        onClearAll={clearAll}
+      />
     </>
   );
 }

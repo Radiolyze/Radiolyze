@@ -10,8 +10,15 @@
 `POST /api/v1/reports/create`
 - Erstellt Report (DB), optional mit `report_id`
 
+`GET /api/v1/reports?status=...&limit=...&offset=...`
+- Listet Reports (DB), optional Status Filter
+
 `GET /api/v1/reports/{report_id}`
 - Liefert Report Status und Inhalte
+
+`PATCH /api/v1/reports/{report_id}`
+- Aktualisiert Findings/Impression/Status eines Reports
+- Schreibt Audit Event (`findings_saved`, `report_amended`, `report_updated`)
 
 `POST /api/v1/reports/{report_id}/finalize`
 - Freigabe durch Radiologe, setzt Status auf `finalized`
@@ -56,5 +63,5 @@
 `POST /api/v1/audit-log`
 - Audit Event schreiben (persistiert in DB)
 
-`GET /api/v1/audit-log?study_id=...`
-- Audit Log lesen (Filter `study_id`, `report_id`)
+`GET /api/v1/audit-log?study_id=...&report_id=...&limit=...&offset=...`
+- Audit Log lesen (Filter `study_id`, `report_id`), Pagination via `limit/offset`

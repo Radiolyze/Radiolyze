@@ -12,12 +12,13 @@
 
 ## Phase 2: Backend Orchestrator (4-8 Wochen)
 
-- [x] FastAPI Endpunkte (create/get/finalize + QA/ASR/Impression/Audit)
+- [x] FastAPI Endpunkte (create/get/update/list/finalize + QA/ASR/Impression/Audit)
 - [x] Orthanc DICOMweb Anbindung (QIDO-RS Studien/Serien + WADO-RS Frames, Basic Auth)
 - [x] Docker Compose Stack (Frontend + Backend + Postgres + Orthanc)
 - [x] WebSocket Live-Updates (Report-Status, QA-Events)
 - [x] Inference Queue (RQ + Redis, Mock Inferenz)
-- [~] Audit Logging (API + Worker Events, Felder/Hashing offen)
+- [x] Audit Logging (API + Worker Events, Pagination + UI Integration)
+- [x] Notifications (Audit Log + WS Refresh)
 
 ## Phase 3: Vergleichsmodus & Priors (6-10 Wochen)
 
@@ -28,6 +29,7 @@
 - [x] Viewport-Synchronisierung (Zoom, Pan, Window/Level)
 - [x] Prior Studies Timeline in Sidebar
 - [x] Automatische Matching-Vorschläge
+- [x] Prior Studies Fetch via DICOMweb (PatientID Filter)
 
 ## Phase 4: Compliance Ready (10-14 Wochen)
 
@@ -42,7 +44,7 @@
 - [ ] Templates + Guidelines RAG
 - [~] vLLM GPU Worker (Compose + API Integration, Multimodal)
 - [ ] DICOM -> Image Pipeline fuer Multimodal Inference (WADO-RS/JPEG)
-- [x] Batch Reporting Dashboard (Multi-Select, Bulk Actions, Analytics)
+- [x] Batch Reporting Dashboard (Multi-Select, Bulk Actions, Analytics + API Anbindung)
 - [x] Report History / Audit Log UI
 - [ ] Observability (Metrics + Tracing)
 

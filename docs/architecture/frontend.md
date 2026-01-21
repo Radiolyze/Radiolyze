@@ -22,11 +22,14 @@ Die UI ist in drei Hauptbereiche gegliedert:
 ## State-Management
 
 - UI State lokal in Komponenten
-- Zentraler Report-Status via `useReport` Hook (QA via API, Findings/Impression lokal)
-- ASR Status via `useASR` Hook (Audio Upload + API Fallback)
+- Zentraler Report-Status via `useReport` Hook (Update/Finalize via API)
+- ASR Status via `useASR` Hook (Audio Upload + optionaler Mock-Fallback)
 - Tastatur-Shortcuts via `useKeyboardShortcuts`
 - WebSocket Live-Updates via `useWebSocket` + `useReportStatusSync`
 - Viewport-Synchronisierung via `onViewportChange` / `syncState` Props
+- Queue Sync via `useDicomWebQueue` (DICOMweb + Report get/create)
+- Prior Studies via `usePriorStudies` (DICOMweb PatientID Filter)
+- Notifications via `useNotifications` (Audit Log + WS Refresh)
 
 ## Hooks
 
@@ -38,7 +41,10 @@ Die UI ist in drei Hauptbereiche gegliedert:
 | `useASR`               | Audio-Aufnahme + Transkription             |
 | `useKeyboardShortcuts` | Globale Shortcuts (Viewer, Navigation)     |
 | `useUserPreferences`   | Persistierte User-Einstellungen            |
-| `useDicomWebQueue`     | DICOMweb Studien-Loading                   |
+| `useDicomWebQueue`     | DICOMweb Studien + Report Sync             |
+| `usePriorStudies`      | Voruntersuchungen via DICOMweb             |
+| `useStudyLookup`       | Studien-Metadaten fuer UI-Enrichment       |
+| `useNotifications`     | Audit Log Benachrichtigungen               |
 
 ## Pages
 
@@ -57,6 +63,7 @@ Die UI ist in drei Hauptbereiche gegliedert:
 
 ## Technische Schulden (bekannt)
 
-- KI/Impression Inferenz weiterhin Mock (Queue vorhanden)
-- Queue/Report State ohne vollstaendige Orchestrator-Sync
+- KI/Impression Inferenz mit Backend-Anbindung (Mock-Fallback wenn Service deaktiviert)
+- Queue Prioritaeten/Selektion noch clientseitig (kein Queue Endpoint)
 - SR Export ist Draft (JSON/Binary), noch kein C-STORE in Orthanc
+- Notification Read-State nur lokal (kein serverseitiger Status)
