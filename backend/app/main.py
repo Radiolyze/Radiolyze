@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
@@ -35,6 +35,7 @@ from .schemas import (
     ReportFinalizeRequest,
     ReportResponse,
 )
+from .sr import build_sr_export
 from .tasks import run_inference_job
 from .ws import ConnectionManager
 from .ws_events import run_ws_bridge
@@ -281,6 +282,35 @@ async def finalize_report(
         {"qaStatus": report.qa_status, "aiStatus": "idle", "asrStatus": "idle"},
     )
     return serialize_report(report, inference_job)
+
+
+@app.get("/api/v1/reports/{report_id}/export-sr")
+def export_structured_report(
+    report_id: str,
+    actor_id: str | None = None,
+    db: Session = Depends(get_db),
+) -> Response:
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    content, filename, media_type = build_sr_export(report)
+    add_audit_event(
+        db,
+        event_type="report_exported",
+        actor_id=actor_id or report.approved_by,
+        report_id=report.id,
+        study_id=report.study_id,
+        metadata={"format": "dicom-sr-json", "file_name": filename},
+        source="api",
+    )
+    db.commit()
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.post("/api/v1/reports/asr-transcript", response_model=ASRResponse)

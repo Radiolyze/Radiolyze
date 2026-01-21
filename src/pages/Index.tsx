@@ -10,6 +10,7 @@ import { useReportStatusSync } from '@/hooks/useReportStatusSync';
 import type { AIStatus, QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
+import { reportClient } from '@/services/reportClient';
 import { mockPriorStudies, formatDate } from '@/data/mockData';
 
 const Index = () => {
@@ -129,6 +130,26 @@ const Index = () => {
     });
   }, [report?.id, report?.studyId]);
 
+  const handleExportSr = useCallback(async () => {
+    if (!report?.id) {
+      return;
+    }
+
+    try {
+      const result = await reportClient.exportStructuredReport(report.id);
+      const url = URL.createObjectURL(result.blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('DICOM SR exportiert');
+    } catch (error) {
+      console.warn('DICOM SR export failed', error);
+      toast.error('DICOM SR Export fehlgeschlagen');
+    }
+  }, [report?.id]);
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onSave: handleSaveFindings,
@@ -200,6 +221,7 @@ const Index = () => {
             onGenerateImpression={handleGenerateImpression}
             onApprove={handleApprove}
             onSaveFindings={handleSaveFindings}
+            onExportSr={handleExportSr}
             onAsrStatusChange={(status, confidence) => {
               setAsrStatus(status);
               setAsrConfidence(confidence);
@@ -250,6 +272,7 @@ const Index = () => {
           onGenerateImpression={handleGenerateImpression}
           onApprove={handleApprove}
           onSaveFindings={handleSaveFindings}
+          onExportSr={handleExportSr}
           onAsrStatusChange={(status, confidence) => {
             setAsrStatus(status);
             setAsrConfidence(confidence);

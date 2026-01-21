@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Edit3, Save, AlertTriangle } from 'lucide-react';
+import { Sparkles, Edit3, Save, AlertTriangle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/Common/StatusBadge';
@@ -23,6 +23,7 @@ interface ImpressionPanelProps {
   onImpressionChange: (text: string) => void;
   onGenerateImpression: () => Promise<void>;
   onApprove: (signature?: string) => void;
+  onExportSr?: () => void;
   isGenerating?: boolean;
 }
 
@@ -40,6 +41,7 @@ export function ImpressionPanel({
   onImpressionChange,
   onGenerateImpression,
   onApprove,
+  onExportSr,
   isGenerating = false,
 }: ImpressionPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -208,6 +210,19 @@ export function ImpressionPanel({
           disabled={!canApprove}
           triggerLabel="Freigeben & Abschliessen"
         />
+
+        {onExportSr && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={onExportSr}
+            disabled={!impression && !findings}
+          >
+            <Download className="h-4 w-4 mr-1.5" />
+            DICOM SR exportieren
+          </Button>
+        )}
         
         <div className="flex gap-2">
           <Button
