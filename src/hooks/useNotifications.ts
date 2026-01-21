@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { auditClient, type AuditEventResponse } from '@/services/auditClient';
 import { useStudyLookup } from '@/hooks/useStudyLookup';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 export type NotificationType = 'report' | 'urgent' | 'system' | 'success';
 
@@ -130,6 +131,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(() => loadIdSet(STORAGE_READ_KEY));
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => loadIdSet(STORAGE_DISMISS_KEY));
+  const refreshTimeoutRef = useRef<number | null>(null);
 
   const studyIds = useMemo(
     () => Array.from(new Set(events.map((event) => event.study_id).filter(Boolean))) as string[],
@@ -152,9 +154,30 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     }
   }, [limit]);
 
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current !== null) {
+      window.clearTimeout(refreshTimeoutRef.current);
+    }
+    refreshTimeoutRef.current = window.setTimeout(() => {
+      refresh();
+    }, 500);
+  }, [refresh]);
+
+  useWebSocket({
+    onReportStatus: scheduleRefresh,
+  });
+
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current !== null) {
+        window.clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     saveIdSet(STORAGE_READ_KEY, readIds);
