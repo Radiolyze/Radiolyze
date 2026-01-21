@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Settings, User, Activity, Sun, Moon, Monitor, History } from 'lucide-react';
+import { Bell, Settings, User, Activity, Sun, Moon, Monitor, History, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -74,6 +74,13 @@ export function Header() {
               3
             </span>
           </Button>
+
+          {/* Batch Dashboard */}
+          <Link to="/batch">
+            <Button variant="ghost" size="icon" title="Batch-Reporting">
+              <LayoutGrid className="h-5 w-5" />
+            </Button>
+          </Link>
 
           {/* History */}
           <Link to="/history">
