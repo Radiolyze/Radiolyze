@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { MainLayout } from '@/components/Layout/MainLayout';
 import { LeftSidebar } from '@/components/Sidebar/LeftSidebar';
-import { DicomViewer } from '@/components/Viewer/DicomViewer';
+import { ComparisonViewer } from '@/components/Viewer/ComparisonViewer';
 import { RightPanel } from '@/components/RightPanel/RightPanel';
 import { useReport } from '@/hooks/useReport';
 import { useDicomWebQueue } from '@/hooks/useDicomWebQueue';
@@ -9,6 +9,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import type { QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
+import { mockPriorStudies, formatDate } from '@/data/mockData';
 
 const Index = () => {
   const { items: queueItems, isLoading: isQueueLoading, error: queueError } = useDicomWebQueue();
@@ -105,16 +106,17 @@ const Index = () => {
     onApprove: handleApprove,
   });
 
-  // Run QA when impression changes
-  useEffect(() => {
-    if (impression && report?.qaStatus === 'pending') {
-      runQAChecks({
-        reportId: report?.id,
-        findingsText: findings,
-        impressionText: impression,
-      });
-    }
-  }, [findings, impression, report?.id, report?.qaStatus, runQAChecks]);
+  // Get prior studies for current patient
+  const priorStudiesForPatient = useMemo(() => {
+    if (!selectedQueueItem) return [];
+    return mockPriorStudies
+      .filter((study) => study.patientId === selectedQueueItem.patient.id)
+      .map((study) => ({
+        study,
+        label: study.studyDescription,
+        date: formatDate(study.studyDate),
+      }));
+  }, [selectedQueueItem]);
 
   if (!report || !selectedQueueItem) {
     return (
@@ -139,7 +141,7 @@ const Index = () => {
             onSelectSeries={handleSelectSeries}
           />
         }
-        viewer={<DicomViewer series={null} />}
+        viewer={<ComparisonViewer currentSeries={null} />}
         rightPanel={
           <RightPanel
             report={{
@@ -187,8 +189,10 @@ const Index = () => {
         />
       }
       viewer={
-        <DicomViewer
-          series={selectedSeries}
+        <ComparisonViewer
+          currentSeries={selectedSeries}
+          currentStudy={selectedQueueItem.study}
+          priorStudies={priorStudiesForPatient}
           progress={{
             asrStatus,
             asrConfidence,
