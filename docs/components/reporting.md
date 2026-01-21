@@ -11,6 +11,7 @@
 - AI Draft Anzeige (aktuell Mock)
 - QA Status/Warnungen
 - Freigabe via Approval Dialog
+- DICOM SR Export (JSON Draft + Binary)
 
 ## QAChecklist
 

@@ -12,6 +12,7 @@ Diese Tabelle ordnet die Anforderungen den geplanten Komponenten zu.
 | Art. 14 | Human Oversight | Approval Dialog + Editierbarkeit |
 | Art. 15 | Robustheit | Fallback UI + Error Handling |
 | Art. 72 | Monitoring | Drift Checks + Incident Prozess |
+| Annex IV | Technische Doku | `docs/compliance/annex-iv.md` |
 
 ## Nachweis-Artefakte (Beispiele)
 
@@ -19,3 +20,4 @@ Diese Tabelle ordnet die Anforderungen den geplanten Komponenten zu.
 - QA Reports (CSV/JSON)
 - Model Version History
 - Security Tests (Pen Test Report)
+- Annex IV Doku (Template)

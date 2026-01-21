@@ -8,14 +8,14 @@
 4. **AI Draft**: MedGemma + LLM erzeugen Impression (optional mit Bild-Inputs).
 5. **QA Checks**: Vollstaendigkeit, Guidelines, Plausibilitaet.
 6. **Review**: Radiologe korrigiert und freigibt.
-7. **Finalize**: DICOM SR wird erzeugt und gespeichert.
+7. **Finalize**: DICOM SR Export (JSON/Binary) ist verfuegbar.
 8. **Audit**: Alle Schritte werden in Audit Log geschrieben.
 
 ## Datenformate
 
 - DICOM (Bilddaten)
 - JSON (Report, QA, Audit)
-- DICOM SR (Finaler Report)
+- DICOM SR (Draft Export: JSON + Binary)
 - Image URLs / lokale Bildpfade fuer Multimodal Inference
 
 ## Fehlerfall

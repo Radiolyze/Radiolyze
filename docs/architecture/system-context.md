@@ -16,7 +16,7 @@
 3. Diktat wird an ASR Service uebergeben.
 4. Findings/Impression werden durch Inference Pipeline angereichert.
 5. QA Checks pruefen Vollstaendigkeit/Guidelines.
-6. Finalisierung erzeugt DICOM SR und Audit Logs.
+6. Finalisierung ermoeglicht DICOM SR Export und Audit Logs.
 
 ## Nicht-Ziele
 

@@ -10,6 +10,7 @@ import { useReportStatusSync } from '@/hooks/useReportStatusSync';
 import type { AIStatus, QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
+import { reportClient } from '@/services/reportClient';
 import { mockPriorStudies, formatDate } from '@/data/mockData';
 
 const Index = () => {
@@ -49,6 +50,15 @@ const Index = () => {
   useEffect(() => {
     setAiStatus('idle');
   }, [report?.id]);
+
+  useEffect(() => {
+    if (!report?.id) return;
+    auditLogger.logEvent({
+      eventType: 'report_opened',
+      reportId: report.id,
+      studyId: report.studyId,
+    });
+  }, [report?.id, report?.studyId]);
 
   // Initialize selection when queue items load
   useEffect(() => {
@@ -120,6 +130,26 @@ const Index = () => {
     });
   }, [report?.id, report?.studyId]);
 
+  const handleExportSr = useCallback(async (format: 'json' | 'dicom') => {
+    if (!report?.id) {
+      return;
+    }
+
+    try {
+      const result = await reportClient.exportStructuredReport(report.id, format);
+      const url = URL.createObjectURL(result.blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success(`DICOM SR exportiert (${format.toUpperCase()})`);
+    } catch (error) {
+      console.warn('DICOM SR export failed', error);
+      toast.error('DICOM SR Export fehlgeschlagen');
+    }
+  }, [report?.id]);
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onSave: handleSaveFindings,
@@ -127,16 +157,20 @@ const Index = () => {
   });
 
   // Get prior studies for current patient
-  const priorStudiesForPatient = useMemo(() => {
+  const priorStudies = useMemo(() => {
     if (!selectedQueueItem) return [];
-    return mockPriorStudies
-      .filter((study) => study.patientId === selectedQueueItem.patient.id)
-      .map((study) => ({
+    return mockPriorStudies.filter((study) => study.patientId === selectedQueueItem.patient.id);
+  }, [selectedQueueItem]);
+
+  const priorStudiesForViewer = useMemo(
+    () =>
+      priorStudies.map((study) => ({
         study,
         label: study.studyDescription,
         date: formatDate(study.studyDate),
-      }));
-  }, [selectedQueueItem]);
+      })),
+    [priorStudies]
+  );
 
   if (!report || !selectedQueueItem) {
     return (
@@ -159,6 +193,7 @@ const Index = () => {
             selectedSeriesId={null}
             onSelectQueueItem={handleSelectQueueItem}
             onSelectSeries={handleSelectSeries}
+            priorStudies={[]}
             wsConnected={wsConnected}
           />
         }
@@ -186,6 +221,7 @@ const Index = () => {
             onGenerateImpression={handleGenerateImpression}
             onApprove={handleApprove}
             onSaveFindings={handleSaveFindings}
+            onExportSr={handleExportSr}
             onAsrStatusChange={(status, confidence) => {
               setAsrStatus(status);
               setAsrConfidence(confidence);
@@ -207,6 +243,7 @@ const Index = () => {
           selectedSeriesId={selectedSeries?.id || null}
           onSelectQueueItem={handleSelectQueueItem}
           onSelectSeries={handleSelectSeries}
+        priorStudies={priorStudies}
           wsConnected={wsConnected}
         />
       }
@@ -214,7 +251,7 @@ const Index = () => {
         <ComparisonViewer
           currentSeries={selectedSeries}
           currentStudy={selectedQueueItem.study}
-          priorStudies={priorStudiesForPatient}
+          priorStudies={priorStudiesForViewer}
           progress={{
             asrStatus: liveStatus?.asrStatus || asrStatus,
             asrConfidence: liveStatus?.asrConfidence ?? asrConfidence,
@@ -235,6 +272,7 @@ const Index = () => {
           onGenerateImpression={handleGenerateImpression}
           onApprove={handleApprove}
           onSaveFindings={handleSaveFindings}
+          onExportSr={handleExportSr}
           onAsrStatusChange={(status, confidence) => {
             setAsrStatus(status);
             setAsrConfidence(confidence);

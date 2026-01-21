@@ -18,6 +18,7 @@ interface RightPanelProps {
   onApprove: (signature?: string) => void;
   onSaveFindings?: () => void;
   onAsrStatusChange?: (status: 'idle' | 'listening' | 'processing', confidence: number) => void;
+  onExportSr?: (format: 'json' | 'dicom') => void;
 }
 
 export function RightPanel({
@@ -32,6 +33,7 @@ export function RightPanel({
   onApprove,
   onSaveFindings,
   onAsrStatusChange,
+  onExportSr,
 }: RightPanelProps) {
   const handleApplyTemplate = useCallback(
     (template: ReportTemplate) => {
@@ -67,6 +69,7 @@ export function RightPanel({
           onImpressionChange={onImpressionChange}
           onGenerateImpression={onGenerateImpression}
           onApprove={onApprove}
+          onExportSr={onExportSr}
           isGenerating={isGeneratingImpression}
         />
 

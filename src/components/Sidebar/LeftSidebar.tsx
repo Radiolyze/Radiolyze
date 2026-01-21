@@ -1,5 +1,6 @@
 import type { Patient, Study, QueueItem, Series } from '@/types/radiology';
 import { PatientCard } from './PatientCard';
+import { PriorStudiesTimeline } from './PriorStudiesTimeline';
 import { SeriesList } from './SeriesList';
 import { ReportQueue } from './ReportQueue';
 import { Wifi, WifiOff } from 'lucide-react';
@@ -13,6 +14,7 @@ interface LeftSidebarProps {
   selectedSeriesId: string | null;
   onSelectQueueItem: (item: QueueItem) => void;
   onSelectSeries: (series: Series) => void;
+  priorStudies?: Study[];
   wsConnected?: boolean;
 }
 
@@ -24,11 +26,13 @@ export function LeftSidebar({
   selectedSeriesId,
   onSelectQueueItem,
   onSelectSeries,
+  priorStudies = [],
   wsConnected,
 }: LeftSidebarProps) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <PatientCard patient={patient} study={study} />
+      <PriorStudiesTimeline currentStudy={study} priorStudies={priorStudies} />
       <SeriesList
         series={study.series}
         selectedSeriesId={selectedSeriesId}

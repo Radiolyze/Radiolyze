@@ -15,7 +15,11 @@
 
 `POST /api/v1/reports/{report_id}/finalize`
 - Freigabe durch Radiologe, setzt Status auf `finalized`
-- DICOM SR Export folgt in Phase 4
+- DICOM SR Export via separatem Endpoint
+
+`GET /api/v1/reports/{report_id}/export-sr?format=json|dicom`
+- Exportiert einen DICOM SR Entwurf als JSON (`application/dicom+json`) oder Binary (`application/dicom`)
+- Erstellt einen Audit Event `report_exported` mit Format
 
 ## ASR
 

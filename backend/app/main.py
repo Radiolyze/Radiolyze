@@ -8,12 +8,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 from sqlalchemy.orm import Session
 
+from .audit import add_audit_event
 from .db import Base, SessionLocal, engine
 from .inference_clients import generate_impression_text, transcribe_audio
 from .mock_logic import run_qa_checks, utc_now
@@ -34,6 +35,7 @@ from .schemas import (
     ReportFinalizeRequest,
     ReportResponse,
 )
+from .sr import build_sr_export
 from .tasks import run_inference_job
 from .ws import ConnectionManager
 from .ws_events import run_ws_bridge
@@ -219,6 +221,16 @@ def create_report(payload: ReportCreateRequest, db: Session = Depends(get_db)) -
     )
 
     db.add(report)
+    add_audit_event(
+        db,
+        event_type="report_created",
+        actor_id="system",
+        report_id=report_id,
+        study_id=payload.study_id,
+        metadata={"status": report.status},
+        timestamp=now,
+        source="api",
+    )
     db.commit()
     db.refresh(report)
     inference_job = get_latest_inference_job(db, report.id)
@@ -245,11 +257,22 @@ async def finalize_report(
         raise HTTPException(status_code=404, detail="Report not found")
 
     now = utc_now()
+    approver = payload.approved_by or payload.signature
     report.status = "finalized"
     report.approved_at = now
-    report.approved_by = payload.approved_by or payload.signature
+    report.approved_by = approver
     report.updated_at = now
 
+    add_audit_event(
+        db,
+        event_type="report_approved",
+        actor_id=approver,
+        report_id=report_id,
+        study_id=report.study_id,
+        metadata={"signature": approver} if approver else None,
+        timestamp=now,
+        source="api",
+    )
     db.commit()
     db.refresh(report)
     inference_job = get_latest_inference_job(db, report.id)
@@ -259,6 +282,40 @@ async def finalize_report(
         {"qaStatus": report.qa_status, "aiStatus": "idle", "asrStatus": "idle"},
     )
     return serialize_report(report, inference_job)
+
+
+@app.get("/api/v1/reports/{report_id}/export-sr")
+def export_structured_report(
+    report_id: str,
+    actor_id: str | None = None,
+    export_format: str = Query("json", alias="format"),
+    db: Session = Depends(get_db),
+) -> Response:
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    normalized = export_format.lower()
+    if normalized not in {"json", "dicom"}:
+        raise HTTPException(status_code=400, detail="Unsupported SR export format")
+
+    content, filename, media_type = build_sr_export(report, normalized)
+    add_audit_event(
+        db,
+        event_type="report_exported",
+        actor_id=actor_id or report.approved_by,
+        report_id=report.id,
+        study_id=report.study_id,
+        metadata={"format": normalized, "file_name": filename},
+        source="api",
+    )
+    db.commit()
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.post("/api/v1/reports/asr-transcript", response_model=ASRResponse)
@@ -280,11 +337,22 @@ async def asr_transcript(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     timestamp = utc_now()
 
+    report = None
     if report_id:
         report = db.get(Report, report_id)
         if report:
             report.updated_at = timestamp
-            db.commit()
+        add_audit_event(
+            db,
+            event_type="asr_transcription",
+            actor_id=None,
+            report_id=report_id,
+            study_id=report.study_id if report else None,
+            metadata={"confidence": confidence, "transcript_length": len(text)},
+            timestamp=timestamp,
+            source="api",
+        )
+        db.commit()
         await broadcast_status(
             report_id,
             {"asrStatus": "processing", "asrConfidence": confidence, "aiStatus": "idle", "qaStatus": report.qa_status if report else "pending"},
@@ -308,6 +376,7 @@ async def generate_impression_endpoint(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     generated_at = utc_now()
 
+    report = None
     if payload.report_id:
         report = db.get(Report, payload.report_id)
         if report:
@@ -315,7 +384,17 @@ async def generate_impression_endpoint(
             report.updated_at = generated_at
             if report.status in {"pending", "in_progress"}:
                 report.status = "draft"
-            db.commit()
+        add_audit_event(
+            db,
+            event_type="impression_generated",
+            actor_id="system",
+            report_id=payload.report_id,
+            study_id=report.study_id if report else None,
+            metadata={"model": model_name, "confidence": confidence, "pipeline": "impression_service"},
+            timestamp=generated_at,
+            source="api",
+        )
+        db.commit()
 
         await broadcast_status(
             payload.report_id,
@@ -342,11 +421,11 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
 
     if payload.report_id:
         report = db.get(Report, payload.report_id)
+        now = utc_now()
         if report:
             report.qa_status = status
             report.qa_warnings = warnings
-            report.updated_at = utc_now()
-            db.commit()
+            report.updated_at = now
 
         qa_result = QACheckResult(
             report_id=payload.report_id,
@@ -355,9 +434,25 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
             warnings=warnings,
             failures=failures,
             quality_score=score,
-            created_at=utc_now(),
+            created_at=now,
         )
         db.add(qa_result)
+        add_audit_event(
+            db,
+            event_type="qa_check_run",
+            actor_id="system",
+            report_id=payload.report_id,
+            study_id=report.study_id if report else None,
+            metadata={
+                "status": status,
+                "warnings_count": len(warnings),
+                "failures_count": len(failures),
+                "checks_count": len(checks),
+                "quality_score": score,
+            },
+            timestamp=now,
+            source="api",
+        )
         db.commit()
 
         await broadcast_status(
@@ -431,21 +526,20 @@ async def queue_inference(
         )
     )
 
-    db.add(
-        AuditEvent(
-            id=str(uuid.uuid4()),
-            event_type="inference_queued",
-            actor_id=requested_by,
-            report_id=payload.report_id,
-            study_id=study_id,
-            timestamp=queued_at,
-            metadata_json={
-                "job_id": job_id,
-                "model_version": model_version,
-                "input_hash": input_hash,
-                **image_metadata,
-            },
-        )
+    add_audit_event(
+        db,
+        event_type="inference_queued",
+        actor_id=requested_by,
+        report_id=payload.report_id,
+        study_id=study_id,
+        metadata={
+            "job_id": job_id,
+            "model_version": model_version,
+            "input_hash": input_hash,
+            **image_metadata,
+        },
+        timestamp=queued_at,
+        source="api",
     )
 
     if report:
@@ -521,16 +615,16 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
 @app.post("/api/v1/audit-log", response_model=AuditEventResponse)
 def create_audit_event(payload: AuditEventRequest, db: Session = Depends(get_db)) -> AuditEventResponse:
     timestamp = payload.timestamp or utc_now()
-    event = AuditEvent(
-        id=str(uuid.uuid4()),
+    event = add_audit_event(
+        db,
         event_type=payload.event_type,
         actor_id=payload.actor_id,
         report_id=payload.report_id,
         study_id=payload.study_id,
+        metadata=payload.metadata,
         timestamp=timestamp,
-        metadata_json=payload.metadata,
+        source="client",
     )
-    db.add(event)
     db.commit()
     db.refresh(event)
     return serialize_audit_event(event)

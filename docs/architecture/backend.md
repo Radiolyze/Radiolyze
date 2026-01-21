@@ -7,13 +7,14 @@ Der Orchestrator steuert:
 - Report-Erstellung und Versionierung
 - ASR Trigger und Inference Pipeline
 - QA Checks und Audit Logging
-- DICOM SR Erzeugung und Upload
+- DICOM SR Export (JSON + Binary Draft)
 
 ### Beispiel-Endpunkte
 
 - `POST /api/v1/reports/create`
 - `GET /api/v1/reports/{report_id}`
 - `POST /api/v1/reports/{report_id}/finalize`
+- `GET /api/v1/reports/{report_id}/export-sr?format=json|dicom`
 - `POST /api/v1/inference/queue`
 - `GET /api/v1/inference/status/{job_id}`
 - `GET /api/v1/audit-log`
