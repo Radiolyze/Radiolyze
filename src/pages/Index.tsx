@@ -136,16 +136,20 @@ const Index = () => {
   });
 
   // Get prior studies for current patient
-  const priorStudiesForPatient = useMemo(() => {
+  const priorStudies = useMemo(() => {
     if (!selectedQueueItem) return [];
-    return mockPriorStudies
-      .filter((study) => study.patientId === selectedQueueItem.patient.id)
-      .map((study) => ({
+    return mockPriorStudies.filter((study) => study.patientId === selectedQueueItem.patient.id);
+  }, [selectedQueueItem]);
+
+  const priorStudiesForViewer = useMemo(
+    () =>
+      priorStudies.map((study) => ({
         study,
         label: study.studyDescription,
         date: formatDate(study.studyDate),
-      }));
-  }, [selectedQueueItem]);
+      })),
+    [priorStudies]
+  );
 
   if (!report || !selectedQueueItem) {
     return (
@@ -168,6 +172,7 @@ const Index = () => {
             selectedSeriesId={null}
             onSelectQueueItem={handleSelectQueueItem}
             onSelectSeries={handleSelectSeries}
+            priorStudies={[]}
             wsConnected={wsConnected}
           />
         }
@@ -216,6 +221,7 @@ const Index = () => {
           selectedSeriesId={selectedSeries?.id || null}
           onSelectQueueItem={handleSelectQueueItem}
           onSelectSeries={handleSelectSeries}
+        priorStudies={priorStudies}
           wsConnected={wsConnected}
         />
       }
@@ -223,7 +229,7 @@ const Index = () => {
         <ComparisonViewer
           currentSeries={selectedSeries}
           currentStudy={selectedQueueItem.study}
-          priorStudies={priorStudiesForPatient}
+          priorStudies={priorStudiesForViewer}
           progress={{
             asrStatus: liveStatus?.asrStatus || asrStatus,
             asrConfidence: liveStatus?.asrConfidence ?? asrConfidence,
