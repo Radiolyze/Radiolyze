@@ -77,6 +77,33 @@ class QAResponse(ApiBaseModel):
     checks: list[QACheck]
 
 
+class InferenceQueueRequest(ApiBaseModel):
+    report_id: str | None = None
+    study_id: str | None = None
+    findings_text: str | None = None
+    requested_by: str | None = None
+    model_version: str | None = None
+
+
+class InferenceQueueResponse(ApiBaseModel):
+    job_id: str
+    status: str
+    queued_at: str
+    report_id: str | None = None
+    study_id: str | None = None
+    model_version: str
+
+
+class InferenceStatusResponse(ApiBaseModel):
+    job_id: str
+    status: str
+    queued_at: str | None = None
+    started_at: str | None = None
+    ended_at: str | None = None
+    result: dict[str, Any] | None = None
+    error: str | None = None
+
+
 class AuditEventRequest(ApiBaseModel):
     event_type: str = Field(alias="eventType")
     actor_id: str | None = Field(default=None, alias="actorId")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import uuid
 from datetime import datetime, timezone
@@ -7,15 +8,21 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from rq.exceptions import NoSuchJobError
+from rq.job import Job
 from sqlalchemy.orm import Session
 
 from .db import Base, SessionLocal, engine
 from .mock_logic import generate_asr_transcript, generate_impression, run_qa_checks, utc_now
 from .models import AuditEvent, QACheckResult, Report
+from .queue import get_queue, get_redis
 from .schemas import (
     ASRResponse,
     AuditEventRequest,
     AuditEventResponse,
+    InferenceQueueRequest,
+    InferenceQueueResponse,
+    InferenceStatusResponse,
     ImpressionRequest,
     ImpressionResponse,
     QAResponse,
@@ -24,6 +31,7 @@ from .schemas import (
     ReportFinalizeRequest,
     ReportResponse,
 )
+from .tasks import run_inference_job
 from .ws import ConnectionManager
 
 app = FastAPI(title="Orchestrator API", version="0.1.0")
@@ -54,6 +62,25 @@ def get_db() -> Session:
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def compute_input_hash(study_id: str | None, findings_text: str | None) -> str:
+    raw = f"{study_id or ''}|{(findings_text or '').strip()}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def get_inference_job_timeout() -> int:
+    return int(os.getenv("INFERENCE_JOB_TIMEOUT", "600"))
+
+
+def get_inference_result_ttl() -> int:
+    return int(os.getenv("INFERENCE_RESULT_TTL", "3600"))
+
+
+def format_datetime(value: datetime | None) -> str | None:
+    if not value:
+        return None
+    return value.isoformat()
 
 
 def serialize_report(report: Report) -> ReportResponse:
@@ -260,6 +287,111 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
         warnings=warnings,
         quality_score=score,
         checks=checks,
+    )
+
+
+@app.post("/api/v1/inference/queue", response_model=InferenceQueueResponse)
+async def queue_inference(
+    payload: InferenceQueueRequest,
+    db: Session = Depends(get_db),
+) -> InferenceQueueResponse:
+    report = None
+    if payload.report_id:
+        report = db.get(Report, payload.report_id)
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+
+    requested_by = payload.requested_by or "system"
+    study_id = payload.study_id or (report.study_id if report else None)
+    findings_text = payload.findings_text or (report.findings_text if report else None)
+    model_version = payload.model_version or os.getenv("INFERENCE_MODEL_VERSION", "mock-medgemma-0.1")
+    input_hash = compute_input_hash(study_id, findings_text)
+    queued_at = utc_now()
+
+    job_id = str(uuid.uuid4())
+    job_payload = {
+        "job_id": job_id,
+        "report_id": payload.report_id,
+        "study_id": study_id,
+        "findings_text": findings_text,
+        "requested_by": requested_by,
+        "model_version": model_version,
+        "input_hash": input_hash,
+    }
+
+    queue = get_queue()
+    job = queue.enqueue(
+        run_inference_job,
+        job_payload,
+        job_id=job_id,
+        job_timeout=get_inference_job_timeout(),
+        result_ttl=get_inference_result_ttl(),
+        failure_ttl=get_inference_result_ttl(),
+    )
+
+    db.add(
+        AuditEvent(
+            id=str(uuid.uuid4()),
+            event_type="inference_queued",
+            actor_id=requested_by,
+            report_id=payload.report_id,
+            study_id=study_id,
+            timestamp=queued_at,
+            metadata_json={
+                "job_id": job_id,
+                "model_version": model_version,
+                "input_hash": input_hash,
+            },
+        )
+    )
+
+    if report:
+        if report.status == "pending":
+            report.status = "in_progress"
+        report.updated_at = queued_at
+
+    db.commit()
+
+    if payload.report_id:
+        await broadcast_status(
+            payload.report_id,
+            {"aiStatus": "queued", "qaStatus": report.qa_status if report else "pending", "asrStatus": "idle"},
+        )
+
+    return InferenceQueueResponse(
+        job_id=job.id,
+        status=job.get_status(),
+        queued_at=queued_at,
+        report_id=payload.report_id,
+        study_id=study_id,
+        model_version=model_version,
+    )
+
+
+@app.get("/api/v1/inference/status/{job_id}", response_model=InferenceStatusResponse)
+def inference_status(job_id: str) -> InferenceStatusResponse:
+    try:
+        job = Job.fetch(job_id, connection=get_redis())
+    except NoSuchJobError as exc:
+        raise HTTPException(status_code=404, detail="Inference job not found") from exc
+
+    error = None
+    if job.is_failed:
+        if job.exc_info:
+            error = job.exc_info.splitlines()[-1]
+        else:
+            error = "Inference job failed"
+
+    result = job.result if job.is_finished else None
+
+    return InferenceStatusResponse(
+        job_id=job.id,
+        status=job.get_status(),
+        queued_at=format_datetime(job.enqueued_at),
+        started_at=format_datetime(job.started_at),
+        ended_at=format_datetime(job.ended_at),
+        result=result,
+        error=error,
     )
 
 
