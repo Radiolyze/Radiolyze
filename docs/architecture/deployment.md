@@ -23,7 +23,12 @@ Docker Compose liefert aktuell:
 - Orthanc Seeder (Sample-DICOM Import)
 - PostgreSQL
 
-Optionale Services (noch offen): GPU Worker, NGINX.
+GPU Services sind als Overlay verfuegbar:
+
+- vLLM MedGemma (Multimodal) via `docker-compose.gpu.yml`
+- MedASR (Speech) via `docker-compose.gpu.yml`
+
+Optionale Services: NGINX.
 
 ### Orthanc Hinweise
 

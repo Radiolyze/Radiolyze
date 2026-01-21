@@ -40,7 +40,8 @@
 
 - [ ] DICOM SR Export
 - [ ] Templates + Guidelines RAG
-- [ ] vLLM GPU Worker (MedGemma + MedASR, OpenAI API, Multimodal)
+- [~] vLLM GPU Worker (Compose + API Integration, Multimodal)
+- [ ] DICOM -> Image Pipeline fuer Multimodal Inference (WADO-RS/JPEG)
 - [x] Batch Reporting Dashboard (Multi-Select, Bulk Actions, Analytics)
 - [x] Report History / Audit Log UI
 - [ ] Observability (Metrics + Tracing)
