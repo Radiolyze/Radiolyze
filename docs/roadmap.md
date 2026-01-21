@@ -12,10 +12,11 @@
 
 ## Phase 2: Backend Orchestrator (4-8 Wochen)
 
-- [ ] FastAPI Endpunkte (create/get/finalize)
-- [~] Orthanc DICOMweb Anbindung (QIDO-RS Studien/Serien + WADO-RS Frames)
+- [x] FastAPI Endpunkte (create/get/finalize + QA/ASR/Impression/Audit)
+- [x] Orthanc DICOMweb Anbindung (QIDO-RS Studien/Serien + WADO-RS Frames, Basic Auth)
+- [x] Docker Compose Stack (Frontend + Backend + Postgres + Orthanc)
 - [ ] Inference Queue (MedGemma, Impression LLM)
-- [ ] Audit Logging (Art. 12)
+- [~] Audit Logging (Art. 12 Baseline: API + DB, Felder/Hashing offen)
 
 ## Phase 3: Compliance Ready (8-12 Wochen)
 
