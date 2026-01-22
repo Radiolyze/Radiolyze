@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   CheckCircle,
@@ -87,29 +88,11 @@ const resolveTurnaroundMinutes = (createdAt: string, updatedAt: string) => {
   return diffMinutes > 0 ? diffMinutes : undefined;
 };
 
-const statusConfig: Record<ReportStatus, { label: string; color: string; icon: typeof FileText }> = {
-  pending: { label: 'Ausstehend', color: 'bg-muted text-muted-foreground', icon: Clock },
-  in_progress: { label: 'In Bearbeitung', color: 'bg-blue-500/10 text-blue-500', icon: RefreshCw },
-  draft: { label: 'Entwurf', color: 'bg-warning/10 text-warning', icon: FileText },
-  approved: { label: 'Freigegeben', color: 'bg-success/10 text-success', icon: CheckCircle },
-  finalized: { label: 'Finalisiert', color: 'bg-primary/10 text-primary', icon: CheckCircle },
-};
-
-const qaStatusConfig: Record<QAStatus, { label: string; color: string }> = {
-  pending: { label: 'Ausstehend', color: 'text-muted-foreground' },
-  checking: { label: 'Prüfung...', color: 'text-blue-500' },
-  pass: { label: 'OK', color: 'text-success' },
-  warn: { label: 'Warnung', color: 'text-warning' },
-  fail: { label: 'Fehler', color: 'text-destructive' },
-};
-
-const priorityConfig = {
-  normal: { label: 'Normal', color: 'bg-muted text-muted-foreground' },
-  urgent: { label: 'Dringend', color: 'bg-warning/10 text-warning border-warning' },
-  stat: { label: 'STAT', color: 'bg-destructive/10 text-destructive border-destructive' },
-};
-
 export default function Batch() {
+  const { t } = useTranslation('batch');
+  const { t: tCommon } = useTranslation('common');
+  const { t: tReport } = useTranslation('report');
+  
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -120,6 +103,28 @@ export default function Batch() {
   const [reportPayloads, setReportPayloads] = useState<ReportResponsePayload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const statusConfig: Record<ReportStatus, { label: string; color: string; icon: typeof FileText }> = {
+    pending: { label: tCommon('status.pending'), color: 'bg-muted text-muted-foreground', icon: Clock },
+    in_progress: { label: tCommon('status.inProgress'), color: 'bg-blue-500/10 text-blue-500', icon: RefreshCw },
+    draft: { label: tCommon('status.draft'), color: 'bg-warning/10 text-warning', icon: FileText },
+    approved: { label: tCommon('status.approved'), color: 'bg-success/10 text-success', icon: CheckCircle },
+    finalized: { label: tCommon('status.finalized'), color: 'bg-primary/10 text-primary', icon: CheckCircle },
+  };
+
+  const qaStatusConfig: Record<QAStatus, { label: string; color: string }> = {
+    pending: { label: tCommon('status.pending'), color: 'text-muted-foreground' },
+    checking: { label: tReport('qa.checking'), color: 'text-blue-500' },
+    pass: { label: tReport('qa.passed'), color: 'text-success' },
+    warn: { label: tReport('qa.warning'), color: 'text-warning' },
+    fail: { label: tReport('qa.failed'), color: 'text-destructive' },
+  };
+
+  const priorityConfig = {
+    normal: { label: tCommon('priority.normal'), color: 'bg-muted text-muted-foreground' },
+    urgent: { label: tCommon('priority.urgent'), color: 'bg-warning/10 text-warning border-warning' },
+    stat: { label: tCommon('priority.stat'), color: 'bg-destructive/10 text-destructive border-destructive' },
+  };
 
   const studyIds = useMemo(
     () => Array.from(new Set(reportPayloads.map((report) => report.study_id).filter(Boolean))),
@@ -146,7 +151,7 @@ export default function Batch() {
       } catch (error) {
         console.warn('Failed to load reports', error);
         if (isActive) {
-          setErrorMessage('Reports konnten nicht geladen werden.');
+          setErrorMessage(t('table.loading'));
           setReportPayloads([]);
         }
       } finally {
@@ -161,7 +166,7 @@ export default function Batch() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [t]);
 
   const mappedReports = useMemo(() => {
     return reportPayloads.map((payload) => {
@@ -175,17 +180,17 @@ export default function Batch() {
         mrn: study?.mrn ?? report.patientId,
         accessionNumber: study?.accessionNumber ?? fallbackAccession,
         modality: study?.modality ?? 'CT',
-        studyDescription: study?.studyDescription ?? 'Unbekannte Studie',
+        studyDescription: study?.studyDescription ?? tCommon('study.study'),
         studyDate: study?.studyDate ?? report.createdAt.slice(0, 10),
         status: report.status,
         qaStatus: report.qaStatus,
-        assignedTo: report.approvedBy ?? 'Unzugewiesen',
+        assignedTo: report.approvedBy ?? '-',
         priority: 'normal' as const,
         createdAt: report.createdAt,
         turnaroundMinutes: resolveTurnaroundMinutes(report.createdAt, report.updatedAt),
       };
     });
-  }, [reportPayloads, studyMap]);
+  }, [reportPayloads, studyMap, tCommon]);
 
   useEffect(() => {
     if (mappedReports.length === 0) {
@@ -223,11 +228,11 @@ export default function Batch() {
 
     // Show toast for QA status changes
     if (payload.qaStatus === 'fail') {
-      toast.error(`Report ${reportId.slice(0, 8)}... QA fehlgeschlagen`);
+      toast.error(`Report ${reportId.slice(0, 8)}... ${tReport('qa.failed')}`);
     } else if (payload.qaStatus === 'pass') {
-      toast.success(`Report ${reportId.slice(0, 8)}... QA bestanden`);
+      toast.success(`Report ${reportId.slice(0, 8)}... ${tReport('qa.passed')}`);
     }
-  }, []);
+  }, [tReport]);
 
   const { isConnected: wsConnected } = useWebSocket({
     onReportStatus: handleReportStatus,
@@ -263,7 +268,7 @@ export default function Batch() {
     const pending = reports.filter((r) => r.status === 'pending').length;
     const drafts = reports.filter((r) => r.status === 'draft').length;
     const approved = reports.filter((r) => r.status === 'approved' || r.status === 'finalized').length;
-  const avgTurnaround = reports
+    const avgTurnaround = reports
       .filter((r) => r.turnaroundMinutes !== undefined)
       .reduce((acc, r) => acc + (r.turnaroundMinutes || 0), 0) /
       (reports.filter((r) => r.turnaroundMinutes !== undefined).length || 1);
@@ -349,12 +354,12 @@ export default function Batch() {
     setSelectedIds(new Set());
 
     if (approved > 0) {
-      toast.success(`${approved} Reports wurden freigegeben`);
+      toast.success(t('bulk.completed', { count: approved }));
     }
     if (failed > 0) {
-      toast.error(`${failed} Reports konnten nicht freigegeben werden`);
+      toast.error(t('bulk.failed', { count: failed }));
     }
-  }, [reports, selectedIds]);
+  }, [reports, selectedIds, t]);
 
   const handleBulkExport = useCallback(async () => {
     if (selectedIds.size === 0) return;
@@ -389,16 +394,16 @@ export default function Batch() {
     setSelectedIds(new Set());
 
     if (failed === 0) {
-      toast.success('Export abgeschlossen');
+      toast.success(tReport('export.success'));
     } else {
-      toast.error(`${failed} Exporte fehlgeschlagen`);
+      toast.error(t('bulk.failed', { count: failed }));
     }
-  }, [selectedIds]);
+  }, [selectedIds, t, tReport]);
 
   const handleBulkDelete = useCallback(() => {
     if (selectedIds.size === 0) return;
-    toast.error('Löschen ist aktuell nicht verfügbar');
-  }, [selectedIds]);
+    toast.error(tCommon('status.error'));
+  }, [selectedIds, tCommon]);
 
   const isAllSelected = filteredReports.length > 0 && selectedIds.size === filteredReports.length;
   const isSomeSelected = selectedIds.size > 0 && selectedIds.size < filteredReports.length;
@@ -419,7 +424,7 @@ export default function Batch() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <h1 className="text-lg font-semibold">Batch-Reporting</h1>
+        <h1 className="text-lg font-semibold">{t('title')}</h1>
         <Badge variant="outline" className="ml-2">
           <BarChart3 className="h-3 w-3 mr-1" />
           Dashboard
@@ -430,12 +435,12 @@ export default function Batch() {
           {wsConnected ? (
             <>
               <Wifi className="h-3.5 w-3.5 text-success" />
-              <span className="text-success hidden sm:inline">Live-Updates</span>
+              <span className="text-success hidden sm:inline">{tCommon('connection.liveUpdates')}</span>
             </>
           ) : (
             <>
               <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground hidden sm:inline">Verbinden...</span>
+              <span className="text-muted-foreground hidden sm:inline">{tCommon('connection.connecting')}</span>
             </>
           )}
         </div>
@@ -449,7 +454,7 @@ export default function Batch() {
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Gesamt</span>
+                <span className="text-sm text-muted-foreground">{t('stats.total')}</span>
               </div>
               <p className="text-2xl font-bold mt-1">{stats.total}</p>
             </CardContent>
@@ -458,7 +463,7 @@ export default function Batch() {
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-warning" />
-                <span className="text-sm text-muted-foreground">Ausstehend</span>
+                <span className="text-sm text-muted-foreground">{t('stats.pending')}</span>
               </div>
               <p className="text-2xl font-bold mt-1">{stats.pending}</p>
             </CardContent>
@@ -467,7 +472,7 @@ export default function Batch() {
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-blue-500" />
-                <span className="text-sm text-muted-foreground">Entwürfe</span>
+                <span className="text-sm text-muted-foreground">{t('stats.drafts')}</span>
               </div>
               <p className="text-2xl font-bold mt-1">{stats.drafts}</p>
             </CardContent>
@@ -476,7 +481,7 @@ export default function Batch() {
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-success" />
-                <span className="text-sm text-muted-foreground">Freigegeben</span>
+                <span className="text-sm text-muted-foreground">{t('stats.approved')}</span>
               </div>
               <p className="text-2xl font-bold mt-1">{stats.approved}</p>
             </CardContent>
@@ -510,7 +515,7 @@ export default function Batch() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Suche nach Patient, Accession, MRN..."
+                    placeholder={t('filters.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -521,25 +526,25 @@ export default function Batch() {
               {/* Status Filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t('filters.status')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Alle Status</SelectItem>
-                  <SelectItem value="pending">Ausstehend</SelectItem>
-                  <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-                  <SelectItem value="draft">Entwurf</SelectItem>
-                  <SelectItem value="approved">Freigegeben</SelectItem>
-                  <SelectItem value="finalized">Finalisiert</SelectItem>
+                  <SelectItem value="all">{t('filters.allStatuses')}</SelectItem>
+                  <SelectItem value="pending">{tCommon('status.pending')}</SelectItem>
+                  <SelectItem value="in_progress">{tCommon('status.inProgress')}</SelectItem>
+                  <SelectItem value="draft">{tCommon('status.draft')}</SelectItem>
+                  <SelectItem value="approved">{tCommon('status.approved')}</SelectItem>
+                  <SelectItem value="finalized">{tCommon('status.finalized')}</SelectItem>
                 </SelectContent>
               </Select>
 
               {/* Modality Filter */}
               <Select value={modalityFilter} onValueChange={setModalityFilter}>
                 <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Modalität" />
+                  <SelectValue placeholder={t('filters.modality')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Alle</SelectItem>
+                  <SelectItem value="all">{t('filters.allModalities')}</SelectItem>
                   {modalities.map((mod) => (
                     <SelectItem key={mod} value={mod}>
                       {mod}
@@ -552,7 +557,7 @@ export default function Batch() {
               {selectedIds.size > 0 && (
                 <div className="flex items-center gap-2 ml-auto">
                   <Badge variant="secondary">
-                    {selectedIds.size} ausgewählt
+                    {t('actions.selected', { count: selectedIds.size })}
                   </Badge>
                   
                   <AlertDialog>
@@ -563,21 +568,20 @@ export default function Batch() {
                         disabled={approvableSelected === 0}
                       >
                         <Send className="h-4 w-4 mr-1" />
-                        Freigeben ({approvableSelected})
+                        {tCommon('actions.approve')} ({approvableSelected})
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Reports freigeben?</AlertDialogTitle>
+                        <AlertDialogTitle>{t('bulk.confirmApprove', { count: approvableSelected })}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {approvableSelected} Reports werden freigegeben. 
-                          Diese Aktion kann nicht rückgängig gemacht werden.
+                          {t('bulk.confirmApprove', { count: approvableSelected })}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                        <AlertDialogCancel>{tCommon('actions.cancel')}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleBulkApprove}>
-                          Freigeben
+                          {tCommon('actions.approve')}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -585,31 +589,30 @@ export default function Batch() {
 
                   <Button variant="outline" size="sm" onClick={handleBulkExport}>
                     <Download className="h-4 w-4 mr-1" />
-                    Export
+                    {tCommon('actions.export')}
                   </Button>
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm" className="text-destructive">
                         <Trash2 className="h-4 w-4 mr-1" />
-                        Löschen
+                        {tCommon('actions.delete')}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Reports löschen?</AlertDialogTitle>
+                        <AlertDialogTitle>{tCommon('actions.delete')}?</AlertDialogTitle>
                         <AlertDialogDescription>
                           {selectedIds.size} Reports werden dauerhaft gelöscht.
-                          Diese Aktion kann nicht rückgängig gemacht werden.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                        <AlertDialogCancel>{tCommon('actions.cancel')}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={handleBulkDelete}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          Löschen
+                          {tCommon('actions.delete')}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -622,7 +625,7 @@ export default function Batch() {
             {isProcessing && (
               <div className="mt-4">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Verarbeite Reports...</span>
+                  <span className="text-muted-foreground">{t('bulk.processing', { current: Math.round(processProgress), total: 100 })}</span>
                   <span className="font-mono">{Math.round(processProgress)}%</span>
                 </div>
                 <Progress value={processProgress} className="h-2" />
@@ -636,7 +639,7 @@ export default function Batch() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
               <span>Reports</span>
-              <Badge variant="outline">{filteredReports.length} Einträge</Badge>
+              <Badge variant="outline">{filteredReports.length} {t('table.noResults').includes('Ergebnisse') ? 'Einträge' : 'entries'}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -652,13 +655,13 @@ export default function Batch() {
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
-                    <TableHead>Patient</TableHead>
+                    <TableHead>{t('table.patient')}</TableHead>
                     <TableHead>Accession</TableHead>
-                    <TableHead>Studie</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t('table.study')}</TableHead>
+                    <TableHead>{t('table.status')}</TableHead>
                     <TableHead>QA</TableHead>
-                    <TableHead>Priorität</TableHead>
-                    <TableHead>Zugewiesen</TableHead>
+                    <TableHead>{t('table.priority')}</TableHead>
+                    <TableHead>-</TableHead>
                     <TableHead className="text-right">TAT</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -667,7 +670,7 @@ export default function Batch() {
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                         <RefreshCw className="h-8 w-8 mx-auto mb-3 animate-spin" />
-                        <p>Reports werden geladen...</p>
+                        <p>{t('table.loading')}</p>
                       </TableCell>
                     </TableRow>
                   )}
@@ -749,10 +752,7 @@ export default function Batch() {
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-12">
                         <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                        <p className="text-muted-foreground">Keine Reports gefunden</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Passen Sie die Filter an
-                        </p>
+                        <p className="text-muted-foreground">{t('table.noResults')}</p>
                       </TableCell>
                     </TableRow>
                   )}
