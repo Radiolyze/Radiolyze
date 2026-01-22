@@ -111,37 +111,38 @@ services:
     ports:
       - "6379:6379"
 
-  vllm-medgemma:
-    image: vllm/vllm-openai:nightly
-    pull_policy: always
-    profiles: ["gpu"]
-    runtime: nvidia
-    ports:
-      - "8002:8000"
-    environment:
-      NVIDIA_VISIBLE_DEVICES: all
-      VLLM_LOGGING_LEVEL: INFO
-      HUGGINGFACE_HUB_TOKEN: ${HUGGINGFACE_HUB_TOKEN:-}
-    volumes:
-      - vllm-cache:/root/.cache/huggingface
-    entrypoint: ["vllm"]
-    command:
+vllm-medgemma:
+  image: vllm/vllm-openai:nightly
+  pull_policy: always
+  profiles: ["gpu"]
+  runtime: nvidia
+  ports:
+    - "8002:8000"
+  environment:
+    NVIDIA_VISIBLE_DEVICES: all
+    VLLM_LOGGING_LEVEL: INFO
+    HUGGINGFACE_HUB_TOKEN: ${HUGGINGFACE_HUB_TOKEN:-}
+  volumes:
+    - vllm-cache:/root/.cache/huggingface
+  entrypoint: ["vllm"]
+  command:
+    - serve
     - google/medgemma-1.5-4b-it
     - --host
-    - 0.0.0.0
+    - "0.0.0.0"
     - --port
     - "8000"
+    - --dtype
+    - bfloat16
     - --max-model-len
     - "4096"
     - --gpu-memory-utilization
     - "0.85"
     - --trust-remote-code
-    - --mm-vision-tower
-    - google/siglip-so400m-patch14-384
-    - --mm-enable-flash-attn
     - --enforce-eager
     - --served-model-name
     - medgemma-radiology
+
 
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
