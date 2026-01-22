@@ -1,0 +1,73 @@
+{
+  "tools": {
+    "zoom": "Zoom",
+    "pan": "Pan",
+    "window": "Window/Level",
+    "measure": "Measure",
+    "annotate": "Annotate",
+    "reset": "Reset",
+    "invert": "Invert",
+    "rotate": "Rotate",
+    "flip": "Flip"
+  },
+  "comparison": {
+    "title": "Comparison",
+    "enable": "Enable comparison",
+    "disable": "Exit comparison",
+    "current": "Current",
+    "prior": "Prior",
+    "swap": "Swap",
+    "selectStudy": "Select study",
+    "selectSeries": "Select series",
+    "noStudySelected": "No study selected"
+  },
+  "sync": {
+    "title": "Synchronization",
+    "frames": "Frames",
+    "zoom": "Zoom",
+    "pan": "Position",
+    "windowLevel": "Window/Level",
+    "enabled": "Sync active"
+  },
+  "progress": {
+    "loading": "Loading...",
+    "frame": "Frame {{current}} of {{total}}",
+    "series": "Series",
+    "asr": {
+      "idle": "Dictation ready",
+      "listening": "Recording...",
+      "processing": "Processing..."
+    },
+    "ai": {
+      "idle": "AI ready",
+      "running": "AI analyzing...",
+      "completed": "AI analysis complete"
+    },
+    "qa": {
+      "idle": "QA ready",
+      "checking": "QA checking...",
+      "passed": "QA passed",
+      "warnings": "QA warnings"
+    }
+  },
+  "series": {
+    "title": "Series",
+    "count": "{{count}} series",
+    "images": "{{count}} images",
+    "seriesNumber": "Series {{number}}"
+  },
+  "controls": {
+    "title": "Controls",
+    "brightness": "Brightness",
+    "contrast": "Contrast",
+    "windowWidth": "Window Width",
+    "windowCenter": "Window Center"
+  },
+  "overlays": {
+    "show": "Show overlays",
+    "hide": "Hide overlays",
+    "patientInfo": "Patient info",
+    "studyInfo": "Study info",
+    "annotations": "Annotations"
+  }
+}

@@ -1,5 +1,6 @@
-import { ArrowLeft, User, Monitor, Mic, Image, FileText, RotateCcw } from 'lucide-react';
+import { ArrowLeft, User, Monitor, Mic, Image, FileText, RotateCcw, Globe } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -7,16 +8,17 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useUserPreferences, type UILanguage } from '@/hooks/useUserPreferences';
 import { DicomWebSettings } from '@/components/Settings/DicomWebSettings';
 import { toast } from 'sonner';
 
 export default function Settings() {
+  const { t } = useTranslation('settings');
   const { preferences, setPreference, resetPreferences } = useUserPreferences();
 
   const handleReset = () => {
     resetPreferences();
-    toast.success('Einstellungen zurückgesetzt');
+    toast.success(t('actions.reset'));
   };
 
   return (
@@ -28,7 +30,7 @@ export default function Settings() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <h1 className="text-lg font-semibold">Einstellungen</h1>
+        <h1 className="text-lg font-semibold">{t('title')}</h1>
       </header>
 
       {/* Content */}
@@ -38,20 +40,20 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Profil
+              {t('profile.title')}
             </CardTitle>
             <CardDescription>
-              Persönliche Informationen und Signatur
+              {t('subtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t('profile.name')}</Label>
                 <Input id="name" defaultValue="Dr. Radiologe" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">E-Mail</Label>
+                <Label htmlFor="email">{t('profile.email')}</Label>
                 <Input id="email" defaultValue="radiologe@klinik.de" />
               </div>
             </div>
@@ -73,18 +75,45 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Monitor className="h-5 w-5" />
-              Darstellung
+              {t('display.title')}
             </CardTitle>
             <CardDescription>
-              Theme, Schriftgröße und Layout-Optionen
+              {t('display.themeOptions.dark')}, {t('display.themeOptions.light')}, {t('display.language')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Language Selector */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Theme</Label>
+                <Label className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  {t('display.language')}
+                </Label>
                 <p className="text-xs text-muted-foreground">
-                  Farbschema der Anwendung
+                  UI-Sprache / UI language
+                </p>
+              </div>
+              <Select
+                value={preferences.uiLanguage}
+                onValueChange={(v) => setPreference('uiLanguage', v as UILanguage)}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="de">{t('display.languageOptions.de')}</SelectItem>
+                  <SelectItem value="en">{t('display.languageOptions.en')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>{t('display.theme')}</Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('display.themeOptions.dark')} / {t('display.themeOptions.light')} / {t('display.themeOptions.system')}
                 </p>
               </div>
               <Select
@@ -95,9 +124,9 @@ export default function Settings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="dark">Dunkel</SelectItem>
-                  <SelectItem value="light">Hell</SelectItem>
-                  <SelectItem value="system">System</SelectItem>
+                  <SelectItem value="dark">{t('display.themeOptions.dark')}</SelectItem>
+                  <SelectItem value="light">{t('display.themeOptions.light')}</SelectItem>
+                  <SelectItem value="system">{t('display.themeOptions.system')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -106,9 +135,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Schriftgröße</Label>
+                <Label>{t('display.fontSize')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Textgröße in der Anwendung
+                  {t('display.fontSizeOptions.small')} / {t('display.fontSizeOptions.medium')} / {t('display.fontSizeOptions.large')}
                 </p>
               </div>
               <Select
@@ -119,9 +148,9 @@ export default function Settings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="small">Klein</SelectItem>
-                  <SelectItem value="medium">Normal</SelectItem>
-                  <SelectItem value="large">Groß</SelectItem>
+                  <SelectItem value="small">{t('display.fontSizeOptions.small')}</SelectItem>
+                  <SelectItem value="medium">{t('display.fontSizeOptions.medium')}</SelectItem>
+                  <SelectItem value="large">{t('display.fontSizeOptions.large')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -130,9 +159,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Kompakter Modus</Label>
+                <Label>{t('display.compactMode')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Reduzierte Abstände für mehr Inhalt
+                  {t('display.compactModeDescription')}
                 </p>
               </div>
               <Switch
@@ -148,18 +177,18 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mic className="h-5 w-5" />
-              Audio & Spracherkennung
+              {t('audio.title')}
             </CardTitle>
             <CardDescription>
-              Mikrofon und ASR-Einstellungen
+              {t('audio.microphoneDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Mikrofon aktiviert</Label>
+                <Label>{t('audio.microphone')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Diktierfunktion einschalten
+                  {t('audio.microphoneDescription')}
                 </p>
               </div>
               <Switch
@@ -172,9 +201,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>ASR-Sprache</Label>
+                <Label>{t('audio.asrLanguage')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Sprache für Spracherkennung
+                  {t('audio.asrLanguageOptions.de-DE')} / {t('audio.asrLanguageOptions.en-US')}
                 </p>
               </div>
               <Select
@@ -185,8 +214,8 @@ export default function Settings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="de-DE">Deutsch</SelectItem>
-                  <SelectItem value="en-US">English</SelectItem>
+                  <SelectItem value="de-DE">{t('audio.asrLanguageOptions.de-DE')}</SelectItem>
+                  <SelectItem value="en-US">{t('audio.asrLanguageOptions.en-US')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -195,9 +224,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Auto-Transkription</Label>
+                <Label>{t('audio.autoTranscribe')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Text automatisch einfügen nach Diktat
+                  {t('audio.autoTranscribeDescription')}
                 </p>
               </div>
               <Switch
@@ -213,18 +242,18 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Image className="h-5 w-5" />
-              DICOM Viewer
+              {t('viewer.title')}
             </CardTitle>
             <CardDescription>
-              Standardwerkzeuge und Anzeigeoptionen
+              {t('viewer.defaultTool')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Standard-Werkzeug</Label>
+                <Label>{t('viewer.defaultTool')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Aktives Tool beim Öffnen einer Serie
+                  {t('viewer.toolOptions.window')} / {t('viewer.toolOptions.zoom')} / {t('viewer.toolOptions.pan')}
                 </p>
               </div>
               <Select
@@ -235,10 +264,10 @@ export default function Settings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="window">Window/Level</SelectItem>
-                  <SelectItem value="zoom">Zoom</SelectItem>
-                  <SelectItem value="pan">Pan</SelectItem>
-                  <SelectItem value="measure">Messen</SelectItem>
+                  <SelectItem value="window">{t('viewer.toolOptions.window')}</SelectItem>
+                  <SelectItem value="zoom">{t('viewer.toolOptions.zoom')}</SelectItem>
+                  <SelectItem value="pan">{t('viewer.toolOptions.pan')}</SelectItem>
+                  <SelectItem value="measure">{t('viewer.toolOptions.measure')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -247,9 +276,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Farben invertieren</Label>
+                <Label>{t('viewer.invertColors')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Negativdarstellung der Bilder
+                  {t('viewer.invertColorsDescription')}
                 </p>
               </div>
               <Switch
@@ -262,9 +291,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Overlays anzeigen</Label>
+                <Label>{t('viewer.showOverlays')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Patient/Studien-Info auf Bildern
+                  {t('viewer.showOverlaysDescription')}
                 </p>
               </div>
               <Switch
@@ -280,18 +309,18 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Befundung
+              {t('report.title')}
             </CardTitle>
             <CardDescription>
-              KI-Assistenz und QA-Einstellungen
+              {t('report.autoGenerateImpressionDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Auto-Impression</Label>
+                <Label>{t('report.autoGenerateImpression')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  KI-Beurteilung automatisch generieren
+                  {t('report.autoGenerateImpressionDescription')}
                 </p>
               </div>
               <Switch
@@ -304,9 +333,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>QA-Warnungen anzeigen</Label>
+                <Label>{t('report.showQAWarnings')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Hinweise bei fehlenden Angaben
+                  {t('report.showQAWarningsDescription')}
                 </p>
               </div>
               <Switch
@@ -321,7 +350,7 @@ export default function Settings() {
         <div className="flex justify-end">
           <Button variant="outline" onClick={handleReset}>
             <RotateCcw className="h-4 w-4 mr-2" />
-            Alle Einstellungen zurücksetzen
+            {t('system.resetSettings')}
           </Button>
         </div>
       </main>

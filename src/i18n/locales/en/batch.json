@@ -1,0 +1,61 @@
+{
+  "title": "Batch Reporting",
+  "subtitle": "Overview and bulk processing of reports",
+  "stats": {
+    "total": "Total",
+    "pending": "Pending",
+    "drafts": "Drafts",
+    "approved": "Approved",
+    "finalized": "Finalized",
+    "todayCompleted": "Completed today"
+  },
+  "filters": {
+    "search": "Search...",
+    "searchPlaceholder": "Patient, accession no., description...",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "modality": "Modality",
+    "allModalities": "All modalities",
+    "priority": "Priority",
+    "allPriorities": "All priorities",
+    "dateRange": "Date range",
+    "today": "Today",
+    "week": "This week",
+    "month": "This month",
+    "all": "All"
+  },
+  "table": {
+    "patient": "Patient",
+    "study": "Study",
+    "modality": "Modality",
+    "status": "Status",
+    "priority": "Priority",
+    "created": "Created",
+    "actions": "Actions",
+    "noResults": "No results found",
+    "loading": "Loading data..."
+  },
+  "actions": {
+    "open": "Open",
+    "approve": "Approve",
+    "approveSelected": "Approve selected",
+    "export": "Export",
+    "exportSelected": "Export selected",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "selected": "{{count}} selected",
+    "refresh": "Refresh"
+  },
+  "bulk": {
+    "title": "Bulk Actions",
+    "confirmApprove": "Do you want to approve {{count}} reports?",
+    "confirmExport": "Do you want to export {{count}} reports?",
+    "processing": "Processing {{current}} of {{total}}...",
+    "completed": "{{count}} reports processed successfully",
+    "failed": "{{count}} reports failed"
+  },
+  "empty": {
+    "title": "No Reports",
+    "message": "There are currently no reports in the queue."
+  }
+}
