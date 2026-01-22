@@ -126,23 +126,23 @@ services:
       - vllm-cache:/root/.cache/huggingface
     entrypoint: ["vllm"]
     command:
-      - serve
-      - google/medgemma-1.5-4b-it
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8000"
-      - --max-model-len
-      - "4096"
-      - --gpu-memory-utilization
-      - "0.85"
-      - --trust-remote-code
-      - --mm-vision-tower
-      - google/siglip-so400m-patch14-384
-      - --mm-enable-flash-attn
-      - --enforce-eager
-      - --served-model-name
-      - medgemma-radiology
+    - google/medgemma-1.5-4b-it
+    - --host
+    - 0.0.0.0
+    - --port
+    - "8000"
+    - --max-model-len
+    - "4096"
+    - --gpu-memory-utilization
+    - "0.85"
+    - --trust-remote-code
+    - --mm-vision-tower
+    - google/siglip-so400m-patch14-384
+    - --mm-enable-flash-attn
+    - --enforce-eager
+    - --served-model-name
+    - medgemma-radiology
+
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
