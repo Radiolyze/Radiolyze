@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Bell, Settings, User, Activity, Sun, Moon, Monitor, History, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +18,7 @@ import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useNotifications } from '@/hooks/useNotifications';
 
 export function Header() {
+  const { t } = useTranslation('common');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { preferences, setPreference } = useUserPreferences();
@@ -48,17 +50,17 @@ export function Header() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Activity className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold tracking-tight">MedGemma</span>
+            <span className="text-lg font-semibold tracking-tight">{t('app.name')}</span>
           </div>
           <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
-            Radiology Reporting
+            {t('app.tagline')}
           </Badge>
         </div>
 
         {/* Center - Status (optional) */}
         <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
           <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-          <span>System Online</span>
+          <span>{t('header.systemOnline')}</span>
         </div>
 
         {/* Right - Actions */}
@@ -79,6 +81,7 @@ export function Header() {
             size="icon" 
             className="relative"
             onClick={() => setNotificationsOpen(true)}
+            title={t('header.notifications')}
           >
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
@@ -90,21 +93,21 @@ export function Header() {
 
           {/* Batch Dashboard */}
           <Link to="/batch">
-            <Button variant="ghost" size="icon" title="Batch-Reporting">
+            <Button variant="ghost" size="icon" title={t('navigation.batch')}>
               <LayoutGrid className="h-5 w-5" />
             </Button>
           </Link>
 
           {/* History */}
           <Link to="/history">
-            <Button variant="ghost" size="icon" title="Report-Historie">
+            <Button variant="ghost" size="icon" title={t('navigation.history')}>
               <History className="h-5 w-5" />
             </Button>
           </Link>
 
           {/* Settings */}
           <Link to="/settings">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" title={t('navigation.settings')}>
               <Settings className="h-5 w-5" />
             </Button>
           </Link>
@@ -128,13 +131,15 @@ export function Header() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profil</DropdownMenuItem>
-              <DropdownMenuItem>Einstellungen</DropdownMenuItem>
+              <DropdownMenuItem>{t('header.profile')}</DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link to="/settings" className="w-full">{t('navigation.settings')}</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShortcutsOpen(true)}>
-                Keyboard Shortcuts
+                {t('header.keyboardShortcuts')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">Abmelden</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive">{t('header.logout')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
