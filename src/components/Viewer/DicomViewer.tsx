@@ -1,19 +1,18 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  ZoomIn,
-  Move,
-  Ruler,
-  Sun,
-  ChevronUp,
-  ChevronDown,
-  Download,
-  Maximize2,
-} from 'lucide-react';
+import { ChevronUp, ChevronDown, Download, Maximize2 } from 'lucide-react';
 import type { AIStatus, ImageRef, QAStatus, Series } from '@/types/radiology';
 import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { ImageControls, type ViewerToolConfig } from './ImageControls';
+import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
+import { useCornerstoneStackViewport } from '@/hooks/useCornerstoneStackViewport';
+import { useApplyViewportSyncState } from '@/hooks/useApplyViewportSyncState';
+import { useStackPrefetch } from '@/hooks/useStackPrefetch';
+import { useCornerstoneViewerTools } from '@/hooks/useCornerstoneViewerTools';
+import { useStackFrameNavigation } from '@/hooks/useStackFrameNavigation';
+import { useCornerstoneStackSetup } from '@/hooks/useCornerstoneStackSetup';
+import { useViewerReset } from '@/hooks/useViewerReset';
+import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
 import {
@@ -23,16 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
-import { buildWadorsFrameUrl, buildWadorsImageId, orthancClient } from '@/services/orthancClient';
-import { Enums, RenderingEngine, imageLoader, type StackViewport } from '@cornerstonejs/core';
-import { ToolGroupManager, Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
-
-export interface ViewportState {
-  zoom: number;
-  pan: { x: number; y: number };
-  windowLevel: { width: number; center: number };
-}
+import { exportAnnotations } from '@/services/annotations';
+import type { ViewportState } from '@/types/viewerSync';
+import { viewerTools, windowLevelPresets } from '@/config/viewer';
+import type { ViewerToolId } from '@/types/viewer';
 
 interface DicomViewerProps {
   series: Series | null;
@@ -46,23 +39,7 @@ interface DicomViewerProps {
   requestedFrameIndex?: number | null;
 }
 
-type Tool = 'zoom' | 'pan' | 'measure' | 'windowLevel';
-
-const tools: ViewerToolConfig[] = [
-  { id: 'zoom', icon: ZoomIn, label: 'Zoom', shortcut: 'Z' },
-  { id: 'pan', icon: Move, label: 'Pan', shortcut: 'P' },
-  { id: 'measure', icon: Ruler, label: 'Messen', shortcut: 'M' },
-  { id: 'windowLevel', icon: Sun, label: 'Fenster/Level', shortcut: 'W' },
-];
-
-const windowLevelPresets = [
-  { id: 'auto', label: 'Auto' },
-  { id: 'ct-soft', label: 'CT Weichteil', windowWidth: 400, windowCenter: 40 },
-  { id: 'ct-lung', label: 'CT Lunge', windowWidth: 1500, windowCenter: -600 },
-  { id: 'ct-bone', label: 'CT Knochen', windowWidth: 2500, windowCenter: 480 },
-  { id: 'ct-brain', label: 'CT Gehirn', windowWidth: 80, windowCenter: 40 },
-  { id: 'ct-abdomen', label: 'CT Abdomen', windowWidth: 350, windowCenter: 50 },
-];
+type Tool = ViewerToolId;
 
 type ASRStatus = 'idle' | 'listening' | 'processing';
 
@@ -73,79 +50,22 @@ export interface ViewerProgress {
   qaStatus: QAStatus;
 }
 
-type InstanceInfo = {
-  instanceId: string;
-  frames: number;
-  instanceNumber?: number;
-};
-
-const getTagValue = (entry: Record<string, unknown>, tag: string) => {
-  const tagEntry = entry[tag] as { Value?: unknown[] } | undefined;
-  if (tagEntry && Array.isArray(tagEntry.Value) && tagEntry.Value.length > 0) {
-    return tagEntry.Value[0];
-  }
-  return undefined;
-};
-
-const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
-  if (typeof entry === 'string') {
-    return { instanceId: entry, frames: 1 };
-  }
-
-  if (!entry || typeof entry !== 'object') {
-    return null;
-  }
-
-  const record = entry as Record<string, unknown>;
-  const instanceId =
-    (getTagValue(record, '00080018') as string | undefined) ||
-    (record.SOPInstanceUID as string | undefined) ||
-    (record.instanceId as string | undefined) ||
-    (record.id as string | undefined) ||
-    (record.ID as string | undefined);
-
-  if (!instanceId) {
-    return null;
-  }
-
-  const rawFrames =
-    getTagValue(record, '00280008') ||
-    record.numberOfFrames ||
-    record.NumberOfFrames;
-  const parsedFrames = Number(rawFrames);
-  const frames = Number.isFinite(parsedFrames) && parsedFrames > 1 ? parsedFrames : 1;
-
-  const rawInstanceNumber =
-    getTagValue(record, '00200013') ||
-    record.InstanceNumber;
-  const parsedInstanceNumber = Number(rawInstanceNumber);
-
-  return {
-    instanceId,
-    frames,
-    instanceNumber: Number.isFinite(parsedInstanceNumber) ? parsedInstanceNumber : undefined,
-  };
-};
-
 export function DicomViewer({ series, onFrameChange, progress, onViewportChange, syncState, onImageRefsChange, requestedFrameIndex }: DicomViewerProps) {
   const { preferences } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<Tool>(preferences.defaultTool as Tool);
   const [zoom, setZoom] = useState(1);
-  const [imageIds, setImageIds] = useState<string[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [isFetchingInstances, setIsFetchingInstances] = useState(false);
-  const [isInitializingViewer, setIsInitializingViewer] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState(windowLevelPresets[0].id);
+  const [viewerError, setViewerError] = useState<string | null>(null);
 
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const renderingEngineRef = useRef<RenderingEngine | null>(null);
-  const stackViewportRef = useRef<StackViewport | null>(null);
-  const toolGroupRef = useRef<ReturnType<typeof ToolGroupManager.getToolGroup> | null>(null);
-  const initialParallelScaleRef = useRef<number | null>(null);
+  const {
+    imageIds,
+    imageRefs,
+    isLoading: isFetchingInstances,
+    error: loadError,
+  } = useDicomSeriesInstances(series);
+
   const activeToolRef = useRef<Tool>(activeTool);
-  const prefetchTimeoutRef = useRef<number | null>(null);
-  const syncingRef = useRef(false); // Prevent sync loops
 
   const viewerInstanceId = useMemo(
     () => `dicom-viewer-${Math.random().toString(36).slice(2, 9)}`,
@@ -155,403 +75,87 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
   const viewportId = `${viewerInstanceId}-viewport`;
   const toolGroupId = `${viewerInstanceId}-tools`;
 
+  const {
+    viewportRef,
+    stackViewportRef,
+    toolGroupRef,
+    initialParallelScaleRef,
+    syncingRef,
+    isInitializing: isInitializingCornerstone,
+    isReady: isViewportReady,
+  } = useCornerstoneStackViewport({
+    isEnabled: Boolean(series),
+    renderingEngineId,
+    viewportId,
+    toolGroupId,
+    onFrameIndexChange: setCurrentFrame,
+    onZoomChange: setZoom,
+    onViewportChange,
+    onInitError: setViewerError,
+  });
+
+  const { applyToolSelection, applyWindowLevelPreset } = useCornerstoneViewerTools({
+    toolGroupRef,
+    stackViewportRef,
+    presets: windowLevelPresets,
+  });
+
+  const { isInitializing: isInitializingStack } = useCornerstoneStackSetup({
+    isReady: isViewportReady,
+    imageIds,
+    stackViewportRef,
+    initialParallelScaleRef,
+    activeToolRef,
+    selectedPresetId,
+    applyToolSelection,
+    applyWindowLevelPreset,
+    onError: setViewerError,
+  });
+
   const hasStack = imageIds.length > 0;
   const totalFrames = hasStack ? imageIds.length : series?.frameCount || 1;
-  const isLoading = isFetchingInstances || isInitializingViewer;
+  const isLoading = isFetchingInstances || isInitializingCornerstone || isInitializingStack;
+  const effectiveError = viewerError ?? loadError;
+
+  const { setFrameIndex, handlePrevFrame, handleNextFrame } = useStackFrameNavigation({
+    currentFrame,
+    setCurrentFrame,
+    hasStack,
+    totalFrames,
+    stackViewportRef,
+    requestedFrameIndex,
+    onFrameChange,
+  });
 
   useEffect(() => {
     activeToolRef.current = activeTool;
   }, [activeTool]);
 
-  useEffect(() => {
-    if (!hasStack) {
-      return;
-    }
+  useStackPrefetch({
+    enabled: hasStack,
+    imageIds,
+    currentFrame,
+    totalFrames,
+  });
 
-    if (prefetchTimeoutRef.current !== null) {
-      clearTimeout(prefetchTimeoutRef.current);
-    }
-
-    prefetchTimeoutRef.current = window.setTimeout(() => {
-      const radius = Math.min(6, Math.max(2, Math.floor(totalFrames / 20)));
-      const start = Math.max(0, currentFrame - radius);
-      const end = Math.min(totalFrames - 1, currentFrame + radius);
-      const prefetchIds: string[] = [];
-
-      for (let index = start; index <= end; index += 1) {
-        if (index === currentFrame) continue;
-        const imageId = imageIds[index];
-        if (imageId) {
-          prefetchIds.push(imageId);
-        }
-      }
-
-      if (prefetchIds.length === 0) {
-        return;
-      }
-
-      prefetchIds.forEach((imageId) => {
-        imageLoader
-          .loadAndCacheImage(imageId, {
-            requestType: Enums.RequestType.Prefetch,
-            priority: 0,
-          })
-          .catch(() => {
-            // Ignore prefetch failures to keep UI responsive.
-          });
-      });
-    }, 150);
-
-    return () => {
-      if (prefetchTimeoutRef.current !== null) {
-        clearTimeout(prefetchTimeoutRef.current);
-        prefetchTimeoutRef.current = null;
-      }
-    };
-  }, [currentFrame, hasStack, imageIds, totalFrames]);
-
-  const setFrameIndex = useCallback(
-    (index: number) => {
-      if (!hasStack) {
-        setCurrentFrame(0);
-        return;
-      }
-
-      const nextIndex = Math.max(0, Math.min(index, totalFrames - 1));
-      setCurrentFrame(nextIndex);
-
-      const viewport = stackViewportRef.current;
-      if (viewport) {
-        viewport.setImageIdIndex(nextIndex).catch((error) => {
-          console.warn('Failed to change frame', error);
-        });
-      }
-    },
-    [hasStack, totalFrames]
-  );
-
-  const applyToolSelection = useCallback(
-    (tool: Tool) => {
-      const toolGroup = toolGroupRef.current;
-      if (!toolGroup) {
-        return;
-      }
-
-      const toolNameMap: Record<Tool, string> = {
-        zoom: cornerstoneToolNames.zoom,
-        pan: cornerstoneToolNames.pan,
-        measure: cornerstoneToolNames.length,
-        windowLevel: cornerstoneToolNames.windowLevel,
-      };
-
-      const selectedTool = toolNameMap[tool];
-      Object.values(toolNameMap).forEach((toolName) => {
-        if (toolName === selectedTool) {
-          toolGroup.setToolActive(toolName, {
-            bindings: [{ mouseButton: ToolEnums.MouseBindings.Primary }],
-          });
-        } else {
-          toolGroup.setToolPassive(toolName, { removeAllBindings: true });
-        }
-      });
-
-      toolGroup.setToolActive(cornerstoneToolNames.stackScroll, {
-        bindings: [{ mouseButton: ToolEnums.MouseBindings.Wheel }],
-      });
-    },
-    []
-  );
-
-  const applyWindowLevelPreset = useCallback(
-    (presetId: string) => {
-      const viewport = stackViewportRef.current;
-      if (!viewport) {
-        return;
-      }
-
-      if (presetId === 'auto') {
-        viewport.resetProperties();
-        viewport.render();
-        return;
-      }
-
-      const preset = windowLevelPresets.find((item) => item.id === presetId);
-      if (!preset || preset.windowWidth === undefined || preset.windowCenter === undefined) {
-        return;
-      }
-
-      const halfWidth = preset.windowWidth / 2;
-      viewport.setProperties({
-        voiRange: {
-          lower: preset.windowCenter - halfWidth,
-          upper: preset.windowCenter + halfWidth,
-        },
-      });
-      viewport.render();
-    },
-    []
-  );
 
   const handleExportAnnotations = useCallback(() => {
     const element = viewportRef.current;
     if (!element || !series) {
       return;
     }
-
-    const annotationTools = [cornerstoneToolNames.length];
-    const annotations = annotationTools.flatMap((toolName) => {
-      const toolAnnotations = annotation.state.getAnnotations(toolName, element) ?? [];
-      return toolAnnotations.map((item) => ({
-        annotationUID: item.annotationUID ?? '',
-        toolName,
-        label: item.data?.label ?? '',
-        handles: item.data?.handles?.points ?? [],
-        cachedStats: item.data?.cachedStats ?? {},
-        metadata: {
-          referencedImageId: item.metadata?.referencedImageId,
-          FrameOfReferenceUID: item.metadata?.FrameOfReferenceUID,
-          sliceIndex: item.metadata?.sliceIndex,
-          viewPlaneNormal: item.metadata?.viewPlaneNormal,
-          viewUp: item.metadata?.viewUp,
-        },
-      }));
-    });
-
-    const payload = {
-      studyId: series.studyId,
-      seriesId: series.id,
-      exportedAt: new Date().toISOString(),
-      annotations,
-    };
-
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `annotations-${series.studyId}-${series.id}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    exportAnnotations({ element, series });
   }, [series]);
 
-  // Load DICOM image IDs when series changes
   useEffect(() => {
-    if (!series) {
-      setImageIds([]);
-      setLoadError(null);
-      setCurrentFrame(0);
-      return;
-    }
-
-    let isActive = true;
-
-    const loadInstances = async () => {
-      setIsFetchingInstances(true);
-      setLoadError(null);
-      setImageIds([]);
-      setCurrentFrame(0);
-      setZoom(1);
-
-      try {
-        const response = await orthancClient.listInstances(series.studyId, series.id);
-        const rawInstances = Array.isArray(response)
-          ? response
-          : Array.isArray((response as { Instances?: unknown[] }).Instances)
-            ? (response as { Instances: unknown[] }).Instances
-            : [];
-        const parsed = rawInstances
-          .map(getInstanceInfo)
-          .filter((item): item is InstanceInfo => Boolean(item));
-
-        if (parsed.length === 0) {
-          throw new Error('Keine DICOM Instanzen gefunden');
-        }
-
-        parsed.sort((a, b) => {
-          if (a.instanceNumber === undefined || b.instanceNumber === undefined) {
-            return 0;
-          }
-          return a.instanceNumber - b.instanceNumber;
-        });
-
-        const ids: string[] = [];
-        const refs: ImageRef[] = [];
-        let stackIndex = 0;
-
-        parsed.forEach((instance) => {
-          for (let index = 0; index < instance.frames; index += 1) {
-            const frameIndex = index + 1;
-            const imageId = buildWadorsImageId(series.studyId, series.id, instance.instanceId, frameIndex);
-            ids.push(imageId);
-            refs.push({
-              studyId: series.studyId,
-              seriesId: series.id,
-              instanceId: instance.instanceId,
-              frameIndex,
-              stackIndex,
-              wadoUrl: buildWadorsFrameUrl(series.studyId, series.id, instance.instanceId, frameIndex),
-              imageId,
-            });
-            stackIndex += 1;
-          }
-        });
-
-        if (isActive) {
-          setImageIds(ids);
-          onImageRefsChange?.(refs);
-        }
-      } catch (error) {
-        console.warn('Failed to load DICOM instances', error);
-        if (isActive) {
-          setLoadError('DICOM-Daten konnten nicht geladen werden.');
-          setImageIds([]);
-          onImageRefsChange?.([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsFetchingInstances(false);
-        }
-      }
-    };
-
-    loadInstances();
-
-    return () => {
-      isActive = false;
-    };
-  }, [series, onImageRefsChange]);
+    setCurrentFrame(0);
+    setZoom(1);
+    setViewerError(null);
+  }, [series?.id]);
 
   useEffect(() => {
-    if (typeof requestedFrameIndex !== 'number') {
-      return;
-    }
-    if (requestedFrameIndex === currentFrame) {
-      return;
-    }
-    setFrameIndex(requestedFrameIndex);
-  }, [currentFrame, requestedFrameIndex, setFrameIndex]);
-
-  // Initialize Cornerstone viewer when image IDs are available
-  useEffect(() => {
-    if (!viewportRef.current || imageIds.length === 0) {
-      return;
-    }
-
-    let isActive = true;
-    const element = viewportRef.current;
-    const handleStackNewImage = (event: Event) => {
-      const detail = (event as CustomEvent<{ imageIdIndex?: number }>).detail;
-      if (detail && typeof detail.imageIdIndex === 'number') {
-        setCurrentFrame(detail.imageIdIndex);
-      }
-    };
-
-    const handleCameraModified = (event: Event) => {
-      const detail = (event as CustomEvent<{ camera?: { parallelScale?: number; pan?: number[] } }>).detail;
-      const initialScale = initialParallelScaleRef.current;
-      const currentScale = detail?.camera?.parallelScale;
-      const panValues = detail?.camera?.pan;
-      
-      if (initialScale && currentScale) {
-        const nextZoom = initialScale / currentScale;
-        if (Number.isFinite(nextZoom)) {
-          setZoom(nextZoom);
-          
-          // Emit viewport change if not syncing from external source
-          if (!syncingRef.current && onViewportChange) {
-            const pan = panValues ? { x: panValues[0] || 0, y: panValues[1] || 0 } : { x: 0, y: 0 };
-            onViewportChange({ zoom: nextZoom, pan });
-          }
-        }
-      }
-    };
-    
-    const handleVoiModified = (event: Event) => {
-      if (syncingRef.current || !onViewportChange) return;
-      
-      const detail = (event as CustomEvent<{ range?: { lower: number; upper: number } }>).detail;
-      if (detail?.range) {
-        const width = detail.range.upper - detail.range.lower;
-        const center = detail.range.lower + width / 2;
-        onViewportChange({ windowLevel: { width, center } });
-      }
-    };
-
-    element.addEventListener(Enums.Events.STACK_NEW_IMAGE, handleStackNewImage);
-    element.addEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
-    element.addEventListener(Enums.Events.VOI_MODIFIED, handleVoiModified);
-
-    const setupViewer = async () => {
-      setIsInitializingViewer(true);
-      setLoadError(null);
-
-      try {
-        await initCornerstone();
-
-        const renderingEngine = new RenderingEngine(renderingEngineId);
-        renderingEngineRef.current = renderingEngine;
-
-        renderingEngine.enableElement({
-          viewportId,
-          type: Enums.ViewportType.STACK,
-          element: viewportRef.current!,
-        });
-
-        const viewport = renderingEngine.getViewport(viewportId) as StackViewport;
-        stackViewportRef.current = viewport;
-
-        const toolGroup = ToolGroupManager.createToolGroup(toolGroupId);
-        toolGroupRef.current = toolGroup;
-
-        toolGroup.addTool(cornerstoneToolNames.stackScroll);
-        toolGroup.addTool(cornerstoneToolNames.pan);
-        toolGroup.addTool(cornerstoneToolNames.zoom);
-        toolGroup.addTool(cornerstoneToolNames.windowLevel);
-        toolGroup.addTool(cornerstoneToolNames.length);
-
-        toolGroup.addViewport(viewportId, renderingEngineId);
-        applyToolSelection(activeToolRef.current);
-
-        await viewport.setStack(imageIds, 0);
-        viewport.render();
-
-        applyWindowLevelPreset(selectedPresetId);
-
-        const camera = viewport.getCamera();
-        initialParallelScaleRef.current = camera?.parallelScale ?? null;
-      } catch (error) {
-        console.warn('Cornerstone initialization failed', error);
-        if (isActive) {
-          setLoadError('Viewer konnte nicht initialisiert werden.');
-          setImageIds([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsInitializingViewer(false);
-        }
-      }
-    };
-
-    setupViewer();
-
-    return () => {
-      isActive = false;
-      element.removeEventListener(Enums.Events.STACK_NEW_IMAGE, handleStackNewImage);
-      element.removeEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
-      element.removeEventListener(Enums.Events.VOI_MODIFIED, handleVoiModified);
-
-      ToolGroupManager.destroyToolGroup(toolGroupId);
-
-      if (renderingEngineRef.current) {
-        renderingEngineRef.current.disableElement(viewportId);
-        renderingEngineRef.current.destroy();
-      }
-
-      renderingEngineRef.current = null;
-      stackViewportRef.current = null;
-      toolGroupRef.current = null;
-      initialParallelScaleRef.current = null;
-    };
-  }, [applyToolSelection, imageIds, renderingEngineId, toolGroupId, viewportId]);
+    onImageRefsChange?.(imageRefs);
+  }, [imageRefs, onImageRefsChange]);
 
   // Update active tool bindings
   useEffect(() => {
@@ -565,92 +169,21 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     applyWindowLevelPreset(selectedPresetId);
   }, [applyWindowLevelPreset, hasStack, selectedPresetId]);
 
-  // Notify parent of frame changes
-  useEffect(() => {
-    onFrameChange?.(currentFrame, totalFrames);
-  }, [currentFrame, totalFrames, onFrameChange]);
+  useApplyViewportSyncState({
+    syncState,
+    stackViewportRef,
+    initialParallelScaleRef,
+    syncingRef,
+  });
 
-  // Apply external sync state
-  useEffect(() => {
-    const viewport = stackViewportRef.current;
-    if (!viewport || !syncState) return;
-
-    syncingRef.current = true;
-
-    try {
-      const camera = viewport.getCamera();
-      const initialScale = initialParallelScaleRef.current;
-      let needsRender = false;
-
-      // Apply zoom
-      if (syncState.zoom !== undefined && initialScale) {
-        const targetParallelScale = initialScale / syncState.zoom;
-        if (camera.parallelScale !== targetParallelScale) {
-          viewport.setCamera({ ...camera, parallelScale: targetParallelScale });
-          needsRender = true;
-        }
-      }
-
-      // Apply pan using panWorld method (Cornerstone3D approach)
-      if (syncState.pan !== undefined) {
-        // Pan is applied via camera focal point offset - we use viewport methods
-        // For stack viewports, pan is controlled via the camera's focalPoint
-        const worldDelta: [number, number, number] = [syncState.pan.x, syncState.pan.y, 0];
-        viewport.setCamera({ 
-          ...camera, 
-          focalPoint: [
-            (camera.focalPoint?.[0] ?? 0) + worldDelta[0],
-            (camera.focalPoint?.[1] ?? 0) + worldDelta[1],
-            camera.focalPoint?.[2] ?? 0
-          ] as [number, number, number]
-        });
-        needsRender = true;
-      }
-
-      // Apply window/level
-      if (syncState.windowLevel !== undefined) {
-        const halfWidth = syncState.windowLevel.width / 2;
-        viewport.setProperties({
-          voiRange: {
-            lower: syncState.windowLevel.center - halfWidth,
-            upper: syncState.windowLevel.center + halfWidth,
-          },
-        });
-        needsRender = true;
-      }
-
-      if (needsRender) {
-        viewport.render();
-      }
-    } finally {
-      // Reset flag after a small delay to allow events to settle
-      requestAnimationFrame(() => {
-        syncingRef.current = false;
-      });
-    }
-  }, [syncState]);
-
-  const handlePrevFrame = useCallback(() => {
-    setFrameIndex(currentFrame - 1);
-  }, [currentFrame, setFrameIndex]);
-
-  const handleNextFrame = useCallback(() => {
-    setFrameIndex(currentFrame + 1);
-  }, [currentFrame, setFrameIndex]);
-
-  const handleReset = useCallback(() => {
-    setActiveTool('windowLevel');
-    setSelectedPresetId(windowLevelPresets[0].id);
-    setFrameIndex(0);
-
-    const viewport = stackViewportRef.current;
-    if (viewport) {
-      viewport.resetCamera({ resetPan: true, resetZoom: true, resetToCenter: true });
-      viewport.resetProperties();
-    }
-
-    setZoom(1);
-  }, [setFrameIndex]);
+  const handleReset = useViewerReset({
+    stackViewportRef,
+    setActiveTool,
+    defaultPresetId: windowLevelPresets[0].id,
+    setSelectedPresetId,
+    setFrameIndex,
+    setZoom,
+  });
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -678,7 +211,7 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
       {/* Toolbar */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         <ImageControls
-          tools={tools}
+          tools={viewerTools}
           activeToolId={activeTool}
           onToolSelect={(toolId) => setActiveTool(toolId as Tool)}
           onReset={handleReset}
@@ -735,11 +268,11 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
       <div className="flex-1 relative bg-viewer">
         <div ref={viewportRef} className="h-full w-full cursor-crosshair" />
 
-        {(loadError || imageIds.length === 0) && !isLoading && (
+        {(effectiveError || imageIds.length === 0) && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-muted-foreground space-y-2">
               <Maximize2 className="h-12 w-12 mx-auto opacity-50" />
-              <p>{loadError ?? 'Keine DICOM-Bilder geladen'}</p>
+              <p>{effectiveError ?? 'Keine DICOM-Bilder geladen'}</p>
               <p className="text-xs text-muted-foreground">
                 Prüfen Sie DICOMweb-Verbindung und Serien-ID.
               </p>

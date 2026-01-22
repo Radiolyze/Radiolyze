@@ -31,6 +31,12 @@
 - [x] Automatische Matching-Vorschläge
 - [x] Prior Studies Fetch via DICOMweb (PatientID Filter)
 
+## Phase 3.5: Maintenance & Refactoring
+
+- [x] Viewer Modularisierung (Hooks, Config Separation)
+- [x] Viewport Sync/Persistenz Hooks konsolidiert
+- [x] Cornerstone Debug-Logging via Env Flag
+
 ## Phase 4: Compliance Ready (10-14 Wochen)
 
 - [~] Human Oversight Dialog + Audit Trail (Dialog vorhanden, Audit Trail erweitert)

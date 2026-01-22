@@ -17,6 +17,20 @@ Status:
 - W/L Presets + Prefetch aktiv
 - Annotation Export (JSON)
 - Viewport-State-Sharing (Zoom, Pan, Window/Level)
+- Implementierung modularisiert (Hooks fuer Stack Setup, Prefetch, Sync, Reset)
+
+Implementierung:
+
+- `useDicomSeriesInstances`: DICOMweb Instances -> ImageIds/ImageRefs
+- `useCornerstoneStackViewport`: Cornerstone RenderingEngine + Viewport Setup
+- `useCornerstoneStackSetup`: Stack setzen + Initial-VOI + Tool-Aktivierung
+- `useCornerstoneViewerTools`: Tool-Selection + Window/Level Presets
+- `useStackFrameNavigation`: Frame-Wechsel + Requested Frame Sync
+- `useStackPrefetch`: Prefetch nahe Frames
+- `useApplyViewportSyncState`: Externe Sync-State Anwendung
+- `useViewerReset`: Reset-Logik fuer Viewport/Tool/WL
+- Viewer-Konfiguration in `src/config/viewer.ts` (Tools + Presets)
+- Debug-Logs via `VITE_DEBUG_CORNERSTONE=true`
 
 Props:
 
@@ -25,6 +39,8 @@ Props:
 - `onFrameChange`: Callback bei Frame-Wechsel
 - `onViewportChange`: Callback bei Viewport-Änderungen (Zoom, Pan, W/L)
 - `syncState`: Externer Viewport-State für Synchronisierung
+- `onImageRefsChange`: Liefert ImageRefs fuer Evidenz/AI
+- `requestedFrameIndex`: Externes Frame-Springen (z.B. Evidence)
 
 ## ComparisonViewer
 
@@ -47,8 +63,7 @@ Features:
 Status:
 
 - Vollständig implementiert
-- Bidirektionale Sync via Event-Listener und State-Sharing
-- Debounced Updates (60fps throttle)
+- Bidirektionale Sync via `useViewportSync` (60fps throttle)
 
 ## ImageControls
 

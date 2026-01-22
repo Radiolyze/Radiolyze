@@ -1,15 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import type { LucideIcon } from 'lucide-react';
 import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-export interface ViewerToolConfig {
-  id: string;
-  icon: LucideIcon;
-  label: string;
-  shortcut?: string;
-}
+import type { ViewerToolConfig } from '@/types/viewer';
 
 interface ImageControlsProps {
   tools: ViewerToolConfig[];

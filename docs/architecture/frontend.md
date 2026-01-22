@@ -27,6 +27,7 @@ Die UI ist in drei Hauptbereiche gegliedert:
 - Tastatur-Shortcuts via `useKeyboardShortcuts`
 - WebSocket Live-Updates via `useWebSocket` + `useReportStatusSync`
 - Viewport-Synchronisierung via `onViewportChange` / `syncState` Props
+- Viewer Lifecycle via Cornerstone Hooks (Stack Setup, Prefetch, Sync, Reset)
 - Queue Sync via `useDicomWebQueue` (DICOMweb + Report get/create)
 - Prior Studies via `usePriorStudies` (DICOMweb PatientID Filter)
 - Notifications via `useNotifications` (Audit Log + WS Refresh)
@@ -45,6 +46,22 @@ Die UI ist in drei Hauptbereiche gegliedert:
 | `usePriorStudies`      | Voruntersuchungen via DICOMweb             |
 | `useStudyLookup`       | Studien-Metadaten fuer UI-Enrichment       |
 | `useNotifications`     | Audit Log Benachrichtigungen               |
+
+## Viewer Hooks (Cornerstone)
+
+- `useDicomSeriesInstances`: DICOMweb Instances -> ImageIds/ImageRefs
+- `useCornerstoneStackViewport`: RenderingEngine + Viewport Setup
+- `useCornerstoneStackSetup`: Stack setzen + VOI Presets anwenden
+- `useCornerstoneViewerTools`: Tool-Selection (Zoom/Pan/WL/Messen)
+- `useStackFrameNavigation`: Frame Navigation + Requested Frame
+- `useStackPrefetch`: Prefetch um aktuellen Frame
+- `useApplyViewportSyncState`: Externe Sync-States anwenden
+- `useViewportSync`: Debounced Sync bei Vergleichsmodus
+- `useViewerReset`: Reset von Tool, W/L, Zoom, Frame
+
+Viewer Konfiguration:
+
+- `src/config/viewer.ts` (Tools + Window/Level Presets)
 
 ## Pages
 

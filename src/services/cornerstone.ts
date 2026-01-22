@@ -11,6 +11,12 @@ import {
 } from '@cornerstonejs/tools';
 
 let initialized = false;
+const shouldDebug = import.meta.env.VITE_DEBUG_CORNERSTONE === 'true';
+const log = (...args: Parameters<typeof console.log>) => {
+  if (shouldDebug) {
+    console.log(...args);
+  }
+};
 
 export const cornerstoneToolNames = {
   pan: PanTool.toolName,
@@ -40,26 +46,26 @@ export const initCornerstone = async () => {
     // This is required for wadors to resolve metadata when loading images
     if (cornerstoneDICOMImageLoader.wadors?.register) {
       cornerstoneDICOMImageLoader.wadors.register();
-      console.log('[cornerstone] wadors metadata provider registered');
+      log('[cornerstone] wadors metadata provider registered');
     }
     
     if (cornerstoneDICOMImageLoader.wadouri?.register) {
       cornerstoneDICOMImageLoader.wadouri.register();
-      console.log('[cornerstone] wadouri metadata provider registered');
+      log('[cornerstone] wadouri metadata provider registered');
     }
     
     // Register image loaders
     if (cornerstoneDICOMImageLoader.wadors?.loadImage) {
       imageLoader.registerImageLoader('wadors', cornerstoneDICOMImageLoader.wadors.loadImage);
-      console.log('[cornerstone] wadors image loader registered');
+      log('[cornerstone] wadors image loader registered');
     }
     
     if (cornerstoneDICOMImageLoader.wadouri?.loadImage) {
       imageLoader.registerImageLoader('wadouri', cornerstoneDICOMImageLoader.wadouri.loadImage);
-      console.log('[cornerstone] wadouri image loader registered');
+      log('[cornerstone] wadouri image loader registered');
     }
     
-    console.log('[cornerstone] DICOM image loader initialized successfully');
+    log('[cornerstone] DICOM image loader initialized successfully');
   } catch (err) {
     console.warn('[cornerstone] DICOM image loader init skipped:', err);
   }
