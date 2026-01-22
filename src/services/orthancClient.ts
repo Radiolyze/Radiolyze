@@ -17,7 +17,11 @@ const buildDicomWebUrl = (
   baseOverride?: string
 ) => {
   const baseUrl = baseOverride ?? DICOM_WEB_URL;
-  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const resolvedBaseUrl =
+    typeof window !== 'undefined' && baseUrl.startsWith('/')
+      ? `${window.location.origin}${baseUrl}`
+      : baseUrl;
+  const base = resolvedBaseUrl.endsWith('/') ? resolvedBaseUrl : `${resolvedBaseUrl}/`;
   const sanitizedPath = path.replace(/^\//, '');
   const url = new URL(sanitizedPath, base);
 
