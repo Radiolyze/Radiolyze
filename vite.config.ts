@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
       alias: [
         { find: "@", replacement: path.resolve(__dirname, "./src") },
         {
-          find: /@cornerstonejs\/codec-libjpeg-turbo-8bit\/dist\/libjpegturbowasm_decode\.js$/,
+          find: /@cornerstonejs\/codec-libjpeg-turbo-8bit\/dist\/libjpegturbowasm_decode\.js(\?.*)?$/,
           replacement: path.resolve(__dirname, "./src/shims/libjpegturbo-default.ts"),
         },
       ],
