@@ -17,8 +17,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cornerstoneToolNames } from '@/services/cornerstone';
+import { exportAnnotations } from '@/services/annotations';
 import { Enums, imageLoader } from '@cornerstonejs/core';
-import { Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
+import { Enums as ToolEnums } from '@cornerstonejs/tools';
 import type { ViewportState } from '@/types/viewerSync';
 import { viewerTools, windowLevelPresets, type ViewerToolId } from '@/config/viewer';
 
@@ -233,40 +234,7 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     if (!element || !series) {
       return;
     }
-
-    const annotationTools = [cornerstoneToolNames.length];
-    const annotations = annotationTools.flatMap((toolName) => {
-      const toolAnnotations = annotation.state.getAnnotations(toolName, element) ?? [];
-      return toolAnnotations.map((item) => ({
-        annotationUID: item.annotationUID ?? '',
-        toolName,
-        label: item.data?.label ?? '',
-        handles: item.data?.handles?.points ?? [],
-        cachedStats: item.data?.cachedStats ?? {},
-        metadata: {
-          referencedImageId: item.metadata?.referencedImageId,
-          FrameOfReferenceUID: item.metadata?.FrameOfReferenceUID,
-          sliceIndex: item.metadata?.sliceIndex,
-          viewPlaneNormal: item.metadata?.viewPlaneNormal,
-          viewUp: item.metadata?.viewUp,
-        },
-      }));
-    });
-
-    const payload = {
-      studyId: series.studyId,
-      seriesId: series.id,
-      exportedAt: new Date().toISOString(),
-      annotations,
-    };
-
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `annotations-${series.studyId}-${series.id}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    exportAnnotations({ element, series });
   }, [series]);
 
   useEffect(() => {
