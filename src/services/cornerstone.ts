@@ -1,6 +1,5 @@
 import { init as initCornerstoneCore, isCornerstoneInitialized, imageLoader } from '@cornerstonejs/core';
 import * as cornerstoneDICOMImageLoader from '@cornerstonejs/dicom-image-loader';
-import dicomParser from 'dicom-parser';
 import {
   addTool,
   init as initCornerstoneTools,
@@ -36,19 +35,9 @@ export const initCornerstone = async () => {
       : 1;
 
   try {
-    // Set external dependencies
-    cornerstoneDICOMImageLoader.external.dicomParser = dicomParser;
-
-    // Initialize the loader with web worker configuration
+    // Initialize the DICOM image loader (v4 API - no external dependencies needed)
     cornerstoneDICOMImageLoader.init({
       maxWebWorkers,
-      startWebWorkersOnDemand: true,
-      taskConfiguration: {
-        decodeTask: {
-          initializeCodecsOnStartup: false,
-          strict: false,
-        },
-      },
     });
 
     // Register the wadors image loader for DICOMweb
@@ -60,6 +49,8 @@ export const initCornerstone = async () => {
     if (cornerstoneDICOMImageLoader.wadouri?.loadImage) {
       imageLoader.registerImageLoader('wadouri', cornerstoneDICOMImageLoader.wadouri.loadImage);
     }
+    
+    console.log('[cornerstone] DICOM image loader initialized successfully');
   } catch (err) {
     console.warn('[cornerstone] DICOM image loader init skipped:', err);
   }

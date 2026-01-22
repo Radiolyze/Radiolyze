@@ -64,12 +64,17 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_BASE_URL: http://localhost:8000
+      # Browser URLs (accessed from host machine)
+      VITE_API_BASE_URL: ""
+      VITE_WS_URL: ""
+      # Vite proxy targets (accessed from within Docker network)
+      VITE_API_PROXY_TARGET: http://backend:8000
+      VITE_DICOM_WEB_PROXY_TARGET: http://orthanc:8042
+      # API endpoints (relative, go through proxy)
       VITE_ASR_ENDPOINT: /api/v1/reports/asr-transcript
       VITE_QA_CHECK_URL: /api/v1/reports/qa-check
       VITE_AUDIT_LOG_URL: /api/v1/audit-log
       VITE_DICOM_WEB_URL: /dicom-web
-      VITE_DICOM_WEB_PROXY_TARGET: http://orthanc:8042
       VITE_DICOM_WEB_USERNAME: orthanc
       VITE_DICOM_WEB_PASSWORD: orthanc
       VITE_USE_MOCK_QUEUE: "false"
