@@ -12,5 +12,3 @@ export interface SyncOptions {
   pan: boolean;
   windowLevel: boolean;
 }
-
-export type ViewportChangeHandler = (state: Partial<ViewportState>) => void;
