@@ -18,12 +18,12 @@ services:
       VLLM_REQUEST_TIMEOUT: "120"
       VLLM_FALLBACK_TO_MOCK: "true"
       VLLM_DEFAULT_CONFIDENCE: "0.0"
-      MEDASR_ENABLED: "false"
+      MEDASR_ENABLED: "true"
       MEDASR_BASE_URL: http://medasr:8001
       MEDASR_TRANSCRIBE_PATH: /v1/audio/transcriptions
       MEDASR_MODEL: google/medasr
       MEDASR_REQUEST_TIMEOUT: "120"
-      MEDASR_FALLBACK_TO_MOCK: "true"
+      MEDASR_FALLBACK_TO_MOCK: "false"
       MEDASR_DEFAULT_CONFIDENCE: "0.0"
     depends_on:
       - db
@@ -47,6 +47,13 @@ services:
       VLLM_REQUEST_TIMEOUT: "120"
       VLLM_FALLBACK_TO_MOCK: "true"
       VLLM_DEFAULT_CONFIDENCE: "0.0"
+      MEDASR_ENABLED: "true"
+      MEDASR_BASE_URL: http://medasr:8001
+      MEDASR_TRANSCRIBE_PATH: /v1/audio/transcriptions
+      MEDASR_MODEL: google/medasr
+      MEDASR_REQUEST_TIMEOUT: "120"
+      MEDASR_FALLBACK_TO_MOCK: "false"
+      MEDASR_DEFAULT_CONFIDENCE: "0.0"
     depends_on:
       - db
       - redis
@@ -115,11 +122,12 @@ services:
     image: vllm/vllm-openai:nightly
     pull_policy: always
     profiles: ["gpu"]
-    runtime: nvidia
+    gpus: all
     ports:
       - "8002:8000"
     environment:
       NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
       VLLM_LOGGING_LEVEL: INFO
       HUGGINGFACE_HUB_TOKEN: ${HUGGINGFACE_HUB_TOKEN:-${HF_TOKEN:-}}
       HF_TOKEN: ${HF_TOKEN:-${HUGGINGFACE_HUB_TOKEN:-}}
@@ -152,7 +160,6 @@ services:
   medasr:
     image: vllm/vllm-openai:nightly
     pull_policy: always
-    profiles: ["gpu"]
     ports:
       - "8003:8001"
     environment:
