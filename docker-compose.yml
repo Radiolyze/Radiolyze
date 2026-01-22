@@ -119,6 +119,7 @@ services:
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       VLLM_LOGGING_LEVEL: INFO
+      HUGGINGFACE_HUB_TOKEN: ${HUGGINGFACE_HUB_TOKEN:-}
     volumes:
       - vllm-cache:/root/.cache/huggingface
     command:
@@ -158,6 +159,7 @@ services:
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       VLLM_LOGGING_LEVEL: INFO
+      HUGGINGFACE_HUB_TOKEN: ${HUGGINGFACE_HUB_TOKEN:-}
     volumes:
       - vllm-cache:/root/.cache/huggingface
     command:

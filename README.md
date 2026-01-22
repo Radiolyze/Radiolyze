@@ -14,7 +14,10 @@ docker compose up --build
 
 ### NVIDIA (CUDA)
 
+Erstelle eine `.env` Datei (vorlage: `env.example`) und trage dein Hugging Face Token ein.
+
 ```sh
+# Setze HUGGINGFACE_HUB_TOKEN in .env (siehe env.example)
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile gpu up --build
 ```
 
@@ -35,7 +38,8 @@ Default Orthanc credentials (local dev):
 - User: `orthanc`
 - Password: `orthanc`
 
-Beim ersten Start wird automatisch ein kleines DICOM Sample geladen.
+Beim ersten Start werden automatisch mehrere DICOM Samples geladen.
+Die Liste laesst sich ueber `ORTHANC_SEED_URLS` (Komma-separiert) anpassen.
 
 ## How can I edit this code?
 

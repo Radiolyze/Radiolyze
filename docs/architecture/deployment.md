@@ -36,6 +36,8 @@ Optionale Services: NGINX.
 - Default Login (lokal): `orthanc / orthanc`
 - DICOMweb Root: `/dicom-web`
 - Seeder via `ORTHANC_SEED_ENABLED` + `ORTHANC_SEED_URLS` steuerbar.
+  Beispiel (Komma-separiert):
+  `https://github.com/pydicom/pydicom-data/raw/master/data_store/data/CT_small.dcm,https://github.com/pydicom/pydicom-data/raw/master/data_store/data/MR_small.dcm,https://github.com/pydicom/pydicom-data/raw/master/data_store/data/CR_small.dcm`
 
 ## Zielumgebungen
 
