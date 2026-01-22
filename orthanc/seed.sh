@@ -5,7 +5,7 @@ ORTHANC_URL="${ORTHANC_URL:-http://orthanc:8042}"
 ORTHANC_USERNAME="${ORTHANC_USERNAME:-orthanc}"
 ORTHANC_PASSWORD="${ORTHANC_PASSWORD:-orthanc}"
 ORTHANC_SEED_ENABLED="${ORTHANC_SEED_ENABLED:-true}"
-ORTHANC_SEED_URLS="${ORTHANC_SEED_URLS:-https://github.com/pydicom/pydicom-data/raw/master/data/CT_small.dcm}"
+ORTHANC_SEED_URLS="${ORTHANC_SEED_URLS:-https://github.com/pydicom/pydicom-data/raw/main/data/CT_small.dcm}"
 
 if [ "$ORTHANC_SEED_ENABLED" != "true" ]; then
   echo "Orthanc seeding disabled."
