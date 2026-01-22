@@ -27,12 +27,7 @@ import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
 import { buildWadorsFrameUrl, buildWadorsImageId, orthancClient } from '@/services/orthancClient';
 import { Enums, RenderingEngine, imageLoader, type StackViewport } from '@cornerstonejs/core';
 import { ToolGroupManager, Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
-
-export interface ViewportState {
-  zoom: number;
-  pan: { x: number; y: number };
-  windowLevel: { width: number; center: number };
-}
+import type { ViewportState } from '@/types/viewerSync';
 
 interface DicomViewerProps {
   series: Series | null;

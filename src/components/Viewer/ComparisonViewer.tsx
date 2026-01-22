@@ -18,7 +18,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DicomViewer, type ViewerProgress, type ViewportState } from './DicomViewer';
+import { DicomViewer, type ViewerProgress } from './DicomViewer';
+import type { ViewportState } from '@/types/viewerSync';
 import type { ImageRef, Series, Study } from '@/types/radiology';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
