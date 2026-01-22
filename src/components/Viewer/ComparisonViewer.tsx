@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Columns2, X, ArrowLeftRight, Link2, Link2Off, ZoomIn, Move, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +51,7 @@ export function ComparisonViewer({
   progress,
   onFrameChange,
 }: ComparisonViewerProps) {
+  const { t } = useTranslation('viewer');
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [isSwapped, setIsSwapped] = useState(false);
   const [selectedPriorStudyId, setSelectedPriorStudyId] = useState<string | null>(null);
@@ -211,8 +213,8 @@ export function ComparisonViewer({
   // Determine which series goes where based on swap state
   const leftSeries = isSwapped ? selectedPriorSeries : currentSeries;
   const rightSeries = isSwapped ? currentSeries : selectedPriorSeries;
-  const leftLabel = isSwapped ? selectedPriorStudy?.label : 'Aktuell';
-  const rightLabel = isSwapped ? 'Aktuell' : selectedPriorStudy?.label;
+  const leftLabel = isSwapped ? selectedPriorStudy?.label : t('comparison.current');
+  const rightLabel = isSwapped ? t('comparison.current') : selectedPriorStudy?.label;
   const leftDate = isSwapped ? selectedPriorStudy?.date : undefined;
   const rightDate = isSwapped ? undefined : selectedPriorStudy?.date;
   const leftProgress = isSwapped ? undefined : progress;
@@ -240,7 +242,7 @@ export function ComparisonViewer({
               className="bg-card/90 backdrop-blur-sm"
             >
               <Columns2 className="h-4 w-4 mr-2" />
-              Vergleich mit Voruntersuchung
+              {t('comparison.enable')}
               <Badge variant="secondary" className="ml-2">
                 {priorStudies.length}
               </Badge>
@@ -259,15 +261,15 @@ export function ComparisonViewer({
         <div className="flex items-center gap-4">
           <Badge variant="outline" className="text-primary border-primary">
             <Columns2 className="h-3 w-3 mr-1" />
-            Vergleichsmodus
+            {t('comparison.title')}
           </Badge>
 
           {/* Prior Study Selector */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Voruntersuchung:</span>
+            <span className="text-sm text-muted-foreground">{t('comparison.prior')}:</span>
             <Select value={selectedPriorStudyId || ''} onValueChange={handleSelectPriorStudy}>
               <SelectTrigger className="h-8 w-[200px]">
-                <SelectValue placeholder="Studie wählen" />
+                <SelectValue placeholder={t('comparison.selectStudy')} />
               </SelectTrigger>
               <SelectContent>
                 {priorStudies.map((prior) => (
@@ -282,7 +284,7 @@ export function ComparisonViewer({
             {selectedPriorStudy && (
               <Select value={selectedPriorSeriesId || ''} onValueChange={setSelectedPriorSeriesId}>
                 <SelectTrigger className="h-8 w-[150px]">
-                  <SelectValue placeholder="Serie wählen" />
+                  <SelectValue placeholder={t('comparison.selectSeries')} />
                 </SelectTrigger>
                 <SelectContent>
                   {selectedPriorStudy.study.series.map((series) => (
@@ -314,13 +316,13 @@ export function ComparisonViewer({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>Synchronisierung</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('sync.title')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem
                 checked={syncOptions.frames}
                 onCheckedChange={() => toggleSyncOption('frames')}
               >
-                Frames synchronisieren
+                {t('sync.frames')}
               </DropdownMenuCheckboxItem>
               <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem
@@ -328,21 +330,21 @@ export function ComparisonViewer({
                 onCheckedChange={() => toggleSyncOption('zoom')}
               >
                 <ZoomIn className="h-3.5 w-3.5 mr-2" />
-                Zoom synchronisieren
+                {t('sync.zoom')}
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={syncOptions.pan}
                 onCheckedChange={() => toggleSyncOption('pan')}
               >
                 <Move className="h-3.5 w-3.5 mr-2" />
-                Pan synchronisieren
+                {t('sync.pan')}
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={syncOptions.windowLevel}
                 onCheckedChange={() => toggleSyncOption('windowLevel')}
               >
                 <Sun className="h-3.5 w-3.5 mr-2" />
-                Fensterung synchronisieren
+                {t('sync.windowLevel')}
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -360,7 +362,7 @@ export function ComparisonViewer({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {isSwapped ? 'Ansichten zurücktauschen' : 'Ansichten tauschen'}
+              {isSwapped ? t('comparison.swap') : t('comparison.swap')}
             </TooltipContent>
           </Tooltip>
 
@@ -376,7 +378,7 @@ export function ComparisonViewer({
                 <X className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Vergleichsmodus beenden</TooltipContent>
+            <TooltipContent>{t('comparison.disable')}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -393,7 +395,7 @@ export function ComparisonViewer({
                   : 'bg-primary text-primary-foreground'
               )}
             >
-              {leftLabel || 'Voruntersuchung'}
+              {leftLabel || t('comparison.prior')}
               {leftDate && <span className="ml-1 opacity-70">{leftDate}</span>}
             </Badge>
           </div>
@@ -416,7 +418,7 @@ export function ComparisonViewer({
                   : 'bg-secondary text-secondary-foreground'
               )}
             >
-              {rightLabel || 'Voruntersuchung'}
+              {rightLabel || t('comparison.prior')}
               {rightDate && <span className="ml-1 opacity-70">{rightDate}</span>}
             </Badge>
           </div>
@@ -433,7 +435,7 @@ export function ComparisonViewer({
             <div className="h-full flex items-center justify-center bg-viewer">
               <div className="text-center text-muted-foreground">
                 <Columns2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Wählen Sie eine Voruntersuchung</p>
+                <p>{t('comparison.noStudySelected')}</p>
               </div>
             </div>
           )}

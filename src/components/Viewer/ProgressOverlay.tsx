@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Mic, Sparkles, ShieldCheck, ShieldAlert, ShieldX, Timer } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -13,12 +14,12 @@ interface ProgressOverlayProps {
   className?: string;
 }
 
-const qaConfig: Record<QAStatus, { icon: typeof ShieldCheck; label: string; className: string }> = {
-  pending: { icon: Timer, label: 'QA ausstehend', className: 'bg-muted text-muted-foreground' },
-  checking: { icon: Timer, label: 'QA prueft', className: 'bg-info/20 text-info' },
-  pass: { icon: ShieldCheck, label: 'QA bestanden', className: 'bg-success/20 text-success' },
-  warn: { icon: ShieldAlert, label: 'QA Warnung', className: 'bg-warning/20 text-warning' },
-  fail: { icon: ShieldX, label: 'QA Fehler', className: 'bg-destructive/20 text-destructive' },
+const qaConfig: Record<QAStatus, { icon: typeof ShieldCheck; labelKey: string; className: string }> = {
+  pending: { icon: Timer, labelKey: 'progress.qa.idle', className: 'bg-muted text-muted-foreground' },
+  checking: { icon: Timer, labelKey: 'progress.qa.checking', className: 'bg-info/20 text-info' },
+  pass: { icon: ShieldCheck, labelKey: 'progress.qa.passed', className: 'bg-success/20 text-success' },
+  warn: { icon: ShieldAlert, labelKey: 'progress.qa.warnings', className: 'bg-warning/20 text-warning' },
+  fail: { icon: ShieldX, labelKey: 'progress.qa.warnings', className: 'bg-destructive/20 text-destructive' },
 };
 
 export function ProgressOverlay({
@@ -28,6 +29,7 @@ export function ProgressOverlay({
   qaStatus = 'pending',
   className,
 }: ProgressOverlayProps) {
+  const { t } = useTranslation('viewer');
   const shouldShow =
     asrStatus !== 'idle' ||
     aiStatus !== 'idle' ||
@@ -67,7 +69,7 @@ export function ProgressOverlay({
             asrStatus === 'idle' && 'bg-muted text-muted-foreground'
           )}
         >
-          {asrStatus === 'listening' ? 'Aufnahme' : asrStatus === 'processing' ? 'Verarbeitung' : 'Bereit'}
+          {t(`progress.asr.${asrStatus}`)}
         </Badge>
       </div>
 
@@ -94,12 +96,12 @@ export function ProgressOverlay({
           )}
         >
           {aiStatus === 'queued'
-            ? 'Wartet'
+            ? t('progress.ai.running')
             : aiStatus === 'processing'
-              ? 'Analyse'
+              ? t('progress.ai.running')
               : aiStatus === 'error'
-                ? 'Fehler'
-                : 'Bereit'}
+                ? t('progress.ai.idle')
+                : t('progress.ai.idle')}
         </Badge>
       </div>
 
@@ -109,7 +111,7 @@ export function ProgressOverlay({
           <span>QA</span>
         </div>
         <Badge variant="outline" className={cn('text-[10px]', qa.className)}>
-          {qa.label}
+          {t(qa.labelKey)}
         </Badge>
       </div>
     </div>
