@@ -61,7 +61,8 @@ services:
       VITE_ASR_ENDPOINT: /api/v1/reports/asr-transcript
       VITE_QA_CHECK_URL: /api/v1/reports/qa-check
       VITE_AUDIT_LOG_URL: /api/v1/audit-log
-      VITE_DICOM_WEB_URL: http://localhost:8042/dicom-web
+      VITE_DICOM_WEB_URL: /dicom-web
+      VITE_DICOM_WEB_PROXY_TARGET: http://orthanc:8042
       VITE_DICOM_WEB_USERNAME: orthanc
       VITE_DICOM_WEB_PASSWORD: orthanc
       VITE_USE_MOCK_QUEUE: "false"
