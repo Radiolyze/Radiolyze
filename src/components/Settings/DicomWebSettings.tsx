@@ -74,9 +74,12 @@ export function DicomWebSettings() {
     setConnectionResult({ status: 'testing', message: 'Verbindung wird getestet...' });
 
     const startTime = performance.now();
-    const testUrl = config.url.endsWith('/')
-      ? `${config.url}studies?limit=1`
-      : `${config.url}/studies?limit=1`;
+    const baseUrl = config.url.startsWith('/')
+      ? `${window.location.origin}${config.url}`
+      : config.url;
+    const testUrl = baseUrl.endsWith('/')
+      ? `${baseUrl}studies?limit=1`
+      : `${baseUrl}/studies?limit=1`;
 
     try {
       const headers: HeadersInit = {
@@ -151,7 +154,7 @@ export function DicomWebSettings() {
         setConnectionResult({
           status: 'error',
           message: 'Netzwerkfehler',
-          details: `Verbindung zum Server nicht möglich. Mögliche Ursachen:\n• Server nicht erreichbar\n• CORS-Konfiguration fehlt\n• Falsche URL\n\nVersuchen Sie, die URL im Browser zu öffnen: ${config.url}`,
+          details: `Verbindung zum Server nicht möglich. Mögliche Ursachen:\n• Server nicht erreichbar\n• CORS-Konfiguration fehlt\n• Falsche URL\n\nVersuchen Sie, die URL im Browser zu öffnen: ${baseUrl}`,
         });
       } else {
         setConnectionResult({
@@ -180,13 +183,14 @@ export function DicomWebSettings() {
           <Label htmlFor="dicom-url">Server-URL</Label>
           <Input
             id="dicom-url"
-            type="url"
-            placeholder="http://localhost:8042/dicom-web"
+            type="text"
+            placeholder="/dicom-web"
             value={config.url}
             onChange={(e) => updateConfig('url', e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            Vollständige URL zum DICOMweb-Endpunkt (WADO-RS/STOW-RS/QIDO-RS)
+            Vollständige URL zum DICOMweb-Endpunkt (WADO-RS/STOW-RS/QIDO-RS).
+            Im Docker/SSH-Setup funktioniert meist <span className="font-mono">/dicom-web</span> über den Frontend-Proxy.
           </p>
         </div>
 
