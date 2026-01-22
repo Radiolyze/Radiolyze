@@ -10,6 +10,7 @@ import { useApplyViewportSyncState } from '@/hooks/useApplyViewportSyncState';
 import { useStackPrefetch } from '@/hooks/useStackPrefetch';
 import { useCornerstoneViewerTools } from '@/hooks/useCornerstoneViewerTools';
 import { useStackFrameNavigation } from '@/hooks/useStackFrameNavigation';
+import { useCornerstoneStackSetup } from '@/hooks/useCornerstoneStackSetup';
 import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
@@ -53,7 +54,6 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<Tool>(preferences.defaultTool as Tool);
   const [zoom, setZoom] = useState(1);
-  const [isInitializingViewer, setIsInitializingViewer] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState(windowLevelPresets[0].id);
   const [viewerError, setViewerError] = useState<string | null>(null);
 
@@ -98,9 +98,20 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     presets: windowLevelPresets,
   });
 
+  const { isInitializing: isInitializingStack } = useCornerstoneStackSetup({
+    imageIds,
+    stackViewportRef,
+    initialParallelScaleRef,
+    activeToolRef,
+    selectedPresetId,
+    applyToolSelection,
+    applyWindowLevelPreset,
+    onError: setViewerError,
+  });
+
   const hasStack = imageIds.length > 0;
   const totalFrames = hasStack ? imageIds.length : series?.frameCount || 1;
-  const isLoading = isFetchingInstances || isInitializingViewer || isInitializingCornerstone;
+  const isLoading = isFetchingInstances || isInitializingCornerstone || isInitializingStack;
   const effectiveError = viewerError ?? loadError;
 
   const { setFrameIndex, handlePrevFrame, handleNextFrame } = useStackFrameNavigation({
@@ -142,48 +153,6 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
   useEffect(() => {
     onImageRefsChange?.(imageRefs);
   }, [imageRefs, onImageRefsChange]);
-
-  useEffect(() => {
-    const viewport = stackViewportRef.current;
-    if (!viewport || imageIds.length === 0) {
-      return;
-    }
-
-    let isActive = true;
-
-    const setupStack = async () => {
-      setIsInitializingViewer(true);
-      setViewerError(null);
-
-      try {
-        applyToolSelection(activeToolRef.current);
-        await viewport.setStack(imageIds, 0);
-        viewport.render();
-
-        applyWindowLevelPreset(selectedPresetId);
-
-        const camera = viewport.getCamera();
-        if (isActive) {
-          initialParallelScaleRef.current = camera?.parallelScale ?? null;
-        }
-      } catch (error) {
-        console.warn('Cornerstone stack setup failed', error);
-        if (isActive) {
-          setViewerError('Viewer konnte nicht initialisiert werden.');
-        }
-      } finally {
-        if (isActive) {
-          setIsInitializingViewer(false);
-        }
-      }
-    };
-
-    setupStack();
-
-    return () => {
-      isActive = false;
-    };
-  }, [applyToolSelection, applyWindowLevelPreset, imageIds, isInitializingCornerstone, selectedPresetId]);
 
   // Update active tool bindings
   useEffect(() => {
