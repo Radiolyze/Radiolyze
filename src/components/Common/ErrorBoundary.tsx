@@ -2,6 +2,7 @@ import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import i18n from '@/i18n';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -13,6 +14,11 @@ interface ErrorBoundaryState {
   error: Error | null;
   errorInfo: React.ErrorInfo | null;
 }
+
+// Helper to get translations (class components can't use hooks)
+const getTranslation = (key: string, ns: string = 'errors'): string => {
+  return i18n.t(key, { ns }) as string;
+};
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
@@ -51,6 +57,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     try {
       localStorage.clear();
       sessionStorage.clear();
+      alert(getTranslation('boundary.cacheClearedMessage'));
       window.location.reload();
     } catch (e) {
       console.error('Failed to clear storage:', e);
@@ -73,9 +80,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
                 <AlertTriangle className="h-7 w-7 text-destructive" />
               </div>
-              <CardTitle className="text-xl">Ein Fehler ist aufgetreten</CardTitle>
+              <CardTitle className="text-xl">{getTranslation('boundary.title')}</CardTitle>
               <CardDescription>
-                Die Anwendung ist auf ein unerwartetes Problem gestoßen.
+                {getTranslation('boundary.message')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -94,7 +101,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                   className="w-full"
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Neu laden
+                  {getTranslation('boundary.actions.reload')}
                 </Button>
                 <Button
                   variant="outline"
@@ -102,7 +109,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                   className="w-full"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Wiederholen
+                  {getTranslation('boundary.actions.retry')}
                 </Button>
               </div>
 
@@ -113,19 +120,19 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                   className="w-full"
                 >
                   <Home className="mr-2 h-4 w-4" />
-                  Startseite
+                  {getTranslation('boundary.actions.goHome')}
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={this.handleClearStorage}
                   className="w-full text-destructive hover:text-destructive"
                 >
-                  Cache leeren
+                  {getTranslation('boundary.actions.clearCache')}
                 </Button>
               </div>
 
               <p className="text-xs text-center text-muted-foreground pt-2">
-                Falls das Problem weiterhin besteht, wenden Sie sich an den Support.
+                {getTranslation('generic.message')}
               </p>
             </CardContent>
           </Card>

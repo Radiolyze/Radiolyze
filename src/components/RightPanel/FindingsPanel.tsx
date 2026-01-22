@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Mic, MicOff, Edit3, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfidenceBar } from '@/components/Common/ConfidenceBar';
@@ -22,6 +23,8 @@ export function FindingsPanel({
   onSave,
   onAsrStatusChange,
 }: FindingsPanelProps) {
+  const { t } = useTranslation('report');
+  const { t: tCommon } = useTranslation('common');
   const [isEditing, setIsEditing] = useState(false);
   const { status, isRecording, confidence, startRecording, stopRecording } = useASR({ reportId });
 
@@ -59,7 +62,7 @@ export function FindingsPanel({
     <div className="flex flex-col border-b border-border">
       {/* Header */}
       <div className="panel-header">
-        <h3 className="text-sm font-semibold uppercase tracking-wide">Befund</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide">{t('findings.title')}</h3>
         <div className="flex items-center gap-2">
           {/* Mic Button */}
           <Button
@@ -73,7 +76,7 @@ export function FindingsPanel({
             )}
             onClick={handleMicClick}
             disabled={status === 'processing'}
-            title={isRecording ? 'Aufnahme stoppen' : 'Diktat starten (Ctrl+M)'}
+            title={isRecording ? t('findings.stopDictation') : t('findings.startDictation')}
           >
             {isRecording ? (
               <MicOff className="h-5 w-5" />
@@ -91,12 +94,12 @@ export function FindingsPanel({
             {isEditing ? (
               <>
                 <Save className="h-4 w-4 mr-1.5" />
-                Speichern
+                {tCommon('actions.save')}
               </>
             ) : (
               <>
                 <Edit3 className="h-4 w-4 mr-1.5" />
-                Bearbeiten
+                {tCommon('actions.edit')}
               </>
             )}
           </Button>
@@ -107,7 +110,7 @@ export function FindingsPanel({
       {status === 'processing' && (
         <div className="px-4 py-2 bg-info/10 border-b border-border flex items-center gap-2 text-sm text-info">
           <div className="w-4 h-4 border-2 border-info border-t-transparent rounded-full spinner" />
-          Verarbeite Audio...
+          {t('findings.processing')}
         </div>
       )}
 
@@ -116,7 +119,7 @@ export function FindingsPanel({
         <div className="px-4 py-2 bg-panel-secondary/50 border-b border-border">
           <ConfidenceBar 
             value={confidence} 
-            label="ASR Konfidenz" 
+            label={t('ai.confidence')} 
             size="sm" 
           />
         </div>
@@ -128,9 +131,9 @@ export function FindingsPanel({
           <ReportEditor
             value={findings}
             onChange={onFindingsChange}
-            placeholder="Klicken Sie auf das Mikrofon zum Diktieren oder tippen Sie hier..."
+            placeholder={t('findings.placeholder')}
             className="h-full min-h-[200px]"
-            ariaLabel="Befund Text"
+            ariaLabel={t('findings.title')}
           />
         ) : (
           <div className="h-full p-4 overflow-y-auto">
@@ -138,7 +141,7 @@ export function FindingsPanel({
               <p className="text-sm whitespace-pre-wrap leading-relaxed">{findings}</p>
             ) : (
               <p className="text-sm text-muted-foreground italic">
-                Noch keine Befunde erfasst. Klicken Sie auf das Mikrofon zum Diktieren.
+                {t('findings.placeholder')}
               </p>
             )}
           </div>
@@ -147,8 +150,8 @@ export function FindingsPanel({
 
       {/* Footer */}
       <div className="px-4 py-2 border-t border-border bg-panel-tertiary/30 flex items-center justify-between text-xs text-muted-foreground">
-        <span>{wordCount} Wörter</span>
-        <span>Ctrl+M für Mikrofon</span>
+        <span>{t('findings.wordCount', { count: wordCount })}</span>
+        <span>Ctrl+M</span>
       </div>
     </div>
   );

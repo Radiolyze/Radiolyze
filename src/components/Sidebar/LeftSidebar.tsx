@@ -1,10 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import type { Patient, Study, QueueItem, Series } from '@/types/radiology';
 import { PatientCard } from './PatientCard';
 import { PriorStudiesTimeline } from './PriorStudiesTimeline';
 import { SeriesList } from './SeriesList';
 import { ReportQueue } from './ReportQueue';
 import { Wifi, WifiOff } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface LeftSidebarProps {
   patient: Patient;
@@ -29,6 +29,8 @@ export function LeftSidebar({
   priorStudies = [],
   wsConnected,
 }: LeftSidebarProps) {
+  const { t } = useTranslation('common');
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <PatientCard patient={patient} study={study} />
@@ -49,12 +51,12 @@ export function LeftSidebar({
           {wsConnected ? (
             <>
               <Wifi className="h-3 w-3 text-success" />
-              <span className="text-success">Live-Updates aktiv</span>
+              <span className="text-success">{t('connection.liveUpdates')}</span>
             </>
           ) : (
             <>
               <WifiOff className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Verbinden...</span>
+              <span className="text-muted-foreground">{t('connection.connecting')}</span>
             </>
           )}
         </div>
