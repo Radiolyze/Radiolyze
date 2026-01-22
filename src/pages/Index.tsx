@@ -31,6 +31,7 @@ const Index = () => {
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [imageRefs, setImageRefs] = useState<ImageRef[]>([]);
   const [evidenceSelection, setEvidenceSelection] = useState<{ seriesId: string; stackIndex: number } | null>(null);
+  const [useAllFrames, setUseAllFrames] = useState(false);
 
   // Report state
   const {
@@ -122,6 +123,7 @@ const Index = () => {
       const result = await generateImpression(findings, {
         onStatus: setAiStatus,
         imageRefs,
+        includeAllFrames: useAllFrames,
       });
       setImpression(result);
       await runQAChecks({
@@ -318,6 +320,8 @@ const Index = () => {
           onSaveFindings={handleSaveFindings}
           onExportSr={handleExportSr}
           onEvidenceSelect={handleEvidenceSelect}
+          useAllFrames={useAllFrames}
+          onUseAllFramesChange={setUseAllFrames}
           onAsrStatusChange={(status, confidence) => {
             setAsrStatus(status);
             setAsrConfidence(confidence);

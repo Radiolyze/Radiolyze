@@ -89,6 +89,8 @@
     "modelVersion": "Modell: {{version}}",
     "completedAt": "Abgeschlossen: {{time}}",
     "evidence": "Evidenz ({{count}})",
-    "frame": "Frame {{frame}}"
+    "frame": "Frame {{frame}}",
+    "useAllFrames": "Alle Frames verwenden",
+    "useAllFramesHelp": "Deaktivieren, um Frames fuer schnellere Inferenz zu sampeln."
   }
 }

@@ -13,6 +13,7 @@ import { StatusBadge } from '@/components/Common/StatusBadge';
 import type { ImageRef, QAStatus } from '@/types/radiology';
 import { ReportEditor } from '@/components/Forms/ReportEditor';
 import { ApprovalDialog } from '@/components/Forms/ApprovalDialog';
+import { Switch } from '@/components/ui/switch';
 import { formatDate, formatTime } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +30,8 @@ interface ImpressionPanelProps {
   inferenceCompletedAt?: string;
   inferenceImageRefs?: ImageRef[];
   onEvidenceSelect?: (ref: ImageRef) => void;
+  useAllFrames?: boolean;
+  onUseAllFramesChange?: (nextValue: boolean) => void;
   onImpressionChange: (text: string) => void;
   onGenerateImpression: () => Promise<void>;
   onApprove: (signature?: string) => void;
@@ -49,6 +52,8 @@ export function ImpressionPanel({
   inferenceCompletedAt,
   inferenceImageRefs,
   onEvidenceSelect,
+  useAllFrames,
+  onUseAllFramesChange,
   onImpressionChange,
   onGenerateImpression,
   onApprove,
@@ -241,6 +246,17 @@ export function ImpressionPanel({
 
       {/* Actions */}
       <div className="p-4 border-t border-border bg-panel-secondary/30 space-y-2">
+        <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2 text-xs">
+          <div>
+            <div className="font-medium text-foreground">{t('inference.useAllFrames')}</div>
+            <div className="text-muted-foreground">{t('inference.useAllFramesHelp')}</div>
+          </div>
+          <Switch
+            checked={Boolean(useAllFrames)}
+            onCheckedChange={(value) => onUseAllFramesChange?.(value)}
+            disabled={!onUseAllFramesChange || isGenerating}
+          />
+        </div>
         <ApprovalDialog
           onConfirm={onApprove}
           disabled={!canApprove}

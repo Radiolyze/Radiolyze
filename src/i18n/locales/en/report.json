@@ -89,6 +89,8 @@
     "modelVersion": "Model: {{version}}",
     "completedAt": "Completed: {{time}}",
     "evidence": "Evidence ({{count}})",
-    "frame": "Frame {{frame}}"
+    "frame": "Frame {{frame}}",
+    "useAllFrames": "Use all frames",
+    "useAllFramesHelp": "Disable to sample frames for faster inference."
   }
 }

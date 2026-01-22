@@ -20,6 +20,8 @@ interface RightPanelProps {
   onAsrStatusChange?: (status: 'idle' | 'listening' | 'processing', confidence: number) => void;
   onExportSr?: (format: 'json' | 'dicom') => void;
   onEvidenceSelect?: (ref: ImageRef) => void;
+  useAllFrames?: boolean;
+  onUseAllFramesChange?: (nextValue: boolean) => void;
 }
 
 export function RightPanel({
@@ -36,6 +38,8 @@ export function RightPanel({
   onAsrStatusChange,
   onExportSr,
   onEvidenceSelect,
+  useAllFrames,
+  onUseAllFramesChange,
 }: RightPanelProps) {
   const handleApplyTemplate = useCallback(
     (template: ReportTemplate) => {
@@ -70,6 +74,8 @@ export function RightPanel({
           inferenceCompletedAt={report.inferenceCompletedAt}
           inferenceImageRefs={report.inferenceImageRefs}
           onEvidenceSelect={onEvidenceSelect}
+          useAllFrames={useAllFrames}
+          onUseAllFramesChange={onUseAllFramesChange}
           onImpressionChange={onImpressionChange}
           onGenerateImpression={onGenerateImpression}
           onApprove={onApprove}
