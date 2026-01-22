@@ -9,6 +9,7 @@ import { useCornerstoneStackViewport } from '@/hooks/useCornerstoneStackViewport
 import { useApplyViewportSyncState } from '@/hooks/useApplyViewportSyncState';
 import { useStackPrefetch } from '@/hooks/useStackPrefetch';
 import { useCornerstoneViewerTools } from '@/hooks/useCornerstoneViewerTools';
+import { useStackFrameNavigation } from '@/hooks/useStackFrameNavigation';
 import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
@@ -102,6 +103,16 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
   const isLoading = isFetchingInstances || isInitializingViewer || isInitializingCornerstone;
   const effectiveError = viewerError ?? loadError;
 
+  const { setFrameIndex, handlePrevFrame, handleNextFrame } = useStackFrameNavigation({
+    currentFrame,
+    setCurrentFrame,
+    hasStack,
+    totalFrames,
+    stackViewportRef,
+    requestedFrameIndex,
+    onFrameChange,
+  });
+
   useEffect(() => {
     activeToolRef.current = activeTool;
   }, [activeTool]);
@@ -112,26 +123,6 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     currentFrame,
     totalFrames,
   });
-
-  const setFrameIndex = useCallback(
-    (index: number) => {
-      if (!hasStack) {
-        setCurrentFrame(0);
-        return;
-      }
-
-      const nextIndex = Math.max(0, Math.min(index, totalFrames - 1));
-      setCurrentFrame(nextIndex);
-
-      const viewport = stackViewportRef.current;
-      if (viewport) {
-        viewport.setImageIdIndex(nextIndex).catch((error) => {
-          console.warn('Failed to change frame', error);
-        });
-      }
-    },
-    [hasStack, totalFrames]
-  );
 
 
   const handleExportAnnotations = useCallback(() => {
@@ -151,16 +142,6 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
   useEffect(() => {
     onImageRefsChange?.(imageRefs);
   }, [imageRefs, onImageRefsChange]);
-
-  useEffect(() => {
-    if (typeof requestedFrameIndex !== 'number') {
-      return;
-    }
-    if (requestedFrameIndex === currentFrame) {
-      return;
-    }
-    setFrameIndex(requestedFrameIndex);
-  }, [currentFrame, requestedFrameIndex, setFrameIndex]);
 
   useEffect(() => {
     const viewport = stackViewportRef.current;
@@ -216,25 +197,12 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     applyWindowLevelPreset(selectedPresetId);
   }, [applyWindowLevelPreset, hasStack, selectedPresetId]);
 
-  // Notify parent of frame changes
-  useEffect(() => {
-    onFrameChange?.(currentFrame, totalFrames);
-  }, [currentFrame, totalFrames, onFrameChange]);
-
   useApplyViewportSyncState({
     syncState,
     stackViewportRef,
     initialParallelScaleRef,
     syncingRef,
   });
-
-  const handlePrevFrame = useCallback(() => {
-    setFrameIndex(currentFrame - 1);
-  }, [currentFrame, setFrameIndex]);
-
-  const handleNextFrame = useCallback(() => {
-    setFrameIndex(currentFrame + 1);
-  }, [currentFrame, setFrameIndex]);
 
   const handleReset = useCallback(() => {
     setActiveTool('windowLevel');
