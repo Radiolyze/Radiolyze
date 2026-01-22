@@ -1,4 +1,5 @@
-import { init as initCornerstoneCore, isCornerstoneInitialized } from '@cornerstonejs/core';
+import { init as initCornerstoneCore, isCornerstoneInitialized, imageLoader } from '@cornerstonejs/core';
+import dicomParser from 'dicom-parser';
 import {
   addTool,
   init as initCornerstoneTools,
@@ -36,10 +37,28 @@ export const initCornerstone = async () => {
   try {
     // Dynamic import to avoid the star export resolution issue
     const dicomImageLoader = await import('@cornerstonejs/dicom-image-loader');
-    if (dicomImageLoader.init) {
-      dicomImageLoader.init({ maxWebWorkers });
-    } else if (dicomImageLoader.default?.init) {
-      dicomImageLoader.default.init({ maxWebWorkers });
+    const loaderModule =
+      'default' in dicomImageLoader ? dicomImageLoader.default ?? dicomImageLoader : dicomImageLoader;
+
+    if ('external' in loaderModule && loaderModule.external) {
+      loaderModule.external.dicomParser = dicomParser;
+    }
+
+    if ('init' in loaderModule) {
+      loaderModule.init({
+        maxWebWorkers,
+        startWebWorkersOnDemand: true,
+        taskConfiguration: {
+          decodeTask: {
+            initializeCodecsOnStartup: false,
+            strict: false,
+          },
+        },
+      });
+    }
+
+    if ('wadors' in loaderModule && loaderModule.wadors?.loadImage) {
+      imageLoader.registerImageLoader('wadors', loaderModule.wadors.loadImage);
     }
   } catch (err) {
     console.warn('[cornerstone] DICOM image loader init skipped:', err);
