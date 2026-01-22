@@ -127,7 +127,7 @@ const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
   };
 };
 
-export function DicomViewer({ series, onFrameChange, progress, onViewportChange, syncState }: DicomViewerProps) {
+export function DicomViewer({ series, onFrameChange, progress, onViewportChange, syncState, onImageRefsChange, requestedFrameIndex }: DicomViewerProps) {
   const { preferences } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<Tool>(preferences.defaultTool as Tool);
