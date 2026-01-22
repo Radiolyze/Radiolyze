@@ -8,6 +8,7 @@ import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
 import { useCornerstoneStackViewport } from '@/hooks/useCornerstoneStackViewport';
 import { useApplyViewportSyncState } from '@/hooks/useApplyViewportSyncState';
 import { useStackPrefetch } from '@/hooks/useStackPrefetch';
+import { useCornerstoneViewerTools } from '@/hooks/useCornerstoneViewerTools';
 import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
@@ -18,9 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cornerstoneToolNames } from '@/services/cornerstone';
 import { exportAnnotations } from '@/services/annotations';
-import { Enums as ToolEnums } from '@cornerstonejs/tools';
 import type { ViewportState } from '@/types/viewerSync';
 import { viewerTools, windowLevelPresets } from '@/config/viewer';
 import type { ViewerToolId } from '@/types/viewer';
@@ -92,6 +91,12 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     onInitError: setViewerError,
   });
 
+  const { applyToolSelection, applyWindowLevelPreset } = useCornerstoneViewerTools({
+    toolGroupRef,
+    stackViewportRef,
+    presets: windowLevelPresets,
+  });
+
   const hasStack = imageIds.length > 0;
   const totalFrames = hasStack ? imageIds.length : series?.frameCount || 1;
   const isLoading = isFetchingInstances || isInitializingViewer || isInitializingCornerstone;
@@ -128,67 +133,6 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     [hasStack, totalFrames]
   );
 
-  const applyToolSelection = useCallback(
-    (tool: Tool) => {
-      const toolGroup = toolGroupRef.current;
-      if (!toolGroup) {
-        return;
-      }
-
-      const toolNameMap: Record<Tool, string> = {
-        zoom: cornerstoneToolNames.zoom,
-        pan: cornerstoneToolNames.pan,
-        measure: cornerstoneToolNames.length,
-        windowLevel: cornerstoneToolNames.windowLevel,
-      };
-
-      const selectedTool = toolNameMap[tool];
-      Object.values(toolNameMap).forEach((toolName) => {
-        if (toolName === selectedTool) {
-          toolGroup.setToolActive(toolName, {
-            bindings: [{ mouseButton: ToolEnums.MouseBindings.Primary }],
-          });
-        } else {
-          toolGroup.setToolPassive(toolName, { removeAllBindings: true });
-        }
-      });
-
-      toolGroup.setToolActive(cornerstoneToolNames.stackScroll, {
-        bindings: [{ mouseButton: ToolEnums.MouseBindings.Wheel }],
-      });
-    },
-    []
-  );
-
-  const applyWindowLevelPreset = useCallback(
-    (presetId: string) => {
-      const viewport = stackViewportRef.current;
-      if (!viewport) {
-        return;
-      }
-
-      if (presetId === 'auto') {
-        viewport.resetProperties();
-        viewport.render();
-        return;
-      }
-
-      const preset = windowLevelPresets.find((item) => item.id === presetId);
-      if (!preset || preset.windowWidth === undefined || preset.windowCenter === undefined) {
-        return;
-      }
-
-      const halfWidth = preset.windowWidth / 2;
-      viewport.setProperties({
-        voiRange: {
-          lower: preset.windowCenter - halfWidth,
-          upper: preset.windowCenter + halfWidth,
-        },
-      });
-      viewport.render();
-    },
-    []
-  );
 
   const handleExportAnnotations = useCallback(() => {
     const element = viewportRef.current;
