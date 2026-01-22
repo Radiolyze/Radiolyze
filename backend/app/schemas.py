@@ -132,6 +132,39 @@ class InferenceStatusResponse(ApiBaseModel):
     error: str | None = None
 
 
+PromptType = Literal["system", "summary", "impression"]
+
+
+class PromptTemplateResponse(ApiBaseModel):
+    prompt_type: PromptType = Field(alias="promptType")
+    name: str
+    template_text: str = Field(alias="templateText")
+    version: int | None = None
+    is_active: bool = Field(alias="isActive")
+    variables: list[str]
+    created_by: str | None = Field(default=None, alias="createdBy")
+    created_at: str | None = Field(default=None, alias="createdAt")
+    updated_at: str | None = Field(default=None, alias="updatedAt")
+    source: Literal["db", "env", "default"]
+    default_text: str = Field(alias="defaultText")
+    editable: bool
+    max_length: int = Field(alias="maxLength")
+    allowed_variables: list[str] = Field(alias="allowedVariables")
+
+
+class PromptListResponse(ApiBaseModel):
+    editable: bool
+    max_length: int = Field(alias="maxLength")
+    allowed_variables: dict[str, list[str]] = Field(alias="allowedVariables")
+    prompts: list[PromptTemplateResponse]
+
+
+class PromptUpdateRequest(ApiBaseModel):
+    template_text: str = Field(alias="templateText")
+    name: str | None = None
+    actor_id: str | None = Field(default=None, alias="actorId")
+
+
 class AuditEventRequest(ApiBaseModel):
     event_type: str = Field(alias="eventType")
     actor_id: str | None = Field(default=None, alias="actorId")

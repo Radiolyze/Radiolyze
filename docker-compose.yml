@@ -12,6 +12,7 @@ services:
       INFERENCE_MODEL_VERSION: medgemma-radiology
       INFERENCE_JOB_TIMEOUT: "600"
       INFERENCE_RESULT_TTL: "3600"
+      PROMPT_CONFIG_ENABLED: "true"
       VLLM_ENABLED: "false"
       VLLM_BASE_URL: http://vllm-medgemma:8000/v1
       VLLM_MODEL_NAME: medgemma-radiology
@@ -41,6 +42,7 @@ services:
       INFERENCE_MODEL_VERSION: medgemma-radiology
       INFERENCE_JOB_TIMEOUT: "600"
       INFERENCE_RESULT_TTL: "3600"
+      PROMPT_CONFIG_ENABLED: "true"
       VLLM_ENABLED: "false"
       VLLM_BASE_URL: http://vllm-medgemma:8000/v1
       VLLM_MODEL_NAME: medgemma-radiology

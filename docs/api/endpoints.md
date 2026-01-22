@@ -51,6 +51,19 @@
 `GET /api/v1/inference/status/{job_id}`
 - Liefert Status + Ergebnis (aus DB, Fallback auf RQ Job)
 
+## Prompts
+
+`GET /api/v1/prompts`
+- Listet aktive Prompt-Templates inkl. Metadata
+- Enthaelt `editable`, `maxLength`, `allowedVariables`
+
+`GET /api/v1/prompts/{prompt_type}`
+- Liefert aktiven Prompt fuer `system|summary|impression`
+
+`PUT /api/v1/prompts/{prompt_type}`
+- Aktualisiert Prompt (neue Version + Aktivierung)
+- Validiert Platzhalter und Laenge
+
 ## QA
 
 `POST /api/v1/reports/qa-check`
