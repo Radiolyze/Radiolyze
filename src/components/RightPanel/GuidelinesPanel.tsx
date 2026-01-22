@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BookOpen, ChevronDown, CheckCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -11,17 +12,18 @@ interface GuidelinesPanelProps {
   isOpenByDefault?: boolean;
 }
 
-const statusStyles: Record<Guideline['status'], { icon: typeof Info; className: string; label: string }> = {
-  pass: { icon: CheckCircle, className: 'text-success', label: 'OK' },
-  warn: { icon: AlertTriangle, className: 'text-warning', label: 'Warnung' },
-  info: { icon: Info, className: 'text-info', label: 'Info' },
-  critical: { icon: XCircle, className: 'text-destructive', label: 'Kritisch' },
+const statusStyles: Record<Guideline['status'], { icon: typeof Info; className: string; labelKey: string }> = {
+  pass: { icon: CheckCircle, className: 'text-success', labelKey: 'guidelines.status.pass' },
+  warn: { icon: AlertTriangle, className: 'text-warning', labelKey: 'guidelines.status.warn' },
+  info: { icon: Info, className: 'text-info', labelKey: 'guidelines.status.info' },
+  critical: { icon: XCircle, className: 'text-destructive', labelKey: 'guidelines.status.critical' },
 };
 
 export function GuidelinesPanel({
   guidelines = mockGuidelines,
   isOpenByDefault = false,
 }: GuidelinesPanelProps) {
+  const { t } = useTranslation('report');
   const [isOpen, setIsOpen] = useState(isOpenByDefault);
 
   return (
@@ -30,7 +32,7 @@ export function GuidelinesPanel({
         <div className="px-4 py-3 border-t border-border flex items-center justify-between hover:bg-accent/50 transition-colors">
           <div className="flex items-center gap-2 text-sm font-medium">
             <BookOpen className="h-4 w-4" />
-            <span>Leitlinien</span>
+            <span>{t('guidelines.title')}</span>
             <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
               {guidelines.length}
             </Badge>
@@ -61,13 +63,13 @@ export function GuidelinesPanel({
                   </div>
                   <Badge variant="outline" className="text-[10px] px-2">
                     <Icon className={cn('h-3 w-3 mr-1', config.className)} />
-                    {config.label}
+                    {t(config.labelKey)}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">{guideline.summary}</p>
                 {guideline.source && (
                   <div className="text-[10px] text-muted-foreground">
-                    Quelle: {guideline.source}
+                    {t('guidelines.source')}: {guideline.source}
                   </div>
                 )}
               </div>

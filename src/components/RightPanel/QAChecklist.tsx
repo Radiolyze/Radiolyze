@@ -1,4 +1,5 @@
 import { CheckCircle, AlertTriangle, XCircle, ChevronDown, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { QACheck } from '@/types/radiology';
 import { cn } from '@/lib/utils';
 import {
@@ -27,6 +28,7 @@ const statusColors = {
 };
 
 export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
+  const { t } = useTranslation('report');
   const [isOpen, setIsOpen] = useState(false);
   const { preferences } = useUserPreferences();
 
@@ -44,7 +46,7 @@ export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
     return (
       <div className="px-4 py-3 border-t border-border flex items-center gap-2 text-sm">
         <EyeOff className="h-4 w-4 text-muted-foreground" />
-        <span className="text-muted-foreground">QA-Warnungen ausgeblendet</span>
+        <span className="text-muted-foreground">{t('qa.warningsHidden')}</span>
         {(warnCount > 0 || failCount > 0) && (
           <div className="flex items-center gap-1.5 text-xs ml-auto">
             {warnCount > 0 && (
@@ -70,7 +72,7 @@ export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
       <CollapsibleTrigger className="w-full">
         <div className="px-4 py-3 border-t border-border flex items-center justify-between hover:bg-accent/50 transition-colors">
           <div className="flex items-center gap-2 text-sm font-medium">
-            <span>QA Prüfungen</span>
+            <span>{t('qa.title')}</span>
             {!isLoading && (
               <div className="flex items-center gap-1.5 text-xs">
                 {passCount > 0 && (
@@ -106,7 +108,7 @@ export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
           {isLoading ? (
             <div className="py-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full spinner" />
-              Prüfungen werden durchgeführt...
+              {t('qa.checking')}
             </div>
           ) : (
             checks.map((check) => {

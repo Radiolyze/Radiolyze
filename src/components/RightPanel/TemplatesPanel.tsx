@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileText, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ export function TemplatesPanel({
   onApplyTemplate,
   isOpenByDefault = false,
 }: TemplatesPanelProps) {
+  const { t } = useTranslation('report');
   const [isOpen, setIsOpen] = useState(isOpenByDefault);
 
   return (
@@ -26,7 +28,7 @@ export function TemplatesPanel({
         <div className="px-4 py-3 border-t border-border flex items-center justify-between hover:bg-accent/50 transition-colors">
           <div className="flex items-center gap-2 text-sm font-medium">
             <FileText className="h-4 w-4" />
-            <span>Templates</span>
+            <span>{t('templates.title')}</span>
             <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
               {templates.length}
             </Badge>
@@ -63,13 +65,13 @@ export function TemplatesPanel({
                 ))}
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Aktualisiert: {template.lastUpdated}</span>
+                <span>{t('templates.lastUpdated', { date: template.lastUpdated })}</span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onApplyTemplate?.(template)}
                 >
-                  Anwenden
+                  {t('templates.apply')}
                 </Button>
               </div>
             </div>
