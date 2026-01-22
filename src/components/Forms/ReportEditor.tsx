@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -18,11 +19,12 @@ export function ReportEditor({
   ariaLabel,
   readOnly = false,
 }: ReportEditorProps) {
+  const { t } = useTranslation('report');
   return (
     <Textarea
       value={value}
       onChange={(event) => onChange?.(event.target.value)}
-      placeholder={placeholder}
+      placeholder={placeholder || t('findings.placeholder')}
       readOnly={readOnly}
       aria-label={ariaLabel}
       className={cn(
