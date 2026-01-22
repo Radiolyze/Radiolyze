@@ -26,6 +26,15 @@ export default defineConfig(({ mode }) => {
         "/dicom-web": {
           target: dicomWebProxyTarget,
           changeOrigin: true,
+          // Add auth headers for Orthanc DICOMweb requests
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              const username = env.VITE_DICOM_WEB_USERNAME || 'orthanc';
+              const password = env.VITE_DICOM_WEB_PASSWORD || 'orthanc';
+              const auth = Buffer.from(`${username}:${password}`).toString('base64');
+              proxyReq.setHeader('Authorization', `Basic ${auth}`);
+            });
+          },
         },
         "/api": {
           target: apiProxyTarget,

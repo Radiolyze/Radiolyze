@@ -20,16 +20,6 @@ export const cornerstoneToolNames = {
   stackScroll: StackScrollTool.toolName,
 };
 
-// Build auth headers for DICOMweb requests
-const getAuthHeaderValue = (): string | null => {
-  const username = import.meta.env.VITE_DICOM_WEB_USERNAME;
-  const password = import.meta.env.VITE_DICOM_WEB_PASSWORD;
-  if (!username || !password) {
-    return null;
-  }
-  return `Basic ${btoa(`${username}:${password}`)}`;
-};
-
 export const initCornerstone = async () => {
   if (initialized) {
     return;
@@ -40,39 +30,33 @@ export const initCornerstone = async () => {
   }
 
   try {
-    const authHeader = getAuthHeaderValue();
-    
-    // Log available methods on dicom-image-loader for debugging
-    console.log('[cornerstone] dicom-image-loader exports:', Object.keys(cornerstoneDICOMImageLoader));
-    if (cornerstoneDICOMImageLoader.wadors) {
-      console.log('[cornerstone] wadors methods:', Object.keys(cornerstoneDICOMImageLoader.wadors));
-    }
-    
     // Initialize the DICOM image loader (v4 API)
-    // Disable web workers to avoid CSP issues in development
+    // Note: Auth is handled by Vite proxy, so no client-side auth config needed
     cornerstoneDICOMImageLoader.init({
-      maxWebWorkers: 0,
+      maxWebWorkers: 0, // Disable web workers to avoid CSP issues
     });
 
-    // Configure global XHR settings for authentication using the configure function if available
-    if (authHeader && typeof cornerstoneDICOMImageLoader.configure === 'function') {
-      cornerstoneDICOMImageLoader.configure({
-        beforeSend: (xhr: XMLHttpRequest) => {
-          xhr.setRequestHeader('Authorization', authHeader);
-        },
-      });
-      console.log('[cornerstone] Global auth headers configured');
+    // Register metadata providers with cornerstone core
+    // This is required for wadors to resolve metadata when loading images
+    if (cornerstoneDICOMImageLoader.wadors?.register) {
+      cornerstoneDICOMImageLoader.wadors.register();
+      console.log('[cornerstone] wadors metadata provider registered');
     }
-
+    
+    if (cornerstoneDICOMImageLoader.wadouri?.register) {
+      cornerstoneDICOMImageLoader.wadouri.register();
+      console.log('[cornerstone] wadouri metadata provider registered');
+    }
+    
     // Register image loaders
     if (cornerstoneDICOMImageLoader.wadors?.loadImage) {
       imageLoader.registerImageLoader('wadors', cornerstoneDICOMImageLoader.wadors.loadImage);
-      console.log('[cornerstone] wadors loader registered');
+      console.log('[cornerstone] wadors image loader registered');
     }
     
     if (cornerstoneDICOMImageLoader.wadouri?.loadImage) {
       imageLoader.registerImageLoader('wadouri', cornerstoneDICOMImageLoader.wadouri.loadImage);
-      console.log('[cornerstone] wadouri loader registered');
+      console.log('[cornerstone] wadouri image loader registered');
     }
     
     console.log('[cornerstone] DICOM image loader initialized successfully');
