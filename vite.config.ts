@@ -26,8 +26,11 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+        "@cornerstonejs/codec-libjpeg-turbo-8bit/dist/libjpegturbowasm_decode.js":
+          path.resolve(__dirname, "./src/shims/libjpegturbo-default.ts"),
       },
     },
+    assetsInclude: ["**/*.wasm"],
     worker: {
       format: "es",
     },
