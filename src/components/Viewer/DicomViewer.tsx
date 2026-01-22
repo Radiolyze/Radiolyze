@@ -1,19 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  ZoomIn,
-  Move,
-  Ruler,
-  Sun,
-  ChevronUp,
-  ChevronDown,
-  Download,
-  Maximize2,
-} from 'lucide-react';
+import { ChevronUp, ChevronDown, Download, Maximize2 } from 'lucide-react';
 import type { AIStatus, ImageRef, QAStatus, Series } from '@/types/radiology';
 import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { ImageControls, type ViewerToolConfig } from './ImageControls';
+import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
 import {
@@ -28,6 +19,7 @@ import { buildWadorsFrameUrl, buildWadorsImageId, orthancClient } from '@/servic
 import { Enums, RenderingEngine, imageLoader, type StackViewport } from '@cornerstonejs/core';
 import { ToolGroupManager, Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
 import type { ViewportState } from '@/types/viewerSync';
+import { viewerTools, windowLevelPresets, type ViewerToolId } from '@/config/viewer';
 
 interface DicomViewerProps {
   series: Series | null;
@@ -41,23 +33,7 @@ interface DicomViewerProps {
   requestedFrameIndex?: number | null;
 }
 
-type Tool = 'zoom' | 'pan' | 'measure' | 'windowLevel';
-
-const tools: ViewerToolConfig[] = [
-  { id: 'zoom', icon: ZoomIn, label: 'Zoom', shortcut: 'Z' },
-  { id: 'pan', icon: Move, label: 'Pan', shortcut: 'P' },
-  { id: 'measure', icon: Ruler, label: 'Messen', shortcut: 'M' },
-  { id: 'windowLevel', icon: Sun, label: 'Fenster/Level', shortcut: 'W' },
-];
-
-const windowLevelPresets = [
-  { id: 'auto', label: 'Auto' },
-  { id: 'ct-soft', label: 'CT Weichteil', windowWidth: 400, windowCenter: 40 },
-  { id: 'ct-lung', label: 'CT Lunge', windowWidth: 1500, windowCenter: -600 },
-  { id: 'ct-bone', label: 'CT Knochen', windowWidth: 2500, windowCenter: 480 },
-  { id: 'ct-brain', label: 'CT Gehirn', windowWidth: 80, windowCenter: 40 },
-  { id: 'ct-abdomen', label: 'CT Abdomen', windowWidth: 350, windowCenter: 50 },
-];
+type Tool = ViewerToolId;
 
 type ASRStatus = 'idle' | 'listening' | 'processing';
 
@@ -673,7 +649,7 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
       {/* Toolbar */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         <ImageControls
-          tools={tools}
+          tools={viewerTools}
           activeToolId={activeTool}
           onToolSelect={(toolId) => setActiveTool(toolId as Tool)}
           onReset={handleReset}
