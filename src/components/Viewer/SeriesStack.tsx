@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 interface SeriesStackProps {
@@ -15,6 +16,7 @@ export function SeriesStack({
   maxThumbnails = 10,
   className,
 }: SeriesStackProps) {
+  const { t } = useTranslation('viewer');
   const visibleFrames = Math.min(totalFrames, maxThumbnails);
   const frameIndexes = Array.from({ length: visibleFrames }, (_, idx) => {
     if (totalFrames <= maxThumbnails) {
@@ -41,7 +43,7 @@ export function SeriesStack({
             'hover:border-primary hover:text-foreground transition-colors',
             frame === currentFrame && 'border-primary text-foreground bg-primary/20'
           )}
-          title={`Frame ${frame + 1}`}
+          title={t('progress.frame', { current: frame + 1, total: totalFrames })}
         >
           {frame + 1}
         </button>

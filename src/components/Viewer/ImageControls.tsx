@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
 import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ export function ImageControls({
   onReset,
   className,
 }: ImageControlsProps) {
+  const { t } = useTranslation('viewer');
   return (
     <div
       className={cn(
@@ -53,7 +55,7 @@ export function ImageControls({
         size="icon"
         className="h-9 w-9"
         onClick={onReset}
-        title="Reset (R)"
+        title={`${t('tools.reset')} (R)`}
       >
         <RotateCcw className="h-4 w-4" />
       </Button>
