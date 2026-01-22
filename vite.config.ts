@@ -7,6 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const dicomWebProxyTarget = env.VITE_DICOM_WEB_PROXY_TARGET || "http://localhost:8042";
+  const backendTarget = env.VITE_API_BASE_URL || "http://localhost:8000";
 
   return {
     server: {
@@ -20,17 +21,18 @@ export default defineConfig(({ mode }) => {
           target: dicomWebProxyTarget,
           changeOrigin: true,
         },
+        "/api": {
+          target: backendTarget,
+          changeOrigin: true,
+          ws: true,
+        },
       },
     },
     plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
     resolve: {
-      alias: [
-        { find: "@", replacement: path.resolve(__dirname, "./src") },
-        {
-          find: /@cornerstonejs\/codec-libjpeg-turbo-8bit\/dist\/libjpegturbowasm_decode\.js(\?.*)?$/,
-          replacement: path.resolve(__dirname, "./src/shims/libjpegturbo-default.ts"),
-        },
-      ],
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
     assetsInclude: ["**/*.wasm"],
     worker: {
@@ -44,13 +46,15 @@ export default defineConfig(({ mode }) => {
       },
     },
     optimizeDeps: {
-      exclude: [
+      include: [
+        "@cornerstonejs/core",
+        "@cornerstonejs/tools",
         "@cornerstonejs/dicom-image-loader",
-        "@cornerstonejs/codec-libjpeg-turbo-8bit",
-        "@cornerstonejs/codec-charls",
-        "@cornerstonejs/codec-openjpeg",
-        "@cornerstonejs/codec-openjph",
+        "dicom-parser",
       ],
+      esbuildOptions: {
+        target: "esnext",
+      },
     },
   };
 });

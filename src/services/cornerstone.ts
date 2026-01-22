@@ -1,4 +1,5 @@
 import { init as initCornerstoneCore, isCornerstoneInitialized, imageLoader } from '@cornerstonejs/core';
+import * as cornerstoneDICOMImageLoader from '@cornerstonejs/dicom-image-loader';
 import dicomParser from 'dicom-parser';
 import {
   addTool,
@@ -35,30 +36,29 @@ export const initCornerstone = async () => {
       : 1;
 
   try {
-    // Dynamic import to avoid the star export resolution issue
-    const dicomImageLoader = await import('@cornerstonejs/dicom-image-loader');
-    const loaderModule =
-      'default' in dicomImageLoader ? dicomImageLoader.default ?? dicomImageLoader : dicomImageLoader;
+    // Set external dependencies
+    cornerstoneDICOMImageLoader.external.dicomParser = dicomParser;
 
-    if ('external' in loaderModule && loaderModule.external) {
-      loaderModule.external.dicomParser = dicomParser;
-    }
-
-    if ('init' in loaderModule) {
-      loaderModule.init({
-        maxWebWorkers,
-        startWebWorkersOnDemand: true,
-        taskConfiguration: {
-          decodeTask: {
-            initializeCodecsOnStartup: false,
-            strict: false,
-          },
+    // Initialize the loader with web worker configuration
+    cornerstoneDICOMImageLoader.init({
+      maxWebWorkers,
+      startWebWorkersOnDemand: true,
+      taskConfiguration: {
+        decodeTask: {
+          initializeCodecsOnStartup: false,
+          strict: false,
         },
-      });
-    }
+      },
+    });
 
-    if ('wadors' in loaderModule && loaderModule.wadors?.loadImage) {
-      imageLoader.registerImageLoader('wadors', loaderModule.wadors.loadImage);
+    // Register the wadors image loader for DICOMweb
+    if (cornerstoneDICOMImageLoader.wadors?.loadImage) {
+      imageLoader.registerImageLoader('wadors', cornerstoneDICOMImageLoader.wadors.loadImage);
+    }
+    
+    // Also register wadouri loader for local files
+    if (cornerstoneDICOMImageLoader.wadouri?.loadImage) {
+      imageLoader.registerImageLoader('wadouri', cornerstoneDICOMImageLoader.wadouri.loadImage);
     }
   } catch (err) {
     console.warn('[cornerstone] DICOM image loader init skipped:', err);
