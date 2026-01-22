@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { useUserPreferences, type UILanguage } from '@/hooks/useUserPreferences';
 import { DicomWebSettings } from '@/components/Settings/DicomWebSettings';
+import { PromptSettings } from '@/components/Settings/PromptSettings';
 import { toast } from 'sonner';
 
 export default function Settings() {
@@ -69,6 +70,9 @@ export default function Settings() {
 
         {/* DICOMweb Server Configuration */}
         <DicomWebSettings />
+
+        {/* Prompt Configuration */}
+        <PromptSettings />
 
         {/* Display Section */}
         <Card>

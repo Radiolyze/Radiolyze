@@ -74,6 +74,37 @@
     "defaultTemplate": "Default template",
     "noTemplate": "No default template"
   },
+  "prompts": {
+    "title": "Prompt Configuration",
+    "description": "Configure prompts for image analysis and impression",
+    "warningTitle": "Data safety notice",
+    "warningDescription": "Do not include PHI, patient names, or personal data in prompts.",
+    "readOnlyTitle": "Editing disabled",
+    "readOnlyDescription": "Enable PROMPT_CONFIG_ENABLED to edit prompts.",
+    "maxLength": "Maximum length: {{count}} characters",
+    "reload": "Reload",
+    "types": {
+      "system": "System",
+      "summary": "Image summary",
+      "impression": "Impression"
+    },
+    "source": "Source",
+    "version": "Version",
+    "unsaved": "Unsaved",
+    "promptLabel": "Prompt text",
+    "length": "{{count}} characters",
+    "allowedVariables": "Allowed variables",
+    "save": "Save",
+    "saving": "Saving...",
+    "reset": "Reset to default",
+    "previewTitle": "Preview",
+    "sampleFindingsPlaceholder": "e.g. findings text...",
+    "sampleFindingsDefault": "CT chest: 2.3 cm nodule in the right upper lobe...",
+    "saveSuccess": "Prompt saved",
+    "saveError": "Failed to save prompt",
+    "loadError": "Failed to load prompts",
+    "noPrompt": "No prompt available"
+  },
   "dicomweb": {
     "title": "DICOMweb Configuration",
     "description": "Configure PACS connection",

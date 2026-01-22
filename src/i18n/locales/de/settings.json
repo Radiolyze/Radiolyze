@@ -74,6 +74,37 @@
     "defaultTemplate": "Standard-Template",
     "noTemplate": "Kein Standard-Template"
   },
+  "prompts": {
+    "title": "Prompt-Konfiguration",
+    "description": "Prompts fuer Bildanalyse und Impression konfigurieren",
+    "warningTitle": "Hinweis zur Datensicherheit",
+    "warningDescription": "Keine PHI, keine Patientennamen und keine persoenlichen Daten in Prompts eintragen.",
+    "readOnlyTitle": "Bearbeitung deaktiviert",
+    "readOnlyDescription": "PROMPT_CONFIG_ENABLED muss aktiviert sein, um Prompts zu bearbeiten.",
+    "maxLength": "Maximale Laenge: {{count}} Zeichen",
+    "reload": "Neu laden",
+    "types": {
+      "system": "System",
+      "summary": "Bildanalyse",
+      "impression": "Impression"
+    },
+    "source": "Quelle",
+    "version": "Version",
+    "unsaved": "Nicht gespeichert",
+    "promptLabel": "Prompt-Text",
+    "length": "{{count}} Zeichen",
+    "allowedVariables": "Zulaessige Variablen",
+    "save": "Speichern",
+    "saving": "Speichert...",
+    "reset": "Standard wiederherstellen",
+    "previewTitle": "Preview",
+    "sampleFindingsPlaceholder": "z.B. Befundtext...",
+    "sampleFindingsDefault": "CT Thorax: Rundherd im rechten Oberlappen...",
+    "saveSuccess": "Prompt gespeichert",
+    "saveError": "Prompt konnte nicht gespeichert werden",
+    "loadError": "Prompts konnten nicht geladen werden",
+    "noPrompt": "Kein Prompt verfuegbar"
+  },
   "dicomweb": {
     "title": "DICOMweb-Konfiguration",
     "description": "PACS-Verbindung konfigurieren",

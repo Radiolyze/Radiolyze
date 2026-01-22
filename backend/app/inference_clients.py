@@ -11,6 +11,7 @@ from typing import Any
 import httpx
 
 from .mock_logic import generate_asr_transcript, generate_impression, generate_inference_summary
+from .prompts import render_prompt_text
 
 logger = logging.getLogger(__name__)
 
@@ -133,31 +134,11 @@ def _vllm_chat_completion(
 
 
 def _build_impression_prompt(findings_text: str | None) -> str:
-    findings_text = (findings_text or "").strip()
-    if not findings_text:
-        return os.getenv(
-            "VLLM_IMAGE_IMPRESSION_PROMPT",
-            "Analyze the provided images and draft a concise impression.",
-        )
-    return (
-        "Create a concise radiology impression based on these findings.\n\n"
-        f"Findings:\n{findings_text}\n\n"
-        "Return only the impression."
-    )
+    return render_prompt_text("impression", {"findings_text": (findings_text or "").strip()})
 
 
 def _build_summary_prompt(findings_text: str | None) -> str:
-    findings_text = (findings_text or "").strip()
-    if not findings_text:
-        return os.getenv(
-            "VLLM_IMAGE_SUMMARY_PROMPT",
-            "Summarize the imaging findings from the provided images.",
-        )
-    return (
-        "Summarize the imaging findings in one or two sentences.\n\n"
-        f"Findings:\n{findings_text}\n\n"
-        "Return only the summary."
-    )
+    return render_prompt_text("summary", {"findings_text": (findings_text or "").strip()})
 
 
 def generate_impression_text(
@@ -178,10 +159,7 @@ def generate_impression_text(
         text = _vllm_chat_completion(
             _build_impression_prompt(findings_text),
             model_name=model_name,
-            system_prompt=os.getenv(
-                "VLLM_SYSTEM_PROMPT",
-                "You are a radiology assistant. Respond clearly and concisely.",
-            ),
+            system_prompt=render_prompt_text("system"),
             image_urls=image_urls,
             image_paths=image_paths,
         )
@@ -215,10 +193,7 @@ def generate_inference_summary_text(
         text = _vllm_chat_completion(
             _build_summary_prompt(findings_text),
             model_name=resolved_model,
-            system_prompt=os.getenv(
-                "VLLM_SYSTEM_PROMPT",
-                "You are a radiology assistant. Respond clearly and concisely.",
-            ),
+            system_prompt=render_prompt_text("system"),
             image_urls=image_urls,
             image_paths=image_paths,
         )

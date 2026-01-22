@@ -221,3 +221,45 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "timestamp": "2026-01-20T10:08:12Z"
 }
 ```
+
+## PromptListResponse
+
+```json
+{
+  "editable": true,
+  "maxLength": 4000,
+  "allowedVariables": {
+    "system": [],
+    "summary": ["findings_text"],
+    "impression": ["findings_text"]
+  },
+  "prompts": [
+    {
+      "promptType": "summary",
+      "name": "summary-default",
+      "templateText": "Task: Summarize...",
+      "version": 1,
+      "isActive": true,
+      "variables": ["findings_text"],
+      "createdBy": "system",
+      "createdAt": "2026-01-20T10:12:00Z",
+      "updatedAt": "2026-01-20T10:12:00Z",
+      "source": "db",
+      "defaultText": "Task: Summarize...",
+      "editable": true,
+      "maxLength": 4000,
+      "allowedVariables": ["findings_text"]
+    }
+  ]
+}
+```
+
+## PromptUpdateRequest
+
+```json
+{
+  "templateText": "Task: Summarize ...",
+  "name": "summary-v2",
+  "actorId": "admin"
+}
+```
