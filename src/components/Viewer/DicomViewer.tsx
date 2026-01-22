@@ -485,6 +485,9 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
       setLoadError(null);
 
       try {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/7c9f9a72-f02e-4a63-b1bd-717991ce3f15',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DicomViewer.tsx:setupViewer:start',message:'setupViewer start',data:{imageIdsCount:imageIds.length,renderingEngineId,viewportId,toolGroupId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
         await initCornerstone();
 
         const renderingEngine = new RenderingEngine(renderingEngineId);
@@ -513,6 +516,10 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
 
         await viewport.setStack(imageIds, 0);
         viewport.render();
+
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/7c9f9a72-f02e-4a63-b1bd-717991ce3f15',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DicomViewer.tsx:setupViewer:stack',message:'setStack/render completed',data:{imageIdsCount:imageIds.length},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
 
         applyWindowLevelPreset(selectedPresetId);
 
