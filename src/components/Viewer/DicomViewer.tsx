@@ -11,6 +11,7 @@ import { useStackPrefetch } from '@/hooks/useStackPrefetch';
 import { useCornerstoneViewerTools } from '@/hooks/useCornerstoneViewerTools';
 import { useStackFrameNavigation } from '@/hooks/useStackFrameNavigation';
 import { useCornerstoneStackSetup } from '@/hooks/useCornerstoneStackSetup';
+import { useViewerReset } from '@/hooks/useViewerReset';
 import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
@@ -173,19 +174,14 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     syncingRef,
   });
 
-  const handleReset = useCallback(() => {
-    setActiveTool('windowLevel');
-    setSelectedPresetId(windowLevelPresets[0].id);
-    setFrameIndex(0);
-
-    const viewport = stackViewportRef.current;
-    if (viewport) {
-      viewport.resetCamera({ resetPan: true, resetZoom: true, resetToCenter: true });
-      viewport.resetProperties();
-    }
-
-    setZoom(1);
-  }, [setFrameIndex]);
+  const handleReset = useViewerReset({
+    stackViewportRef,
+    setActiveTool,
+    defaultPresetId: windowLevelPresets[0].id,
+    setSelectedPresetId,
+    setFrameIndex,
+    setZoom,
+  });
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
