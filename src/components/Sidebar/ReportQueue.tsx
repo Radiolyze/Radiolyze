@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { FileText, Clock, CheckCircle, Sparkles } from 'lucide-react';
 import type { AIStatus, QueueItem } from '@/types/radiology';
 import { Badge } from '@/components/ui/badge';
@@ -10,56 +11,59 @@ interface ReportQueueProps {
   onSelectItem: (item: QueueItem) => void;
 }
 
-const statusConfig = {
-  pending: {
-    icon: Clock,
-    label: 'Ausstehend',
-    className: 'bg-muted text-muted-foreground',
-  },
-  in_progress: {
-    icon: FileText,
-    label: 'In Bearbeitung',
-    className: 'bg-info/20 text-info',
-  },
-  draft: {
-    icon: FileText,
-    label: 'Entwurf',
-    className: 'bg-warning/20 text-warning',
-  },
-  approved: {
-    icon: CheckCircle,
-    label: 'Genehmigt',
-    className: 'bg-success/20 text-success',
-  },
-  finalized: {
-    icon: CheckCircle,
-    label: 'Abgeschlossen',
-    className: 'bg-success/20 text-success',
-  },
-};
-
-const priorityConfig = {
-  normal: null,
-  urgent: { label: 'Dringend', className: 'bg-warning/20 text-warning border-warning/30' },
-  stat: { label: 'STAT', className: 'bg-destructive/20 text-destructive border-destructive/30' },
-};
-
-const aiStatusConfig: Record<AIStatus, { label: string; className: string }> = {
-  idle: { label: 'KI bereit', className: 'bg-muted text-muted-foreground' },
-  queued: { label: 'KI wartet', className: 'bg-warning/20 text-warning border-warning/30' },
-  processing: { label: 'KI analysiert', className: 'bg-info/20 text-info border-info/30' },
-  error: { label: 'KI Fehler', className: 'bg-destructive/20 text-destructive border-destructive/30' },
-};
-
 export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueueProps) {
+  const { t } = useTranslation('common');
+  const { t: tReport } = useTranslation('report');
+  
   const pendingCount = items.filter(i => i.report.status === 'pending' || i.report.status === 'in_progress').length;
+
+  const statusConfig = {
+    pending: {
+      icon: Clock,
+      label: t('status.pending'),
+      className: 'bg-muted text-muted-foreground',
+    },
+    in_progress: {
+      icon: FileText,
+      label: t('status.inProgress'),
+      className: 'bg-info/20 text-info',
+    },
+    draft: {
+      icon: FileText,
+      label: t('status.draft'),
+      className: 'bg-warning/20 text-warning',
+    },
+    approved: {
+      icon: CheckCircle,
+      label: t('status.approved'),
+      className: 'bg-success/20 text-success',
+    },
+    finalized: {
+      icon: CheckCircle,
+      label: t('status.finalized'),
+      className: 'bg-success/20 text-success',
+    },
+  };
+
+  const priorityConfig = {
+    normal: null,
+    urgent: { label: t('priority.urgent'), className: 'bg-warning/20 text-warning border-warning/30' },
+    stat: { label: t('priority.stat'), className: 'bg-destructive/20 text-destructive border-destructive/30' },
+  };
+
+  const aiStatusConfig: Record<AIStatus, { label: string; className: string }> = {
+    idle: { label: tReport('ai.status.idle'), className: 'bg-muted text-muted-foreground' },
+    queued: { label: tReport('ai.status.queued'), className: 'bg-warning/20 text-warning border-warning/30' },
+    processing: { label: tReport('ai.status.running'), className: 'bg-info/20 text-info border-info/30' },
+    error: { label: tReport('ai.status.failed'), className: 'bg-destructive/20 text-destructive border-destructive/30' },
+  };
 
   return (
     <div className="flex flex-col border-t border-sidebar-border">
       <div className="px-4 py-3 border-b border-sidebar-border flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-medium text-sidebar-foreground">
           <FileText className="h-4 w-4" />
-          <span>Warteschlange</span>
+          <span>{t('queue.title')}</span>
         </div>
         {pendingCount > 0 && (
           <Badge variant="secondary" className="bg-primary/20 text-primary">

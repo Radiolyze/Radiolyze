@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { User, Calendar, Hash, Stethoscope } from 'lucide-react';
 import type { Patient, Study } from '@/types/radiology';
 import { getAge, formatDate } from '@/data/mockData';
@@ -9,7 +10,14 @@ interface PatientCardProps {
 }
 
 export function PatientCard({ patient, study }: PatientCardProps) {
+  const { t } = useTranslation('common');
   const age = getAge(patient.dateOfBirth);
+
+  const genderLabel = patient.gender === 'M' 
+    ? t('patient.male') 
+    : patient.gender === 'F' 
+      ? t('patient.female') 
+      : t('patient.other');
 
   return (
     <div className="p-4 border-b border-sidebar-border">
@@ -21,9 +29,9 @@ export function PatientCard({ patient, study }: PatientCardProps) {
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-foreground truncate">{patient.name}</h3>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{age !== null ? `${age} Jahre` : '—'}</span>
+            <span>{age !== null ? `${age} ${t('patient.years')}` : '—'}</span>
             <span>•</span>
-            <span>{patient.gender === 'M' ? 'Männlich' : patient.gender === 'F' ? 'Weiblich' : 'Divers'}</span>
+            <span>{genderLabel}</span>
           </div>
         </div>
       </div>
