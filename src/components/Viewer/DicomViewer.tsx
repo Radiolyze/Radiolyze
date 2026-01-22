@@ -21,7 +21,8 @@ import { exportAnnotations } from '@/services/annotations';
 import { Enums, imageLoader } from '@cornerstonejs/core';
 import { Enums as ToolEnums } from '@cornerstonejs/tools';
 import type { ViewportState } from '@/types/viewerSync';
-import { viewerTools, windowLevelPresets, type ViewerToolId } from '@/config/viewer';
+import { viewerTools, windowLevelPresets } from '@/config/viewer';
+import type { ViewerToolId } from '@/types/viewer';
 
 interface DicomViewerProps {
   series: Series | null;

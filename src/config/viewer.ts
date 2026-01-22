@@ -1,7 +1,5 @@
 import { Move, Ruler, Sun, ZoomIn } from 'lucide-react';
-import type { ViewerToolConfig } from '@/components/Viewer/ImageControls';
-
-export type ViewerToolId = 'zoom' | 'pan' | 'measure' | 'windowLevel';
+import type { ViewerToolConfig } from '@/types/viewer';
 
 export const viewerTools: ViewerToolConfig[] = [
   { id: 'zoom', icon: ZoomIn, label: 'Zoom', shortcut: 'Z' },
