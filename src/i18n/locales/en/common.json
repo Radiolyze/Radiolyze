@@ -1,0 +1,114 @@
+{
+  "app": {
+    "name": "MedGemma Radiology",
+    "tagline": "AI-powered Radiology Reporting"
+  },
+  "navigation": {
+    "home": "Home",
+    "batch": "Batch Reporting",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "approve": "Approve",
+    "export": "Export",
+    "reload": "Reload",
+    "retry": "Retry",
+    "apply": "Apply",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "clearCache": "Clear Cache",
+    "goHome": "Go Home"
+  },
+  "status": {
+    "pending": "Pending",
+    "inProgress": "In Progress",
+    "draft": "Draft",
+    "approved": "Approved",
+    "finalized": "Finalized",
+    "idle": "Ready",
+    "loading": "Loading...",
+    "processing": "Processing...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning"
+  },
+  "connection": {
+    "connected": "Connected",
+    "connecting": "Connecting...",
+    "disconnected": "Disconnected",
+    "liveUpdates": "Live updates active",
+    "offline": "Offline"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}} days ago",
+    "weeksAgo": "{{count}} weeks ago",
+    "monthsAgo": "{{count}} months ago",
+    "yearsAgo": "{{count}} years ago",
+    "justNow": "Just now"
+  },
+  "patient": {
+    "name": "Name",
+    "age": "Age",
+    "years": "years",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "other": "Other",
+    "mrn": "Patient ID",
+    "dob": "Date of Birth"
+  },
+  "study": {
+    "study": "Study",
+    "studies": "Studies",
+    "series": "Series",
+    "images": "Images",
+    "modality": "Modality",
+    "date": "Date",
+    "description": "Description",
+    "referringPhysician": "Referring Physician",
+    "accessionNumber": "Accession No."
+  },
+  "priority": {
+    "normal": "Normal",
+    "urgent": "Urgent",
+    "stat": "STAT"
+  },
+  "header": {
+    "systemOnline": "System Online",
+    "notifications": "Notifications",
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "profile": "Profile",
+    "logout": "Log Out"
+  },
+  "queue": {
+    "title": "Queue",
+    "pending": "Pending",
+    "empty": "No items in queue"
+  },
+  "priorStudies": {
+    "title": "Prior Studies",
+    "suggestion": "Suggestion",
+    "noPriors": "No prior studies available",
+    "sameModality": "Same modality",
+    "similarDescription": "Similar description",
+    "sameReferrer": "Same referrer",
+    "recent": "Recent"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Page not found",
+    "backHome": "Back to Home"
+  }
+}

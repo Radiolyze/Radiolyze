@@ -1,0 +1,109 @@
+{
+  "title": "Einstellungen",
+  "subtitle": "Persönliche Einstellungen und Systemkonfiguration",
+  "sections": {
+    "profile": "Profil",
+    "display": "Darstellung",
+    "audio": "Audio & Diktat",
+    "viewer": "Viewer",
+    "report": "Befundung",
+    "dicomweb": "DICOMweb",
+    "system": "System"
+  },
+  "profile": {
+    "title": "Profil",
+    "name": "Name",
+    "email": "E-Mail",
+    "role": "Rolle",
+    "department": "Abteilung"
+  },
+  "display": {
+    "title": "Darstellung",
+    "theme": "Design",
+    "themeOptions": {
+      "dark": "Dunkel",
+      "light": "Hell",
+      "system": "System"
+    },
+    "language": "Sprache",
+    "languageOptions": {
+      "de": "Deutsch",
+      "en": "English"
+    },
+    "fontSize": "Schriftgröße",
+    "fontSizeOptions": {
+      "small": "Klein",
+      "medium": "Mittel",
+      "large": "Groß"
+    },
+    "compactMode": "Kompaktmodus",
+    "compactModeDescription": "Reduzierte Abstände für mehr Inhalt"
+  },
+  "audio": {
+    "title": "Audio & Diktat",
+    "microphone": "Mikrofon aktiviert",
+    "microphoneDescription": "Diktatfunktion aktivieren",
+    "asrLanguage": "Sprache für Spracherkennung",
+    "asrLanguageOptions": {
+      "de-DE": "Deutsch",
+      "en-US": "English (US)"
+    },
+    "autoTranscribe": "Automatische Transkription",
+    "autoTranscribeDescription": "Diktat automatisch in Befund übernehmen"
+  },
+  "viewer": {
+    "title": "Viewer-Einstellungen",
+    "defaultTool": "Standard-Werkzeug",
+    "toolOptions": {
+      "zoom": "Zoom",
+      "pan": "Verschieben",
+      "measure": "Messen",
+      "window": "Fensterung"
+    },
+    "invertColors": "Farben invertieren",
+    "invertColorsDescription": "Standard-Invertierung für alle Bilder",
+    "showOverlays": "Overlays anzeigen",
+    "showOverlaysDescription": "Patienten- und Studieninformationen einblenden"
+  },
+  "report": {
+    "title": "Befundung",
+    "autoGenerateImpression": "Beurteilung automatisch generieren",
+    "autoGenerateImpressionDescription": "KI-Entwurf automatisch erstellen, wenn Befund lang genug",
+    "showQAWarnings": "QA-Warnungen anzeigen",
+    "showQAWarningsDescription": "Warnungen der Qualitätsprüfung einblenden",
+    "defaultTemplate": "Standard-Template",
+    "noTemplate": "Kein Standard-Template"
+  },
+  "dicomweb": {
+    "title": "DICOMweb-Konfiguration",
+    "description": "PACS-Verbindung konfigurieren",
+    "url": "DICOMweb URL",
+    "urlPlaceholder": "https://pacs.example.com/dicom-web",
+    "username": "Benutzername",
+    "usernamePlaceholder": "Optional",
+    "password": "Passwort",
+    "passwordPlaceholder": "Optional",
+    "testConnection": "Verbindung testen",
+    "testing": "Teste Verbindung...",
+    "connectionSuccess": "Verbindung erfolgreich",
+    "connectionFailed": "Verbindung fehlgeschlagen",
+    "latency": "Latenz: {{ms}}ms",
+    "save": "Speichern",
+    "unsavedChanges": "Ungespeicherte Änderungen"
+  },
+  "system": {
+    "title": "System",
+    "version": "Version",
+    "clearCache": "Cache leeren",
+    "clearCacheDescription": "Lokale Daten und Einstellungen zurücksetzen",
+    "resetSettings": "Einstellungen zurücksetzen",
+    "resetSettingsDescription": "Alle Einstellungen auf Standard zurücksetzen",
+    "confirmReset": "Möchten Sie alle Einstellungen zurücksetzen?"
+  },
+  "actions": {
+    "save": "Speichern",
+    "saved": "Gespeichert",
+    "reset": "Zurücksetzen",
+    "cancel": "Abbrechen"
+  }
+}

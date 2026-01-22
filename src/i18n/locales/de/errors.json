@@ -1,0 +1,63 @@
+{
+  "generic": {
+    "title": "Ein Fehler ist aufgetreten",
+    "message": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "retry": "Wiederholen",
+    "reload": "Seite neu laden",
+    "goHome": "Zur Startseite"
+  },
+  "network": {
+    "title": "Netzwerkfehler",
+    "offline": "Sie sind offline. Bitte überprüfen Sie Ihre Internetverbindung.",
+    "timeout": "Die Anfrage hat zu lange gedauert. Bitte versuchen Sie es erneut.",
+    "connectionFailed": "Verbindung zum Server fehlgeschlagen."
+  },
+  "api": {
+    "400": "Ungültige Anfrage",
+    "401": "Nicht autorisiert. Bitte melden Sie sich erneut an.",
+    "403": "Zugriff verweigert",
+    "404": "Ressource nicht gefunden",
+    "500": "Serverfehler. Bitte versuchen Sie es später erneut.",
+    "502": "Server nicht erreichbar",
+    "503": "Service vorübergehend nicht verfügbar"
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich",
+    "invalidEmail": "Ungültige E-Mail-Adresse",
+    "invalidUrl": "Ungültige URL",
+    "minLength": "Mindestens {{min}} Zeichen erforderlich",
+    "maxLength": "Maximal {{max}} Zeichen erlaubt"
+  },
+  "dicomweb": {
+    "connectionFailed": "DICOMweb-Verbindung fehlgeschlagen",
+    "authFailed": "Authentifizierung fehlgeschlagen. Bitte Zugangsdaten prüfen.",
+    "notFound": "DICOMweb-Endpunkt nicht gefunden. Bitte URL prüfen.",
+    "invalidResponse": "Ungültige Antwort vom Server",
+    "corsError": "CORS-Fehler. Der Server erlaubt keine Anfragen von dieser Adresse.",
+    "timeout": "Zeitüberschreitung bei der Verbindung"
+  },
+  "report": {
+    "saveFailed": "Befund konnte nicht gespeichert werden",
+    "approveFailed": "Freigabe fehlgeschlagen",
+    "exportFailed": "Export fehlgeschlagen",
+    "generateFailed": "KI-Generierung fehlgeschlagen"
+  },
+  "asr": {
+    "notSupported": "Spracherkennung wird in diesem Browser nicht unterstützt",
+    "noMicrophone": "Kein Mikrofon gefunden",
+    "permissionDenied": "Mikrofonzugriff verweigert",
+    "networkError": "Netzwerkfehler bei Spracherkennung"
+  },
+  "boundary": {
+    "title": "Anwendungsfehler",
+    "message": "Ein unerwarteter Fehler ist aufgetreten.",
+    "details": "Fehlerdetails",
+    "actions": {
+      "reload": "Neu laden",
+      "retry": "Wiederholen",
+      "goHome": "Startseite",
+      "clearCache": "Cache leeren"
+    },
+    "cacheClearedMessage": "Cache geleert. Seite wird neu geladen..."
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "app": {
+    "name": "MedGemma Radiology",
+    "tagline": "KI-gestützte Radiologie-Befundung"
+  },
+  "navigation": {
+    "home": "Startseite",
+    "batch": "Batch-Reporting",
+    "history": "Verlauf",
+    "settings": "Einstellungen"
+  },
+  "actions": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "approve": "Freigeben",
+    "export": "Exportieren",
+    "reload": "Neu laden",
+    "retry": "Wiederholen",
+    "apply": "Anwenden",
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "reset": "Zurücksetzen",
+    "clearCache": "Cache leeren",
+    "goHome": "Startseite"
+  },
+  "status": {
+    "pending": "Ausstehend",
+    "inProgress": "In Bearbeitung",
+    "draft": "Entwurf",
+    "approved": "Freigegeben",
+    "finalized": "Finalisiert",
+    "idle": "Bereit",
+    "loading": "Laden...",
+    "processing": "Verarbeiten...",
+    "success": "Erfolgreich",
+    "error": "Fehler",
+    "warning": "Warnung"
+  },
+  "connection": {
+    "connected": "Verbunden",
+    "connecting": "Verbinden...",
+    "disconnected": "Getrennt",
+    "liveUpdates": "Live-Updates aktiv",
+    "offline": "Offline"
+  },
+  "time": {
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "daysAgo": "vor {{count}} Tagen",
+    "weeksAgo": "vor {{count}} Wochen",
+    "monthsAgo": "vor {{count}} Monaten",
+    "yearsAgo": "vor {{count}} Jahren",
+    "justNow": "Gerade eben"
+  },
+  "patient": {
+    "name": "Name",
+    "age": "Alter",
+    "years": "Jahre",
+    "gender": "Geschlecht",
+    "male": "Männlich",
+    "female": "Weiblich",
+    "other": "Divers",
+    "mrn": "Patienten-ID",
+    "dob": "Geburtsdatum"
+  },
+  "study": {
+    "study": "Studie",
+    "studies": "Studien",
+    "series": "Serien",
+    "images": "Bilder",
+    "modality": "Modalität",
+    "date": "Datum",
+    "description": "Beschreibung",
+    "referringPhysician": "Überweisender Arzt",
+    "accessionNumber": "Accession-Nr."
+  },
+  "priority": {
+    "normal": "Normal",
+    "urgent": "Dringend",
+    "stat": "STAT"
+  },
+  "header": {
+    "systemOnline": "System Online",
+    "notifications": "Benachrichtigungen",
+    "keyboardShortcuts": "Tastaturkürzel",
+    "profile": "Profil",
+    "logout": "Abmelden"
+  },
+  "queue": {
+    "title": "Warteschlange",
+    "pending": "Ausstehend",
+    "empty": "Keine Einträge in der Warteschlange"
+  },
+  "priorStudies": {
+    "title": "Voruntersuchungen",
+    "suggestion": "Vorschlag",
+    "noPriors": "Keine Voruntersuchungen verfügbar",
+    "sameModality": "Gleiche Modalität",
+    "similarDescription": "Ähnliche Beschreibung",
+    "sameReferrer": "Gleicher Überweiser",
+    "recent": "Aktuell"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Seite nicht gefunden",
+    "backHome": "Zurück zur Startseite"
+  }
+}

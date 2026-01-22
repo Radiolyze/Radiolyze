@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
+import i18n from '@/i18n';
+
+export type UILanguage = 'de' | 'en';
 
 export interface UserPreferences {
   // Display
   theme: 'dark' | 'light' | 'system';
   fontSize: 'small' | 'medium' | 'large';
   compactMode: boolean;
+  uiLanguage: UILanguage;
   
   // Audio / ASR
   microphoneEnabled: boolean;
@@ -26,6 +30,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'dark',
   fontSize: 'medium',
   compactMode: false,
+  uiLanguage: 'de',
   microphoneEnabled: true,
   asrLanguage: 'de-DE',
   autoTranscribe: true,
@@ -90,6 +95,13 @@ export function useUserPreferences() {
       root.classList.add('text-base');
     }
   }, [preferences.fontSize]);
+
+  // Apply UI language
+  useEffect(() => {
+    if (preferences.uiLanguage && i18n.language !== preferences.uiLanguage) {
+      i18n.changeLanguage(preferences.uiLanguage);
+    }
+  }, [preferences.uiLanguage]);
 
   const setPreference = useCallback(<K extends keyof UserPreferences>(
     key: K,

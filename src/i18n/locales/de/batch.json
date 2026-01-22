@@ -1,0 +1,61 @@
+{
+  "title": "Batch-Reporting",
+  "subtitle": "Übersicht und Massenbearbeitung von Befunden",
+  "stats": {
+    "total": "Gesamt",
+    "pending": "Ausstehend",
+    "drafts": "Entwürfe",
+    "approved": "Freigegeben",
+    "finalized": "Finalisiert",
+    "todayCompleted": "Heute abgeschlossen"
+  },
+  "filters": {
+    "search": "Suchen...",
+    "searchPlaceholder": "Patient, Accession-Nr., Beschreibung...",
+    "status": "Status",
+    "allStatuses": "Alle Status",
+    "modality": "Modalität",
+    "allModalities": "Alle Modalitäten",
+    "priority": "Priorität",
+    "allPriorities": "Alle Prioritäten",
+    "dateRange": "Zeitraum",
+    "today": "Heute",
+    "week": "Diese Woche",
+    "month": "Dieser Monat",
+    "all": "Alle"
+  },
+  "table": {
+    "patient": "Patient",
+    "study": "Studie",
+    "modality": "Modalität",
+    "status": "Status",
+    "priority": "Priorität",
+    "created": "Erstellt",
+    "actions": "Aktionen",
+    "noResults": "Keine Ergebnisse gefunden",
+    "loading": "Lade Daten..."
+  },
+  "actions": {
+    "open": "Öffnen",
+    "approve": "Freigeben",
+    "approveSelected": "Ausgewählte freigeben",
+    "export": "Exportieren",
+    "exportSelected": "Ausgewählte exportieren",
+    "selectAll": "Alle auswählen",
+    "deselectAll": "Auswahl aufheben",
+    "selected": "{{count}} ausgewählt",
+    "refresh": "Aktualisieren"
+  },
+  "bulk": {
+    "title": "Massenaktionen",
+    "confirmApprove": "Möchten Sie {{count}} Befunde freigeben?",
+    "confirmExport": "Möchten Sie {{count}} Befunde exportieren?",
+    "processing": "Verarbeite {{current}} von {{total}}...",
+    "completed": "{{count}} Befunde erfolgreich verarbeitet",
+    "failed": "{{count}} Befunde fehlgeschlagen"
+  },
+  "empty": {
+    "title": "Keine Befunde",
+    "message": "Es gibt derzeit keine Befunde in der Warteschlange."
+  }
+}

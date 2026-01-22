@@ -1,0 +1,63 @@
+{
+  "generic": {
+    "title": "An error occurred",
+    "message": "Something went wrong. Please try again.",
+    "retry": "Retry",
+    "reload": "Reload page",
+    "goHome": "Go to Home"
+  },
+  "network": {
+    "title": "Network Error",
+    "offline": "You are offline. Please check your internet connection.",
+    "timeout": "The request timed out. Please try again.",
+    "connectionFailed": "Failed to connect to server."
+  },
+  "api": {
+    "400": "Invalid request",
+    "401": "Unauthorized. Please log in again.",
+    "403": "Access denied",
+    "404": "Resource not found",
+    "500": "Server error. Please try again later.",
+    "502": "Server unreachable",
+    "503": "Service temporarily unavailable"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidEmail": "Invalid email address",
+    "invalidUrl": "Invalid URL",
+    "minLength": "Minimum {{min}} characters required",
+    "maxLength": "Maximum {{max}} characters allowed"
+  },
+  "dicomweb": {
+    "connectionFailed": "DICOMweb connection failed",
+    "authFailed": "Authentication failed. Please check credentials.",
+    "notFound": "DICOMweb endpoint not found. Please check URL.",
+    "invalidResponse": "Invalid response from server",
+    "corsError": "CORS error. The server does not allow requests from this address.",
+    "timeout": "Connection timed out"
+  },
+  "report": {
+    "saveFailed": "Failed to save report",
+    "approveFailed": "Approval failed",
+    "exportFailed": "Export failed",
+    "generateFailed": "AI generation failed"
+  },
+  "asr": {
+    "notSupported": "Speech recognition is not supported in this browser",
+    "noMicrophone": "No microphone found",
+    "permissionDenied": "Microphone access denied",
+    "networkError": "Network error during speech recognition"
+  },
+  "boundary": {
+    "title": "Application Error",
+    "message": "An unexpected error occurred.",
+    "details": "Error details",
+    "actions": {
+      "reload": "Reload",
+      "retry": "Retry",
+      "goHome": "Go Home",
+      "clearCache": "Clear Cache"
+    },
+    "cacheClearedMessage": "Cache cleared. Page will reload..."
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "title": "Settings",
+  "subtitle": "Personal settings and system configuration",
+  "sections": {
+    "profile": "Profile",
+    "display": "Display",
+    "audio": "Audio & Dictation",
+    "viewer": "Viewer",
+    "report": "Reporting",
+    "dicomweb": "DICOMweb",
+    "system": "System"
+  },
+  "profile": {
+    "title": "Profile",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "department": "Department"
+  },
+  "display": {
+    "title": "Display",
+    "theme": "Theme",
+    "themeOptions": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    },
+    "language": "Language",
+    "languageOptions": {
+      "de": "Deutsch",
+      "en": "English"
+    },
+    "fontSize": "Font Size",
+    "fontSizeOptions": {
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large"
+    },
+    "compactMode": "Compact Mode",
+    "compactModeDescription": "Reduced spacing for more content"
+  },
+  "audio": {
+    "title": "Audio & Dictation",
+    "microphone": "Microphone enabled",
+    "microphoneDescription": "Enable dictation feature",
+    "asrLanguage": "Speech recognition language",
+    "asrLanguageOptions": {
+      "de-DE": "Deutsch",
+      "en-US": "English (US)"
+    },
+    "autoTranscribe": "Auto transcribe",
+    "autoTranscribeDescription": "Automatically add dictation to findings"
+  },
+  "viewer": {
+    "title": "Viewer Settings",
+    "defaultTool": "Default Tool",
+    "toolOptions": {
+      "zoom": "Zoom",
+      "pan": "Pan",
+      "measure": "Measure",
+      "window": "Window/Level"
+    },
+    "invertColors": "Invert colors",
+    "invertColorsDescription": "Default inversion for all images",
+    "showOverlays": "Show overlays",
+    "showOverlaysDescription": "Display patient and study information"
+  },
+  "report": {
+    "title": "Reporting",
+    "autoGenerateImpression": "Auto-generate impression",
+    "autoGenerateImpressionDescription": "Automatically create AI draft when findings are sufficient",
+    "showQAWarnings": "Show QA warnings",
+    "showQAWarningsDescription": "Display quality check warnings",
+    "defaultTemplate": "Default template",
+    "noTemplate": "No default template"
+  },
+  "dicomweb": {
+    "title": "DICOMweb Configuration",
+    "description": "Configure PACS connection",
+    "url": "DICOMweb URL",
+    "urlPlaceholder": "https://pacs.example.com/dicom-web",
+    "username": "Username",
+    "usernamePlaceholder": "Optional",
+    "password": "Password",
+    "passwordPlaceholder": "Optional",
+    "testConnection": "Test Connection",
+    "testing": "Testing connection...",
+    "connectionSuccess": "Connection successful",
+    "connectionFailed": "Connection failed",
+    "latency": "Latency: {{ms}}ms",
+    "save": "Save",
+    "unsavedChanges": "Unsaved changes"
+  },
+  "system": {
+    "title": "System",
+    "version": "Version",
+    "clearCache": "Clear cache",
+    "clearCacheDescription": "Reset local data and settings",
+    "resetSettings": "Reset settings",
+    "resetSettingsDescription": "Reset all settings to defaults",
+    "confirmReset": "Do you want to reset all settings?"
+  },
+  "actions": {
+    "save": "Save",
+    "saved": "Saved",
+    "reset": "Reset",
+    "cancel": "Cancel"
+  }
+}

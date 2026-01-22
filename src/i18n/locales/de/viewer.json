@@ -1,0 +1,73 @@
+{
+  "tools": {
+    "zoom": "Zoom",
+    "pan": "Verschieben",
+    "window": "Fensterung",
+    "measure": "Messen",
+    "annotate": "Annotieren",
+    "reset": "Zurücksetzen",
+    "invert": "Invertieren",
+    "rotate": "Drehen",
+    "flip": "Spiegeln"
+  },
+  "comparison": {
+    "title": "Vergleich",
+    "enable": "Vergleich aktivieren",
+    "disable": "Vergleich beenden",
+    "current": "Aktuell",
+    "prior": "Voruntersuchung",
+    "swap": "Tauschen",
+    "selectStudy": "Studie auswählen",
+    "selectSeries": "Serie auswählen",
+    "noStudySelected": "Keine Studie ausgewählt"
+  },
+  "sync": {
+    "title": "Synchronisierung",
+    "frames": "Bilder",
+    "zoom": "Zoom",
+    "pan": "Position",
+    "windowLevel": "Fensterung",
+    "enabled": "Sync aktiv"
+  },
+  "progress": {
+    "loading": "Laden...",
+    "frame": "Bild {{current}} von {{total}}",
+    "series": "Serie",
+    "asr": {
+      "idle": "Diktat bereit",
+      "listening": "Aufnahme läuft...",
+      "processing": "Verarbeite..."
+    },
+    "ai": {
+      "idle": "KI bereit",
+      "running": "KI analysiert...",
+      "completed": "KI-Analyse abgeschlossen"
+    },
+    "qa": {
+      "idle": "QA bereit",
+      "checking": "QA prüft...",
+      "passed": "QA bestanden",
+      "warnings": "QA-Warnungen"
+    }
+  },
+  "series": {
+    "title": "Serien",
+    "count": "{{count}} Serien",
+    "images": "{{count}} Bilder",
+    "seriesNumber": "Serie {{number}}"
+  },
+  "controls": {
+    "title": "Steuerung",
+    "brightness": "Helligkeit",
+    "contrast": "Kontrast",
+    "windowWidth": "Fensterbreite",
+    "windowCenter": "Fenstermitte"
+  },
+  "overlays": {
+    "show": "Overlays anzeigen",
+    "hide": "Overlays ausblenden",
+    "patientInfo": "Patienteninfo",
+    "studyInfo": "Studieninfo",
+    "annotations": "Annotationen"
+  }
+}
