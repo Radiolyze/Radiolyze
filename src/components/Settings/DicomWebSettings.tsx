@@ -79,7 +79,9 @@ export function DicomWebSettings() {
       : `${config.url}/studies?limit=1`;
 
     try {
-      const headers: HeadersInit = {};
+      const headers: HeadersInit = {
+        Accept: 'application/dicom+json, application/json',
+      };
       if (config.username && config.password) {
         const token = btoa(`${config.username}:${config.password}`);
         headers['Authorization'] = `Basic ${token}`;
@@ -108,10 +110,13 @@ export function DicomWebSettings() {
             latencyMs,
           });
         } else {
+          const isHtmlResponse = contentType.includes('text/html');
           setConnectionResult({
             status: 'error',
             message: 'Ungültige Antwort',
-            details: `Der Server antwortet, aber nicht im DICOMweb-Format (${contentType}). Überprüfen Sie die URL.`,
+            details: isHtmlResponse
+              ? `Der Server liefert HTML statt DICOMweb (${contentType}). Möglicherweise ist dies die Orthanc-UI oder eine Login-Seite. Prüfen Sie, dass die URL auf den DICOMweb-Endpunkt zeigt (z.B. http://<host>:8042/dicom-web).`
+              : `Der Server antwortet, aber nicht im DICOMweb-Format (${contentType}). Überprüfen Sie die URL.`,
           });
         }
       } else if (response.status === 401 || response.status === 403) {
