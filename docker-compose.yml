@@ -153,11 +153,9 @@ services:
     image: vllm/vllm-openai:nightly
     pull_policy: always
     profiles: ["gpu"]
-    runtime: nvidia
     ports:
       - "8003:8001"
     environment:
-      NVIDIA_VISIBLE_DEVICES: all
       VLLM_LOGGING_LEVEL: INFO
       HUGGINGFACE_HUB_TOKEN: ${HUGGINGFACE_HUB_TOKEN:-${HF_TOKEN:-}}
       HF_TOKEN: ${HF_TOKEN:-${HUGGINGFACE_HUB_TOKEN:-}}
@@ -171,10 +169,8 @@ services:
       - 0.0.0.0
       - --port
       - "8001"
-      - --quantization
-      - awq
       - --dtype
-      - bfloat16
+      - float32
       - --max-model-len
       - "1024"
       - --served-model-name
