@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Columns2, X, ArrowLeftRight, Link2, Link2Off, ZoomIn, Move, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,22 +19,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DicomViewer, type ViewerProgress } from './DicomViewer';
-import type { ViewportState } from '@/types/viewerSync';
+import type { SyncOptions, ViewportState } from '@/types/viewerSync';
 import type { ImageRef, Series, Study } from '@/types/radiology';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useViewportSync } from '@/hooks/useViewportSync';
 
 interface PriorStudy {
   study: Study;
   label: string;
   date: string;
-}
-
-interface SyncOptions {
-  frames: boolean;
-  zoom: boolean;
-  pan: boolean;
-  windowLevel: boolean;
 }
 
 interface ComparisonViewerProps {
@@ -73,9 +67,8 @@ export function ComparisonViewer({
   // Viewport sync state - what gets passed to the "other" viewer
   const [currentViewerSyncState, setCurrentViewerSyncState] = useState<Partial<ViewportState>>({});
   const [priorViewerSyncState, setPriorViewerSyncState] = useState<Partial<ViewportState>>({});
-  
-  // Debounce ref to prevent rapid sync loops
-  const syncDebounceRef = useRef<number | null>(null);
+
+  const syncViewportChange = useViewportSync(syncOptions);
 
   // Get selected prior study and series
   const selectedPriorStudy = priorStudies.find((p) => p.study.id === selectedPriorStudyId);
@@ -121,53 +114,17 @@ export function ComparisonViewer({
   // Handle viewport state changes from current viewer and sync to prior
   const handleCurrentViewportChange = useCallback(
     (state: Partial<ViewportState>) => {
-      if (syncDebounceRef.current) {
-        clearTimeout(syncDebounceRef.current);
-      }
-      
-      syncDebounceRef.current = window.setTimeout(() => {
-        const syncState: Partial<ViewportState> = {};
-        if (syncOptions.zoom && state.zoom !== undefined) {
-          syncState.zoom = state.zoom;
-        }
-        if (syncOptions.pan && state.pan !== undefined) {
-          syncState.pan = state.pan;
-        }
-        if (syncOptions.windowLevel && state.windowLevel !== undefined) {
-          syncState.windowLevel = state.windowLevel;
-        }
-        if (Object.keys(syncState).length > 0) {
-          setPriorViewerSyncState(syncState);
-        }
-      }, 16); // ~60fps throttle
+      syncViewportChange(state, setPriorViewerSyncState);
     },
-    [syncOptions]
+    [syncViewportChange]
   );
 
   // Handle viewport state changes from prior viewer and sync to current
   const handlePriorViewportChange = useCallback(
     (state: Partial<ViewportState>) => {
-      if (syncDebounceRef.current) {
-        clearTimeout(syncDebounceRef.current);
-      }
-      
-      syncDebounceRef.current = window.setTimeout(() => {
-        const syncState: Partial<ViewportState> = {};
-        if (syncOptions.zoom && state.zoom !== undefined) {
-          syncState.zoom = state.zoom;
-        }
-        if (syncOptions.pan && state.pan !== undefined) {
-          syncState.pan = state.pan;
-        }
-        if (syncOptions.windowLevel && state.windowLevel !== undefined) {
-          syncState.windowLevel = state.windowLevel;
-        }
-        if (Object.keys(syncState).length > 0) {
-          setCurrentViewerSyncState(syncState);
-        }
-      }, 16);
+      syncViewportChange(state, setCurrentViewerSyncState);
     },
-    [syncOptions]
+    [syncViewportChange]
   );
 
   const handleEnableCompare = useCallback(() => {
