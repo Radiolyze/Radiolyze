@@ -82,6 +82,7 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     initialParallelScaleRef,
     syncingRef,
     isInitializing: isInitializingCornerstone,
+    isReady: isViewportReady,
   } = useCornerstoneStackViewport({
     isEnabled: Boolean(series),
     renderingEngineId,
@@ -100,6 +101,7 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
   });
 
   const { isInitializing: isInitializingStack } = useCornerstoneStackSetup({
+    isReady: isViewportReady,
     imageIds,
     stackViewportRef,
     initialParallelScaleRef,

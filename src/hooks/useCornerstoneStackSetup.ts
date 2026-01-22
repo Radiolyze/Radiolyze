@@ -4,6 +4,7 @@ import type { StackViewport } from '@cornerstonejs/core';
 import type { ViewerToolId } from '@/types/viewer';
 
 interface UseCornerstoneStackSetupOptions {
+  isReady: boolean;
   imageIds: string[];
   stackViewportRef: RefObject<StackViewport | null>;
   initialParallelScaleRef: RefObject<number | null>;
@@ -15,6 +16,7 @@ interface UseCornerstoneStackSetupOptions {
 }
 
 export const useCornerstoneStackSetup = ({
+  isReady,
   imageIds,
   stackViewportRef,
   initialParallelScaleRef,
@@ -28,7 +30,7 @@ export const useCornerstoneStackSetup = ({
 
   useEffect(() => {
     const viewport = stackViewportRef.current;
-    if (!viewport || imageIds.length === 0) {
+    if (!isReady || !viewport || imageIds.length === 0) {
       return;
     }
 
@@ -71,6 +73,7 @@ export const useCornerstoneStackSetup = ({
     applyToolSelection,
     applyWindowLevelPreset,
     imageIds,
+    isReady,
     initialParallelScaleRef,
     onError,
     selectedPresetId,

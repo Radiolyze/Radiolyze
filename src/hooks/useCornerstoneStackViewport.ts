@@ -22,6 +22,7 @@ interface UseCornerstoneStackViewportResult {
   initialParallelScaleRef: React.RefObject<number | null>;
   syncingRef: React.RefObject<boolean>;
   isInitializing: boolean;
+  isReady: boolean;
 }
 
 export const useCornerstoneStackViewport = ({
@@ -41,6 +42,7 @@ export const useCornerstoneStackViewport = ({
   const initialParallelScaleRef = useRef<number | null>(null);
   const syncingRef = useRef(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   const onFrameIndexChangeRef = useRef(onFrameIndexChange);
   const onZoomChangeRef = useRef(onZoomChange);
@@ -129,6 +131,7 @@ export const useCornerstoneStackViewport = ({
 
         const viewport = renderingEngine.getViewport(viewportId) as StackViewport;
         stackViewportRef.current = viewport;
+        setIsReady(true);
 
         const toolGroup = ToolGroupManager.createToolGroup(toolGroupId);
         toolGroupRef.current = toolGroup;
@@ -176,6 +179,7 @@ export const useCornerstoneStackViewport = ({
       stackViewportRef.current = null;
       toolGroupRef.current = null;
       initialParallelScaleRef.current = null;
+      setIsReady(false);
     };
   }, [
     handleCameraModified,
@@ -194,5 +198,6 @@ export const useCornerstoneStackViewport = ({
     initialParallelScaleRef,
     syncingRef,
     isInitializing,
+    isReady,
   };
 };
