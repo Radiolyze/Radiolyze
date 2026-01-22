@@ -112,7 +112,8 @@ services:
       - "6379:6379"
 
   vllm-medgemma:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai:nightly
+    pull_policy: always
     profiles: ["gpu"]
     runtime: nvidia
     ports:
@@ -153,7 +154,8 @@ services:
       retries: 3
 
   medasr:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai:nightly
+    pull_policy: always
     profiles: ["gpu"]
     runtime: nvidia
     ports:
