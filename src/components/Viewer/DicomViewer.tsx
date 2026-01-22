@@ -4,6 +4,7 @@ import type { AIStatus, ImageRef, QAStatus, Series } from '@/types/radiology';
 import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
 import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
@@ -15,7 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
-import { buildWadorsFrameUrl, buildWadorsImageId, orthancClient } from '@/services/orthancClient';
 import { Enums, RenderingEngine, imageLoader, type StackViewport } from '@cornerstonejs/core';
 import { ToolGroupManager, Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
 import type { ViewportState } from '@/types/viewerSync';
@@ -44,70 +44,21 @@ export interface ViewerProgress {
   qaStatus: QAStatus;
 }
 
-type InstanceInfo = {
-  instanceId: string;
-  frames: number;
-  instanceNumber?: number;
-};
-
-const getTagValue = (entry: Record<string, unknown>, tag: string) => {
-  const tagEntry = entry[tag] as { Value?: unknown[] } | undefined;
-  if (tagEntry && Array.isArray(tagEntry.Value) && tagEntry.Value.length > 0) {
-    return tagEntry.Value[0];
-  }
-  return undefined;
-};
-
-const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
-  if (typeof entry === 'string') {
-    return { instanceId: entry, frames: 1 };
-  }
-
-  if (!entry || typeof entry !== 'object') {
-    return null;
-  }
-
-  const record = entry as Record<string, unknown>;
-  const instanceId =
-    (getTagValue(record, '00080018') as string | undefined) ||
-    (record.SOPInstanceUID as string | undefined) ||
-    (record.instanceId as string | undefined) ||
-    (record.id as string | undefined) ||
-    (record.ID as string | undefined);
-
-  if (!instanceId) {
-    return null;
-  }
-
-  const rawFrames =
-    getTagValue(record, '00280008') ||
-    record.numberOfFrames ||
-    record.NumberOfFrames;
-  const parsedFrames = Number(rawFrames);
-  const frames = Number.isFinite(parsedFrames) && parsedFrames > 1 ? parsedFrames : 1;
-
-  const rawInstanceNumber =
-    getTagValue(record, '00200013') ||
-    record.InstanceNumber;
-  const parsedInstanceNumber = Number(rawInstanceNumber);
-
-  return {
-    instanceId,
-    frames,
-    instanceNumber: Number.isFinite(parsedInstanceNumber) ? parsedInstanceNumber : undefined,
-  };
-};
-
 export function DicomViewer({ series, onFrameChange, progress, onViewportChange, syncState, onImageRefsChange, requestedFrameIndex }: DicomViewerProps) {
   const { preferences } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<Tool>(preferences.defaultTool as Tool);
   const [zoom, setZoom] = useState(1);
-  const [imageIds, setImageIds] = useState<string[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [isFetchingInstances, setIsFetchingInstances] = useState(false);
   const [isInitializingViewer, setIsInitializingViewer] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState(windowLevelPresets[0].id);
+  const [viewerError, setViewerError] = useState<string | null>(null);
+
+  const {
+    imageIds,
+    imageRefs,
+    isLoading: isFetchingInstances,
+    error: loadError,
+  } = useDicomSeriesInstances(series);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const renderingEngineRef = useRef<RenderingEngine | null>(null);
@@ -129,6 +80,7 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
   const hasStack = imageIds.length > 0;
   const totalFrames = hasStack ? imageIds.length : series?.frameCount || 1;
   const isLoading = isFetchingInstances || isInitializingViewer;
+  const effectiveError = viewerError ?? loadError;
 
   useEffect(() => {
     activeToolRef.current = activeTool;
@@ -304,92 +256,15 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     URL.revokeObjectURL(url);
   }, [series]);
 
-  // Load DICOM image IDs when series changes
   useEffect(() => {
-    if (!series) {
-      setImageIds([]);
-      setLoadError(null);
-      setCurrentFrame(0);
-      return;
-    }
+    setCurrentFrame(0);
+    setZoom(1);
+    setViewerError(null);
+  }, [series?.id]);
 
-    let isActive = true;
-
-    const loadInstances = async () => {
-      setIsFetchingInstances(true);
-      setLoadError(null);
-      setImageIds([]);
-      setCurrentFrame(0);
-      setZoom(1);
-
-      try {
-        const response = await orthancClient.listInstances(series.studyId, series.id);
-        const rawInstances = Array.isArray(response)
-          ? response
-          : Array.isArray((response as { Instances?: unknown[] }).Instances)
-            ? (response as { Instances: unknown[] }).Instances
-            : [];
-        const parsed = rawInstances
-          .map(getInstanceInfo)
-          .filter((item): item is InstanceInfo => Boolean(item));
-
-        if (parsed.length === 0) {
-          throw new Error('Keine DICOM Instanzen gefunden');
-        }
-
-        parsed.sort((a, b) => {
-          if (a.instanceNumber === undefined || b.instanceNumber === undefined) {
-            return 0;
-          }
-          return a.instanceNumber - b.instanceNumber;
-        });
-
-        const ids: string[] = [];
-        const refs: ImageRef[] = [];
-        let stackIndex = 0;
-
-        parsed.forEach((instance) => {
-          for (let index = 0; index < instance.frames; index += 1) {
-            const frameIndex = index + 1;
-            const imageId = buildWadorsImageId(series.studyId, series.id, instance.instanceId, frameIndex);
-            ids.push(imageId);
-            refs.push({
-              studyId: series.studyId,
-              seriesId: series.id,
-              instanceId: instance.instanceId,
-              frameIndex,
-              stackIndex,
-              wadoUrl: buildWadorsFrameUrl(series.studyId, series.id, instance.instanceId, frameIndex),
-              imageId,
-            });
-            stackIndex += 1;
-          }
-        });
-
-        if (isActive) {
-          setImageIds(ids);
-          onImageRefsChange?.(refs);
-        }
-      } catch (error) {
-        console.warn('Failed to load DICOM instances', error);
-        if (isActive) {
-          setLoadError('DICOM-Daten konnten nicht geladen werden.');
-          setImageIds([]);
-          onImageRefsChange?.([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsFetchingInstances(false);
-        }
-      }
-    };
-
-    loadInstances();
-
-    return () => {
-      isActive = false;
-    };
-  }, [series, onImageRefsChange]);
+  useEffect(() => {
+    onImageRefsChange?.(imageRefs);
+  }, [imageRefs, onImageRefsChange]);
 
   useEffect(() => {
     if (typeof requestedFrameIndex !== 'number') {
@@ -453,7 +328,7 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
 
     const setupViewer = async () => {
       setIsInitializingViewer(true);
-      setLoadError(null);
+      setViewerError(null);
 
       try {
         await initCornerstone();
@@ -492,8 +367,7 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
       } catch (error) {
         console.warn('Cornerstone initialization failed', error);
         if (isActive) {
-          setLoadError('Viewer konnte nicht initialisiert werden.');
-          setImageIds([]);
+          setViewerError('Viewer konnte nicht initialisiert werden.');
         }
       } finally {
         if (isActive) {
@@ -706,11 +580,11 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
       <div className="flex-1 relative bg-viewer">
         <div ref={viewportRef} className="h-full w-full cursor-crosshair" />
 
-        {(loadError || imageIds.length === 0) && !isLoading && (
+        {(effectiveError || imageIds.length === 0) && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-muted-foreground space-y-2">
               <Maximize2 className="h-12 w-12 mx-auto opacity-50" />
-              <p>{loadError ?? 'Keine DICOM-Bilder geladen'}</p>
+              <p>{effectiveError ?? 'Keine DICOM-Bilder geladen'}</p>
               <p className="text-xs text-muted-foreground">
                 Prüfen Sie DICOMweb-Verbindung und Serien-ID.
               </p>
