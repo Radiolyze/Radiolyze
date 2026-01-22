@@ -1,0 +1,33 @@
+FROM rocm/pytorch:latest
+
+ARG VLLM_REPO="https://github.com/vllm-project/vllm.git"
+ARG VLLM_BRANCH="main"
+ARG PYTORCH_ROCM_ARCH
+
+ENV PYTORCH_ROCM_ARCH=${PYTORCH_ROCM_ARCH}
+ENV VLLM_TARGET_DEVICE=rocm
+ENV RAY_EXPERIMENTAL_NOSET_ROCR_VISIBLE_DEVICES=1
+ENV RAY_EXPERIMENTAL_NOSET_HIP_VISIBLE_DEVICES=1
+
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    cmake \
+    ninja-build \
+    pkg-config \
+    curl \
+    libnuma-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
+WORKDIR /opt/vllm
+RUN git clone ${VLLM_REPO} . \
+    && git fetch -v --prune -- origin ${VLLM_BRANCH} \
+    && git checkout FETCH_HEAD
+
+RUN python3 -m pip install -r requirements/rocm.txt \
+    && python3 -m pip install -e . --no-build-isolation
+
+ENV HF_HOME=/root/.cache/huggingface
+CMD ["/bin/bash"]

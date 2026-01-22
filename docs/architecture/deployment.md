@@ -27,6 +27,7 @@ GPU Services sind als Overlay verfuegbar:
 
 - vLLM MedGemma (Multimodal) via `docker-compose.gpu.yml`
 - MedASR (Speech) via `docker-compose.gpu.yml`
+- AMD ROCm Overlay via `docker-compose.rocm.yml` (Image: `vllm-rocm`)
 
 Optionale Services: NGINX.
 

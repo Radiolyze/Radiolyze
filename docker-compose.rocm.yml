@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  vllm-medgemma:
+    image: vllm-rocm
+    profiles: ["rocm"]
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+    ipc: host
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
+    environment:
+      NVIDIA_VISIBLE_DEVICES: ""
+      VLLM_LOGGING_LEVEL: INFO
+
+  medasr:
+    image: vllm-rocm
+    profiles: ["rocm"]
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+    ipc: host
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
+    environment:
+      NVIDIA_VISIBLE_DEVICES: ""
+      VLLM_LOGGING_LEVEL: INFO

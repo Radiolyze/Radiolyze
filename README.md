@@ -10,6 +10,21 @@
 docker compose up --build
 ```
 
+## GPU quick start
+
+### NVIDIA (CUDA)
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile gpu up --build
+```
+
+### AMD (ROCm)
+
+```sh
+DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile.rocm -t vllm-rocm .
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.rocm.yml --profile rocm up --build
+```
+
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000/api/v1/health
 - Orthanc UI: http://localhost:8042

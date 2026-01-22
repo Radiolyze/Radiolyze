@@ -17,6 +17,27 @@ docker compose up --build
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile gpu up --build
 ```
 
+### GPU Stack (AMD ROCm)
+
+```bash
+DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile.rocm -t vllm-rocm .
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.rocm.yml --profile rocm up --build
+```
+
+- ROCm Device Mounts: `/dev/kfd` und `/dev/dri`
+- Optionale Build-Arg: `PYTORCH_ROCM_ARCH` (z. B. `gfx1100`, `gfx90a`, `gfx942`)
+
+#### Source Build (ROCm)
+
+```bash
+git clone https://github.com/vllm-project/vllm.git
+cd vllm
+export PYTORCH_ROCM_ARCH=gfx1100
+export VLLM_TARGET_DEVICE=rocm
+pip install -r requirements/rocm.txt
+pip install -e . --no-build-isolation
+```
+
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000/api/v1/health
 - Orthanc UI: http://localhost:8042
