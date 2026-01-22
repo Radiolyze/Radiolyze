@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
+import { useCornerstoneStackViewport } from '@/hooks/useCornerstoneStackViewport';
 import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
 import { SeriesStack } from './SeriesStack';
@@ -15,9 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
-import { Enums, RenderingEngine, imageLoader, type StackViewport } from '@cornerstonejs/core';
-import { ToolGroupManager, Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
+import { cornerstoneToolNames } from '@/services/cornerstone';
+import { Enums, imageLoader } from '@cornerstonejs/core';
+import { Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
 import type { ViewportState } from '@/types/viewerSync';
 import { viewerTools, windowLevelPresets, type ViewerToolId } from '@/config/viewer';
 
@@ -60,14 +61,8 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     error: loadError,
   } = useDicomSeriesInstances(series);
 
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const renderingEngineRef = useRef<RenderingEngine | null>(null);
-  const stackViewportRef = useRef<StackViewport | null>(null);
-  const toolGroupRef = useRef<ReturnType<typeof ToolGroupManager.getToolGroup> | null>(null);
-  const initialParallelScaleRef = useRef<number | null>(null);
   const activeToolRef = useRef<Tool>(activeTool);
   const prefetchTimeoutRef = useRef<number | null>(null);
-  const syncingRef = useRef(false); // Prevent sync loops
 
   const viewerInstanceId = useMemo(
     () => `dicom-viewer-${Math.random().toString(36).slice(2, 9)}`,
@@ -77,9 +72,27 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
   const viewportId = `${viewerInstanceId}-viewport`;
   const toolGroupId = `${viewerInstanceId}-tools`;
 
+  const {
+    viewportRef,
+    stackViewportRef,
+    toolGroupRef,
+    initialParallelScaleRef,
+    syncingRef,
+    isInitializing: isInitializingCornerstone,
+  } = useCornerstoneStackViewport({
+    isEnabled: Boolean(series),
+    renderingEngineId,
+    viewportId,
+    toolGroupId,
+    onFrameIndexChange: setCurrentFrame,
+    onZoomChange: setZoom,
+    onViewportChange,
+    onInitError: setViewerError,
+  });
+
   const hasStack = imageIds.length > 0;
   const totalFrames = hasStack ? imageIds.length : series?.frameCount || 1;
-  const isLoading = isFetchingInstances || isInitializingViewer;
+  const isLoading = isFetchingInstances || isInitializingViewer || isInitializingCornerstone;
   const effectiveError = viewerError ?? loadError;
 
   useEffect(() => {
@@ -276,96 +289,31 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     setFrameIndex(requestedFrameIndex);
   }, [currentFrame, requestedFrameIndex, setFrameIndex]);
 
-  // Initialize Cornerstone viewer when image IDs are available
   useEffect(() => {
-    if (!viewportRef.current || imageIds.length === 0) {
+    const viewport = stackViewportRef.current;
+    if (!viewport || imageIds.length === 0) {
       return;
     }
 
     let isActive = true;
-    const element = viewportRef.current;
-    const handleStackNewImage = (event: Event) => {
-      const detail = (event as CustomEvent<{ imageIdIndex?: number }>).detail;
-      if (detail && typeof detail.imageIdIndex === 'number') {
-        setCurrentFrame(detail.imageIdIndex);
-      }
-    };
 
-    const handleCameraModified = (event: Event) => {
-      const detail = (event as CustomEvent<{ camera?: { parallelScale?: number; pan?: number[] } }>).detail;
-      const initialScale = initialParallelScaleRef.current;
-      const currentScale = detail?.camera?.parallelScale;
-      const panValues = detail?.camera?.pan;
-      
-      if (initialScale && currentScale) {
-        const nextZoom = initialScale / currentScale;
-        if (Number.isFinite(nextZoom)) {
-          setZoom(nextZoom);
-          
-          // Emit viewport change if not syncing from external source
-          if (!syncingRef.current && onViewportChange) {
-            const pan = panValues ? { x: panValues[0] || 0, y: panValues[1] || 0 } : { x: 0, y: 0 };
-            onViewportChange({ zoom: nextZoom, pan });
-          }
-        }
-      }
-    };
-    
-    const handleVoiModified = (event: Event) => {
-      if (syncingRef.current || !onViewportChange) return;
-      
-      const detail = (event as CustomEvent<{ range?: { lower: number; upper: number } }>).detail;
-      if (detail?.range) {
-        const width = detail.range.upper - detail.range.lower;
-        const center = detail.range.lower + width / 2;
-        onViewportChange({ windowLevel: { width, center } });
-      }
-    };
-
-    element.addEventListener(Enums.Events.STACK_NEW_IMAGE, handleStackNewImage);
-    element.addEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
-    element.addEventListener(Enums.Events.VOI_MODIFIED, handleVoiModified);
-
-    const setupViewer = async () => {
+    const setupStack = async () => {
       setIsInitializingViewer(true);
       setViewerError(null);
 
       try {
-        await initCornerstone();
-
-        const renderingEngine = new RenderingEngine(renderingEngineId);
-        renderingEngineRef.current = renderingEngine;
-
-        renderingEngine.enableElement({
-          viewportId,
-          type: Enums.ViewportType.STACK,
-          element: viewportRef.current!,
-        });
-
-        const viewport = renderingEngine.getViewport(viewportId) as StackViewport;
-        stackViewportRef.current = viewport;
-
-        const toolGroup = ToolGroupManager.createToolGroup(toolGroupId);
-        toolGroupRef.current = toolGroup;
-
-        toolGroup.addTool(cornerstoneToolNames.stackScroll);
-        toolGroup.addTool(cornerstoneToolNames.pan);
-        toolGroup.addTool(cornerstoneToolNames.zoom);
-        toolGroup.addTool(cornerstoneToolNames.windowLevel);
-        toolGroup.addTool(cornerstoneToolNames.length);
-
-        toolGroup.addViewport(viewportId, renderingEngineId);
         applyToolSelection(activeToolRef.current);
-
         await viewport.setStack(imageIds, 0);
         viewport.render();
 
         applyWindowLevelPreset(selectedPresetId);
 
         const camera = viewport.getCamera();
-        initialParallelScaleRef.current = camera?.parallelScale ?? null;
+        if (isActive) {
+          initialParallelScaleRef.current = camera?.parallelScale ?? null;
+        }
       } catch (error) {
-        console.warn('Cornerstone initialization failed', error);
+        console.warn('Cornerstone stack setup failed', error);
         if (isActive) {
           setViewerError('Viewer konnte nicht initialisiert werden.');
         }
@@ -376,27 +324,12 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
       }
     };
 
-    setupViewer();
+    setupStack();
 
     return () => {
       isActive = false;
-      element.removeEventListener(Enums.Events.STACK_NEW_IMAGE, handleStackNewImage);
-      element.removeEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
-      element.removeEventListener(Enums.Events.VOI_MODIFIED, handleVoiModified);
-
-      ToolGroupManager.destroyToolGroup(toolGroupId);
-
-      if (renderingEngineRef.current) {
-        renderingEngineRef.current.disableElement(viewportId);
-        renderingEngineRef.current.destroy();
-      }
-
-      renderingEngineRef.current = null;
-      stackViewportRef.current = null;
-      toolGroupRef.current = null;
-      initialParallelScaleRef.current = null;
     };
-  }, [applyToolSelection, imageIds, renderingEngineId, toolGroupId, viewportId]);
+  }, [applyToolSelection, applyWindowLevelPreset, imageIds, isInitializingCornerstone, selectedPresetId]);
 
   // Update active tool bindings
   useEffect(() => {
