@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Layers, Image } from 'lucide-react';
 import type { Series } from '@/types/radiology';
 import { cn } from '@/lib/utils';
@@ -9,12 +10,14 @@ interface SeriesListProps {
 }
 
 export function SeriesList({ series, selectedSeriesId, onSelectSeries }: SeriesListProps) {
+  const { t } = useTranslation('viewer');
+
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
       <div className="px-4 py-3 border-b border-sidebar-border">
         <div className="flex items-center gap-2 text-sm font-medium text-sidebar-foreground">
           <Layers className="h-4 w-4" />
-          <span>Serien ({series.length})</span>
+          <span>{t('series.title')} ({series.length})</span>
         </div>
       </div>
 
@@ -43,10 +46,10 @@ export function SeriesList({ series, selectedSeriesId, onSelectSeries }: SeriesL
                   {s.seriesDescription}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Serie {s.seriesNumber} • {s.modality}
+                  {t('series.seriesNumber', { number: s.seriesNumber })} • {s.modality}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {s.frameCount} Bilder
+                  {t('series.images', { count: s.frameCount })}
                 </p>
               </div>
             </div>
