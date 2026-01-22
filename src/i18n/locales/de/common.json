@@ -110,5 +110,45 @@
     "title": "404",
     "message": "Seite nicht gefunden",
     "backHome": "Zurück zur Startseite"
+  },
+  "shortcuts": {
+    "title": "Tastenkürzel",
+    "description": "Schneller arbeiten mit Keyboard Shortcuts",
+    "helpHint": "Drücke ? um diese Hilfe zu öffnen",
+    "groups": {
+      "general": "Allgemein",
+      "dictation": "Diktat (ASR)",
+      "viewer": "DICOM Viewer",
+      "navigation": "Frame-Navigation"
+    },
+    "actions": {
+      "saveReport": "Befund speichern",
+      "approveReport": "Report freigeben",
+      "toggleMic": "Mikrofon ein/aus",
+      "zoomMode": "Zoom-Modus",
+      "panMode": "Pan-Modus",
+      "measure": "Messen",
+      "resetView": "Ansicht zurücksetzen",
+      "prevFrame": "Vorheriger Frame",
+      "nextFrame": "Nächster Frame",
+      "scrollFrames": "Frames durchblättern"
+    }
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "description": "Aktuelle Benachrichtigungen und System-Meldungen",
+    "markAllRead": "Alle als gelesen markieren",
+    "clearAll": "Alle löschen",
+    "loading": "Benachrichtigungen werden geladen...",
+    "pleaseWait": "Bitte warten...",
+    "empty": "Keine Benachrichtigungen",
+    "upToDate": "Sie sind auf dem neuesten Stand"
+  },
+  "qa": {
+    "pending": "Ausstehend",
+    "checking": "Prüfung...",
+    "passed": "Bestanden",
+    "warnings": "Warnungen",
+    "failed": "Fehler"
   }
 }

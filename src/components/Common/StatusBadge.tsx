@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { CheckCircle, AlertTriangle, XCircle, Loader2, Clock } from 'lucide-react';
 import type { QAStatus } from '@/types/radiology';
 import { Badge } from '@/components/ui/badge';
@@ -11,37 +12,38 @@ interface StatusBadgeProps {
 
 const statusConfig: Record<QAStatus, {
   icon: typeof CheckCircle;
-  label: string;
+  labelKey: string;
   className: string;
 }> = {
   pending: {
     icon: Clock,
-    label: 'Ausstehend',
+    labelKey: 'qa.pending',
     className: 'status-pending',
   },
   checking: {
     icon: Loader2,
-    label: 'Prüfung...',
+    labelKey: 'qa.checking',
     className: 'bg-info/20 text-info border-info/30',
   },
   pass: {
     icon: CheckCircle,
-    label: 'Bestanden',
+    labelKey: 'qa.passed',
     className: 'status-pass',
   },
   warn: {
     icon: AlertTriangle,
-    label: 'Warnungen',
+    labelKey: 'qa.warnings',
     className: 'status-warn',
   },
   fail: {
     icon: XCircle,
-    label: 'Fehler',
+    labelKey: 'qa.failed',
     className: 'status-fail',
   },
 };
 
 export function StatusBadge({ status, size = 'md', showLabel = true }: StatusBadgeProps) {
+  const { t } = useTranslation('common');
   const config = statusConfig[status];
   const Icon = config.icon;
 
@@ -58,7 +60,7 @@ export function StatusBadge({ status, size = 'md', showLabel = true }: StatusBad
         size === 'sm' ? 'h-3 w-3' : 'h-4 w-4',
         status === 'checking' && 'animate-spin'
       )} />
-      {showLabel && config.label}
+      {showLabel && t(config.labelKey)}
     </Badge>
   );
 }

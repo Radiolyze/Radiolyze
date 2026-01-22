@@ -110,5 +110,45 @@
     "title": "404",
     "message": "Page not found",
     "backHome": "Back to Home"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "description": "Work faster with keyboard shortcuts",
+    "helpHint": "Press ? to open this help",
+    "groups": {
+      "general": "General",
+      "dictation": "Dictation (ASR)",
+      "viewer": "DICOM Viewer",
+      "navigation": "Frame Navigation"
+    },
+    "actions": {
+      "saveReport": "Save report",
+      "approveReport": "Approve report",
+      "toggleMic": "Toggle microphone",
+      "zoomMode": "Zoom mode",
+      "panMode": "Pan mode",
+      "measure": "Measure",
+      "resetView": "Reset view",
+      "prevFrame": "Previous frame",
+      "nextFrame": "Next frame",
+      "scrollFrames": "Scroll through frames"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Current notifications and system messages",
+    "markAllRead": "Mark all as read",
+    "clearAll": "Clear all",
+    "loading": "Loading notifications...",
+    "pleaseWait": "Please wait...",
+    "empty": "No notifications",
+    "upToDate": "You are up to date"
+  },
+  "qa": {
+    "pending": "Pending",
+    "checking": "Checking...",
+    "passed": "Passed",
+    "warnings": "Warnings",
+    "failed": "Failed"
   }
 }

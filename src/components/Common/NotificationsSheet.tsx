@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Sheet,
   SheetContent,
@@ -45,6 +46,8 @@ export function NotificationsSheet({
   onMarkAllAsRead,
   onClearAll,
 }: NotificationsSheetProps) {
+  const { t } = useTranslation('common');
+
   useEffect(() => {
     if (open) {
       onRefresh?.();
@@ -57,7 +60,7 @@ export function NotificationsSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            Benachrichtigungen
+            {t('notifications.title')}
             {unreadCount > 0 && (
               <Badge variant="destructive" className="text-[10px] px-1.5">
                 {unreadCount}
@@ -65,7 +68,7 @@ export function NotificationsSheet({
             )}
           </SheetTitle>
           <SheetDescription>
-            Aktuelle Benachrichtigungen und System-Meldungen
+            {t('notifications.description')}
           </SheetDescription>
         </SheetHeader>
 
@@ -79,7 +82,7 @@ export function NotificationsSheet({
                 disabled={unreadCount === 0}
                 className="text-xs"
               >
-                Alle als gelesen markieren
+                {t('notifications.markAllRead')}
               </Button>
               <Button
                 variant="ghost"
@@ -88,7 +91,7 @@ export function NotificationsSheet({
                 className="text-xs text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="h-3 w-3 mr-1" />
-                Alle löschen
+                {t('notifications.clearAll')}
               </Button>
             </div>
 
@@ -97,7 +100,7 @@ export function NotificationsSheet({
                 {isLoading && (
                   <div className="py-6 text-center text-sm text-muted-foreground">
                     <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
-                    Benachrichtigungen werden geladen...
+                    {t('notifications.loading')}
                   </div>
                 )}
                 {errorMessage && !isLoading && (
@@ -151,8 +154,8 @@ export function NotificationsSheet({
         ) : isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
             <RefreshCw className="h-10 w-10 text-muted-foreground/50 mb-4 animate-spin" />
-            <p className="text-sm text-muted-foreground">Benachrichtigungen werden geladen</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">Bitte warten...</p>
+            <p className="text-sm text-muted-foreground">{t('notifications.loading')}</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">{t('notifications.pleaseWait')}</p>
           </div>
         ) : errorMessage ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12 text-destructive">
@@ -163,10 +166,10 @@ export function NotificationsSheet({
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
             <Bell className="h-12 w-12 text-muted-foreground/30 mb-4" />
             <p className="text-sm text-muted-foreground">
-              Keine Benachrichtigungen
+              {t('notifications.empty')}
             </p>
             <p className="text-xs text-muted-foreground/70 mt-1">
-              Sie sind auf dem neuesten Stand
+              {t('notifications.upToDate')}
             </p>
           </div>
         )}
