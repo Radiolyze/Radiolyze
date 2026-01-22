@@ -127,7 +127,7 @@ export default function Batch() {
   };
 
   const studyIds = useMemo(
-    () => Array.from(new Set(reportPayloads.map((report) => report.study_id).filter(Boolean))),
+    () => Array.from(new Set((Array.isArray(reportPayloads) ? reportPayloads : []).map((report) => report.study_id).filter(Boolean))),
     [reportPayloads]
   );
   const { studyMap, error: studyLookupError } = useStudyLookup(studyIds);
