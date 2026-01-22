@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { AIStatus, QACheck, QAStatus, Report } from '@/types/radiology';
+import type { AIStatus, ImageRef, QACheck, QAStatus, Report } from '@/types/radiology';
 import { mockAIImpressions, mockQAChecks } from '@/data/mockData';
 import { impressionClient } from '@/services/impressionClient';
 import { inferenceClient } from '@/services/inferenceClient';
@@ -71,10 +71,31 @@ interface GenerateImpressionOptions {
   studyId?: string;
   requestedBy?: string;
   modelVersion?: string;
+  imageRefs?: ImageRef[];
   onStatus?: (status: AIStatus) => void;
 }
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const maxInferenceFrames = (() => {
+  const parsed = Number(import.meta.env.VITE_INFERENCE_MAX_FRAMES ?? '16');
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 16;
+  }
+  return Math.floor(parsed);
+})();
+
+const selectInferenceImageRefs = (refs: ImageRef[] | undefined) => {
+  if (!refs || refs.length === 0) return [];
+  if (refs.length <= maxInferenceFrames) return refs;
+  const step = refs.length / maxInferenceFrames;
+  const selected: ImageRef[] = [];
+  for (let index = 0; index < maxInferenceFrames; index += 1) {
+    const refIndex = Math.min(refs.length - 1, Math.floor(index * step));
+    selected.push(refs[refIndex]);
+  }
+  return selected;
+};
 
 const extractInferenceSummary = (result?: Record<string, unknown> | null) => {
   if (!result) return '';
@@ -101,6 +122,44 @@ const extractInferenceCompletedAt = (result?: Record<string, unknown> | null) =>
   if (typeof result.completed_at === 'string') return result.completed_at;
   if (typeof result.completedAt === 'string') return result.completedAt;
   return undefined;
+};
+
+const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null => {
+  const studyId = typeof value.study_id === 'string' ? value.study_id : value.studyId;
+  const seriesId = typeof value.series_id === 'string' ? value.series_id : value.seriesId;
+  const instanceId = typeof value.instance_id === 'string' ? value.instance_id : value.instanceId;
+  const frameIndex = typeof value.frame_index === 'number' ? value.frame_index : value.frameIndex;
+  const stackIndex = typeof value.stack_index === 'number' ? value.stack_index : value.stackIndex;
+  const wadoUrl = typeof value.wado_url === 'string' ? value.wado_url : value.wadoUrl;
+  if (
+    typeof studyId !== 'string' ||
+    typeof seriesId !== 'string' ||
+    typeof instanceId !== 'string' ||
+    typeof frameIndex !== 'number' ||
+    typeof stackIndex !== 'number' ||
+    typeof wadoUrl !== 'string'
+  ) {
+    return null;
+  }
+  const imageId = typeof value.image_id === 'string' ? value.image_id : value.imageId;
+  return {
+    studyId,
+    seriesId,
+    instanceId,
+    frameIndex,
+    stackIndex,
+    wadoUrl,
+    imageId: typeof imageId === 'string' ? imageId : undefined,
+  };
+};
+
+const extractInferenceImageRefs = (result?: Record<string, unknown> | null): ImageRef[] | undefined => {
+  if (!result) return undefined;
+  const raw = (result.image_refs ?? result.imageRefs) as unknown;
+  if (!Array.isArray(raw)) return undefined;
+  return raw
+    .map((entry) => (entry && typeof entry === 'object' ? mapInferenceImageRef(entry as Record<string, unknown>) : null))
+    .filter((entry): entry is ImageRef => Boolean(entry));
 };
 
 const mapJobStatusToAiStatus = (status?: string): AIStatus | null => {
@@ -216,6 +275,8 @@ export function useReport(initialReport?: Report): UseReportReturn {
     const onStatus = options?.onStatus;
     const requestedBy = options?.requestedBy;
     const modelVersion = options?.modelVersion;
+    const selectedImageRefs = selectInferenceImageRefs(options?.imageRefs);
+    const imageUrls = selectedImageRefs.map((ref) => ref.wadoUrl);
     let succeeded = false;
 
     try {
@@ -224,6 +285,8 @@ export function useReport(initialReport?: Report): UseReportReturn {
         reportId,
         studyId,
         findingsText: findings,
+        imageUrls,
+        imageRefs: selectedImageRefs,
         requestedBy,
         modelVersion,
       });
@@ -238,6 +301,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         inferenceJobId: jobId,
         inferenceStatus: queueResponse.status ?? 'queued',
         inferenceModelVersion: queueResponse.model_version ?? queueResponse.modelVersion ?? modelVersion,
+        inferenceImageRefs: selectedImageRefs,
       } : null);
 
       const result = await pollInferenceResult(jobId, onStatus);
@@ -249,6 +313,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
       const confidence = extractInferenceConfidence(result);
       const inferredModel = extractInferenceModel(result);
       const completedAt = extractInferenceCompletedAt(result);
+      const inferredImageRefs = extractInferenceImageRefs(result);
 
       setReport(prev => prev ? {
         ...prev,
@@ -260,6 +325,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         inferenceConfidence: confidence,
         inferenceModelVersion: inferredModel ?? prev.inferenceModelVersion ?? modelVersion,
         inferenceCompletedAt: completedAt,
+        inferenceImageRefs: inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
       } : null);
 
       succeeded = true;

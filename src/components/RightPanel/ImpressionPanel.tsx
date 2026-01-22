@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { StatusBadge } from '@/components/Common/StatusBadge';
-import type { QAStatus } from '@/types/radiology';
+import type { ImageRef, QAStatus } from '@/types/radiology';
 import { ReportEditor } from '@/components/Forms/ReportEditor';
 import { ApprovalDialog } from '@/components/Forms/ApprovalDialog';
 import { formatDate, formatTime } from '@/data/mockData';
@@ -27,6 +27,8 @@ interface ImpressionPanelProps {
   inferenceModelVersion?: string;
   inferenceJobId?: string;
   inferenceCompletedAt?: string;
+  inferenceImageRefs?: ImageRef[];
+  onEvidenceSelect?: (ref: ImageRef) => void;
   onImpressionChange: (text: string) => void;
   onGenerateImpression: () => Promise<void>;
   onApprove: (signature?: string) => void;
@@ -45,6 +47,8 @@ export function ImpressionPanel({
   inferenceModelVersion,
   inferenceJobId,
   inferenceCompletedAt,
+  inferenceImageRefs,
+  onEvidenceSelect,
   onImpressionChange,
   onGenerateImpression,
   onApprove,
@@ -180,6 +184,29 @@ export function ImpressionPanel({
             <p className="text-sm text-foreground whitespace-pre-wrap">{inferenceSummary}</p>
           ) : (
             <p className="text-xs text-muted-foreground">{t('inference.summary')}: -</p>
+          )}
+          {inferenceImageRefs && inferenceImageRefs.length > 0 && (
+            <div className="border-t border-border pt-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                {t('inference.evidence', { count: inferenceImageRefs.length })}
+              </div>
+              <div className="space-y-1">
+                {inferenceImageRefs.map((ref) => (
+                  <Button
+                    key={`${ref.instanceId}-${ref.frameIndex}-${ref.stackIndex}`}
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto w-full justify-start px-2 py-1 text-xs"
+                    onClick={() => onEvidenceSelect?.(ref)}
+                    disabled={!onEvidenceSelect}
+                  >
+                    <span className="truncate">
+                      {ref.instanceId.slice(0, 8)}… · {t('inference.frame', { frame: ref.frameIndex })}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}

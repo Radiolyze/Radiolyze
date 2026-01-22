@@ -92,12 +92,23 @@ class QAResponse(ApiBaseModel):
     checks: list[QACheck]
 
 
+class ImageRef(ApiBaseModel):
+    study_id: str
+    series_id: str
+    instance_id: str
+    frame_index: int
+    stack_index: int
+    wado_url: str
+    image_id: str | None = None
+
+
 class InferenceQueueRequest(ApiBaseModel):
     report_id: str | None = None
     study_id: str | None = None
     findings_text: str | None = None
     image_urls: list[str] | None = None
     image_paths: list[str] | None = None
+    image_refs: list[ImageRef] | None = None
     requested_by: str | None = None
     model_version: str | None = None
 

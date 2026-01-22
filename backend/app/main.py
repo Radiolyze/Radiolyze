@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import json
 import os
 import uuid
 from datetime import datetime, timezone
@@ -76,15 +77,18 @@ def compute_input_hash(
     findings_text: str | None,
     image_urls: list[str] | None = None,
     image_paths: list[str] | None = None,
+    image_refs: list[dict[str, Any]] | None = None,
 ) -> str:
     normalized_urls = [url.strip() for url in (image_urls or []) if url and url.strip()]
     normalized_paths = [path.strip() for path in (image_paths or []) if path and path.strip()]
+    normalized_refs = json.dumps(image_refs or [], sort_keys=True)
     raw = "|".join(
         [
             study_id or "",
             (findings_text or "").strip(),
             ",".join(normalized_urls),
             ",".join(normalized_paths),
+            normalized_refs,
         ]
     )
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -102,18 +106,26 @@ def get_model_version() -> str:
     return os.getenv("INFERENCE_MODEL_VERSION") or os.getenv("VLLM_MODEL_NAME", "mock-medgemma-0.1")
 
 
-def build_image_metadata(image_urls: list[str] | None, image_paths: list[str] | None) -> dict[str, Any]:
+def build_image_metadata(
+    image_urls: list[str] | None,
+    image_paths: list[str] | None,
+    image_refs: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     normalized_urls = [url.strip() for url in (image_urls or []) if url and url.strip()]
     normalized_paths = [path.strip() for path in (image_paths or []) if path and path.strip()]
     count = len(normalized_urls) + len(normalized_paths)
+    refs_count = len(image_refs or [])
     if count == 0:
-        return {}
+        return {"image_refs_count": refs_count} if refs_count else {}
     sources = []
     if normalized_urls:
         sources.append("url")
     if normalized_paths:
         sources.append("path")
-    return {"image_count": count, "image_sources": sources}
+    metadata: dict[str, Any] = {"image_count": count, "image_sources": sources}
+    if refs_count:
+        metadata["image_refs_count"] = refs_count
+    return metadata
 
 
 def format_datetime(value: datetime | str | None) -> str | None:
@@ -556,10 +568,11 @@ async def queue_inference(
     findings_text = payload.findings_text or (report.findings_text if report else None)
     image_urls = payload.image_urls or []
     image_paths = payload.image_paths or []
+    image_refs = [ref.model_dump() for ref in (payload.image_refs or [])]
     model_version = payload.model_version or get_model_version()
-    input_hash = compute_input_hash(study_id, findings_text, image_urls, image_paths)
+    input_hash = compute_input_hash(study_id, findings_text, image_urls, image_paths, image_refs)
     queued_at = utc_now()
-    image_metadata = build_image_metadata(image_urls, image_paths)
+    image_metadata = build_image_metadata(image_urls, image_paths, image_refs)
 
     job_id = str(uuid.uuid4())
     job_payload = {
@@ -569,6 +582,7 @@ async def queue_inference(
         "findings_text": findings_text,
         "image_urls": image_urls,
         "image_paths": image_paths,
+        "image_refs": image_refs,
         "requested_by": requested_by,
         "model_version": model_version,
         "input_hash": input_hash,
@@ -593,7 +607,7 @@ async def queue_inference(
             model_version=model_version,
             input_hash=input_hash,
             queued_at=queued_at,
-            metadata_json={"requested_by": requested_by, **image_metadata},
+            metadata_json={"requested_by": requested_by, "image_refs": image_refs, **image_metadata},
         )
     )
 
@@ -607,6 +621,7 @@ async def queue_inference(
             "job_id": job_id,
             "model_version": model_version,
             "input_hash": input_hash,
+            "image_refs": image_refs,
             **image_metadata,
         },
         timestamp=queued_at,
@@ -642,11 +657,15 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
     if job_record:
         result = None
         if job_record.status == "finished":
+            image_refs = None
+            if isinstance(job_record.metadata_json, dict):
+                image_refs = job_record.metadata_json.get("image_refs")
             result = {
                 "summary": job_record.summary_text,
                 "confidence": job_record.confidence,
                 "model_version": job_record.model_version,
                 "completed_at": job_record.completed_at,
+                "image_refs": image_refs,
             }
         return InferenceStatusResponse(
             job_id=job_record.id,

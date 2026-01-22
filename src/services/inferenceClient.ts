@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import type { ImageRef } from '@/types/radiology';
 
 const INFERENCE_QUEUE_ENDPOINT =
   import.meta.env.VITE_INFERENCE_QUEUE_URL ?? '/api/v1/inference/queue';
@@ -9,6 +10,8 @@ export interface InferenceQueuePayload {
   reportId?: string;
   studyId?: string;
   findingsText?: string;
+  imageUrls?: string[];
+  imageRefs?: ImageRef[];
   requestedBy?: string;
   modelVersion?: string;
 }
@@ -26,6 +29,21 @@ export interface InferenceQueueResponse {
   model_version?: string;
   modelVersion?: string;
 }
+
+const mapImageRefsToPayload = (refs: ImageRef[] | undefined) => {
+  if (!refs || refs.length === 0) {
+    return undefined;
+  }
+  return refs.map((ref) => ({
+    study_id: ref.studyId,
+    series_id: ref.seriesId,
+    instance_id: ref.instanceId,
+    frame_index: ref.frameIndex,
+    stack_index: ref.stackIndex,
+    wado_url: ref.wadoUrl,
+    image_id: ref.imageId,
+  }));
+};
 
 export interface InferenceStatusResponse {
   job_id?: string;
@@ -47,6 +65,8 @@ export const inferenceClient = {
       report_id: payload.reportId,
       study_id: payload.studyId,
       findings_text: payload.findingsText,
+      image_urls: payload.imageUrls,
+      image_refs: mapImageRefsToPayload(payload.imageRefs),
       requested_by: payload.requestedBy,
       model_version: payload.modelVersion,
     });

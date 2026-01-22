@@ -11,18 +11,26 @@ from .models import InferenceJob, Report
 from .ws_events import publish_report_status
 
 
-def _build_image_metadata(image_urls: list[str] | None, image_paths: list[str] | None) -> dict[str, Any]:
+def _build_image_metadata(
+    image_urls: list[str] | None,
+    image_paths: list[str] | None,
+    image_refs: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
     normalized_urls = [url.strip() for url in (image_urls or []) if url and url.strip()]
     normalized_paths = [path.strip() for path in (image_paths or []) if path and path.strip()]
     count = len(normalized_urls) + len(normalized_paths)
+    refs_count = len(image_refs or [])
     if count == 0:
-        return {}
+        return {"image_refs_count": refs_count} if refs_count else {}
     sources = []
     if normalized_urls:
         sources.append("url")
     if normalized_paths:
         sources.append("path")
-    return {"image_count": count, "image_sources": sources}
+    metadata: dict[str, Any] = {"image_count": count, "image_sources": sources}
+    if refs_count:
+        metadata["image_refs_count"] = refs_count
+    return metadata
 
 
 def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
@@ -31,11 +39,12 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     findings_text = payload.get("findings_text")
     image_urls = payload.get("image_urls") or []
     image_paths = payload.get("image_paths") or []
+    image_refs = payload.get("image_refs") or []
     requested_by = payload.get("requested_by") or "system"
     requested_model_version = payload.get("model_version") or "mock-medgemma-0.1"
     input_hash = payload.get("input_hash")
     job_id = payload.get("job_id")
-    image_metadata = _build_image_metadata(image_urls, image_paths)
+    image_metadata = _build_image_metadata(image_urls, image_paths, image_refs)
 
     db = SessionLocal()
     try:
@@ -51,6 +60,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 model_version=requested_model_version,
                 input_hash=input_hash,
                 queued_at=utc_now(),
+                metadata_json={"image_refs": image_refs},
             )
             db.add(job)
             db.commit()
@@ -74,6 +84,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "model_version": requested_model_version,
                 "requested_model": requested_model_version,
                 "input_hash": input_hash,
+                "image_refs": image_refs,
                 **image_metadata,
             },
             source="worker",
@@ -99,6 +110,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             **(metadata or {}),
             "requested_model": requested_model_version,
             "resolved_model": resolved_model,
+            "image_refs": image_refs,
         }
         db.commit()
 
@@ -116,6 +128,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "input_hash": input_hash,
                 "output_summary": output_summary,
                 "confidence": confidence,
+                "image_refs": image_refs,
                 **(metadata or {}),
                 **image_metadata,
             },
@@ -163,6 +176,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "requested_model": requested_model_version,
                 "input_hash": input_hash,
                 "error": str(exc),
+                "image_refs": image_refs,
                 **image_metadata,
             },
             source="worker",

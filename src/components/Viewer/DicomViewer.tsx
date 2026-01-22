@@ -9,7 +9,7 @@ import {
   Download,
   Maximize2,
 } from 'lucide-react';
-import type { AIStatus, QAStatus, Series } from '@/types/radiology';
+import type { AIStatus, ImageRef, QAStatus, Series } from '@/types/radiology';
 import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
-import { buildWadorsImageId, orthancClient } from '@/services/orthancClient';
+import { buildWadorsFrameUrl, buildWadorsImageId, orthancClient } from '@/services/orthancClient';
 import { Enums, RenderingEngine, imageLoader, type StackViewport } from '@cornerstonejs/core';
 import { ToolGroupManager, Enums as ToolEnums, annotation } from '@cornerstonejs/tools';
 
@@ -42,6 +42,8 @@ interface DicomViewerProps {
   onViewportChange?: (state: Partial<ViewportState>) => void;
   /** External viewport state to sync from another viewer */
   syncState?: Partial<ViewportState>;
+  onImageRefsChange?: (refs: ImageRef[]) => void;
+  requestedFrameIndex?: number | null;
 }
 
 type Tool = 'zoom' | 'pan' | 'measure' | 'windowLevel';
@@ -371,20 +373,38 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
           return a.instanceNumber - b.instanceNumber;
         });
 
-        const ids = parsed.flatMap((instance) =>
-          Array.from({ length: instance.frames }, (_, index) =>
-            buildWadorsImageId(series.studyId, series.id, instance.instanceId, index + 1)
-          )
-        );
+        const ids: string[] = [];
+        const refs: ImageRef[] = [];
+        let stackIndex = 0;
+
+        parsed.forEach((instance) => {
+          for (let index = 0; index < instance.frames; index += 1) {
+            const frameIndex = index + 1;
+            const imageId = buildWadorsImageId(series.studyId, series.id, instance.instanceId, frameIndex);
+            ids.push(imageId);
+            refs.push({
+              studyId: series.studyId,
+              seriesId: series.id,
+              instanceId: instance.instanceId,
+              frameIndex,
+              stackIndex,
+              wadoUrl: buildWadorsFrameUrl(series.studyId, series.id, instance.instanceId, frameIndex),
+              imageId,
+            });
+            stackIndex += 1;
+          }
+        });
 
         if (isActive) {
           setImageIds(ids);
+          onImageRefsChange?.(refs);
         }
       } catch (error) {
         console.warn('Failed to load DICOM instances', error);
         if (isActive) {
           setLoadError('DICOM-Daten konnten nicht geladen werden.');
           setImageIds([]);
+          onImageRefsChange?.([]);
         }
       } finally {
         if (isActive) {
@@ -398,7 +418,17 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     return () => {
       isActive = false;
     };
-  }, [series]);
+  }, [series, onImageRefsChange]);
+
+  useEffect(() => {
+    if (typeof requestedFrameIndex !== 'number') {
+      return;
+    }
+    if (requestedFrameIndex === currentFrame) {
+      return;
+    }
+    setFrameIndex(requestedFrameIndex);
+  }, [currentFrame, requestedFrameIndex, setFrameIndex]);
 
   // Initialize Cornerstone viewer when image IDs are available
   useEffect(() => {

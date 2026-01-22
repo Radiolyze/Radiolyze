@@ -29,5 +29,6 @@ export const mapReportResponse = (payload: ReportResponsePayload, existing?: Rep
   inferenceModelVersion: payload.inference_model_version ?? existing?.inferenceModelVersion,
   inferenceJobId: payload.inference_job_id ?? existing?.inferenceJobId,
   inferenceCompletedAt: payload.inference_completed_at ?? existing?.inferenceCompletedAt,
+  inferenceImageRefs: existing?.inferenceImageRefs,
   aiStatus: existing?.aiStatus,
 });

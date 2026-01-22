@@ -29,6 +29,16 @@ export interface Series {
   thumbnailUrl?: string;
 }
 
+export interface ImageRef {
+  studyId: string;
+  seriesId: string;
+  instanceId: string;
+  frameIndex: number;
+  stackIndex: number;
+  wadoUrl: string;
+  imageId?: string;
+}
+
 export interface Report {
   id: string;
   studyId: string;
@@ -49,6 +59,7 @@ export interface Report {
   inferenceModelVersion?: string;
   inferenceJobId?: string;
   inferenceCompletedAt?: string;
+  inferenceImageRefs?: ImageRef[];
 }
 
 export type ReportStatus = 'pending' | 'in_progress' | 'draft' | 'approved' | 'finalized';

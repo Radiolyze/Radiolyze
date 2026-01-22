@@ -1,4 +1,5 @@
 export const DICOM_WEB_URL = import.meta.env.VITE_DICOM_WEB_URL ?? 'http://localhost:8042/dicom-web';
+const DICOM_WEB_INFERENCE_URL = import.meta.env.VITE_DICOM_WEB_INFERENCE_URL ?? DICOM_WEB_URL;
 const DICOM_WEB_USERNAME = import.meta.env.VITE_DICOM_WEB_USERNAME;
 const DICOM_WEB_PASSWORD = import.meta.env.VITE_DICOM_WEB_PASSWORD;
 
@@ -10,8 +11,13 @@ const buildAuthHeaders = () => {
   return { Authorization: `Basic ${token}` };
 };
 
-const buildDicomWebUrl = (path: string, query?: Record<string, string | number | undefined>) => {
-  const base = DICOM_WEB_URL.endsWith('/') ? DICOM_WEB_URL : `${DICOM_WEB_URL}/`;
+const buildDicomWebUrl = (
+  path: string,
+  query?: Record<string, string | number | undefined>,
+  baseOverride?: string
+) => {
+  const baseUrl = baseOverride ?? DICOM_WEB_URL;
+  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   const sanitizedPath = path.replace(/^\//, '');
   const url = new URL(sanitizedPath, base);
 
@@ -51,6 +57,18 @@ export const buildWadorsImageId = (
   instanceId: string,
   frame = 1
 ) => `wadors:${buildDicomWebUrl(`studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/${frame}`)}`;
+
+export const buildWadorsFrameUrl = (
+  studyId: string,
+  seriesId: string,
+  instanceId: string,
+  frame = 1
+) =>
+  buildDicomWebUrl(
+    `studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/${frame}`,
+    undefined,
+    DICOM_WEB_INFERENCE_URL
+  );
 
 interface ListStudiesOptions {
   limit?: number;

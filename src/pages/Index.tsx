@@ -8,7 +8,7 @@ import { useDicomWebQueue } from '@/hooks/useDicomWebQueue';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useReportStatusSync } from '@/hooks/useReportStatusSync';
 import { usePriorStudies } from '@/hooks/usePriorStudies';
-import type { AIStatus, QueueItem, Series } from '@/types/radiology';
+import type { AIStatus, ImageRef, QueueItem, Series } from '@/types/radiology';
 import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
 import { reportClient } from '@/services/reportClient';
@@ -29,6 +29,8 @@ const Index = () => {
   // Current selection state
   const [selectedQueueItem, setSelectedQueueItem] = useState<QueueItem | null>(null);
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
+  const [imageRefs, setImageRefs] = useState<ImageRef[]>([]);
+  const [evidenceSelection, setEvidenceSelection] = useState<{ seriesId: string; stackIndex: number } | null>(null);
 
   // Report state
   const {
@@ -105,11 +107,22 @@ const Index = () => {
     setSelectedSeries(series);
   }, []);
 
+  const handleImageRefsChange = useCallback((refs: ImageRef[]) => {
+    setImageRefs(refs);
+  }, []);
+
+  const handleEvidenceSelect = useCallback((ref: ImageRef) => {
+    setEvidenceSelection({ seriesId: ref.seriesId, stackIndex: ref.stackIndex });
+  }, []);
+
   const handleGenerateImpression = useCallback(async () => {
     if (!findings || isGenerating) return;
 
     try {
-      const result = await generateImpression(findings, { onStatus: setAiStatus });
+      const result = await generateImpression(findings, {
+        onStatus: setAiStatus,
+        imageRefs,
+      });
       setImpression(result);
       await runQAChecks({
         reportId: report?.id,
@@ -287,6 +300,8 @@ const Index = () => {
             aiStatus: effectiveAiStatus,
             qaStatus: liveStatus?.qaStatus || report.qaStatus,
           }}
+          onImageRefsChange={handleImageRefsChange}
+          evidenceSelection={evidenceSelection}
         />
       }
       rightPanel={
@@ -302,6 +317,7 @@ const Index = () => {
           onApprove={handleApprove}
           onSaveFindings={handleSaveFindings}
           onExportSr={handleExportSr}
+          onEvidenceSelect={handleEvidenceSelect}
           onAsrStatusChange={(status, confidence) => {
             setAsrStatus(status);
             setAsrConfidence(confidence);

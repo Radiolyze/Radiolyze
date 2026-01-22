@@ -4,7 +4,7 @@ import { ImpressionPanel } from './ImpressionPanel';
 import { QAChecklist } from './QAChecklist';
 import { TemplatesPanel } from './TemplatesPanel';
 import { GuidelinesPanel } from './GuidelinesPanel';
-import type { Report, QACheck, ReportTemplate } from '@/types/radiology';
+import type { ImageRef, Report, QACheck, ReportTemplate } from '@/types/radiology';
 
 interface RightPanelProps {
   report: Report;
@@ -19,6 +19,7 @@ interface RightPanelProps {
   onSaveFindings?: () => void;
   onAsrStatusChange?: (status: 'idle' | 'listening' | 'processing', confidence: number) => void;
   onExportSr?: (format: 'json' | 'dicom') => void;
+  onEvidenceSelect?: (ref: ImageRef) => void;
 }
 
 export function RightPanel({
@@ -34,6 +35,7 @@ export function RightPanel({
   onSaveFindings,
   onAsrStatusChange,
   onExportSr,
+  onEvidenceSelect,
 }: RightPanelProps) {
   const handleApplyTemplate = useCallback(
     (template: ReportTemplate) => {
@@ -66,6 +68,8 @@ export function RightPanel({
           inferenceModelVersion={report.inferenceModelVersion}
           inferenceJobId={report.inferenceJobId}
           inferenceCompletedAt={report.inferenceCompletedAt}
+          inferenceImageRefs={report.inferenceImageRefs}
+          onEvidenceSelect={onEvidenceSelect}
           onImpressionChange={onImpressionChange}
           onGenerateImpression={onGenerateImpression}
           onApprove={onApprove}

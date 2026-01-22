@@ -87,6 +87,8 @@
     "summary": "Summary",
     "confidence": "Confidence: {{value}}%",
     "modelVersion": "Model: {{version}}",
-    "completedAt": "Completed: {{time}}"
+    "completedAt": "Completed: {{time}}",
+    "evidence": "Evidence ({{count}})",
+    "frame": "Frame {{frame}}"
   }
 }

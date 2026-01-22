@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DicomViewer, type ViewerProgress, type ViewportState } from './DicomViewer';
-import type { Series, Study } from '@/types/radiology';
+import type { ImageRef, Series, Study } from '@/types/radiology';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -42,6 +42,8 @@ interface ComparisonViewerProps {
   priorStudies?: PriorStudy[];
   progress?: ViewerProgress;
   onFrameChange?: (frame: number, total: number) => void;
+  onImageRefsChange?: (refs: ImageRef[]) => void;
+  evidenceSelection?: { seriesId: string; stackIndex: number } | null;
 }
 
 export function ComparisonViewer({
@@ -50,6 +52,8 @@ export function ComparisonViewer({
   priorStudies = [],
   progress,
   onFrameChange,
+  onImageRefsChange,
+  evidenceSelection,
 }: ComparisonViewerProps) {
   const { t } = useTranslation('viewer');
   const [isCompareMode, setIsCompareMode] = useState(false);
@@ -225,12 +229,32 @@ export function ComparisonViewer({
   const rightViewportHandler = isSwapped ? handleCurrentViewportChange : handlePriorViewportChange;
   const leftSyncState = isSwapped ? currentViewerSyncState : priorViewerSyncState;
   const rightSyncState = isSwapped ? priorViewerSyncState : currentViewerSyncState;
+  const leftEvidenceFrame =
+    evidenceSelection && leftSeries?.id === evidenceSelection.seriesId
+      ? evidenceSelection.stackIndex
+      : null;
+  const rightEvidenceFrame =
+    evidenceSelection && rightSeries?.id === evidenceSelection.seriesId
+      ? evidenceSelection.stackIndex
+      : null;
+  const leftImageRefsChange = !isSwapped ? onImageRefsChange : undefined;
+  const rightImageRefsChange = isSwapped ? onImageRefsChange : undefined;
 
   // Single viewer mode
   if (!isCompareMode) {
     return (
       <div className="h-full relative">
-        <DicomViewer series={currentSeries} progress={progress} onFrameChange={onFrameChange} />
+        <DicomViewer
+          series={currentSeries}
+          progress={progress}
+          onFrameChange={onFrameChange}
+          onImageRefsChange={onImageRefsChange}
+          requestedFrameIndex={
+            evidenceSelection && currentSeries?.id === evidenceSelection.seriesId
+              ? evidenceSelection.stackIndex
+              : null
+          }
+        />
 
         {/* Compare Mode Toggle */}
         {priorStudies.length > 0 && currentSeries && (
@@ -405,6 +429,8 @@ export function ComparisonViewer({
             onFrameChange={leftFrameHandler}
             onViewportChange={leftViewportHandler}
             syncState={leftSyncState}
+            onImageRefsChange={leftImageRefsChange}
+            requestedFrameIndex={leftEvidenceFrame}
           />
         </div>
 
@@ -430,6 +456,8 @@ export function ComparisonViewer({
               onFrameChange={rightFrameHandler}
               onViewportChange={rightViewportHandler}
               syncState={rightSyncState}
+              onImageRefsChange={rightImageRefsChange}
+              requestedFrameIndex={rightEvidenceFrame}
             />
           ) : (
             <div className="h-full flex items-center justify-center bg-viewer">
