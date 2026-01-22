@@ -6,6 +6,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
 import { useCornerstoneStackViewport } from '@/hooks/useCornerstoneStackViewport';
+import { useApplyViewportSyncState } from '@/hooks/useApplyViewportSyncState';
 import { useStackPrefetch } from '@/hooks/useStackPrefetch';
 import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
@@ -276,65 +277,12 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
     onFrameChange?.(currentFrame, totalFrames);
   }, [currentFrame, totalFrames, onFrameChange]);
 
-  // Apply external sync state
-  useEffect(() => {
-    const viewport = stackViewportRef.current;
-    if (!viewport || !syncState) return;
-
-    syncingRef.current = true;
-
-    try {
-      const camera = viewport.getCamera();
-      const initialScale = initialParallelScaleRef.current;
-      let needsRender = false;
-
-      // Apply zoom
-      if (syncState.zoom !== undefined && initialScale) {
-        const targetParallelScale = initialScale / syncState.zoom;
-        if (camera.parallelScale !== targetParallelScale) {
-          viewport.setCamera({ ...camera, parallelScale: targetParallelScale });
-          needsRender = true;
-        }
-      }
-
-      // Apply pan using panWorld method (Cornerstone3D approach)
-      if (syncState.pan !== undefined) {
-        // Pan is applied via camera focal point offset - we use viewport methods
-        // For stack viewports, pan is controlled via the camera's focalPoint
-        const worldDelta: [number, number, number] = [syncState.pan.x, syncState.pan.y, 0];
-        viewport.setCamera({ 
-          ...camera, 
-          focalPoint: [
-            (camera.focalPoint?.[0] ?? 0) + worldDelta[0],
-            (camera.focalPoint?.[1] ?? 0) + worldDelta[1],
-            camera.focalPoint?.[2] ?? 0
-          ] as [number, number, number]
-        });
-        needsRender = true;
-      }
-
-      // Apply window/level
-      if (syncState.windowLevel !== undefined) {
-        const halfWidth = syncState.windowLevel.width / 2;
-        viewport.setProperties({
-          voiRange: {
-            lower: syncState.windowLevel.center - halfWidth,
-            upper: syncState.windowLevel.center + halfWidth,
-          },
-        });
-        needsRender = true;
-      }
-
-      if (needsRender) {
-        viewport.render();
-      }
-    } finally {
-      // Reset flag after a small delay to allow events to settle
-      requestAnimationFrame(() => {
-        syncingRef.current = false;
-      });
-    }
-  }, [syncState]);
+  useApplyViewportSyncState({
+    syncState,
+    stackViewportRef,
+    initialParallelScaleRef,
+    syncingRef,
+  });
 
   const handlePrevFrame = useCallback(() => {
     setFrameIndex(currentFrame - 1);
