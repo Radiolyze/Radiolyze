@@ -147,7 +147,7 @@ export default function Batch() {
       try {
         const response = await reportClient.listReports({ limit: 200 });
         if (!isActive) return;
-        setReportPayloads(response);
+        setReportPayloads(Array.isArray(response) ? response : []);
       } catch (error) {
         console.warn('Failed to load reports', error);
         if (isActive) {
@@ -169,7 +169,8 @@ export default function Batch() {
   }, [t]);
 
   const mappedReports = useMemo(() => {
-    return reportPayloads.map((payload) => {
+    const safePayloads = Array.isArray(reportPayloads) ? reportPayloads : [];
+    return safePayloads.map((payload) => {
       const report = mapReportResponse(payload);
       const study = studyMap[report.studyId];
       const fallbackAccession = report.studyId ? report.studyId.slice(0, 8) : '—';
