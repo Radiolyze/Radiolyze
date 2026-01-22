@@ -17,6 +17,11 @@ export default defineConfig(({ mode }) => {
       hmr: {
         overlay: false,
       },
+      headers: {
+        // Allow web workers to load from same origin
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "credentialless",
+      },
       proxy: {
         "/dicom-web": {
           target: dicomWebProxyTarget,

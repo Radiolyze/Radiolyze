@@ -3,7 +3,7 @@ const DICOM_WEB_INFERENCE_URL = import.meta.env.VITE_DICOM_WEB_INFERENCE_URL ?? 
 const DICOM_WEB_USERNAME = import.meta.env.VITE_DICOM_WEB_USERNAME;
 const DICOM_WEB_PASSWORD = import.meta.env.VITE_DICOM_WEB_PASSWORD;
 
-const buildAuthHeaders = () => {
+export const buildAuthHeaders = () => {
   if (!DICOM_WEB_USERNAME || !DICOM_WEB_PASSWORD) {
     return {};
   }
@@ -11,7 +11,7 @@ const buildAuthHeaders = () => {
   return { Authorization: `Basic ${token}` };
 };
 
-const buildDicomWebUrl = (
+export const buildDicomWebUrl = (
   path: string,
   query?: Record<string, string | number | undefined>,
   baseOverride?: string
@@ -87,6 +87,10 @@ export const orthancClient = {
 
   async listInstances(studyId: string, seriesId: string) {
     return fetchDicomWebJson(`studies/${studyId}/series/${seriesId}/instances`, { includefield: 'all' });
+  },
+
+  async fetchInstanceMetadata(studyId: string, seriesId: string, instanceId: string) {
+    return fetchDicomWebJson(`studies/${studyId}/series/${seriesId}/instances/${instanceId}/metadata`);
   },
 
   async fetchInstanceFrame(studyId: string, seriesId: string, instanceId: string) {

@@ -20,6 +20,16 @@ export const cornerstoneToolNames = {
   stackScroll: StackScrollTool.toolName,
 };
 
+// Build auth headers for DICOMweb requests
+const getAuthHeaderValue = (): string | null => {
+  const username = import.meta.env.VITE_DICOM_WEB_USERNAME;
+  const password = import.meta.env.VITE_DICOM_WEB_PASSWORD;
+  if (!username || !password) {
+    return null;
+  }
+  return `Basic ${btoa(`${username}:${password}`)}`;
+};
+
 export const initCornerstone = async () => {
   if (initialized) {
     return;
@@ -29,25 +39,40 @@ export const initCornerstone = async () => {
     initCornerstoneCore();
   }
 
-  const maxWebWorkers =
-    typeof navigator !== 'undefined' && navigator.hardwareConcurrency
-      ? Math.max(1, Math.floor(navigator.hardwareConcurrency / 2))
-      : 1;
-
   try {
-    // Initialize the DICOM image loader (v4 API - no external dependencies needed)
-    cornerstoneDICOMImageLoader.init({
-      maxWebWorkers,
-    });
-
-    // Register the wadors image loader for DICOMweb
-    if (cornerstoneDICOMImageLoader.wadors?.loadImage) {
-      imageLoader.registerImageLoader('wadors', cornerstoneDICOMImageLoader.wadors.loadImage);
+    const authHeader = getAuthHeaderValue();
+    
+    // Log available methods on dicom-image-loader for debugging
+    console.log('[cornerstone] dicom-image-loader exports:', Object.keys(cornerstoneDICOMImageLoader));
+    if (cornerstoneDICOMImageLoader.wadors) {
+      console.log('[cornerstone] wadors methods:', Object.keys(cornerstoneDICOMImageLoader.wadors));
     }
     
-    // Also register wadouri loader for local files
+    // Initialize the DICOM image loader (v4 API)
+    // Disable web workers to avoid CSP issues in development
+    cornerstoneDICOMImageLoader.init({
+      maxWebWorkers: 0,
+    });
+
+    // Configure global XHR settings for authentication using the configure function if available
+    if (authHeader && typeof cornerstoneDICOMImageLoader.configure === 'function') {
+      cornerstoneDICOMImageLoader.configure({
+        beforeSend: (xhr: XMLHttpRequest) => {
+          xhr.setRequestHeader('Authorization', authHeader);
+        },
+      });
+      console.log('[cornerstone] Global auth headers configured');
+    }
+
+    // Register image loaders
+    if (cornerstoneDICOMImageLoader.wadors?.loadImage) {
+      imageLoader.registerImageLoader('wadors', cornerstoneDICOMImageLoader.wadors.loadImage);
+      console.log('[cornerstone] wadors loader registered');
+    }
+    
     if (cornerstoneDICOMImageLoader.wadouri?.loadImage) {
       imageLoader.registerImageLoader('wadouri', cornerstoneDICOMImageLoader.wadouri.loadImage);
+      console.log('[cornerstone] wadouri loader registered');
     }
     
     console.log('[cornerstone] DICOM image loader initialized successfully');
