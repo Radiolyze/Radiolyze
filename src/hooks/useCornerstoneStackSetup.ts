@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { MutableRefObject, RefObject } from 'react';
 import type { StackViewport } from '@cornerstonejs/core';
-import type { ViewerToolId } from '@/types/viewer';
+import type { AllToolId } from '@/types/viewer';
 
 interface UseCornerstoneStackSetupOptions {
   isReady: boolean;
   imageIds: string[];
   stackViewportRef: MutableRefObject<StackViewport | null>;
   initialParallelScaleRef: MutableRefObject<number | null>;
-  activeToolRef: RefObject<ViewerToolId>;
+  activeToolRef: RefObject<AllToolId>;
   selectedPresetId: string;
-  applyToolSelection: (tool: ViewerToolId) => void;
+  applyToolSelection: (tool: AllToolId) => void;
   applyWindowLevelPreset: (presetId: string) => void;
   onError?: (message: string | null) => void;
 }
