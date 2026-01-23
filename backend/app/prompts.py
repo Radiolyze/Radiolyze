@@ -305,5 +305,21 @@ def render_prompt_text(prompt_type: PromptType, variables: dict[str, Any] | None
     return render_prompt(template["template_text"], variables)
 
 
+def render_prompt_with_metadata(
+    prompt_type: PromptType,
+    variables: dict[str, Any] | None = None,
+) -> tuple[str, dict[str, Any]]:
+    template = get_prompt_template(prompt_type)
+    text = render_prompt(template["template_text"], variables)
+    metadata = {
+        "prompt_type": prompt_type,
+        "name": template["name"],
+        "version": template["version"],
+        "source": template["source"],
+        "fingerprint": template_fingerprint(template["template_text"]),
+    }
+    return text, metadata
+
+
 def template_fingerprint(template_text: str) -> str:
     return hashlib.sha256(template_text.encode("utf-8")).hexdigest()

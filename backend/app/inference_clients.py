@@ -10,9 +10,11 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from pydantic import ValidationError
 
+from .ai_schemas import ImpressionOutput, SummaryOutput
 from .mock_logic import generate_asr_transcript, generate_impression, generate_inference_summary
-from .prompts import render_prompt_text
+from .prompts import render_prompt_with_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -312,8 +314,11 @@ def _vllm_chat_completion(
     return content.strip()
 
 
-def _build_impression_prompt(findings_text: str | None, image_manifest: str | None) -> str:
-    return render_prompt_text(
+def _build_impression_prompt(
+    findings_text: str | None,
+    image_manifest: str | None,
+) -> tuple[str, dict[str, Any]]:
+    return render_prompt_with_metadata(
         "impression",
         {
             "findings_text": (findings_text or "").strip(),
@@ -322,14 +327,59 @@ def _build_impression_prompt(findings_text: str | None, image_manifest: str | No
     )
 
 
-def _build_summary_prompt(findings_text: str | None, image_manifest: str | None) -> str:
-    return render_prompt_text(
+def _build_summary_prompt(
+    findings_text: str | None,
+    image_manifest: str | None,
+) -> tuple[str, dict[str, Any]]:
+    return render_prompt_with_metadata(
         "summary",
         {
             "findings_text": (findings_text or "").strip(),
             "image_manifest": image_manifest or "",
         },
     )
+
+
+def _parse_structured_output(
+    raw_text: str,
+    *,
+    model_type: type[SummaryOutput] | type[ImpressionOutput],
+    text_key: str,
+) -> tuple[str, dict[str, Any], list[int] | None, str | None]:
+    parsed, parse_error = _parse_json_response(raw_text)
+    metadata: dict[str, Any] = {}
+    evidence_indices = None
+    confidence_label = None
+
+    if not parsed:
+        metadata["json_parsed"] = False
+        metadata["json_schema_valid"] = False
+        metadata["json_error"] = parse_error or "no_json_object"
+        return raw_text, metadata, None, None
+
+    try:
+        output = model_type.model_validate(parsed)
+    except ValidationError:
+        metadata["json_parsed"] = True
+        metadata["json_schema_valid"] = False
+        metadata["json_error"] = "schema_validation_failed"
+        evidence_indices = _extract_evidence_indices(parsed)
+        return raw_text, metadata, evidence_indices, None
+
+    text = getattr(output, text_key, None)
+    if not text:
+        metadata["json_parsed"] = True
+        metadata["json_schema_valid"] = False
+        metadata["json_error"] = f"missing_{text_key}"
+        evidence_indices = getattr(output, "evidence_indices", None)
+        confidence_label = getattr(output, "confidence", None)
+        return raw_text, metadata, evidence_indices, confidence_label
+
+    metadata["json_parsed"] = True
+    metadata["json_schema_valid"] = True
+    evidence_indices = getattr(output, "evidence_indices", None)
+    confidence_label = getattr(output, "confidence", None)
+    return text, metadata, evidence_indices, confidence_label
 
 
 def generate_impression_text(
@@ -349,30 +399,30 @@ def generate_impression_text(
     model_name = _vllm_model_name()
     try:
         start_time = time.monotonic()
+        system_prompt, system_meta = render_prompt_with_metadata("system")
+        prompt_text, prompt_meta = _build_impression_prompt(findings_text, image_manifest)
         raw_text = _vllm_chat_completion(
-            _build_impression_prompt(findings_text, image_manifest),
+            prompt_text,
             model_name=model_name,
-            system_prompt=render_prompt_text("system"),
+            system_prompt=system_prompt,
             image_urls=image_urls,
             image_paths=image_paths,
         )
-        parsed, parse_error = _parse_json_response(raw_text)
-        json_text = _extract_json_text(parsed, "impression")
-        evidence_indices = _extract_evidence_indices(parsed)
-        text = json_text or raw_text
+        text, parse_metadata, evidence_indices, confidence_label = _parse_structured_output(
+            raw_text,
+            model_type=ImpressionOutput,
+            text_key="impression",
+        )
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
-        json_metadata = {}
-        if json_text:
-            json_metadata["json_parsed"] = True
-        elif parse_error:
-            json_metadata["json_parsed"] = False
-            json_metadata["json_error"] = parse_error
-        else:
-            json_metadata["json_parsed"] = False
-            json_metadata["json_error"] = "missing_impression"
+        json_metadata = {
+            **parse_metadata,
+            "prompt": {"system": system_meta, "task": prompt_meta},
+        }
         if evidence_indices:
             json_metadata["evidence_indices"] = evidence_indices
+        if confidence_label:
+            json_metadata["confidence_label"] = confidence_label
         return text, confidence, model_name, _compact_metadata(
             {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
         )
@@ -402,30 +452,30 @@ def generate_inference_summary_text(
     resolved_model = _vllm_model_name(model_name)
     try:
         start_time = time.monotonic()
+        system_prompt, system_meta = render_prompt_with_metadata("system")
+        prompt_text, prompt_meta = _build_summary_prompt(findings_text, image_manifest)
         raw_text = _vllm_chat_completion(
-            _build_summary_prompt(findings_text, image_manifest),
+            prompt_text,
             model_name=resolved_model,
-            system_prompt=render_prompt_text("system"),
+            system_prompt=system_prompt,
             image_urls=image_urls,
             image_paths=image_paths,
         )
-        parsed, parse_error = _parse_json_response(raw_text)
-        json_text = _extract_json_text(parsed, "summary")
-        evidence_indices = _extract_evidence_indices(parsed)
-        text = json_text or raw_text
+        text, parse_metadata, evidence_indices, confidence_label = _parse_structured_output(
+            raw_text,
+            model_type=SummaryOutput,
+            text_key="summary",
+        )
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
-        json_metadata = {}
-        if json_text:
-            json_metadata["json_parsed"] = True
-        elif parse_error:
-            json_metadata["json_parsed"] = False
-            json_metadata["json_error"] = parse_error
-        else:
-            json_metadata["json_parsed"] = False
-            json_metadata["json_error"] = "missing_summary"
+        json_metadata = {
+            **parse_metadata,
+            "prompt": {"system": system_meta, "task": prompt_meta},
+        }
         if evidence_indices:
             json_metadata["evidence_indices"] = evidence_indices
+        if confidence_label:
+            json_metadata["confidence_label"] = confidence_label
         return text, confidence, resolved_model, _compact_metadata(
             {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
         )
