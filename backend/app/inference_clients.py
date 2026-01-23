@@ -304,16 +304,29 @@ def _vllm_chat_completion(
         "temperature": _env_float("VLLM_TEMPERATURE", 0.1),
         "top_p": _env_float("VLLM_TOP_P", 0.9),
     }
+    logger.info("vLLM request to %s with model=%s, has_images=%s", url, model_name, has_images)
     with httpx.Client(timeout=_vllm_timeout()) as client:
         response = client.post(url, json=payload, headers=_vllm_headers())
         response.raise_for_status()
         data = response.json()
+    logger.info("vLLM response keys: %s", list(data.keys()))
+    # Check for error in response (vLLM may return 200 with error field)
+    if data.get("error"):
+        logger.error("vLLM returned error: %s", data.get("error"))
+        raise RuntimeError(f"vLLM error: {data.get('error')}")
     choices = data.get("choices") or []
     if not choices:
+        logger.error(
+            "vLLM returned no choices. Full response: %s (truncated to 2000 chars)",
+            str(data)[:2000],
+        )
         raise RuntimeError("vLLM returned no choices")
     message = choices[0].get("message") or {}
     content = message.get("content")
+    finish_reason = choices[0].get("finish_reason")
+    logger.info("vLLM finish_reason=%s, content_length=%d", finish_reason, len(content) if content else 0)
     if not content:
+        logger.error("vLLM returned empty content. Choice: %s", choices[0])
         raise RuntimeError("vLLM returned empty content")
     return content.strip()
 
