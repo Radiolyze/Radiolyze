@@ -65,6 +65,7 @@ export interface Report {
   inferenceJobId?: string;
   inferenceCompletedAt?: string;
   inferenceImageRefs?: ImageRef[];
+  inferenceEvidenceIndices?: number[];
 }
 
 export type ReportStatus = 'pending' | 'in_progress' | 'draft' | 'approved' | 'finalized';

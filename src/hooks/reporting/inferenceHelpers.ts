@@ -151,6 +151,23 @@ export const extractInferenceModel = (result?: Record<string, unknown> | null) =
   return undefined;
 };
 
+export const extractInferenceEvidenceIndices = (result?: Record<string, unknown> | null) => {
+  if (!result) return undefined;
+  const raw = (result.evidence_indices ?? result.evidenceIndices) as unknown;
+  if (!Array.isArray(raw)) return undefined;
+  const indices = raw
+    .map((entry) => {
+      if (typeof entry === 'number' && Number.isInteger(entry)) return entry;
+      if (typeof entry === 'string') {
+        const parsed = Number(entry);
+        return Number.isInteger(parsed) ? parsed : null;
+      }
+      return null;
+    })
+    .filter((entry): entry is number => Boolean(entry && entry > 0));
+  return indices.length > 0 ? indices : undefined;
+};
+
 export const extractInferenceCompletedAt = (result?: Record<string, unknown> | null) => {
   if (!result) return undefined;
   if (typeof result.completed_at === 'string') return result.completed_at;

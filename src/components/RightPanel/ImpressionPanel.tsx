@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Sparkles, Edit3, Save, AlertTriangle, Download, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ interface ImpressionPanelProps {
   inferenceJobId?: string;
   inferenceCompletedAt?: string;
   inferenceImageRefs?: ImageRef[];
+  inferenceEvidenceIndices?: number[];
   onEvidenceSelect?: (ref: ImageRef) => void;
   useAllFrames?: boolean;
   onUseAllFramesChange?: (nextValue: boolean) => void;
@@ -51,6 +52,7 @@ export function ImpressionPanel({
   inferenceJobId,
   inferenceCompletedAt,
   inferenceImageRefs,
+  inferenceEvidenceIndices,
   onEvidenceSelect,
   useAllFrames,
   onUseAllFramesChange,
@@ -71,6 +73,19 @@ export function ImpressionPanel({
     inferenceConfidence !== undefined ||
     inferenceCompletedAt
   );
+
+  const evidenceRefs = useMemo(() => {
+    if (!inferenceImageRefs || inferenceImageRefs.length === 0) {
+      return [];
+    }
+    if (!inferenceEvidenceIndices || inferenceEvidenceIndices.length === 0) {
+      return inferenceImageRefs;
+    }
+    const mapped = inferenceEvidenceIndices
+      .map((index) => inferenceImageRefs[index - 1])
+      .filter((ref): ref is ImageRef => Boolean(ref));
+    return mapped.length > 0 ? mapped : inferenceImageRefs;
+  }, [inferenceEvidenceIndices, inferenceImageRefs]);
 
   const resolvedInferenceStatus = inferenceStatus || (inferenceSummary ? 'finished' : undefined);
   const inferenceStatusLabel: Record<string, { label: string; className: string }> = {
@@ -190,13 +205,13 @@ export function ImpressionPanel({
           ) : (
             <p className="text-xs text-muted-foreground">{t('inference.summary')}: -</p>
           )}
-          {inferenceImageRefs && inferenceImageRefs.length > 0 && (
+          {evidenceRefs.length > 0 && (
             <div className="border-t border-border pt-2">
               <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-                {t('inference.evidence', { count: inferenceImageRefs.length })}
+                {t('inference.evidence', { count: evidenceRefs.length })}
               </div>
               <div className="space-y-1">
-                {inferenceImageRefs.map((ref) => (
+                {evidenceRefs.map((ref) => (
                   <Button
                     key={`${ref.instanceId}-${ref.frameIndex}-${ref.stackIndex}`}
                     variant="ghost"

@@ -161,6 +161,34 @@ def _extract_json_text(payload: dict[str, Any] | None, key: str) -> str | None:
     return None
 
 
+def _extract_evidence_indices(payload: dict[str, Any] | None) -> list[int] | None:
+    if not payload:
+        return None
+    raw = payload.get("evidence_indices")
+    if raw is None:
+        raw = payload.get("evidenceIndices")
+    if not isinstance(raw, list):
+        return None
+    indices: list[int] = []
+    for entry in raw:
+        if isinstance(entry, bool):
+            continue
+        if isinstance(entry, int):
+            value = entry
+        elif isinstance(entry, float) and entry.is_integer():
+            value = int(entry)
+        elif isinstance(entry, str):
+            try:
+                value = int(entry.strip())
+            except ValueError:
+                continue
+        else:
+            continue
+        if value > 0:
+            indices.append(value)
+    return indices or None
+
+
 def _vllm_base_url() -> str:
     return os.getenv("VLLM_BASE_URL", "http://vllm-medgemma:8000/v1").rstrip("/")
 
@@ -267,6 +295,7 @@ def generate_impression_text(
         )
         parsed, parse_error = _parse_json_response(raw_text)
         json_text = _extract_json_text(parsed, "impression")
+        evidence_indices = _extract_evidence_indices(parsed)
         text = json_text or raw_text
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
@@ -279,6 +308,8 @@ def generate_impression_text(
         else:
             json_metadata["json_parsed"] = False
             json_metadata["json_error"] = "missing_impression"
+        if evidence_indices:
+            json_metadata["evidence_indices"] = evidence_indices
         return text, confidence, model_name, _compact_metadata(
             {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
         )
@@ -317,6 +348,7 @@ def generate_inference_summary_text(
         )
         parsed, parse_error = _parse_json_response(raw_text)
         json_text = _extract_json_text(parsed, "summary")
+        evidence_indices = _extract_evidence_indices(parsed)
         text = json_text or raw_text
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
@@ -329,6 +361,8 @@ def generate_inference_summary_text(
         else:
             json_metadata["json_parsed"] = False
             json_metadata["json_error"] = "missing_summary"
+        if evidence_indices:
+            json_metadata["evidence_indices"] = evidence_indices
         return text, confidence, resolved_model, _compact_metadata(
             {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
         )
