@@ -114,16 +114,35 @@
   "shortcuts": {
     "title": "Tastenkürzel",
     "description": "Schneller arbeiten mit Keyboard Shortcuts",
-    "helpHint": "Drücke ? um diese Hilfe zu öffnen",
+    "helpHint": "Drücke ",
+    "helpHintSuffix": " um diese Hilfe zu öffnen",
+    "tabs": {
+      "general": "Allgemein",
+      "stack": "Stack",
+      "mpr": "MPR",
+      "vrt": "3D"
+    },
+    "hints": {
+      "mprAvailable": "MPR-Modus verfügbar für CT/MR-Serien mit ≥10 Bildern",
+      "vrtAvailable": "3D-Modus verfügbar für CT/MR/PT-Serien mit ≥10 Bildern"
+    },
     "groups": {
       "general": "Allgemein",
       "dictation": "Diktat (ASR)",
       "viewer": "DICOM Viewer",
-      "navigation": "Frame-Navigation"
+      "viewerTools": "Viewer-Tools",
+      "navigation": "Frame-Navigation",
+      "mprLayout": "MPR-Layout",
+      "mprProjection": "Projektion",
+      "mprMouse": "Maus-Steuerung",
+      "vrtPresets": "CT-Presets",
+      "vrtViews": "Ansichtspositionen",
+      "vrtMouse": "Maus-Steuerung"
     },
     "actions": {
       "saveReport": "Befund speichern",
       "approveReport": "Report freigeben",
+      "showHelp": "Hilfe anzeigen",
       "toggleMic": "Mikrofon ein/aus",
       "zoomMode": "Zoom-Modus",
       "panMode": "Pan-Modus",
@@ -131,7 +150,29 @@
       "resetView": "Ansicht zurücksetzen",
       "prevFrame": "Vorheriger Frame",
       "nextFrame": "Nächster Frame",
-      "scrollFrames": "Frames durchblättern"
+      "scrollFrames": "Frames durchblättern",
+      "maximizeAxial": "Axial maximieren",
+      "maximizeSagittal": "Sagittal maximieren",
+      "maximizeCoronal": "Coronal maximieren",
+      "exitMaximize": "Maximierung beenden",
+      "toggleMIP": "MIP umschalten",
+      "crosshairs": "Crosshairs positionieren",
+      "panMouse": "Pan (Verschieben)",
+      "zoomMouse": "Zoom",
+      "windowLevel": "Fensterung (W/L)",
+      "presetBone": "Preset: Knochen",
+      "presetLung": "Preset: Lunge",
+      "presetSoftTissue": "Preset: Weichteil",
+      "presetAngio": "Preset: Angiographie",
+      "presetMuscleBone": "Preset: Muskel/Knochen",
+      "viewAnterior": "Ansicht: Anterior",
+      "viewPosterior": "Ansicht: Posterior",
+      "viewLeft": "Ansicht: Links",
+      "viewRight": "Ansicht: Rechts",
+      "viewSuperior": "Ansicht: Superior",
+      "viewInferior": "Ansicht: Inferior",
+      "rotate3D": "3D Rotation",
+      "resetCamera": "Kamera zurücksetzen"
     }
   },
   "notifications": {
