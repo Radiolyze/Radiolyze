@@ -108,6 +108,25 @@ def compute_input_hash(
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def compute_text_hash(*values: str | None) -> str:
+    normalized = [value.strip() for value in values if value and value.strip()]
+    raw = "|".join(normalized)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def compute_bytes_hash(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def build_output_summary(text: str | None, limit: int = 240) -> str | None:
+    if not text:
+        return None
+    normalized = text.strip()
+    if not normalized:
+        return None
+    return normalized[:limit]
+
+
 def get_inference_job_timeout() -> int:
     return int(os.getenv("INFERENCE_JOB_TIMEOUT", "600"))
 
@@ -446,7 +465,7 @@ async def asr_transcript(
     if not content:
         raise HTTPException(status_code=400, detail="Empty audio payload")
     try:
-        text, confidence, _model_name, _metadata = await transcribe_audio(
+        text, confidence, model_name, metadata = await transcribe_audio(
             content=content,
             filename=file.filename or "audio.wav",
             content_type=file.content_type,
@@ -455,18 +474,30 @@ async def asr_transcript(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     timestamp = utc_now()
 
+    audio_hash = compute_bytes_hash(content)
+    output_summary = f"transcript_length={len(text)}"
+
     report = None
     if report_id:
         report = db.get(Report, report_id)
         if report:
             report.updated_at = timestamp
+        metadata_payload = {
+            "confidence": confidence,
+            "transcript_length": len(text),
+            "model_version": model_name,
+            "input_hash": audio_hash,
+            "output_summary": output_summary,
+        }
+        if metadata:
+            metadata_payload.update(metadata)
         add_audit_event(
             db,
             event_type="asr_transcription",
             actor_id=None,
             report_id=report_id,
             study_id=report.study_id if report else None,
-            metadata={"confidence": confidence, "transcript_length": len(text)},
+            metadata=metadata_payload,
             timestamp=timestamp,
             source="api",
         )
@@ -485,7 +516,7 @@ async def generate_impression_endpoint(
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
     try:
-        text, confidence, model_name, _metadata = generate_impression_text(
+        text, confidence, model_name, metadata = generate_impression_text(
             payload.findings_text,
             image_urls=payload.image_urls,
             image_paths=payload.image_paths,
@@ -502,13 +533,32 @@ async def generate_impression_endpoint(
             report.updated_at = generated_at
             if report.status in {"pending", "in_progress"}:
                 report.status = "draft"
+        input_hash = compute_input_hash(
+            report.study_id if report else None,
+            payload.findings_text,
+            payload.image_urls,
+            payload.image_paths,
+        )
+        output_summary = build_output_summary(text)
+        image_metadata = build_image_metadata(payload.image_urls, payload.image_paths, None)
+        metadata_payload = {
+            "model_version": model_name,
+            "model": model_name,
+            "confidence": confidence,
+            "pipeline": "impression_service",
+            "input_hash": input_hash,
+            "output_summary": output_summary,
+            **image_metadata,
+        }
+        if metadata:
+            metadata_payload.update(metadata)
         add_audit_event(
             db,
             event_type="impression_generated",
             actor_id="system",
             report_id=payload.report_id,
             study_id=report.study_id if report else None,
-            metadata={"model": model_name, "confidence": confidence, "pipeline": "impression_service"},
+            metadata=metadata_payload,
             timestamp=generated_at,
             source="api",
         )
@@ -555,6 +605,8 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
             created_at=now,
         )
         db.add(qa_result)
+        input_hash = compute_text_hash(payload.findings_text, payload.impression_text)
+        output_summary = f"{status} (warnings={len(warnings)}, failures={len(failures)})"
         add_audit_event(
             db,
             event_type="qa_check_run",
@@ -562,11 +614,16 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
             report_id=payload.report_id,
             study_id=report.study_id if report else None,
             metadata={
+                "model_version": "qa-rules-v1",
+                "engine": "rules",
+                "engine_version": "qa-rules-v1",
                 "status": status,
                 "warnings_count": len(warnings),
                 "failures_count": len(failures),
                 "checks_count": len(checks),
                 "quality_score": score,
+                "input_hash": input_hash,
+                "output_summary": output_summary,
             },
             timestamp=now,
             source="api",
