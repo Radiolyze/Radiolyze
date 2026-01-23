@@ -48,6 +48,7 @@ Der Orchestrator steuert:
 - MedASR als separater Service (OpenAI Audio API kompatibel)
 - Multimodal Requests via `/v1/chat/completions` (Text + Bild)
 - `image_urls` / `image_paths` fuer multimodale Inputs in Impression + Inference
+- `image_urls` sollten auf gerenderte PNG-Frames zeigen (WADO-RS `/frames/{n}/rendered`)
 - Modellname/Version und Bildanzahl werden im Audit Log persistiert
 
 ## Datenhaltung

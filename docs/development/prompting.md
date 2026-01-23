@@ -70,8 +70,15 @@ Use the same language as the provided findings text when possible.
 Task: Summarize the imaging findings from the provided images.
 If findings text is provided, align with it and correct only obvious conflicts.
 If findings text is empty, rely solely on the images.
-Output: 1-2 sentences, no bullet points, no headings.
-Return only the summary text.
+Output: 1-2 sentences.
+Return a JSON object with keys:
+- summary (string)
+- evidence_indices (array of integers, optional; refer to image manifest indices)
+- limitations (string, optional)
+Return only valid JSON. No markdown or code fences.
+
+Image manifest:
+{{image_manifest}}
 
 Findings (optional):
 {{findings_text}}
@@ -82,8 +89,16 @@ Findings (optional):
 Task: Draft a concise radiology impression based on the images and findings.
 Prioritize the most clinically relevant findings.
 If uncertain, qualify with "likely" or "cannot exclude".
-Output: 1-3 short sentences, no bullet points, no headings.
-Return only the impression text.
+Output: 1-3 short sentences.
+Return a JSON object with keys:
+- impression (string)
+- comparison (string, optional)
+- evidence_indices (array of integers, optional; refer to image manifest indices)
+- confidence (string, optional: low|medium|high)
+Return only valid JSON. No markdown or code fences.
+
+Image manifest:
+{{image_manifest}}
 
 Findings (optional):
 {{findings_text}}

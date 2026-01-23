@@ -141,14 +141,17 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
         result = None
         if job_record.status == "finished":
             image_refs = None
+            evidence_indices = None
             if isinstance(job_record.metadata_json, dict):
                 image_refs = job_record.metadata_json.get("image_refs")
+                evidence_indices = job_record.metadata_json.get("evidence_indices")
             result = {
                 "summary": job_record.summary_text,
                 "confidence": job_record.confidence,
                 "model_version": job_record.model_version,
                 "completed_at": job_record.completed_at,
                 "image_refs": image_refs,
+                "evidence_indices": evidence_indices,
             }
         return InferenceStatusResponse(
             job_id=job_record.id,

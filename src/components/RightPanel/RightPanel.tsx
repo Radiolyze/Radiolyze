@@ -73,6 +73,7 @@ export function RightPanel({
           inferenceJobId={report.inferenceJobId}
           inferenceCompletedAt={report.inferenceCompletedAt}
           inferenceImageRefs={report.inferenceImageRefs}
+          inferenceEvidenceIndices={report.inferenceEvidenceIndices}
           onEvidenceSelect={onEvidenceSelect}
           useAllFrames={useAllFrames}
           onUseAllFramesChange={onUseAllFramesChange}

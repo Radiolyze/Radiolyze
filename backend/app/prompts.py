@@ -37,8 +37,14 @@ DEFAULT_PROMPTS: dict[PromptType, str] = {
         "Task: Summarize the imaging findings from the provided images.\n"
         "If findings text is provided, align with it and correct only obvious conflicts.\n"
         "If findings text is empty, rely solely on the images.\n"
-        "Output: 1-2 sentences, no bullet points, no headings.\n"
-        "Return only the summary text.\n\n"
+        "Output: 1-2 sentences.\n"
+        "Return a JSON object with keys:\n"
+        "- summary (string)\n"
+        "- evidence_indices (array of integers, optional; refer to image manifest indices)\n"
+        "- limitations (string, optional)\n"
+        "Return only valid JSON. No markdown or code fences.\n\n"
+        "Image manifest:\n"
+        "{{image_manifest}}\n\n"
         "Findings (optional):\n"
         "{{findings_text}}"
     ),
@@ -46,8 +52,15 @@ DEFAULT_PROMPTS: dict[PromptType, str] = {
         "Task: Draft a concise radiology impression based on the images and findings.\n"
         "Prioritize the most clinically relevant findings.\n"
         "If uncertain, qualify with \"likely\" or \"cannot exclude\".\n"
-        "Output: 1-3 short sentences, no bullet points, no headings.\n"
-        "Return only the impression text.\n\n"
+        "Output: 1-3 short sentences.\n"
+        "Return a JSON object with keys:\n"
+        "- impression (string)\n"
+        "- comparison (string, optional)\n"
+        "- evidence_indices (array of integers, optional; refer to image manifest indices)\n"
+        "- confidence (string, optional: low|medium|high)\n"
+        "Return only valid JSON. No markdown or code fences.\n\n"
+        "Image manifest:\n"
+        "{{image_manifest}}\n\n"
         "Findings (optional):\n"
         "{{findings_text}}"
     ),
@@ -55,8 +68,8 @@ DEFAULT_PROMPTS: dict[PromptType, str] = {
 
 ALLOWED_VARIABLES: dict[PromptType, set[str]] = {
     "system": set(),
-    "summary": {"findings_text"},
-    "impression": {"findings_text"},
+    "summary": {"findings_text", "image_manifest"},
+    "impression": {"findings_text", "image_manifest"},
 }
 
 VARIABLE_PATTERN = re.compile(r"{{\s*([a-zA-Z0-9_]+)\s*}}")

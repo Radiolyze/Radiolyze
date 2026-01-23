@@ -9,6 +9,7 @@ import { mapReportResponse } from '@/services/reportMapping';
 import {
   extractInferenceCompletedAt,
   extractInferenceConfidence,
+  extractInferenceEvidenceIndices,
   extractInferenceImageRefs,
   extractInferenceModel,
   extractInferenceSummary,
@@ -25,6 +26,7 @@ interface GenerateImpressionOptions {
   requestedBy?: string;
   modelVersion?: string;
   imageRefs?: ImageRef[];
+  priorImageRefs?: ImageRef[];
   includeAllFrames?: boolean;
   onStatus?: (status: AIStatus) => void;
 }
@@ -106,8 +108,16 @@ export function useReport(initialReport?: Report): UseReportReturn {
     const onStatus = options?.onStatus;
     const requestedBy = options?.requestedBy;
     const modelVersion = options?.modelVersion;
-    const selectedImageRefs = selectInferenceImageRefs(options?.imageRefs, options?.includeAllFrames);
-    const imageUrls = selectedImageRefs.map((ref) => ref.wadoUrl);
+    const selectedCurrentRefs = selectInferenceImageRefs(options?.imageRefs, {
+      includeAllFrames: options?.includeAllFrames,
+      role: 'current',
+    });
+    const selectedPriorRefs = selectInferenceImageRefs(options?.priorImageRefs, {
+      includeAllFrames: options?.includeAllFrames,
+      role: 'prior',
+    });
+    const selectedImageRefs = [...selectedCurrentRefs, ...selectedPriorRefs];
+    const imageUrls = selectedImageRefs.map((ref) => ref.inferenceUrl ?? ref.wadoUrl);
     let succeeded = false;
 
     try {
@@ -145,6 +155,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
       const inferredModel = extractInferenceModel(result);
       const completedAt = extractInferenceCompletedAt(result);
       const inferredImageRefs = extractInferenceImageRefs(result);
+      const evidenceIndices = extractInferenceEvidenceIndices(result);
 
       setReport(prev => prev ? {
         ...prev,
@@ -157,6 +168,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         inferenceModelVersion: inferredModel ?? prev.inferenceModelVersion ?? modelVersion,
         inferenceCompletedAt: completedAt,
         inferenceImageRefs: inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
+        inferenceEvidenceIndices: evidenceIndices ?? prev.inferenceEvidenceIndices,
       } : null);
 
       succeeded = true;

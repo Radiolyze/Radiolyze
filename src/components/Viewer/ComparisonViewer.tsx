@@ -17,6 +17,7 @@ interface ComparisonViewerProps {
   progress?: ViewerProgress;
   onFrameChange?: (frame: number, total: number) => void;
   onImageRefsChange?: (refs: ImageRef[]) => void;
+  onPriorImageRefsChange?: (refs: ImageRef[]) => void;
   evidenceSelection?: { seriesId: string; stackIndex: number } | null;
 }
 
@@ -26,6 +27,7 @@ export function ComparisonViewer({
   progress,
   onFrameChange,
   onImageRefsChange,
+  onPriorImageRefsChange,
   evidenceSelection,
 }: ComparisonViewerProps) {
   const { t } = useTranslation('viewer');
@@ -175,6 +177,8 @@ export function ComparisonViewer({
       : null;
   const leftImageRefsChange = !isSwapped ? onImageRefsChange : undefined;
   const rightImageRefsChange = isSwapped ? onImageRefsChange : undefined;
+  const leftPriorImageRefsChange = isSwapped ? onPriorImageRefsChange : undefined;
+  const rightPriorImageRefsChange = !isSwapped ? onPriorImageRefsChange : undefined;
   const leftBadgeVariant = isSwapped ? 'secondary' : 'primary';
   const rightBadgeVariant = isSwapped ? 'primary' : 'secondary';
   const showSyncIndicator = Boolean(selectedPriorSeries) && (syncOptions.frames || hasSyncEnabled);
@@ -226,7 +230,7 @@ export function ComparisonViewer({
           onFrameChange={leftFrameHandler}
           onViewportChange={leftViewportHandler}
           syncState={leftSyncState}
-          onImageRefsChange={leftImageRefsChange}
+          onImageRefsChange={leftImageRefsChange ?? leftPriorImageRefsChange}
           requestedFrameIndex={leftEvidenceFrame}
           emptyMessage={t('comparison.noStudySelected')}
         />
@@ -241,7 +245,7 @@ export function ComparisonViewer({
           onFrameChange={rightFrameHandler}
           onViewportChange={rightViewportHandler}
           syncState={rightSyncState}
-          onImageRefsChange={rightImageRefsChange}
+          onImageRefsChange={rightImageRefsChange ?? rightPriorImageRefsChange}
           requestedFrameIndex={rightEvidenceFrame}
           emptyMessage={t('comparison.noStudySelected')}
         />

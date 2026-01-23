@@ -36,7 +36,12 @@ export interface ImageRef {
   frameIndex: number;
   stackIndex: number;
   wadoUrl: string;
+  inferenceUrl?: string;
   imageId?: string;
+  studyDate?: string;
+  seriesDescription?: string;
+  seriesModality?: string;
+  role?: 'current' | 'prior';
 }
 
 export interface Report {
@@ -60,6 +65,7 @@ export interface Report {
   inferenceJobId?: string;
   inferenceCompletedAt?: string;
   inferenceImageRefs?: ImageRef[];
+  inferenceEvidenceIndices?: number[];
 }
 
 export type ReportStatus = 'pending' | 'in_progress' | 'draft' | 'approved' | 'finalized';

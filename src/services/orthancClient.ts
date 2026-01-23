@@ -74,6 +74,18 @@ export const buildWadorsFrameUrl = (
     DICOM_WEB_INFERENCE_URL
   );
 
+export const buildWadorsRenderedFrameUrl = (
+  studyId: string,
+  seriesId: string,
+  instanceId: string,
+  frame = 1
+) =>
+  buildDicomWebUrl(
+    `studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/${frame}/rendered`,
+    undefined,
+    DICOM_WEB_INFERENCE_URL
+  );
+
 interface ListStudiesOptions {
   limit?: number;
   patientId?: string;

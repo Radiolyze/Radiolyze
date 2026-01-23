@@ -100,6 +100,10 @@ class ImageRef(ApiBaseModel):
     stack_index: int
     wado_url: str
     image_id: str | None = None
+    study_date: str | None = None
+    series_description: str | None = None
+    series_modality: str | None = None
+    role: Literal["current", "prior"] | None = None
 
 
 class InferenceQueueRequest(ApiBaseModel):

@@ -1,27 +1,134 @@
 import type { AIStatus, ImageRef } from '@/types/radiology';
 import { inferenceClient } from '@/services/inferenceClient';
 
-const maxInferenceFrames = (() => {
-  const parsed = Number(import.meta.env.VITE_INFERENCE_MAX_FRAMES ?? '16');
+type InferenceImageRole = 'current' | 'prior';
+
+interface InferenceImageSelectionOptions {
+  includeAllFrames?: boolean;
+  role?: InferenceImageRole;
+  maxFrames?: number;
+}
+
+const readMaxFrames = (raw: string | undefined, fallback: number) => {
+  const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    return 16;
+    return fallback;
   }
   return Math.floor(parsed);
-})();
+};
+
+const legacyMaxFrames = readMaxFrames(import.meta.env.VITE_INFERENCE_MAX_FRAMES, 16);
+const inferenceFrameLimits = {
+  current: readMaxFrames(import.meta.env.VITE_INFERENCE_MAX_FRAMES_CURRENT, legacyMaxFrames),
+  prior: readMaxFrames(import.meta.env.VITE_INFERENCE_MAX_FRAMES_PRIOR, 8),
+};
+
+const getMaxInferenceFrames = (role?: InferenceImageRole) => {
+  if (role === 'prior') return inferenceFrameLimits.prior;
+  return inferenceFrameLimits.current;
+};
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-export const selectInferenceImageRefs = (refs: ImageRef[] | undefined, includeAllFrames?: boolean) => {
-  if (!refs || refs.length === 0) return [];
-  if (includeAllFrames) return refs;
-  if (refs.length <= maxInferenceFrames) return refs;
-  const step = refs.length / maxInferenceFrames;
+type SeriesGroup = { seriesId: string; refs: ImageRef[]; index: number };
+
+const groupRefsBySeries = (refs: ImageRef[]): SeriesGroup[] => {
+  const groups = new Map<string, SeriesGroup>();
+  refs.forEach((ref, index) => {
+    const existing = groups.get(ref.seriesId);
+    if (existing) {
+      existing.refs.push(ref);
+      return;
+    }
+    groups.set(ref.seriesId, { seriesId: ref.seriesId, refs: [ref], index });
+  });
+  return Array.from(groups.values()).sort((a, b) => a.index - b.index);
+};
+
+const sampleRefs = (refs: ImageRef[], maxFrames: number) => {
+  if (refs.length <= maxFrames) return refs;
+  const step = refs.length / maxFrames;
   const selected: ImageRef[] = [];
-  for (let index = 0; index < maxInferenceFrames; index += 1) {
+  for (let index = 0; index < maxFrames; index += 1) {
     const refIndex = Math.min(refs.length - 1, Math.floor(index * step));
     selected.push(refs[refIndex]);
   }
   return selected;
+};
+
+const distributeFrameBudget = (groups: SeriesGroup[], totalMax: number) => {
+  const totalAvailable = groups.reduce((sum, group) => sum + group.refs.length, 0);
+  if (totalMax >= totalAvailable) {
+    return new Map(groups.map((group) => [group.seriesId, group.refs.length]));
+  }
+
+  if (totalMax < groups.length) {
+    const sortedBySize = [...groups].sort((a, b) => {
+      if (b.refs.length !== a.refs.length) return b.refs.length - a.refs.length;
+      return a.index - b.index;
+    });
+    const allowed = new Set(sortedBySize.slice(0, totalMax).map((group) => group.seriesId));
+    return new Map(groups.map((group) => [group.seriesId, allowed.has(group.seriesId) ? 1 : 0]));
+  }
+
+  const allocations = groups.map((group) => {
+    const raw = (group.refs.length / totalAvailable) * totalMax;
+    const floorValue = Math.floor(raw);
+    const base = Math.max(1, Math.min(group.refs.length, floorValue));
+    return { group, base, remainder: raw - floorValue };
+  });
+
+  let allocated = allocations.reduce((sum, item) => sum + item.base, 0);
+  if (allocated > totalMax) {
+    let surplus = allocated - totalMax;
+    const reducible = allocations
+      .filter((item) => item.base > 1)
+      .sort((a, b) => a.remainder - b.remainder);
+    for (const item of reducible) {
+      if (surplus <= 0) break;
+      item.base -= 1;
+      surplus -= 1;
+    }
+    allocated = totalMax - surplus;
+  }
+
+  if (allocated < totalMax) {
+    let remaining = totalMax - allocated;
+    const expandable = allocations
+      .filter((item) => item.base < item.group.refs.length)
+      .sort((a, b) => b.remainder - a.remainder);
+    for (const item of expandable) {
+      if (remaining <= 0) break;
+      item.base += 1;
+      remaining -= 1;
+    }
+  }
+
+  return new Map(allocations.map((item) => [item.group.seriesId, item.base]));
+};
+
+export const selectInferenceImageRefs = (
+  refs: ImageRef[] | undefined,
+  options?: InferenceImageSelectionOptions | boolean
+) => {
+  if (!refs || refs.length === 0) return [];
+  const normalized = typeof options === 'boolean' ? { includeAllFrames: options } : options || {};
+  if (normalized.includeAllFrames) return refs;
+
+  const maxFrames = normalized.maxFrames ?? getMaxInferenceFrames(normalized.role);
+  if (refs.length <= maxFrames) return refs;
+
+  const groups = groupRefsBySeries(refs);
+  if (groups.length <= 1) {
+    return sampleRefs(refs, maxFrames);
+  }
+
+  const budgets = distributeFrameBudget(groups, maxFrames);
+  return groups.flatMap((group) => {
+    const budget = budgets.get(group.seriesId) ?? 0;
+    if (budget <= 0) return [];
+    return sampleRefs(group.refs, budget);
+  });
 };
 
 export const extractInferenceSummary = (result?: Record<string, unknown> | null) => {
@@ -42,6 +149,23 @@ export const extractInferenceModel = (result?: Record<string, unknown> | null) =
   if (typeof result.model_version === 'string') return result.model_version;
   if (typeof result.model === 'string') return result.model;
   return undefined;
+};
+
+export const extractInferenceEvidenceIndices = (result?: Record<string, unknown> | null) => {
+  if (!result) return undefined;
+  const raw = (result.evidence_indices ?? result.evidenceIndices) as unknown;
+  if (!Array.isArray(raw)) return undefined;
+  const indices = raw
+    .map((entry) => {
+      if (typeof entry === 'number' && Number.isInteger(entry)) return entry;
+      if (typeof entry === 'string') {
+        const parsed = Number(entry);
+        return Number.isInteger(parsed) ? parsed : null;
+      }
+      return null;
+    })
+    .filter((entry): entry is number => Boolean(entry && entry > 0));
+  return indices.length > 0 ? indices : undefined;
 };
 
 export const extractInferenceCompletedAt = (result?: Record<string, unknown> | null) => {
@@ -69,6 +193,12 @@ const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null =
     return null;
   }
   const imageId = typeof value.image_id === 'string' ? value.image_id : value.imageId;
+  const studyDate = typeof value.study_date === 'string' ? value.study_date : value.studyDate;
+  const seriesDescription =
+    typeof value.series_description === 'string' ? value.series_description : value.seriesDescription;
+  const seriesModality =
+    typeof value.series_modality === 'string' ? value.series_modality : value.seriesModality;
+  const role = typeof value.role === 'string' ? value.role : undefined;
   return {
     studyId,
     seriesId,
@@ -77,6 +207,10 @@ const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null =
     stackIndex,
     wadoUrl,
     imageId: typeof imageId === 'string' ? imageId : undefined,
+    studyDate: typeof studyDate === 'string' ? studyDate : undefined,
+    seriesDescription: typeof seriesDescription === 'string' ? seriesDescription : undefined,
+    seriesModality: typeof seriesModality === 'string' ? seriesModality : undefined,
+    role: role === 'current' || role === 'prior' ? role : undefined,
   };
 };
 
