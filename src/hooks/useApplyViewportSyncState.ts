@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
-import type { RefObject } from 'react';
+import type { MutableRefObject } from 'react';
 import type { StackViewport } from '@cornerstonejs/core';
 import type { ViewportState } from '@/types/viewerSync';
 
 interface ApplyViewportSyncOptions {
   syncState?: Partial<ViewportState>;
-  stackViewportRef: RefObject<StackViewport | null>;
-  initialParallelScaleRef: RefObject<number | null>;
-  syncingRef: RefObject<boolean>;
+  stackViewportRef: MutableRefObject<StackViewport | null>;
+  initialParallelScaleRef: MutableRefObject<number | null>;
+  syncingRef: MutableRefObject<boolean>;
 }
 
 export const useApplyViewportSyncState = ({
