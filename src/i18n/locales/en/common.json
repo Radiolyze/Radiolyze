@@ -114,16 +114,35 @@
   "shortcuts": {
     "title": "Keyboard Shortcuts",
     "description": "Work faster with keyboard shortcuts",
-    "helpHint": "Press ? to open this help",
+    "helpHint": "Press ",
+    "helpHintSuffix": " to open this help",
+    "tabs": {
+      "general": "General",
+      "stack": "Stack",
+      "mpr": "MPR",
+      "vrt": "3D"
+    },
+    "hints": {
+      "mprAvailable": "MPR mode available for CT/MR series with ≥10 images",
+      "vrtAvailable": "3D mode available for CT/MR/PT series with ≥10 images"
+    },
     "groups": {
       "general": "General",
       "dictation": "Dictation (ASR)",
       "viewer": "DICOM Viewer",
-      "navigation": "Frame Navigation"
+      "viewerTools": "Viewer Tools",
+      "navigation": "Frame Navigation",
+      "mprLayout": "MPR Layout",
+      "mprProjection": "Projection",
+      "mprMouse": "Mouse Controls",
+      "vrtPresets": "CT Presets",
+      "vrtViews": "View Positions",
+      "vrtMouse": "Mouse Controls"
     },
     "actions": {
       "saveReport": "Save report",
       "approveReport": "Approve report",
+      "showHelp": "Show help",
       "toggleMic": "Toggle microphone",
       "zoomMode": "Zoom mode",
       "panMode": "Pan mode",
@@ -131,7 +150,29 @@
       "resetView": "Reset view",
       "prevFrame": "Previous frame",
       "nextFrame": "Next frame",
-      "scrollFrames": "Scroll through frames"
+      "scrollFrames": "Scroll through frames",
+      "maximizeAxial": "Maximize Axial",
+      "maximizeSagittal": "Maximize Sagittal",
+      "maximizeCoronal": "Maximize Coronal",
+      "exitMaximize": "Exit maximize",
+      "toggleMIP": "Toggle MIP",
+      "crosshairs": "Position crosshairs",
+      "panMouse": "Pan (move)",
+      "zoomMouse": "Zoom",
+      "windowLevel": "Window/Level",
+      "presetBone": "Preset: Bone",
+      "presetLung": "Preset: Lung",
+      "presetSoftTissue": "Preset: Soft Tissue",
+      "presetAngio": "Preset: Angiography",
+      "presetMuscleBone": "Preset: Muscle/Bone",
+      "viewAnterior": "View: Anterior",
+      "viewPosterior": "View: Posterior",
+      "viewLeft": "View: Left",
+      "viewRight": "View: Right",
+      "viewSuperior": "View: Superior",
+      "viewInferior": "View: Inferior",
+      "rotate3D": "3D Rotation",
+      "resetCamera": "Reset camera"
     }
   },
   "notifications": {
