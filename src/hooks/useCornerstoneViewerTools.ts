@@ -3,14 +3,30 @@ import type { RefObject } from 'react';
 import type { StackViewport } from '@cornerstonejs/core';
 import { Enums as ToolEnums, ToolGroupManager } from '@cornerstonejs/tools';
 import { cornerstoneToolNames } from '@/services/cornerstone';
-import type { ViewerToolId } from '@/types/viewer';
+import type { ViewerToolId, AnnotationToolId, AllToolId } from '@/types/viewer';
 import type { WindowLevelPreset } from '@/config/viewer';
 
-const toolNameMap: Record<ViewerToolId, string> = {
+// Map viewer tool IDs to Cornerstone tool names
+const viewerToolNameMap: Record<ViewerToolId, string> = {
   zoom: cornerstoneToolNames.zoom,
   pan: cornerstoneToolNames.pan,
   measure: cornerstoneToolNames.length,
   windowLevel: cornerstoneToolNames.windowLevel,
+};
+
+// Map annotation tool IDs to Cornerstone tool names
+const annotationToolNameMap: Record<AnnotationToolId, string> = {
+  rectangle: cornerstoneToolNames.rectangle,
+  ellipse: cornerstoneToolNames.ellipse,
+  freehand: cornerstoneToolNames.freehand,
+  bidirectional: cornerstoneToolNames.bidirectional,
+  arrow: cornerstoneToolNames.arrow,
+};
+
+// Combined map
+const allToolNameMap: Record<AllToolId, string> = {
+  ...viewerToolNameMap,
+  ...annotationToolNameMap,
 };
 
 interface UseCornerstoneViewerToolsOptions {
@@ -25,23 +41,34 @@ export const useCornerstoneViewerTools = ({
   presets,
 }: UseCornerstoneViewerToolsOptions) => {
   const applyToolSelection = useCallback(
-    (tool: ViewerToolId) => {
+    (tool: AllToolId) => {
       const toolGroup = toolGroupRef.current;
       if (!toolGroup) {
         return;
       }
 
-      const selectedTool = toolNameMap[tool];
-      Object.values(toolNameMap).forEach((toolName) => {
-        if (toolName === selectedTool) {
-          toolGroup.setToolActive(toolName, {
-            bindings: [{ mouseButton: ToolEnums.MouseBindings.Primary }],
-          });
-        } else {
-          toolGroup.setToolPassive(toolName, { removeAllBindings: true });
+      const selectedTool = allToolNameMap[tool];
+      if (!selectedTool) {
+        console.warn(`[useCornerstoneViewerTools] Unknown tool: ${tool}`);
+        return;
+      }
+
+      // Set all tools passive first
+      Object.values(allToolNameMap).forEach((toolName) => {
+        try {
+          if (toolName === selectedTool) {
+            toolGroup.setToolActive(toolName, {
+              bindings: [{ mouseButton: ToolEnums.MouseBindings.Primary }],
+            });
+          } else {
+            toolGroup.setToolPassive(toolName, { removeAllBindings: true });
+          }
+        } catch {
+          // Tool may not be added to this group
         }
       });
 
+      // Always keep stack scroll active on wheel
       toolGroup.setToolActive(cornerstoneToolNames.stackScroll, {
         bindings: [{ mouseButton: ToolEnums.MouseBindings.Wheel }],
       });

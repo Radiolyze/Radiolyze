@@ -8,6 +8,11 @@ import {
   StackScrollTool,
   WindowLevelTool,
   ZoomTool,
+  RectangleROITool,
+  EllipticalROITool,
+  PlanarFreehandROITool,
+  BidirectionalTool,
+  ArrowAnnotateTool,
 } from '@cornerstonejs/tools';
 
 let initialized = false;
@@ -19,11 +24,18 @@ const log = (...args: Parameters<typeof console.log>) => {
 };
 
 export const cornerstoneToolNames = {
+  // Navigation tools
   pan: PanTool.toolName,
   zoom: ZoomTool.toolName,
   windowLevel: WindowLevelTool.toolName,
   length: LengthTool.toolName,
   stackScroll: StackScrollTool.toolName,
+  // Annotation tools for training
+  rectangle: RectangleROITool.toolName,
+  ellipse: EllipticalROITool.toolName,
+  freehand: PlanarFreehandROITool.toolName,
+  bidirectional: BidirectionalTool.toolName,
+  arrow: ArrowAnnotateTool.toolName,
 };
 
 export const initCornerstone = async () => {
@@ -72,11 +84,21 @@ export const initCornerstone = async () => {
 
   initCornerstoneTools();
 
+  // Navigation tools
   addTool(PanTool);
   addTool(ZoomTool);
   addTool(WindowLevelTool);
   addTool(LengthTool);
   addTool(StackScrollTool);
+
+  // Annotation tools for training data
+  addTool(RectangleROITool);
+  addTool(EllipticalROITool);
+  addTool(PlanarFreehandROITool);
+  addTool(BidirectionalTool);
+  addTool(ArrowAnnotateTool);
+
+  log('[cornerstone] All tools registered (navigation + annotation)');
 
   initialized = true;
 };

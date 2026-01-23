@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download, Tag, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -7,12 +7,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { ViewerToolConfig } from '@/types/viewer';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import type { ViewerToolConfig, AnnotationToolConfig, AllToolId } from '@/types/viewer';
 import type { WindowLevelPreset } from '@/config/viewer';
 import { ImageControls } from './ImageControls';
+import { cn } from '@/lib/utils';
 
 interface DicomViewerToolbarProps {
   tools: ViewerToolConfig[];
+  annotationTools?: AnnotationToolConfig[];
   activeToolId: string;
   onToolSelect: (toolId: string) => void;
   onReset: () => void;
@@ -21,10 +28,13 @@ interface DicomViewerToolbarProps {
   onPresetChange: (presetId: string) => void;
   onExportAnnotations: () => void;
   hasStack: boolean;
+  annotationMode?: boolean;
+  onAnnotationModeToggle?: () => void;
 }
 
 export function DicomViewerToolbar({
   tools,
+  annotationTools = [],
   activeToolId,
   onToolSelect,
   onReset,
@@ -33,15 +43,73 @@ export function DicomViewerToolbar({
   onPresetChange,
   onExportAnnotations,
   hasStack,
+  annotationMode = false,
+  onAnnotationModeToggle,
 }: DicomViewerToolbarProps) {
   return (
     <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+      {/* Navigation tools */}
       <ImageControls
         tools={tools}
         activeToolId={activeToolId}
         onToolSelect={onToolSelect}
         onReset={onReset}
       />
+
+      {/* Annotation mode toggle + tools */}
+      {annotationTools.length > 0 && (
+        <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-1.5 border border-border">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={annotationMode ? 'default' : 'ghost'}
+                size="sm"
+                className={cn('h-8 px-2 gap-1.5', annotationMode && 'bg-primary text-primary-foreground')}
+                onClick={onAnnotationModeToggle}
+              >
+                <Tag className="h-4 w-4" />
+                {annotationMode ? (
+                  <ToggleRight className="h-4 w-4" />
+                ) : (
+                  <ToggleLeft className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {annotationMode ? 'Annotation-Modus aktiv' : 'Annotation-Modus aktivieren'}
+            </TooltipContent>
+          </Tooltip>
+
+          {annotationMode && (
+            <>
+              <div className="w-px h-6 bg-border" />
+              {annotationTools.map((tool) => (
+                <Tooltip key={tool.id}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-8 w-8',
+                        activeToolId === tool.id && 'bg-accent text-accent-foreground'
+                      )}
+                      onClick={() => onToolSelect(tool.id)}
+                      disabled={!hasStack}
+                    >
+                      <tool.icon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {tool.label} {tool.shortcut && `(${tool.shortcut})`}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Window/Level presets + Export */}
       <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-2 border border-border">
         <Select
           value={selectedPresetId}
