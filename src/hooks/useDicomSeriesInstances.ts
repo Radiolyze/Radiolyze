@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { ImageRef, Series } from '@/types/radiology';
-import { buildWadorsFrameUrl, buildWadorsImageId, orthancClient } from '@/services/orthancClient';
+import {
+  buildWadorsFrameUrl,
+  buildWadorsImageId,
+  buildWadorsRenderedFrameUrl,
+  orthancClient,
+} from '@/services/orthancClient';
 
 type InstanceInfo = {
   instanceId: string;
@@ -116,6 +121,8 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
           for (let index = 0; index < instance.frames; index += 1) {
             const frameIndex = index + 1;
             const imageId = buildWadorsImageId(series.studyId, series.id, instance.instanceId, frameIndex);
+            const wadoUrl = buildWadorsFrameUrl(series.studyId, series.id, instance.instanceId, frameIndex);
+            const inferenceUrl = buildWadorsRenderedFrameUrl(series.studyId, series.id, instance.instanceId, frameIndex);
             ids.push(imageId);
             refs.push({
               studyId: series.studyId,
@@ -123,7 +130,8 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
               instanceId: instance.instanceId,
               frameIndex,
               stackIndex,
-              wadoUrl: buildWadorsFrameUrl(series.studyId, series.id, instance.instanceId, frameIndex),
+              wadoUrl,
+              inferenceUrl,
               imageId,
             });
             stackIndex += 1;

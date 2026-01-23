@@ -36,6 +36,7 @@ export interface ImageRef {
   frameIndex: number;
   stackIndex: number;
   wadoUrl: string;
+  inferenceUrl?: string;
   imageId?: string;
 }
 
