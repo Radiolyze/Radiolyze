@@ -154,6 +154,21 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "findings_text": "Im CT Thorax ...",
   "image_urls": ["https://example.local/images/series-1/frame-1.jpg"],
   "image_paths": ["/data/images/series-1/frame-1.jpg"],
+  "image_refs": [
+    {
+      "study_id": "st-123",
+      "series_id": "se-456",
+      "instance_id": "1.2.3.4",
+      "frame_index": 12,
+      "stack_index": 120,
+      "wado_url": "https://example.local/dicom-web/.../frames/12/rendered",
+      "image_id": "wadors:https://example.local/dicom-web/.../frames/12",
+      "study_date": "2026-01-20",
+      "series_description": "CT Thorax",
+      "series_modality": "CT",
+      "role": "current"
+    }
+  ],
   "requested_by": "system",
   "model_version": "medgemma-v2"
 }
@@ -185,7 +200,23 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
     "summary": "Automatische Bildanalyse: ...",
     "confidence": 0.84,
     "model_version": "medgemma-v2",
-    "completed_at": "2026-01-20T10:08:20Z"
+    "completed_at": "2026-01-20T10:08:20Z",
+    "image_refs": [
+      {
+        "study_id": "st-123",
+        "series_id": "se-456",
+        "instance_id": "1.2.3.4",
+        "frame_index": 12,
+        "stack_index": 120,
+        "wado_url": "https://example.local/dicom-web/.../frames/12/rendered",
+        "image_id": "wadors:https://example.local/dicom-web/.../frames/12",
+        "study_date": "2026-01-20",
+        "series_description": "CT Thorax",
+        "series_modality": "CT",
+        "role": "current"
+      }
+    ],
+    "evidence_indices": [1]
   },
   "error": null
 }
@@ -230,8 +261,8 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
   "maxLength": 4000,
   "allowedVariables": {
     "system": [],
-    "summary": ["findings_text"],
-    "impression": ["findings_text"]
+    "summary": ["findings_text", "image_manifest"],
+    "impression": ["findings_text", "image_manifest"]
   },
   "prompts": [
     {
@@ -240,7 +271,7 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
       "templateText": "Task: Summarize...",
       "version": 1,
       "isActive": true,
-      "variables": ["findings_text"],
+      "variables": ["findings_text", "image_manifest"],
       "createdBy": "system",
       "createdAt": "2026-01-20T10:12:00Z",
       "updatedAt": "2026-01-20T10:12:00Z",
@@ -248,7 +279,7 @@ Die OpenAPI kann im Backend unter `/docs` eingesehen werden.
       "defaultText": "Task: Summarize...",
       "editable": true,
       "maxLength": 4000,
-      "allowedVariables": ["findings_text"]
+      "allowedVariables": ["findings_text", "image_manifest"]
     }
   ]
 }
