@@ -1,9 +1,18 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Columns2 } from 'lucide-react';
+import { Columns2, Box } from 'lucide-react';
 import type { ImageRef, Series } from '@/types/radiology';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { DicomViewer, type ViewerProgress } from './DicomViewer';
+import { MPRViewer } from './MPRViewer';
+
+export type ViewerMode = 'stack' | 'mpr';
 
 interface ComparisonSingleViewProps {
   currentSeries: Series | null;
@@ -25,26 +34,57 @@ export function ComparisonSingleView({
   onEnableCompare,
 }: ComparisonSingleViewProps) {
   const { t } = useTranslation('viewer');
+  const [viewerMode, setViewerMode] = useState<ViewerMode>('stack');
 
   const requestedFrameIndex =
     evidenceSelection && currentSeries?.id === evidenceSelection.seriesId
       ? evidenceSelection.stackIndex
       : null;
   const showToggle = priorStudiesCount > 0 && currentSeries;
+  
+  // Check if series supports MPR (CT/MR with sufficient frames)
+  const supportsMPR = currentSeries && 
+    ['CT', 'MR'].includes(currentSeries.modality) && 
+    (currentSeries.frameCount || 0) >= 10;
 
   return (
     <div className="h-full relative">
-      <DicomViewer
-        series={currentSeries}
-        progress={progress}
-        onFrameChange={onFrameChange}
-        onImageRefsChange={onImageRefsChange}
-        requestedFrameIndex={requestedFrameIndex}
-      />
+      {viewerMode === 'stack' ? (
+        <DicomViewer
+          series={currentSeries}
+          progress={progress}
+          onFrameChange={onFrameChange}
+          onImageRefsChange={onImageRefsChange}
+          requestedFrameIndex={requestedFrameIndex}
+        />
+      ) : (
+        <MPRViewer series={currentSeries} />
+      )}
 
-      {/* Compare Mode Toggle */}
-      {showToggle && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+      {/* Mode Toggle Buttons */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+        {/* MPR Toggle */}
+        {supportsMPR && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={viewerMode === 'mpr' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewerMode(viewerMode === 'mpr' ? 'stack' : 'mpr')}
+                className="bg-card/90 backdrop-blur-sm"
+              >
+                <Box className="h-4 w-4 mr-2" />
+                MPR
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {viewerMode === 'mpr' ? 'Stack-Ansicht' : 'Multi-Planar Rekonstruktion'}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Compare Mode Toggle */}
+        {showToggle && viewerMode === 'stack' && (
           <Button
             variant="outline"
             size="sm"
@@ -57,8 +97,8 @@ export function ComparisonSingleView({
               {priorStudiesCount}
             </Badge>
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
