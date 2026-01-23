@@ -119,3 +119,35 @@ unvollstaendig fuer 3D- und Longitudinal-Analysen.
 3. Evidence-Indices versionieren und mit Annotationen verknuepfen.
 4. Exportstatistiken erweitern (pro Modality, pro Series, pro Label).
 5. Optional: Data Capture Modus fuer gespeicherte Renderings.
+
+## Erweiterter Plan: Umfassende Nutzung der MedGemma-1.5-Faehigkeiten
+
+### P0: 3D-Readiness in der Inferenzpipeline
+- Volumen-Slices mit konsistenter Reihenfolge und Spacing erfassen.
+- Sampling-Strategien pro Modality (CT/MR) definieren und dokumentieren.
+- Rendering-Parameter (VOI/WL Preset) persistieren.
+- vLLM Kontextbudget pruefen und ggf. anpassen (max-model-len, max_tokens).
+
+### P1: Longitudinaler Kontext als First-Class Input
+- Explizite current/prior Paare mit Zeitabstand in der Inferenz-Queue speichern.
+- Optional: einfache Vergleichsmetriken (z.B. Laesion groesse, ROI-Messung).
+- Vergleichs-Prompts standardisieren (Change/Trend-Formulierungen).
+
+### P1: Strukturierte Outputs und Validierung
+- JSON-Outputs mit Schema-Validierung erzwingen (Summary/Impression/Findings).
+- Evidence-Indices verpflichtend machen (wenn Bilder genutzt werden).
+- Prompt-Version und Prompt-Fingerprint in Audit/Inferenz speichern.
+
+### P2: WSI und Patch-Workflows (optional, aber "Model Capabilities" decken)
+- Tile/patch Manifest definieren (Index, Koordinaten, Magnification).
+- Batch-Inputs fuer WSI (gepoolte Patches mit Role/Region).
+- Annotation-Export auf WSI-Tiles erweitern.
+
+### P2: Wissens- und Textverstehen besser nutzen
+- Report-Templates/GUIDELINES als Kontext in Prompts einspeisen.
+- Strukturierte Extraktion (z.B. JSON fuer Findings) als eigenen Endpoint anbieten.
+
+### P3: Evaluation und Reproduzierbarkeit
+- Golden Sets fuer CT/MR/longitudinal definieren (ohne Training).
+- Replay-Mechanismus fuer Inferenz mit gleichem Slice-Set.
+- Qualitaetsberichte (Coverage, Missing Metadata, Drift Indikatoren).
