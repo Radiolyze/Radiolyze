@@ -82,6 +82,35 @@ Controls:
 - **Scroll**: Zoom
 - **Shift+LMB**: Window/Level
 
+## VRTViewer (3D Volume Rendering)
+
+Rolle:
+
+- 3D Volume Rendering mit Transfer Functions
+- CT-optimierte Presets (Bone, Lung, Soft Tissue, Angiography)
+- Interaktive Beleuchtungs- und Qualitätseinstellungen
+
+Features:
+
+- **CT Presets**: Bone, Lung, Soft Tissue, Angiography, Muscle/Bone
+- **Transfer Functions**: Opacity + Color basierend auf Hounsfield Units
+- **Beleuchtung**: Ambient, Diffuse, Specular, Glanzstärke
+- **Ansichtspositionen**: Anterior, Posterior, Left, Right, Superior, Inferior
+- **Renderqualität**: Einstellbare Sample-Distanz
+
+Implementierung:
+
+- `useVRTViewport`: VolumeViewport3D Setup mit Transfer Functions
+- `VRTToolbar`: Preset-Auswahl, Ansichtswinkel, Beleuchtungs-Popover
+- `src/types/vrt.ts`: VRT Presets und Transfer Function Definitionen
+- Aktivierung via 3D-Button (nur für CT/MR/PT mit ≥10 Frames)
+
+Controls:
+
+- **LMB**: Trackball Rotation
+- **RMB**: Pan
+- **Scroll**: Zoom
+
 ## ComparisonViewer
 
 Rolle:
