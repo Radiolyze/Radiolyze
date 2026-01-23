@@ -6,6 +6,7 @@ import base64
 import hashlib
 import io
 import json
+import os
 import zipfile
 from datetime import datetime
 from typing import Any, Literal
@@ -15,6 +16,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+import httpx
 
 from ..db import get_db
 from ..models import Annotation
@@ -64,6 +66,49 @@ def _generate_export_id() -> str:
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     hash_suffix = hashlib.md5(str(datetime.utcnow().timestamp()).encode()).hexdigest()[:6]
     return f"export_{timestamp}_{hash_suffix}"
+
+
+def _dicom_web_base_url() -> str:
+    return os.getenv("DICOM_WEB_BASE_URL", "http://orthanc:8042/dicom-web").rstrip("/")
+
+
+def _dicom_auth_headers() -> dict[str, str]:
+    username = os.getenv("DICOM_WEB_USERNAME") or os.getenv("ORTHANC_USERNAME")
+    password = os.getenv("DICOM_WEB_PASSWORD") or os.getenv("ORTHANC_PASSWORD")
+    if not username or not password:
+        return {}
+    token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+    return {"Authorization": f"Basic {token}"}
+
+
+def _build_rendered_frame_url(ann: Annotation) -> str:
+    frame_number = ann.frame_index + 1
+    return (
+        f"{_dicom_web_base_url()}/studies/{ann.study_id}/series/{ann.series_id}/instances/"
+        f"{ann.instance_id}/frames/{frame_number}/rendered"
+    )
+
+
+def _collect_image_entries(
+    annotations: list[Annotation],
+    split: str,
+    entries: dict[str, dict[str, Any]],
+) -> None:
+    for ann in annotations:
+        image_key = f"{ann.study_id}_{ann.series_id}_{ann.instance_id}_{ann.frame_index}"
+        if image_key not in entries:
+            entries[image_key] = {
+                "id": image_key,
+                "image_path": f"images/{image_key}.png",
+                "wado_url": _build_rendered_frame_url(ann),
+                "study_id": ann.study_id,
+                "series_id": ann.series_id,
+                "instance_id": ann.instance_id,
+                "frame_index": ann.frame_index,
+                "frame_number": ann.frame_index + 1,
+                "splits": set(),
+            }
+        entries[image_key]["splits"].add(split)
 
 
 def _build_coco_dataset(annotations: list[Annotation]) -> dict[str, Any]:
@@ -256,6 +301,7 @@ def _create_export_zip(
     export_format: ExportFormat,
     annotations: list[Annotation],
     split_ratio: float,
+    include_images: bool,
 ) -> bytes:
     """Create ZIP file with exported dataset."""
     buffer = io.BytesIO()
@@ -265,6 +311,10 @@ def _create_export_zip(
         split_idx = int(len(annotations) * split_ratio)
         train_anns = annotations[:split_idx]
         val_anns = annotations[split_idx:]
+        image_entries: dict[str, dict[str, Any]] = {}
+        if include_images:
+            _collect_image_entries(train_anns, "train", image_entries)
+            _collect_image_entries(val_anns, "val", image_entries)
         
         if export_format == "coco":
             # COCO format
@@ -305,6 +355,13 @@ Use WADO-RS to fetch rendered images:
 ```
 GET /wado-rs/studies/{study_id}/series/{series_id}/instances/{instance_id}/frames/{frame}/rendered
 ```
+"""
+            if include_images:
+                readme += """
+
+## Data Capture
+Dieses Exportpaket enthaelt bereits gerenderte PNGs in `images/`
+und ein `images/manifest.json` mit Metadaten/Hashes.
 """
             zf.writestr("README.md", readme)
             
@@ -358,6 +415,13 @@ from transformers import AutoModelForObjectDetection, TrainingArguments, Trainer
 model = AutoModelForObjectDetection.from_pretrained("google/medgemma-1.5-4b-it")
 # ... configure training
 ```
+"""
+            if include_images:
+                readme += """
+
+## Data Capture
+Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
+`images/manifest.json` mit Metadaten/Hashes.
 """
             zf.writestr("README.md", readme)
             
@@ -424,7 +488,36 @@ with open("train.json") as f:
 ## Rendering Images
 Use the WADO-RS URLs to fetch rendered PNG images before training.
 """
+            if include_images:
+                readme += """
+
+## Data Capture
+Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
+`images/manifest.json` mit Metadaten/Hashes.
+"""
             zf.writestr("README.md", readme)
+
+        if include_images and image_entries:
+            headers = _dicom_auth_headers()
+            manifest: list[dict[str, Any]] = []
+            with httpx.Client(timeout=20) as client:
+                for entry in image_entries.values():
+                    splits = sorted(entry.pop("splits"))
+                    entry["splits"] = splits
+                    try:
+                        response = client.get(entry["wado_url"], headers=headers)
+                        response.raise_for_status()
+                        content = response.content
+                        zf.writestr(entry["image_path"], content)
+                        entry["status"] = "ok"
+                        entry["bytes"] = len(content)
+                        entry["sha256"] = hashlib.sha256(content).hexdigest()
+                    except Exception as exc:
+                        entry["status"] = "error"
+                        entry["error"] = str(exc)
+                    manifest.append(entry)
+
+            zf.writestr("images/manifest.json", json.dumps(manifest, indent=2))
     
     buffer.seek(0)
     return buffer.read()
@@ -498,6 +591,7 @@ def export_training_data(
         payload.format,
         annotations,
         payload.split_ratio,
+        payload.include_images,
     )
     
     export_id = _generate_export_id()
