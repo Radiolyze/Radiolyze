@@ -39,20 +39,20 @@
 
 ## Phase 4: Compliance Ready (10-14 Wochen)
 
-- [~] Human Oversight Dialog + Audit Trail (Dialog vorhanden, Audit Trail erweitert)
-- [~] EU AI Act Dokumentation (Annex IV Template, Inhalte offen)
-- [ ] Drift Monitoring (Post-Market)
-- [~] Security Hardening (Baseline Doku, TLS/RBAC Umsetzung offen)
+- [~] Human Oversight Dialog + Audit Trail (Dialog vorhanden; Pflichtfelder fuer Inference/Impression/QA/ASR, Report-Events noch nicht durchgaengig)
+- [~] EU AI Act Dokumentation (Annex IV Entwurf vorhanden, offene TODOs)
+- [~] Drift Monitoring (API-Report + Snapshot-Persistenz, Scheduling/UI offen)
+- [~] Security Hardening (Baseline Doku; AuthN/AuthZ, TLS, Rate Limits offen)
 
 ## Phase 5: Production (14-22 Wochen)
 
-- [~] DICOM SR Export (JSON + Binary Export, Archivierung offen)
+- [~] DICOM SR Export (JSON + Binary Export + UI, Archivierung/Persistenz offen)
 - [ ] Templates + Guidelines RAG
-- [~] vLLM GPU Worker (Compose + API Integration, Multimodal)
+- [x] vLLM GPU Worker (Compose + API Integration, Multimodal)
 - [ ] DICOM -> Image Pipeline fuer Multimodal Inference (WADO-RS/JPEG)
 - [x] Batch Reporting Dashboard (Multi-Select, Bulk Actions, Analytics + API Anbindung)
 - [x] Report History / Audit Log UI
-- [ ] Observability (Metrics + Tracing)
+- [~] Observability (Metrics-Endpoint + Drift-Report, Tracing offen)
 
 ## Phase 6: Scale & Optimization (22+ Wochen)
 
@@ -61,6 +61,15 @@
 - [ ] Multi-Site Deployment
 - [ ] Advanced Viewer Tools (MPR, Annotation Suite)
 - [ ] Analytics Dashboard
+
+## Naechste Schritte (naechster Sprint)
+
+1. Annex IV ausfuellen (Risikoanalyse, Data-Governance, Model Cards, KPI/Drift).
+2. Security Hardening umsetzen (JWT/OIDC, RBAC, TLS-Termination, Rate Limits).
+3. Drift Monitoring operationalisieren (Scheduler, Alerts-UI, Review-Prozess).
+4. Observability/Tracing (OpenTelemetry, Dashboard, Log-Korrelation).
+5. Templates/Guidelines RAG konzipieren (Vector Store, Retrieval API, UI Hook).
+6. DICOM -> Image Pipeline fuer Multimodal (WADO-RS Render/JPEG, Caching/TTL).
 
 ## Risiken und Abhaengigkeiten
 

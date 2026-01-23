@@ -6,20 +6,21 @@ import hashlib
 import json
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .audit import add_audit_event
 from .db import Base, SessionLocal, engine
 from .inference_clients import generate_impression_text, transcribe_audio
 from .mock_logic import run_qa_checks, utc_now
-from .models import AuditEvent, InferenceJob, QACheckResult, Report
+from .models import AuditEvent, DriftSnapshot, InferenceJob, QACheckResult, Report
 from .queue import get_queue, get_redis
 from .schemas import (
     ASRResponse,
@@ -108,6 +109,25 @@ def compute_input_hash(
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def compute_text_hash(*values: str | None) -> str:
+    normalized = [value.strip() for value in values if value and value.strip()]
+    raw = "|".join(normalized)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def compute_bytes_hash(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def build_output_summary(text: str | None, limit: int = 240) -> str | None:
+    if not text:
+        return None
+    normalized = text.strip()
+    if not normalized:
+        return None
+    return normalized[:limit]
+
+
 def get_inference_job_timeout() -> int:
     return int(os.getenv("INFERENCE_JOB_TIMEOUT", "600"))
 
@@ -148,6 +168,91 @@ def format_datetime(value: datetime | str | None) -> str | None:
     if isinstance(value, str):
         return value
     return value.isoformat()
+
+
+def counts_to_dict(rows: list[tuple[str | None, int]]) -> dict[str, int]:
+    result: dict[str, int] = {}
+    for key, count in rows:
+        label = key or "unknown"
+        result[label] = count
+    return result
+
+
+def get_threshold(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def calculate_median(values: list[float]) -> float | None:
+    if not values:
+        return None
+    sorted_values = sorted(values)
+    midpoint = len(sorted_values) // 2
+    if len(sorted_values) % 2 == 1:
+        return sorted_values[midpoint]
+    return (sorted_values[midpoint - 1] + sorted_values[midpoint]) / 2
+
+
+def summarize_inference_jobs(jobs: list[InferenceJob]) -> dict[str, Any]:
+    total = len(jobs)
+    status_counts: dict[str, int] = {}
+    confidences: list[float] = []
+    for job in jobs:
+        status = job.status or "unknown"
+        status_counts[status] = status_counts.get(status, 0) + 1
+        if job.confidence is not None:
+            confidences.append(float(job.confidence))
+
+    average_confidence = sum(confidences) / len(confidences) if confidences else None
+    failed_count = status_counts.get("failed", 0)
+    failure_rate = failed_count / total if total else None
+
+    return {
+        "total": total,
+        "status_counts": status_counts,
+        "confidence_avg": average_confidence,
+        "confidence_median": calculate_median(confidences),
+        "failure_rate": failure_rate,
+    }
+
+
+def summarize_qa_results(results: list[QACheckResult]) -> dict[str, Any]:
+    total = len(results)
+    status_counts: dict[str, int] = {}
+    quality_scores: list[float] = []
+    for result in results:
+        status = result.status or "unknown"
+        status_counts[status] = status_counts.get(status, 0) + 1
+        if result.quality_score is not None:
+            quality_scores.append(float(result.quality_score))
+
+    pass_count = status_counts.get("pass", 0)
+    pass_rate = pass_count / total if total else None
+    average_score = sum(quality_scores) / len(quality_scores) if quality_scores else None
+
+    return {
+        "total": total,
+        "status_counts": status_counts,
+        "pass_rate": pass_rate,
+        "quality_score_avg": average_score,
+    }
+
+
+def compute_deltas(current: dict[str, Any], baseline: dict[str, Any], keys: list[str]) -> dict[str, float | None]:
+    deltas: dict[str, float | None] = {}
+    for key in keys:
+        current_value = current.get(key)
+        baseline_value = baseline.get(key)
+        if current_value is None or baseline_value is None:
+            deltas[key] = None
+        else:
+            deltas[key] = float(current_value) - float(baseline_value)
+    return deltas
 
 
 def get_latest_inference_job(db: Session, report_id: str | None) -> InferenceJob | None:
@@ -446,7 +551,7 @@ async def asr_transcript(
     if not content:
         raise HTTPException(status_code=400, detail="Empty audio payload")
     try:
-        text, confidence, _model_name, _metadata = await transcribe_audio(
+        text, confidence, model_name, metadata = await transcribe_audio(
             content=content,
             filename=file.filename or "audio.wav",
             content_type=file.content_type,
@@ -455,18 +560,30 @@ async def asr_transcript(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     timestamp = utc_now()
 
+    audio_hash = compute_bytes_hash(content)
+    output_summary = f"transcript_length={len(text)}"
+
     report = None
     if report_id:
         report = db.get(Report, report_id)
         if report:
             report.updated_at = timestamp
+        metadata_payload = {
+            "confidence": confidence,
+            "transcript_length": len(text),
+            "model_version": model_name,
+            "input_hash": audio_hash,
+            "output_summary": output_summary,
+        }
+        if metadata:
+            metadata_payload.update(metadata)
         add_audit_event(
             db,
             event_type="asr_transcription",
             actor_id=None,
             report_id=report_id,
             study_id=report.study_id if report else None,
-            metadata={"confidence": confidence, "transcript_length": len(text)},
+            metadata=metadata_payload,
             timestamp=timestamp,
             source="api",
         )
@@ -485,7 +602,7 @@ async def generate_impression_endpoint(
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
     try:
-        text, confidence, model_name, _metadata = generate_impression_text(
+        text, confidence, model_name, metadata = generate_impression_text(
             payload.findings_text,
             image_urls=payload.image_urls,
             image_paths=payload.image_paths,
@@ -502,13 +619,32 @@ async def generate_impression_endpoint(
             report.updated_at = generated_at
             if report.status in {"pending", "in_progress"}:
                 report.status = "draft"
+        input_hash = compute_input_hash(
+            report.study_id if report else None,
+            payload.findings_text,
+            payload.image_urls,
+            payload.image_paths,
+        )
+        output_summary = build_output_summary(text)
+        image_metadata = build_image_metadata(payload.image_urls, payload.image_paths, None)
+        metadata_payload = {
+            "model_version": model_name,
+            "model": model_name,
+            "confidence": confidence,
+            "pipeline": "impression_service",
+            "input_hash": input_hash,
+            "output_summary": output_summary,
+            **image_metadata,
+        }
+        if metadata:
+            metadata_payload.update(metadata)
         add_audit_event(
             db,
             event_type="impression_generated",
             actor_id="system",
             report_id=payload.report_id,
             study_id=report.study_id if report else None,
-            metadata={"model": model_name, "confidence": confidence, "pipeline": "impression_service"},
+            metadata=metadata_payload,
             timestamp=generated_at,
             source="api",
         )
@@ -555,6 +691,8 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
             created_at=now,
         )
         db.add(qa_result)
+        input_hash = compute_text_hash(payload.findings_text, payload.impression_text)
+        output_summary = f"{status} (warnings={len(warnings)}, failures={len(failures)})"
         add_audit_event(
             db,
             event_type="qa_check_run",
@@ -562,11 +700,16 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
             report_id=payload.report_id,
             study_id=report.study_id if report else None,
             metadata={
+                "model_version": "qa-rules-v1",
+                "engine": "rules",
+                "engine_version": "qa-rules-v1",
                 "status": status,
                 "warnings_count": len(warnings),
                 "failures_count": len(failures),
                 "checks_count": len(checks),
                 "quality_score": score,
+                "input_hash": input_hash,
+                "output_summary": output_summary,
             },
             timestamp=now,
             source="api",
@@ -824,6 +967,194 @@ def list_audit_events(
         query = query.filter(AuditEvent.report_id == report_id)
     events = query.order_by(AuditEvent.timestamp.desc()).offset(offset).limit(limit).all()
     return [serialize_audit_event(event) for event in events]
+
+
+@app.get("/api/v1/metrics")
+def get_metrics(db: Session = Depends(get_db)) -> dict[str, Any]:
+    reports_total = db.query(func.count(Report.id)).scalar() or 0
+    reports_by_status = counts_to_dict(
+        db.query(Report.status, func.count(Report.id)).group_by(Report.status).all()
+    )
+    qa_status_counts = counts_to_dict(
+        db.query(Report.qa_status, func.count(Report.id)).group_by(Report.qa_status).all()
+    )
+    inference_job_counts = counts_to_dict(
+        db.query(InferenceJob.status, func.count(InferenceJob.id)).group_by(InferenceJob.status).all()
+    )
+    audit_events_total = db.query(func.count(AuditEvent.id)).scalar() or 0
+
+    return {
+        "timestamp": now_iso(),
+        "reports_total": reports_total,
+        "reports_by_status": reports_by_status,
+        "qa_status_counts": qa_status_counts,
+        "inference_job_status_counts": inference_job_counts,
+        "audit_events_total": audit_events_total,
+    }
+
+
+@app.get("/api/v1/monitoring/drift")
+def get_drift_report(
+    window_days: int = Query(7, ge=1, le=90),
+    baseline_days: int | None = Query(None, ge=1, le=365),
+    persist: bool = Query(False),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    baseline_days = baseline_days or window_days
+    window_start = now - timedelta(days=window_days)
+    baseline_start = window_start - timedelta(days=baseline_days)
+
+    window_start_iso = window_start.isoformat()
+    window_end_iso = now.isoformat()
+    baseline_start_iso = baseline_start.isoformat()
+    baseline_end_iso = window_start_iso
+
+    current_jobs = (
+        db.query(InferenceJob)
+        .filter(InferenceJob.completed_at >= window_start_iso, InferenceJob.completed_at < window_end_iso)
+        .all()
+    )
+    baseline_jobs = (
+        db.query(InferenceJob)
+        .filter(InferenceJob.completed_at >= baseline_start_iso, InferenceJob.completed_at < baseline_end_iso)
+        .all()
+    )
+    current_qa = (
+        db.query(QACheckResult)
+        .filter(QACheckResult.created_at >= window_start_iso, QACheckResult.created_at < window_end_iso)
+        .all()
+    )
+    baseline_qa = (
+        db.query(QACheckResult)
+        .filter(QACheckResult.created_at >= baseline_start_iso, QACheckResult.created_at < baseline_end_iso)
+        .all()
+    )
+
+    current_inference = summarize_inference_jobs(current_jobs)
+    baseline_inference = summarize_inference_jobs(baseline_jobs)
+    current_qa_summary = summarize_qa_results(current_qa)
+    baseline_qa_summary = summarize_qa_results(baseline_qa)
+
+    inference_deltas = compute_deltas(
+        current_inference,
+        baseline_inference,
+        ["confidence_avg", "confidence_median", "failure_rate"],
+    )
+    qa_deltas = compute_deltas(
+        current_qa_summary,
+        baseline_qa_summary,
+        ["pass_rate", "quality_score_avg"],
+    )
+
+    alerts: list[dict[str, Any]] = []
+    confidence_delta = inference_deltas.get("confidence_avg")
+    failure_delta = inference_deltas.get("failure_rate")
+    pass_rate_delta = qa_deltas.get("pass_rate")
+    score_delta = qa_deltas.get("quality_score_avg")
+
+    if confidence_delta is not None and abs(confidence_delta) >= get_threshold("DRIFT_CONFIDENCE_DELTA", 0.1):
+        alerts.append(
+            {
+                "metric": "inference.confidence_avg",
+                "delta": confidence_delta,
+                "threshold": get_threshold("DRIFT_CONFIDENCE_DELTA", 0.1),
+            }
+        )
+    if failure_delta is not None and abs(failure_delta) >= get_threshold("DRIFT_INFERENCE_FAILURE_DELTA", 0.05):
+        alerts.append(
+            {
+                "metric": "inference.failure_rate",
+                "delta": failure_delta,
+                "threshold": get_threshold("DRIFT_INFERENCE_FAILURE_DELTA", 0.05),
+            }
+        )
+    if pass_rate_delta is not None and abs(pass_rate_delta) >= get_threshold("DRIFT_QA_PASS_RATE_DELTA", 0.1):
+        alerts.append(
+            {
+                "metric": "qa.pass_rate",
+                "delta": pass_rate_delta,
+                "threshold": get_threshold("DRIFT_QA_PASS_RATE_DELTA", 0.1),
+            }
+        )
+    if score_delta is not None and abs(score_delta) >= get_threshold("DRIFT_QA_SCORE_DELTA", 5.0):
+        alerts.append(
+            {
+                "metric": "qa.quality_score_avg",
+                "delta": score_delta,
+                "threshold": get_threshold("DRIFT_QA_SCORE_DELTA", 5.0),
+            }
+        )
+
+    response_payload = {
+        "window_days": window_days,
+        "baseline_days": baseline_days,
+        "window": {"start": window_start_iso, "end": window_end_iso},
+        "baseline_window": {"start": baseline_start_iso, "end": baseline_end_iso},
+        "current": {"inference": current_inference, "qa": current_qa_summary},
+        "baseline": {"inference": baseline_inference, "qa": baseline_qa_summary},
+        "delta": {"inference": inference_deltas, "qa": qa_deltas},
+        "alerts": alerts,
+    }
+
+    if persist:
+        snapshot_id = str(uuid.uuid4())
+        snapshot = DriftSnapshot(
+            id=snapshot_id,
+            created_at=now_iso(),
+            window_days=window_days,
+            baseline_days=baseline_days,
+            payload=response_payload,
+        )
+        db.add(snapshot)
+        add_audit_event(
+            db,
+            event_type="drift_snapshot_created",
+            actor_id="system",
+            metadata={
+                "snapshot_id": snapshot_id,
+                "alerts_count": len(alerts),
+                "window_days": window_days,
+                "baseline_days": baseline_days,
+            },
+            source="api",
+        )
+        if alerts:
+            add_audit_event(
+                db,
+                event_type="drift_alert_triggered",
+                actor_id="system",
+                metadata={"snapshot_id": snapshot_id, "alerts": alerts},
+                source="api",
+            )
+        db.commit()
+
+    return response_payload
+
+
+@app.get("/api/v1/monitoring/drift/snapshots")
+def list_drift_snapshots(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> list[dict[str, Any]]:
+    snapshots = (
+        db.query(DriftSnapshot)
+        .order_by(DriftSnapshot.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": snapshot.id,
+            "created_at": snapshot.created_at,
+            "window_days": snapshot.window_days,
+            "baseline_days": snapshot.baseline_days,
+            "payload": snapshot.payload,
+        }
+        for snapshot in snapshots
+    ]
 
 
 @app.websocket("/api/v1/ws")

@@ -10,7 +10,8 @@ Audit Logs dokumentieren alle KI-gestuetzten Entscheidungen und menschlichen Ein
 - Felder aktuell: `event_type`, `actor_id`, `report_id`, `study_id`, `timestamp`, `metadata`
 - Events werden im API Layer und Worker erzeugt (Queue + Inference)
 - Metadata enthaelt optional `source` (`api`, `worker`, `client`)
-- Hashing/Model-Versionen sind noch nicht verpflichtend (Phase 3)
+- Input-Hash/Model-Version/Output-Summary sind fuer Inference, Impression, QA und ASR hinterlegt
+  (ASR nutzt Audio-Hash + Laengen-Output, keine Transkripte)
 
 ## Mindestfelder
 
@@ -18,9 +19,9 @@ Audit Logs dokumentieren alle KI-gestuetzten Entscheidungen und menschlichen Ein
 - Actor ID (User oder "system")
 - Report ID + Study ID
 - Timestamp (UTC)
-- Model Version
-- Input Hash (kein PHI)
-- Output Summary (gekuerzt)
+- Model Version (bei regelbasierten Checks: `qa-rules-v1`)
+- Input Hash (kein PHI, z.B. Findings/Impression oder Audio-Blob)
+- Output Summary (gekuerzt; darf keine PHI enthalten)
 - Source (api/worker/client)
 
 ## Logging Punkte
