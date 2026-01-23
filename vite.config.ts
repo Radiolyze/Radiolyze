@@ -3,25 +3,30 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// Plugin to fix MIME type for worker files served from node_modules/.vite/deps
-function workerMimeTypeFix(): Plugin {
+// Plugin to handle Cornerstone worker files that Vite can't serve
+// When maxWebWorkers: 0 is set, we don't need actual workers, so serve a no-op stub
+function cornerstoneWorkerStub(): Plugin {
   return {
-    name: "worker-mime-type-fix",
+    name: "cornerstone-worker-stub",
     configureServer(server) {
-      // Add middleware early to intercept worker file requests
+      // Add middleware BEFORE Vite's default middleware to intercept worker requests
       server.middlewares.use((req, res, next) => {
         const url = req.url || "";
-        // Detect worker files from Vite deps cache
-        if (url.includes(".vite/deps") && url.includes("Worker")) {
-          // Intercept the response to ensure Content-Type is set
-          const originalEnd = res.end.bind(res);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          res.end = function (...args: any[]) {
-            if (!res.headersSent && !res.getHeader("content-type")) {
-              res.setHeader("Content-Type", "application/javascript; charset=utf-8");
-            }
-            return originalEnd(...args);
-          };
+        // Intercept requests for Cornerstone worker files that would otherwise 404
+        if (url.includes("decodeImageFrameWorker") && url.includes("worker_file")) {
+          // Serve a minimal no-op worker module
+          res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.statusCode = 200;
+          // Empty worker that just exports nothing - Cornerstone will fall back to main thread
+          res.end(`
+            // Stub worker for Cornerstone - actual decoding happens on main thread (maxWebWorkers: 0)
+            self.onmessage = function(e) {
+              // No-op: decoding disabled in workers
+              self.postMessage({ error: 'Workers disabled' });
+            };
+          `);
+          return;
         }
         next();
       });
@@ -83,7 +88,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      workerMimeTypeFix(),
+      cornerstoneWorkerStub(),
       mode === "development" && componentTagger(),
     ].filter(Boolean),
     resolve: {

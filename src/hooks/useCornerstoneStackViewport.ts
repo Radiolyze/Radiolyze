@@ -136,11 +136,19 @@ export const useCornerstoneStackViewport = ({
         const toolGroup = ToolGroupManager.createToolGroup(toolGroupId);
         toolGroupRef.current = toolGroup;
 
+        // Navigation tools
         toolGroup.addTool(cornerstoneToolNames.stackScroll);
         toolGroup.addTool(cornerstoneToolNames.pan);
         toolGroup.addTool(cornerstoneToolNames.zoom);
         toolGroup.addTool(cornerstoneToolNames.windowLevel);
         toolGroup.addTool(cornerstoneToolNames.length);
+        
+        // Annotation tools for training data
+        toolGroup.addTool(cornerstoneToolNames.rectangle);
+        toolGroup.addTool(cornerstoneToolNames.ellipse);
+        toolGroup.addTool(cornerstoneToolNames.freehand);
+        toolGroup.addTool(cornerstoneToolNames.bidirectional);
+        toolGroup.addTool(cornerstoneToolNames.arrow);
 
         toolGroup.addViewport(viewportId, renderingEngineId);
 

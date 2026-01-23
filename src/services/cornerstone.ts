@@ -136,6 +136,8 @@ export const prefetchWadorsMetadata = async (
     const metadataUrl = buildDicomWebUrl(
       `studies/${studyId}/series/${seriesId}/instances/${instanceId}/metadata`
     );
+    console.log('[cornerstone] Fetching metadata from:', metadataUrl);
+    
     const response = await fetch(metadataUrl);
     
     if (!response.ok) {
@@ -143,6 +145,7 @@ export const prefetchWadorsMetadata = async (
     }
     
     const metadata = await response.json();
+    console.log('[cornerstone] Metadata received, array length:', Array.isArray(metadata) ? metadata.length : 'not array');
     
     // The metadata response is an array with one object for the instance
     const instanceMetadata = Array.isArray(metadata) ? metadata[0] : metadata;
@@ -152,10 +155,13 @@ export const prefetchWadorsMetadata = async (
       for (let frame = 1; frame <= numberOfFrames; frame++) {
         const imageId = buildWadorsImageId(studyId, seriesId, instanceId, frame);
         cornerstoneDICOMImageLoader.wadors.metaDataManager.add(imageId, instanceMetadata);
+        console.log('[cornerstone] Registered metadata for:', imageId);
       }
-      log('[cornerstone] Metadata pre-fetched for', instanceId, `(${numberOfFrames} frames)`);
+      console.log('[cornerstone] Metadata pre-fetched for', instanceId, `(${numberOfFrames} frames)`);
+    } else {
+      console.warn('[cornerstone] No metaDataManager available or no metadata');
     }
   } catch (err) {
-    console.warn('[cornerstone] Failed to prefetch metadata:', err);
+    console.error('[cornerstone] Failed to prefetch metadata:', err);
   }
 };
