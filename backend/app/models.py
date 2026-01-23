@@ -92,3 +92,40 @@ class PromptTemplate(Base):
     created_by: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
     updated_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class Annotation(Base):
+    """Training annotations for Fine-Tuning MedGemma."""
+
+    __tablename__ = "annotations"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    study_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    series_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    instance_id: Mapped[str] = mapped_column(String, nullable=False)
+    frame_index: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Tool and geometry
+    tool_type: Mapped[str] = mapped_column(String, nullable=False)
+    geometry_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+    # Classification
+    label: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str | None] = mapped_column(String, nullable=True)
+    severity: Mapped[str | None] = mapped_column(String, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Metadata
+    created_by: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    verified_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    verified_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # DICOM context
+    anatomical_region: Mapped[str | None] = mapped_column(String, nullable=True)
+    laterality: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Cornerstone reference
+    cornerstone_annotation_uid: Mapped[str | None] = mapped_column(String, nullable=True)
