@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import mimetypes
 import os
@@ -123,6 +124,43 @@ def _build_image_manifest(
     return "\n".join(lines)
 
 
+def _strip_code_fences(text: str) -> str:
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return stripped
+    lines = stripped.splitlines()
+    if lines and lines[0].startswith("```"):
+        lines = lines[1:]
+    if lines and lines[-1].strip().startswith("```"):
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
+
+
+def _parse_json_response(text: str) -> tuple[dict[str, Any] | None, str | None]:
+    candidate = _strip_code_fences(text)
+    start = candidate.find("{")
+    end = candidate.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        return None, "no_json_object"
+    candidate = candidate[start : end + 1]
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError as exc:
+        return None, str(exc)
+    if not isinstance(parsed, dict):
+        return None, "json_not_object"
+    return parsed, None
+
+
+def _extract_json_text(payload: dict[str, Any] | None, key: str) -> str | None:
+    if not payload:
+        return None
+    value = payload.get(key)
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
 def _vllm_base_url() -> str:
     return os.getenv("VLLM_BASE_URL", "http://vllm-medgemma:8000/v1").rstrip("/")
 
@@ -220,16 +258,30 @@ def generate_impression_text(
     model_name = _vllm_model_name()
     try:
         start_time = time.monotonic()
-        text = _vllm_chat_completion(
+        raw_text = _vllm_chat_completion(
             _build_impression_prompt(findings_text, image_manifest),
             model_name=model_name,
             system_prompt=render_prompt_text("system"),
             image_urls=image_urls,
             image_paths=image_paths,
         )
+        parsed, parse_error = _parse_json_response(raw_text)
+        json_text = _extract_json_text(parsed, "impression")
+        text = json_text or raw_text
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
-        return text, confidence, model_name, _compact_metadata({"provider": "vllm", "latency_ms": latency_ms})
+        json_metadata = {}
+        if json_text:
+            json_metadata["json_parsed"] = True
+        elif parse_error:
+            json_metadata["json_parsed"] = False
+            json_metadata["json_error"] = parse_error
+        else:
+            json_metadata["json_parsed"] = False
+            json_metadata["json_error"] = "missing_impression"
+        return text, confidence, model_name, _compact_metadata(
+            {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
+        )
     except Exception as exc:
         logger.warning("vLLM impression failed: %s", exc)
         if _env_flag("VLLM_FALLBACK_TO_MOCK", True):
@@ -256,16 +308,30 @@ def generate_inference_summary_text(
     resolved_model = _vllm_model_name(model_name)
     try:
         start_time = time.monotonic()
-        text = _vllm_chat_completion(
+        raw_text = _vllm_chat_completion(
             _build_summary_prompt(findings_text, image_manifest),
             model_name=resolved_model,
             system_prompt=render_prompt_text("system"),
             image_urls=image_urls,
             image_paths=image_paths,
         )
+        parsed, parse_error = _parse_json_response(raw_text)
+        json_text = _extract_json_text(parsed, "summary")
+        text = json_text or raw_text
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
-        return text, confidence, resolved_model, _compact_metadata({"provider": "vllm", "latency_ms": latency_ms})
+        json_metadata = {}
+        if json_text:
+            json_metadata["json_parsed"] = True
+        elif parse_error:
+            json_metadata["json_parsed"] = False
+            json_metadata["json_error"] = parse_error
+        else:
+            json_metadata["json_parsed"] = False
+            json_metadata["json_error"] = "missing_summary"
+        return text, confidence, resolved_model, _compact_metadata(
+            {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
+        )
     except Exception as exc:
         logger.warning("vLLM inference failed: %s", exc)
         if _env_flag("VLLM_FALLBACK_TO_MOCK", True):
