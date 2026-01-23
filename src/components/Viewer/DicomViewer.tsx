@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ChevronUp, ChevronDown, Download, Maximize2 } from 'lucide-react';
 import type { AIStatus, ImageRef, QAStatus, Series } from '@/types/radiology';
-import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
@@ -12,16 +10,11 @@ import { useCornerstoneViewerTools } from '@/hooks/useCornerstoneViewerTools';
 import { useStackFrameNavigation } from '@/hooks/useStackFrameNavigation';
 import { useCornerstoneStackSetup } from '@/hooks/useCornerstoneStackSetup';
 import { useViewerReset } from '@/hooks/useViewerReset';
-import { ImageControls } from './ImageControls';
 import { ProgressOverlay } from './ProgressOverlay';
-import { SeriesStack } from './SeriesStack';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { DicomViewerToolbar } from './DicomViewerToolbar';
+import { DicomViewerStateOverlay } from './DicomViewerStateOverlay';
+import { DicomViewerFrameOverlays } from './DicomViewerFrameOverlays';
+import { ViewerEmptyState } from './ViewerEmptyState';
 import { exportAnnotations } from '@/services/annotations';
 import type { ViewportState } from '@/types/viewerSync';
 import { viewerTools, windowLevelPresets } from '@/config/viewer';
@@ -197,54 +190,24 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
 
   if (!series) {
     return (
-      <div className="h-full flex items-center justify-center bg-viewer">
-        <div className="text-center text-muted-foreground">
-          <Maximize2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Wählen Sie eine Serie aus</p>
-        </div>
-      </div>
+      <ViewerEmptyState title="Wählen Sie eine Serie aus" />
     );
   }
 
   return (
     <div className="h-full flex flex-col bg-viewer relative">
       {/* Toolbar */}
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        <ImageControls
-          tools={viewerTools}
-          activeToolId={activeTool}
-          onToolSelect={(toolId) => setActiveTool(toolId as Tool)}
-          onReset={handleReset}
-        />
-        <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-2 border border-border">
-          <Select
-            value={selectedPresetId}
-            onValueChange={setSelectedPresetId}
-            disabled={!hasStack}
-          >
-            <SelectTrigger className="h-8 w-[170px] text-xs">
-              <SelectValue placeholder="Fenster/Level" />
-            </SelectTrigger>
-            <SelectContent>
-              {windowLevelPresets.map((preset) => (
-                <SelectItem key={preset.id} value={preset.id}>
-                  {preset.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2"
-            onClick={handleExportAnnotations}
-            disabled={!hasStack}
-          >
-            <Download className="h-4 w-4 mr-1" />
-            Export
-          </Button>
-        </div>
-      </div>
+      <DicomViewerToolbar
+        tools={viewerTools}
+        activeToolId={activeTool}
+        onToolSelect={(toolId) => setActiveTool(toolId as Tool)}
+        onReset={handleReset}
+        presets={windowLevelPresets}
+        selectedPresetId={selectedPresetId}
+        onPresetChange={setSelectedPresetId}
+        onExportAnnotations={handleExportAnnotations}
+        hasStack={hasStack}
+      />
 
       {/* Series Info */}
       <div className="absolute top-4 right-4 z-10 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
@@ -268,85 +231,23 @@ export function DicomViewer({ series, onFrameChange, progress, onViewportChange,
       <div className="flex-1 relative bg-viewer">
         <div ref={viewportRef} className="h-full w-full cursor-crosshair" />
 
-        {(effectiveError || imageIds.length === 0) && !isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-muted-foreground space-y-2">
-              <Maximize2 className="h-12 w-12 mx-auto opacity-50" />
-              <p>{effectiveError ?? 'Keine DICOM-Bilder geladen'}</p>
-              <p className="text-xs text-muted-foreground">
-                Prüfen Sie DICOMweb-Verbindung und Serien-ID.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-viewer/80">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full spinner" />
-              <p className="text-muted-foreground">Lade DICOM-Bilder...</p>
-            </div>
-          </div>
-        )}
-
-        {hasStack && (
-          <>
-            <div className="absolute bottom-2 left-2 text-xs text-white/70 font-mono">
-              Im: {currentFrame + 1}/{totalFrames}
-            </div>
-            <div className="absolute bottom-2 right-2 text-xs text-white/70 font-mono">
-              Zoom: {(zoom * 100).toFixed(0)}%
-            </div>
-          </>
-        )}
+        <DicomViewerStateOverlay
+          isLoading={isLoading}
+          hasStack={hasStack}
+          error={effectiveError}
+        />
       </div>
 
-      {/* Frame Navigation */}
-      {hasStack && totalFrames > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-2 border border-border">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handlePrevFrame}
-            disabled={currentFrame === 0}
-          >
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-          
-          <div className="min-w-[80px] text-center">
-            <span className="text-sm font-mono">
-              {currentFrame + 1} / {totalFrames}
-            </span>
-          </div>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleNextFrame}
-            disabled={currentFrame === totalFrames - 1}
-          >
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {hasStack && totalFrames > 1 && !isLoading && (
-        <SeriesStack
-          totalFrames={totalFrames}
-          currentFrame={currentFrame}
-          onSelectFrame={setFrameIndex}
-          className="absolute bottom-4 left-4 z-10"
-        />
-      )}
-
-      {/* Scroll hint */}
-      {hasStack && totalFrames > 1 && !isLoading && (
-        <div className="absolute bottom-4 right-4 text-xs text-muted-foreground bg-card/90 backdrop-blur-sm rounded px-2 py-1 border border-border">
-          Scrollen oder ↑↓ zum Navigieren
-        </div>
-      )}
+      <DicomViewerFrameOverlays
+        hasStack={hasStack}
+        totalFrames={totalFrames}
+        currentFrame={currentFrame}
+        zoom={zoom}
+        isLoading={isLoading}
+        onPrevFrame={handlePrevFrame}
+        onNextFrame={handleNextFrame}
+        onSelectFrame={setFrameIndex}
+      />
     </div>
   );
 }
