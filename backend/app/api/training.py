@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 import httpx
 
-from ..db import get_db
+from ..deps import get_db
 from ..models import Annotation
 from ..utils.time import utc_iso
 

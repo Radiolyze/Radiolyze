@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..db import get_db
+from ..deps import get_db
 from ..models import Annotation
 from ..utils.time import utc_iso
 
