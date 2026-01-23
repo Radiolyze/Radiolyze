@@ -373,6 +373,7 @@ async def generate_impression_endpoint(
         confidence=confidence,
         model=model_name,
         generated_at=generated_at,
+        metadata=metadata,
     )
 
 

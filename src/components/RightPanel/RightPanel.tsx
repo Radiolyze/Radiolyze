@@ -74,6 +74,7 @@ export function RightPanel({
           inferenceCompletedAt={report.inferenceCompletedAt}
           inferenceImageRefs={report.inferenceImageRefs}
           inferenceEvidenceIndices={report.inferenceEvidenceIndices}
+          inferenceMetadata={report.inferenceMetadata}
           onEvidenceSelect={onEvidenceSelect}
           useAllFrames={useAllFrames}
           onUseAllFramesChange={onUseAllFramesChange}

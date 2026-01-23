@@ -27,6 +27,7 @@ nav:
       - Frontend: architecture/frontend.md
       - Backend: architecture/backend.md
       - Datenfluss: architecture/data-flow.md
+      - MedGemma 1.5 Nutzung: architecture/medgemma-1-5-nutzung.md
       - Compliance: architecture/compliance.md
       - Deployment: architecture/deployment.md
   - Komponenten:

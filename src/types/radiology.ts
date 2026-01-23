@@ -39,9 +39,16 @@ export interface ImageRef {
   inferenceUrl?: string;
   imageId?: string;
   studyDate?: string;
+  timeDeltaDays?: number;
   seriesDescription?: string;
   seriesModality?: string;
   role?: 'current' | 'prior';
+  pixelSpacing?: number[];
+  sliceThickness?: number;
+  spacingBetweenSlices?: number;
+  imageOrientation?: number[];
+  imagePosition?: number[];
+  instanceNumber?: number;
 }
 
 export interface Report {
@@ -66,6 +73,7 @@ export interface Report {
   inferenceCompletedAt?: string;
   inferenceImageRefs?: ImageRef[];
   inferenceEvidenceIndices?: number[];
+  inferenceMetadata?: Record<string, unknown>;
 }
 
 export type ReportStatus = 'pending' | 'in_progress' | 'draft' | 'approved' | 'finalized';

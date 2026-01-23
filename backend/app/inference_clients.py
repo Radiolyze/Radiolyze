@@ -10,9 +10,11 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from pydantic import ValidationError
 
+from .ai_schemas import SCHEMA_VERSION, ImpressionOutput, SummaryOutput
 from .mock_logic import generate_asr_transcript, generate_impression, generate_inference_summary
-from .prompts import render_prompt_text
+from .prompts import render_prompt_with_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,10 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _schema_strict() -> bool:
+    return _env_flag("VLLM_SCHEMA_STRICT", False)
+
+
 def _compact_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in metadata.items() if value is not None}
 
@@ -52,6 +58,42 @@ def _normalize_list(values: list[str] | None) -> list[str]:
     if not values:
         return []
     return [value.strip() for value in values if isinstance(value, str) and value.strip()]
+
+
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _as_int(value: Any) -> int | None:
+    parsed = _as_float(value)
+    if parsed is None or not parsed.is_integer():
+        return None
+    return int(parsed)
+
+
+def _format_float(value: float) -> str:
+    return f"{value:.4f}".rstrip("0").rstrip(".")
+
+
+def _normalize_float_list(raw: Any) -> list[float] | None:
+    if not isinstance(raw, list):
+        return None
+    values: list[float] = []
+    for entry in raw:
+        parsed = _as_float(entry)
+        if parsed is None:
+            continue
+        values.append(parsed)
+    return values or None
 
 
 def _encode_image_path(path: str) -> str:
@@ -90,16 +132,28 @@ def _build_image_manifest(
             if role not in {"current", "prior"}:
                 role = None
             study_date = ref.get("study_date") or ref.get("studyDate")
+            time_delta_days = ref.get("time_delta_days") or ref.get("timeDeltaDays")
             series_description = ref.get("series_description") or ref.get("seriesDescription")
             series_modality = ref.get("series_modality") or ref.get("seriesModality")
             frame_index = ref.get("frame_index") if "frame_index" in ref else ref.get("frameIndex")
             stack_index = ref.get("stack_index") if "stack_index" in ref else ref.get("stackIndex")
+            instance_number = ref.get("instance_number") if "instance_number" in ref else ref.get("instanceNumber")
+            slice_thickness = ref.get("slice_thickness") if "slice_thickness" in ref else ref.get("sliceThickness")
+            spacing_between_slices = (
+                ref.get("spacing_between_slices")
+                if "spacing_between_slices" in ref
+                else ref.get("spacingBetweenSlices")
+            )
+            pixel_spacing = ref.get("pixel_spacing") if "pixel_spacing" in ref else ref.get("pixelSpacing")
 
             parts = [f"{index})"]
             if role:
                 parts.append(f"role={role}")
             if study_date:
                 parts.append(f"study_date={study_date}")
+            delta_days = _as_int(time_delta_days)
+            if delta_days is not None:
+                parts.append(f"time_delta_days={delta_days}")
             if series_description:
                 parts.append(f"series={series_description}")
             if series_modality:
@@ -108,6 +162,21 @@ def _build_image_manifest(
                 parts.append(f"frame={frame_index}")
             if isinstance(stack_index, int):
                 parts.append(f"stack={stack_index}")
+            instance_number_value = _as_int(instance_number)
+            if instance_number_value is not None:
+                parts.append(f"instance={instance_number_value}")
+            slice_value = _as_float(slice_thickness)
+            if slice_value is not None:
+                parts.append(f"slice_thickness={_format_float(slice_value)}")
+            spacing_value = _as_float(spacing_between_slices)
+            if spacing_value is not None:
+                parts.append(f"spacing_between_slices={_format_float(spacing_value)}")
+            pixel_values = _normalize_float_list(pixel_spacing)
+            if pixel_values and len(pixel_values) >= 2:
+                parts.append(
+                    "pixel_spacing="
+                    f"{_format_float(pixel_values[0])}x{_format_float(pixel_values[1])}"
+                )
             lines.append(" ".join(parts))
 
         if lines:
@@ -249,8 +318,11 @@ def _vllm_chat_completion(
     return content.strip()
 
 
-def _build_impression_prompt(findings_text: str | None, image_manifest: str | None) -> str:
-    return render_prompt_text(
+def _build_impression_prompt(
+    findings_text: str | None,
+    image_manifest: str | None,
+) -> tuple[str, dict[str, Any]]:
+    return render_prompt_with_metadata(
         "impression",
         {
             "findings_text": (findings_text or "").strip(),
@@ -259,14 +331,60 @@ def _build_impression_prompt(findings_text: str | None, image_manifest: str | No
     )
 
 
-def _build_summary_prompt(findings_text: str | None, image_manifest: str | None) -> str:
-    return render_prompt_text(
+def _build_summary_prompt(
+    findings_text: str | None,
+    image_manifest: str | None,
+) -> tuple[str, dict[str, Any]]:
+    return render_prompt_with_metadata(
         "summary",
         {
             "findings_text": (findings_text or "").strip(),
             "image_manifest": image_manifest or "",
         },
     )
+
+
+def _parse_structured_output(
+    raw_text: str,
+    *,
+    model_type: type[SummaryOutput] | type[ImpressionOutput],
+    text_key: str,
+    schema_name: str,
+) -> tuple[str, dict[str, Any], list[int] | None, str | None]:
+    parsed, parse_error = _parse_json_response(raw_text)
+    metadata: dict[str, Any] = {"schema_name": schema_name, "schema_version": SCHEMA_VERSION}
+    evidence_indices = None
+    confidence_label = None
+
+    if not parsed:
+        metadata["json_parsed"] = False
+        metadata["json_schema_valid"] = False
+        metadata["json_error"] = parse_error or "no_json_object"
+        return raw_text, metadata, None, None
+
+    try:
+        output = model_type.model_validate(parsed)
+    except ValidationError:
+        metadata["json_parsed"] = True
+        metadata["json_schema_valid"] = False
+        metadata["json_error"] = "schema_validation_failed"
+        evidence_indices = _extract_evidence_indices(parsed)
+        return raw_text, metadata, evidence_indices, None
+
+    text = getattr(output, text_key, None)
+    if not text:
+        metadata["json_parsed"] = True
+        metadata["json_schema_valid"] = False
+        metadata["json_error"] = f"missing_{text_key}"
+        evidence_indices = getattr(output, "evidence_indices", None)
+        confidence_label = getattr(output, "confidence", None)
+        return raw_text, metadata, evidence_indices, confidence_label
+
+    metadata["json_parsed"] = True
+    metadata["json_schema_valid"] = True
+    evidence_indices = getattr(output, "evidence_indices", None)
+    confidence_label = getattr(output, "confidence", None)
+    return text, metadata, evidence_indices, confidence_label
 
 
 def generate_impression_text(
@@ -286,30 +404,36 @@ def generate_impression_text(
     model_name = _vllm_model_name()
     try:
         start_time = time.monotonic()
+        system_prompt, system_meta = render_prompt_with_metadata("system")
+        prompt_text, prompt_meta = _build_impression_prompt(findings_text, image_manifest)
         raw_text = _vllm_chat_completion(
-            _build_impression_prompt(findings_text, image_manifest),
+            prompt_text,
             model_name=model_name,
-            system_prompt=render_prompt_text("system"),
+            system_prompt=system_prompt,
             image_urls=image_urls,
             image_paths=image_paths,
         )
-        parsed, parse_error = _parse_json_response(raw_text)
-        json_text = _extract_json_text(parsed, "impression")
-        evidence_indices = _extract_evidence_indices(parsed)
-        text = json_text or raw_text
+        text, parse_metadata, evidence_indices, confidence_label = _parse_structured_output(
+            raw_text,
+            model_type=ImpressionOutput,
+            text_key="impression",
+            schema_name="impression_output",
+        )
+        if _schema_strict() and not parse_metadata.get("json_schema_valid"):
+            raise RuntimeError(f"Schema validation failed: {parse_metadata.get('json_error', 'unknown')}")
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
-        json_metadata = {}
-        if json_text:
-            json_metadata["json_parsed"] = True
-        elif parse_error:
-            json_metadata["json_parsed"] = False
-            json_metadata["json_error"] = parse_error
-        else:
-            json_metadata["json_parsed"] = False
-            json_metadata["json_error"] = "missing_impression"
+        json_metadata = {
+            **parse_metadata,
+            "prompt": {"system": system_meta, "task": prompt_meta},
+        }
+        json_metadata["images_used"] = has_images
         if evidence_indices:
             json_metadata["evidence_indices"] = evidence_indices
+        if has_images and not evidence_indices:
+            json_metadata["evidence_missing"] = True
+        if confidence_label:
+            json_metadata["confidence_label"] = confidence_label
         return text, confidence, model_name, _compact_metadata(
             {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
         )
@@ -339,30 +463,36 @@ def generate_inference_summary_text(
     resolved_model = _vllm_model_name(model_name)
     try:
         start_time = time.monotonic()
+        system_prompt, system_meta = render_prompt_with_metadata("system")
+        prompt_text, prompt_meta = _build_summary_prompt(findings_text, image_manifest)
         raw_text = _vllm_chat_completion(
-            _build_summary_prompt(findings_text, image_manifest),
+            prompt_text,
             model_name=resolved_model,
-            system_prompt=render_prompt_text("system"),
+            system_prompt=system_prompt,
             image_urls=image_urls,
             image_paths=image_paths,
         )
-        parsed, parse_error = _parse_json_response(raw_text)
-        json_text = _extract_json_text(parsed, "summary")
-        evidence_indices = _extract_evidence_indices(parsed)
-        text = json_text or raw_text
+        text, parse_metadata, evidence_indices, confidence_label = _parse_structured_output(
+            raw_text,
+            model_type=SummaryOutput,
+            text_key="summary",
+            schema_name="summary_output",
+        )
+        if _schema_strict() and not parse_metadata.get("json_schema_valid"):
+            raise RuntimeError(f"Schema validation failed: {parse_metadata.get('json_error', 'unknown')}")
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
-        json_metadata = {}
-        if json_text:
-            json_metadata["json_parsed"] = True
-        elif parse_error:
-            json_metadata["json_parsed"] = False
-            json_metadata["json_error"] = parse_error
-        else:
-            json_metadata["json_parsed"] = False
-            json_metadata["json_error"] = "missing_summary"
+        json_metadata = {
+            **parse_metadata,
+            "prompt": {"system": system_meta, "task": prompt_meta},
+        }
+        json_metadata["images_used"] = has_images
         if evidence_indices:
             json_metadata["evidence_indices"] = evidence_indices
+        if has_images and not evidence_indices:
+            json_metadata["evidence_missing"] = True
+        if confidence_label:
+            json_metadata["confidence_label"] = confidence_label
         return text, confidence, resolved_model, _compact_metadata(
             {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
         )

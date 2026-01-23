@@ -11,6 +11,37 @@ export interface ExportRequest {
   splitRatio?: number;
 }
 
+export interface ManifestRequest {
+  studyIds?: string[];
+  categories?: string[];
+  verifiedOnly?: boolean;
+  splitRatio?: number;
+  limit?: number;
+  checkImages?: boolean;
+}
+
+export interface ManifestEntry {
+  id: string;
+  image_path: string;
+  wado_url: string;
+  study_id: string;
+  series_id: string;
+  instance_id: string;
+  frame_index: number;
+  frame_number: number;
+  splits: string[];
+  status?: 'ok' | 'error';
+  bytes?: number;
+  sha256?: string;
+  error?: string;
+}
+
+export interface ManifestResponse {
+  total: number;
+  images: ManifestEntry[];
+  status?: { ok: number; error: number };
+}
+
 export interface ExportStats {
   totalAnnotations: number;
   verifiedAnnotations: number;
@@ -71,6 +102,17 @@ export async function exportTrainingData(request: ExportRequest): Promise<Blob> 
   }
 
   return response.blob();
+}
+
+export async function getTrainingManifest(request: ManifestRequest): Promise<ManifestResponse> {
+  return apiClient.post<ManifestResponse>(`${BASE_PATH}/manifest`, {
+    studyIds: request.studyIds,
+    categories: request.categories,
+    verifiedOnly: request.verifiedOnly ?? true,
+    splitRatio: request.splitRatio ?? 0.8,
+    limit: request.limit,
+    checkImages: request.checkImages,
+  });
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

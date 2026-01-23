@@ -31,5 +31,6 @@ export const mapReportResponse = (payload: ReportResponsePayload, existing?: Rep
   inferenceCompletedAt: payload.inference_completed_at ?? existing?.inferenceCompletedAt,
   inferenceImageRefs: existing?.inferenceImageRefs,
   inferenceEvidenceIndices: existing?.inferenceEvidenceIndices,
+  inferenceMetadata: existing?.inferenceMetadata,
   aiStatus: existing?.aiStatus,
 });

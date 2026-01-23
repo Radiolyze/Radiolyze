@@ -69,6 +69,7 @@ class ImpressionResponse(ApiBaseModel):
     confidence: float
     model: str
     generated_at: str
+    metadata: dict[str, Any] | None = None
 
 
 class QACheckRequest(ApiBaseModel):
@@ -101,9 +102,16 @@ class ImageRef(ApiBaseModel):
     wado_url: str
     image_id: str | None = None
     study_date: str | None = None
+    time_delta_days: int | None = None
     series_description: str | None = None
     series_modality: str | None = None
     role: Literal["current", "prior"] | None = None
+    pixel_spacing: list[float] | None = None
+    slice_thickness: float | None = None
+    spacing_between_slices: float | None = None
+    image_orientation: list[float] | None = None
+    image_position: list[float] | None = None
+    instance_number: int | None = None
 
 
 class InferenceQueueRequest(ApiBaseModel):

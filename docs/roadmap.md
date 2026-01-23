@@ -59,6 +59,15 @@
 - [x] Report History / Audit Log UI
 - [~] Observability (Metrics-Endpoint + Drift-Report, Tracing offen)
 
+## Phase 5.5: MedGemma Capability Expansion (16-24 Wochen)
+
+- [ ] 3D-Readiness: Slice-Order, Spacing, VOI/WL Persistenz
+- [ ] Longitudinal Context: Current/Prior Paare + Time-Delta
+- [ ] Strukturierte Outputs (JSON Schema + Validation)
+- [ ] Evidence-Indices verpflichtend bei Bild-Inputs
+- [ ] Optional: WSI/Patch Manifest + Tile Inputs
+- [ ] Data Capture Modus (Rendered PNG + Manifest)
+
 ## Phase 6: Scale & Optimization (22+ Wochen)
 
 - [ ] Performance Optimierung (Web Worker, Streaming)
@@ -75,6 +84,9 @@
 4. Observability/Tracing (OpenTelemetry, Dashboard, Log-Korrelation).
 5. Templates/Guidelines RAG konzipieren (Vector Store, Retrieval API, UI Hook).
 6. DICOM -> Image Pipeline fuer Multimodal (WADO-RS Render/JPEG, Caching/TTL).
+7. 3D-Readiness: Slice-Metadaten + Sampling-Strategien erfassen.
+8. Longitudinal Context: Time-Delta + Prior Mapping persistieren.
+9. Strukturierte JSON-Outputs + Schema-Validierung vorbereiten.
 
 ## Risiken und Abhaengigkeiten
 

@@ -11,6 +11,7 @@ import {
   extractInferenceConfidence,
   extractInferenceEvidenceIndices,
   extractInferenceImageRefs,
+  extractInferenceMetadata,
   extractInferenceModel,
   extractInferenceSummary,
   pollInferenceResult,
@@ -156,6 +157,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
       const completedAt = extractInferenceCompletedAt(result);
       const inferredImageRefs = extractInferenceImageRefs(result);
       const evidenceIndices = extractInferenceEvidenceIndices(result);
+      const inferenceMetadata = extractInferenceMetadata(result);
 
       setReport(prev => prev ? {
         ...prev,
@@ -169,6 +171,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         inferenceCompletedAt: completedAt,
         inferenceImageRefs: inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
         inferenceEvidenceIndices: evidenceIndices ?? prev.inferenceEvidenceIndices,
+        inferenceMetadata: inferenceMetadata ?? prev.inferenceMetadata,
       } : null);
 
       succeeded = true;

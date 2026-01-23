@@ -11,6 +11,11 @@ type InstanceInfo = {
   instanceId: string;
   frames: number;
   instanceNumber?: number;
+  pixelSpacing?: number[];
+  sliceThickness?: number;
+  spacingBetweenSlices?: number;
+  imageOrientation?: number[];
+  imagePosition?: number[];
 };
 
 const getTagValue = (entry: Record<string, unknown>, tag: string) => {
@@ -19,6 +24,27 @@ const getTagValue = (entry: Record<string, unknown>, tag: string) => {
     return tagEntry.Value[0];
   }
   return undefined;
+};
+
+const getTagValues = (entry: Record<string, unknown>, tag: string) => {
+  const tagEntry = entry[tag] as { Value?: unknown[] } | undefined;
+  if (tagEntry && Array.isArray(tagEntry.Value) && tagEntry.Value.length > 0) {
+    return tagEntry.Value;
+  }
+  return undefined;
+};
+
+const readNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const readNumberArray = (values: unknown[] | undefined) => {
+  if (!values) return undefined;
+  const parsed = values
+    .map(readNumber)
+    .filter((entry): entry is number => typeof entry === 'number');
+  return parsed.length > 0 ? parsed : undefined;
 };
 
 const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
@@ -46,18 +72,29 @@ const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
     getTagValue(record, '00280008') ||
     record.numberOfFrames ||
     record.NumberOfFrames;
-  const parsedFrames = Number(rawFrames);
-  const frames = Number.isFinite(parsedFrames) && parsedFrames > 1 ? parsedFrames : 1;
+  const parsedFrames = readNumber(rawFrames);
+  const frames = parsedFrames && parsedFrames > 1 ? parsedFrames : 1;
 
   const rawInstanceNumber =
     getTagValue(record, '00200013') ||
     record.InstanceNumber;
-  const parsedInstanceNumber = Number(rawInstanceNumber);
+  const parsedInstanceNumber = readNumber(rawInstanceNumber);
+
+  const pixelSpacing = readNumberArray(getTagValues(record, '00280030'));
+  const sliceThickness = readNumber(getTagValue(record, '00180050'));
+  const spacingBetweenSlices = readNumber(getTagValue(record, '00180088'));
+  const imageOrientation = readNumberArray(getTagValues(record, '00200037'));
+  const imagePosition = readNumberArray(getTagValues(record, '00200032'));
 
   return {
     instanceId,
     frames,
-    instanceNumber: Number.isFinite(parsedInstanceNumber) ? parsedInstanceNumber : undefined,
+    instanceNumber: parsedInstanceNumber,
+    pixelSpacing,
+    sliceThickness,
+    spacingBetweenSlices,
+    imageOrientation,
+    imagePosition,
   };
 };
 
@@ -135,6 +172,12 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
               imageId,
               seriesDescription: series.seriesDescription,
               seriesModality: series.modality,
+              instanceNumber: instance.instanceNumber,
+              pixelSpacing: instance.pixelSpacing,
+              sliceThickness: instance.sliceThickness,
+              spacingBetweenSlices: instance.spacingBetweenSlices,
+              imageOrientation: instance.imageOrientation,
+              imagePosition: instance.imagePosition,
             });
             stackIndex += 1;
           }

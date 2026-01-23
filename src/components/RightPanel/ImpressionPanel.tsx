@@ -30,6 +30,7 @@ interface ImpressionPanelProps {
   inferenceCompletedAt?: string;
   inferenceImageRefs?: ImageRef[];
   inferenceEvidenceIndices?: number[];
+  inferenceMetadata?: Record<string, unknown>;
   onEvidenceSelect?: (ref: ImageRef) => void;
   useAllFrames?: boolean;
   onUseAllFramesChange?: (nextValue: boolean) => void;
@@ -53,6 +54,7 @@ export function ImpressionPanel({
   inferenceCompletedAt,
   inferenceImageRefs,
   inferenceEvidenceIndices,
+  inferenceMetadata,
   onEvidenceSelect,
   useAllFrames,
   onUseAllFramesChange,
@@ -86,6 +88,38 @@ export function ImpressionPanel({
       .filter((ref): ref is ImageRef => Boolean(ref));
     return mapped.length > 0 ? mapped : inferenceImageRefs;
   }, [inferenceEvidenceIndices, inferenceImageRefs]);
+
+  const inferenceMeta = useMemo(() => {
+    if (!inferenceMetadata) return null;
+    return inferenceMetadata;
+  }, [inferenceMetadata]);
+
+  const schemaName = typeof inferenceMeta?.schema_name === 'string' ? inferenceMeta.schema_name : undefined;
+  const schemaVersion = typeof inferenceMeta?.schema_version === 'string' ? inferenceMeta.schema_version : undefined;
+  const schemaValid =
+    typeof inferenceMeta?.json_schema_valid === 'boolean' ? inferenceMeta.json_schema_valid : undefined;
+  const schemaError = typeof inferenceMeta?.json_error === 'string' ? inferenceMeta.json_error : undefined;
+  const evidenceMissing = inferenceMeta?.evidence_missing === true;
+  const promptMeta =
+    inferenceMeta?.prompt && typeof inferenceMeta.prompt === 'object'
+      ? (inferenceMeta.prompt as Record<string, unknown>)
+      : null;
+  const systemPrompt =
+    promptMeta?.system && typeof promptMeta.system === 'object'
+      ? (promptMeta.system as Record<string, unknown>)
+      : null;
+  const taskPrompt =
+    promptMeta?.task && typeof promptMeta.task === 'object'
+      ? (promptMeta.task as Record<string, unknown>)
+      : null;
+  const systemPromptLabel =
+    typeof systemPrompt?.name === 'string'
+      ? `${systemPrompt.name}${systemPrompt.version ? ` v${systemPrompt.version}` : ''}`
+      : undefined;
+  const taskPromptLabel =
+    typeof taskPrompt?.name === 'string'
+      ? `${taskPrompt.name}${taskPrompt.version ? ` v${taskPrompt.version}` : ''}`
+      : undefined;
 
   const resolvedInferenceStatus = inferenceStatus || (inferenceSummary ? 'finished' : undefined);
   const inferenceStatusLabel: Record<string, { label: string; className: string }> = {
@@ -198,6 +232,42 @@ export function ImpressionPanel({
             )}
             {inferenceJobId && (
               <div>Job: {inferenceJobId.slice(0, 8)}...</div>
+            )}
+            {(schemaName || schemaVersion || schemaValid !== undefined) && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span>{t('inference.schema')}: {schemaName ?? 'n/a'}{schemaVersion ? ` v${schemaVersion}` : ''}</span>
+                {schemaValid !== undefined && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'text-[10px] px-1.5 py-0',
+                      schemaValid
+                        ? 'bg-success/10 text-success border-success/30'
+                        : 'bg-warning/10 text-warning border-warning/30'
+                    )}
+                  >
+                    {schemaValid ? t('inference.schemaValid') : t('inference.schemaInvalid')}
+                  </Badge>
+                )}
+              </div>
+            )}
+            {schemaError && (
+              <div className="text-warning">
+                {t('inference.schemaError', { error: schemaError })}
+              </div>
+            )}
+            {systemPromptLabel && (
+              <div>
+                {t('inference.promptSystem')}: {systemPromptLabel}
+              </div>
+            )}
+            {taskPromptLabel && (
+              <div>
+                {t('inference.promptTask')}: {taskPromptLabel}
+              </div>
+            )}
+            {evidenceMissing && (
+              <div className="text-warning">{t('inference.evidenceMissing')}</div>
             )}
           </div>
           {inferenceSummary ? (

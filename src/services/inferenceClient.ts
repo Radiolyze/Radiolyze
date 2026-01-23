@@ -43,9 +43,16 @@ const mapImageRefsToPayload = (refs: ImageRef[] | undefined) => {
     wado_url: ref.wadoUrl,
     image_id: ref.imageId,
     study_date: ref.studyDate,
+    time_delta_days: ref.timeDeltaDays,
     series_description: ref.seriesDescription,
     series_modality: ref.seriesModality,
     role: ref.role,
+    pixel_spacing: ref.pixelSpacing,
+    slice_thickness: ref.sliceThickness,
+    spacing_between_slices: ref.spacingBetweenSlices,
+    image_orientation: ref.imageOrientation,
+    image_position: ref.imagePosition,
+    instance_number: ref.instanceNumber,
   }));
 };
 
