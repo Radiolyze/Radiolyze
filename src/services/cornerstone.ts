@@ -13,6 +13,7 @@ import {
   PlanarFreehandROITool,
   BidirectionalTool,
   ArrowAnnotateTool,
+  TrackballRotateTool,
 } from '@cornerstonejs/tools';
 
 let initialized = false;
@@ -30,6 +31,8 @@ export const cornerstoneToolNames = {
   windowLevel: WindowLevelTool.toolName,
   length: LengthTool.toolName,
   stackScroll: StackScrollTool.toolName,
+  // 3D tools
+  trackballRotate: TrackballRotateTool.toolName,
   // Annotation tools for training
   rectangle: RectangleROITool.toolName,
   ellipse: EllipticalROITool.toolName,
@@ -98,7 +101,10 @@ export const initCornerstone = async () => {
   addTool(BidirectionalTool);
   addTool(ArrowAnnotateTool);
 
-  log('[cornerstone] All tools registered (navigation + annotation)');
+  // 3D tools
+  addTool(TrackballRotateTool);
+
+  log('[cornerstone] All tools registered (navigation + annotation + 3D)');
 
   initialized = true;
 };
