@@ -34,8 +34,13 @@
 ## Phase 3.5: Maintenance & Refactoring
 
 - [x] Viewer Modularisierung (Hooks, Config Separation)
+- [x] DicomViewer in Subcomponents (Toolbar, Overlays, Empty-State)
+- [x] ComparisonViewer in Subcomponents (Toolbar, Pane, Sync-Indicator)
 - [x] Viewport Sync/Persistenz Hooks konsolidiert
 - [x] Cornerstone Debug-Logging via Env Flag
+- [x] Backend Router Split (Reports, Inference, Prompts, Audit, Monitoring, WS)
+- [x] Backend Utils (Hashing/Inference/Metrics/Time) + get_db Dependency
+- [x] Frontend ReportWorkspace Container + Inference/QA Helpers
 
 ## Phase 4: Compliance Ready (10-14 Wochen)
 
