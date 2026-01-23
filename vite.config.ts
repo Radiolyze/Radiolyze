@@ -1,7 +1,23 @@
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+
+// Plugin to fix MIME type for worker files served from node_modules
+function workerMimeTypeFix(): Plugin {
+  return {
+    name: "worker-mime-type-fix",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        // Fix MIME type for worker files
+        if (req.url?.includes("worker") && req.url?.endsWith(".js")) {
+          res.setHeader("Content-Type", "application/javascript");
+        }
+        next();
+      });
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -18,15 +34,17 @@ export default defineConfig(({ mode }) => {
         overlay: false,
       },
       headers: {
-        // Allow web workers to load from same origin
+        // Required for SharedArrayBuffer support (used by Cornerstone web workers)
         "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Embedder-Policy": "credentialless",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        // Allow web workers from same origin
+        "Content-Security-Policy": "worker-src 'self' blob:;",
       },
       proxy: {
         "/dicom-web": {
           target: dicomWebProxyTarget,
           changeOrigin: true,
-          // Add auth headers for Orthanc DICOMweb requests
+          // Add auth headers for Orthanc DICOMweb requests and CORP headers for COEP compatibility
           configure: (proxy) => {
             proxy.on('proxyReq', (proxyReq) => {
               const username = env.VITE_DICOM_WEB_USERNAME || 'orthanc';
@@ -34,16 +52,30 @@ export default defineConfig(({ mode }) => {
               const auth = Buffer.from(`${username}:${password}`).toString('base64');
               proxyReq.setHeader('Authorization', `Basic ${auth}`);
             });
+            // Add CORP header to response for COEP compatibility
+            proxy.on('proxyRes', (proxyRes) => {
+              proxyRes.headers['cross-origin-resource-policy'] = 'cross-origin';
+            });
           },
         },
         "/api": {
           target: apiProxyTarget,
           changeOrigin: true,
           ws: true,
+          // Add CORP header to response for COEP compatibility
+          configure: (proxy) => {
+            proxy.on('proxyRes', (proxyRes) => {
+              proxyRes.headers['cross-origin-resource-policy'] = 'cross-origin';
+            });
+          },
         },
       },
     },
-    plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+    plugins: [
+      react(),
+      workerMimeTypeFix(),
+      mode === "development" && componentTagger(),
+    ].filter(Boolean),
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
@@ -64,7 +96,6 @@ export default defineConfig(({ mode }) => {
       include: [
         "@cornerstonejs/core",
         "@cornerstonejs/tools",
-        "@cornerstonejs/dicom-image-loader",
         "dicom-parser",
         // vtk.js and its dependencies need CJS transformation
         "@kitware/vtk.js",
@@ -74,6 +105,10 @@ export default defineConfig(({ mode }) => {
         "@cornerstonejs/codec-libjpeg-turbo-8bit",
         "@cornerstonejs/codec-openjpeg",
         "@cornerstonejs/codec-openjph",
+      ],
+      // Exclude dicom-image-loader from pre-bundling to preserve worker handling
+      exclude: [
+        "@cornerstonejs/dicom-image-loader",
       ],
       esbuildOptions: {
         target: "esnext",

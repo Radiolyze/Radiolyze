@@ -53,8 +53,9 @@ export const initCornerstone = async () => {
   try {
     // Initialize the DICOM image loader (v4 API)
     // Note: Auth is handled by Vite proxy, so no client-side auth config needed
+    // Workers are enabled for better performance - CSP headers configured in vite.config.ts
     cornerstoneDICOMImageLoader.init({
-      maxWebWorkers: 0, // Disable web workers to avoid CSP issues
+      maxWebWorkers: navigator.hardwareConcurrency ? Math.min(navigator.hardwareConcurrency, 4) : 2,
     });
 
     // Register metadata providers with cornerstone core

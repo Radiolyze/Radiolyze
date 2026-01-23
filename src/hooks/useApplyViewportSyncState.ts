@@ -52,16 +52,21 @@ export const useApplyViewportSyncState = ({
         needsRender = true;
       }
 
-      // Apply window/level
-      if (syncState.windowLevel !== undefined) {
-        const halfWidth = syncState.windowLevel.width / 2;
-        viewport.setProperties({
-          voiRange: {
-            lower: syncState.windowLevel.center - halfWidth,
-            upper: syncState.windowLevel.center + halfWidth,
-          },
-        });
-        needsRender = true;
+      // Apply window/level (only if an image is loaded)
+      // Otherwise Cornerstone throws "Cannot destructure property 'windowCenter' of 'this.csImage'"
+      if (syncState.windowLevel !== undefined && viewport.getCurrentImageId?.()) {
+        try {
+          const halfWidth = syncState.windowLevel.width / 2;
+          viewport.setProperties({
+            voiRange: {
+              lower: syncState.windowLevel.center - halfWidth,
+              upper: syncState.windowLevel.center + halfWidth,
+            },
+          });
+          needsRender = true;
+        } catch {
+          // Image data not yet loaded
+        }
       }
 
       if (needsRender) {

@@ -28,7 +28,15 @@ export const useViewerReset = ({
     const viewport = stackViewportRef.current;
     if (viewport) {
       viewport.resetCamera({ resetPan: true, resetZoom: true, resetToCenter: true });
-      viewport.resetProperties();
+      // Only reset properties if an image is loaded, otherwise Cornerstone throws
+      // "Cannot destructure property 'windowCenter' of 'this.csImage'"
+      try {
+        if (viewport.getCurrentImageId?.()) {
+          viewport.resetProperties();
+        }
+      } catch {
+        // Image data not yet loaded
+      }
     }
 
     setZoom(1);

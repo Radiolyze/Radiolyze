@@ -15,6 +15,7 @@
   "HttpHeaders": {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Accept, Authorization, Content-Type, Origin, X-Requested-With"
+    "Access-Control-Allow-Headers": "Accept, Authorization, Content-Type, Origin, X-Requested-With",
+    "Cross-Origin-Resource-Policy": "cross-origin"
   }
 }

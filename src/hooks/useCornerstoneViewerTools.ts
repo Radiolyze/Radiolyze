@@ -90,25 +90,29 @@ export const useCornerstoneViewerTools = ({
         return;
       }
 
-      if (presetId === 'auto') {
-        viewport.resetProperties();
+      try {
+        if (presetId === 'auto') {
+          viewport.resetProperties();
+          viewport.render();
+          return;
+        }
+
+        const preset = presets.find((item) => item.id === presetId);
+        if (!preset || preset.windowWidth === undefined || preset.windowCenter === undefined) {
+          return;
+        }
+
+        const halfWidth = preset.windowWidth / 2;
+        viewport.setProperties({
+          voiRange: {
+            lower: preset.windowCenter - halfWidth,
+            upper: preset.windowCenter + halfWidth,
+          },
+        });
         viewport.render();
-        return;
+      } catch {
+        // Image data not yet loaded - will be applied when image loads
       }
-
-      const preset = presets.find((item) => item.id === presetId);
-      if (!preset || preset.windowWidth === undefined || preset.windowCenter === undefined) {
-        return;
-      }
-
-      const halfWidth = preset.windowWidth / 2;
-      viewport.setProperties({
-        voiRange: {
-          lower: preset.windowCenter - halfWidth,
-          upper: preset.windowCenter + halfWidth,
-        },
-      });
-      viewport.render();
     },
     [presets, stackViewportRef]
   );
