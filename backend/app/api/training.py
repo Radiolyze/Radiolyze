@@ -67,6 +67,7 @@ class ManifestRequest(BaseModel):
     verified_only: bool = Field(default=True, alias="verifiedOnly")
     split_ratio: float = Field(default=0.8, alias="splitRatio", ge=0.5, le=0.95)
     limit: int | None = Field(default=None, ge=1, le=20000)
+    check_images: bool = Field(default=False, alias="checkImages")
 
     class Config:
         populate_by_name = True
@@ -140,6 +141,27 @@ def _build_manifest(entries: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     return manifest
+
+
+def _attach_manifest_status(manifest: list[dict[str, Any]]) -> dict[str, int]:
+    headers = _dicom_auth_headers()
+    ok_count = 0
+    error_count = 0
+    with httpx.Client(timeout=20) as client:
+        for entry in manifest:
+            try:
+                response = client.get(entry["wado_url"], headers=headers)
+                response.raise_for_status()
+                content = response.content
+                entry["status"] = "ok"
+                entry["bytes"] = len(content)
+                entry["sha256"] = hashlib.sha256(content).hexdigest()
+                ok_count += 1
+            except Exception as exc:
+                entry["status"] = "error"
+                entry["error"] = str(exc)
+                error_count += 1
+    return {"ok": ok_count, "error": error_count}
 
 
 def _build_coco_dataset(annotations: list[Annotation]) -> dict[str, Any]:
@@ -529,8 +551,9 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
             zf.writestr("README.md", readme)
 
         if include_images and image_entries:
-            headers = _dicom_auth_headers()
             manifest = _build_manifest(image_entries)
+            headers = _dicom_auth_headers()
+            status_counts = {"ok": 0, "error": 0}
             with httpx.Client(timeout=20) as client:
                 for entry in manifest:
                     try:
@@ -541,11 +564,15 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
                         entry["status"] = "ok"
                         entry["bytes"] = len(content)
                         entry["sha256"] = hashlib.sha256(content).hexdigest()
+                        status_counts["ok"] += 1
                     except Exception as exc:
                         entry["status"] = "error"
                         entry["error"] = str(exc)
-
-            zf.writestr("images/manifest.json", json.dumps(manifest, indent=2))
+                        status_counts["error"] += 1
+            zf.writestr(
+                "images/manifest.json",
+                json.dumps({"images": manifest, "status": status_counts}, indent=2),
+            )
     
     buffer.seek(0)
     return buffer.read()
@@ -664,7 +691,14 @@ def export_manifest(
     if payload.limit:
         manifest = manifest[: payload.limit]
 
-    return {"total": total, "images": manifest}
+    status_counts = None
+    if payload.check_images:
+        status_counts = _attach_manifest_status(manifest)
+
+    response: dict[str, Any] = {"total": total, "images": manifest}
+    if status_counts is not None:
+        response["status"] = status_counts
+    return response
 
 
 @router.get("/api/v1/training/categories")

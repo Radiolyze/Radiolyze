@@ -17,6 +17,7 @@ export interface ManifestRequest {
   verifiedOnly?: boolean;
   splitRatio?: number;
   limit?: number;
+  checkImages?: boolean;
 }
 
 export interface ManifestEntry {
@@ -29,11 +30,16 @@ export interface ManifestEntry {
   frame_index: number;
   frame_number: number;
   splits: string[];
+  status?: 'ok' | 'error';
+  bytes?: number;
+  sha256?: string;
+  error?: string;
 }
 
 export interface ManifestResponse {
   total: number;
   images: ManifestEntry[];
+  status?: { ok: number; error: number };
 }
 
 export interface ExportStats {
@@ -105,6 +111,7 @@ export async function getTrainingManifest(request: ManifestRequest): Promise<Man
     verifiedOnly: request.verifiedOnly ?? true,
     splitRatio: request.splitRatio ?? 0.8,
     limit: request.limit,
+    checkImages: request.checkImages,
   });
 }
 

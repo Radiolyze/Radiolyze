@@ -112,21 +112,26 @@ export default function Training() {
     exportMutation.mutate(request);
   };
 
-  const buildManifestRequest = (limit?: number) => ({
+  const buildManifestRequest = (limit?: number, checkImages?: boolean) => ({
     verifiedOnly,
     splitRatio: splitRatio[0],
     categories: selectedCategories.length > 0 ? selectedCategories : undefined,
     limit,
+    checkImages,
   });
 
   const handleManifestPreview = () => {
     manifestMutation.mutate(buildManifestRequest(50));
   };
 
+  const handleManifestCheck = () => {
+    manifestMutation.mutate(buildManifestRequest(50, true));
+  };
+
   const handleManifestDownload = async () => {
     setIsDownloadingManifest(true);
     try {
-      const data = await getTrainingManifest(buildManifestRequest());
+      const data = await getTrainingManifest(buildManifestRequest(undefined, true));
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const timestamp = new Date().toISOString().slice(0, 10);
       downloadBlob(blob, `medgemma-manifest-${timestamp}.json`);
@@ -413,6 +418,14 @@ export default function Training() {
                         )}
                       </Button>
                       <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleManifestCheck}
+                        disabled={manifestMutation.isPending || !stats?.totalAnnotations}
+                      >
+                        Rendered Images prüfen
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="sm"
                         onClick={handleManifestDownload}
@@ -433,6 +446,12 @@ export default function Training() {
                             </span>
                           )}
                         </div>
+                        {manifest.status && (
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span>OK: {manifest.status.ok}</span>
+                            <span>Fehler: {manifest.status.error}</span>
+                          </div>
+                        )}
                         <div className="space-y-1">
                           {manifest.images.slice(0, 3).map((entry) => (
                             <div
@@ -442,6 +461,7 @@ export default function Training() {
                               <span className="font-mono">{entry.id}</span>
                               <span className="text-muted-foreground">
                                 {entry.splits.join(', ')}
+                                {entry.status === 'error' && ' · Fehler'}
                               </span>
                             </div>
                           ))}
@@ -451,6 +471,32 @@ export default function Training() {
                             </div>
                           )}
                         </div>
+                        {manifest.status?.error ? (
+                          <div className="space-y-2">
+                            <div className="text-xs font-medium text-muted-foreground">
+                              Fehlerliste (Preview)
+                            </div>
+                            {manifest.images
+                              .filter((entry) => entry.status === 'error')
+                              .slice(0, 3)
+                              .map((entry) => (
+                                <div
+                                  key={`${entry.id}-error`}
+                                  className="rounded border border-warning/30 bg-warning/5 px-2 py-1 text-xs"
+                                >
+                                  <div className="font-mono">{entry.id}</div>
+                                  <div className="text-muted-foreground">
+                                    {entry.error || 'Abruf fehlgeschlagen'}
+                                  </div>
+                                </div>
+                              ))}
+                            {manifest.status.error > 3 && (
+                              <div className="text-xs text-muted-foreground">
+                                + {manifest.status.error - 3} weitere Fehler
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
                         <div className="flex items-start gap-2 text-xs text-muted-foreground">
                           <AlertCircle className="h-4 w-4 mt-0.5" />
                           Das ZIP enthält `images/manifest.json` inklusive Hashes und Status.
@@ -493,6 +539,11 @@ export default function Training() {
                 )}
               </Button>
             </div>
+            {includeImages && (
+              <div className="mt-3 text-xs text-muted-foreground">
+                Hinweis: Das Export-ZIP enthält ein Manifest unter <code>images/manifest.json</code>.
+              </div>
+            )}
 
             {!stats?.totalAnnotations && !statsLoading && (
               <div className="mt-4 p-4 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-3">
