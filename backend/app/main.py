@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile, WebSocket, WebSocketDisconnect
@@ -176,6 +176,83 @@ def counts_to_dict(rows: list[tuple[str | None, int]]) -> dict[str, int]:
         label = key or "unknown"
         result[label] = count
     return result
+
+
+def get_threshold(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def calculate_median(values: list[float]) -> float | None:
+    if not values:
+        return None
+    sorted_values = sorted(values)
+    midpoint = len(sorted_values) // 2
+    if len(sorted_values) % 2 == 1:
+        return sorted_values[midpoint]
+    return (sorted_values[midpoint - 1] + sorted_values[midpoint]) / 2
+
+
+def summarize_inference_jobs(jobs: list[InferenceJob]) -> dict[str, Any]:
+    total = len(jobs)
+    status_counts: dict[str, int] = {}
+    confidences: list[float] = []
+    for job in jobs:
+        status = job.status or "unknown"
+        status_counts[status] = status_counts.get(status, 0) + 1
+        if job.confidence is not None:
+            confidences.append(float(job.confidence))
+
+    average_confidence = sum(confidences) / len(confidences) if confidences else None
+    failed_count = status_counts.get("failed", 0)
+    failure_rate = failed_count / total if total else None
+
+    return {
+        "total": total,
+        "status_counts": status_counts,
+        "confidence_avg": average_confidence,
+        "confidence_median": calculate_median(confidences),
+        "failure_rate": failure_rate,
+    }
+
+
+def summarize_qa_results(results: list[QACheckResult]) -> dict[str, Any]:
+    total = len(results)
+    status_counts: dict[str, int] = {}
+    quality_scores: list[float] = []
+    for result in results:
+        status = result.status or "unknown"
+        status_counts[status] = status_counts.get(status, 0) + 1
+        if result.quality_score is not None:
+            quality_scores.append(float(result.quality_score))
+
+    pass_count = status_counts.get("pass", 0)
+    pass_rate = pass_count / total if total else None
+    average_score = sum(quality_scores) / len(quality_scores) if quality_scores else None
+
+    return {
+        "total": total,
+        "status_counts": status_counts,
+        "pass_rate": pass_rate,
+        "quality_score_avg": average_score,
+    }
+
+
+def compute_deltas(current: dict[str, Any], baseline: dict[str, Any], keys: list[str]) -> dict[str, float | None]:
+    deltas: dict[str, float | None] = {}
+    for key in keys:
+        current_value = current.get(key)
+        baseline_value = baseline.get(key)
+        if current_value is None or baseline_value is None:
+            deltas[key] = None
+        else:
+            deltas[key] = float(current_value) - float(baseline_value)
+    return deltas
 
 
 def get_latest_inference_job(db: Session, report_id: str | None) -> InferenceJob | None:
@@ -913,6 +990,110 @@ def get_metrics(db: Session = Depends(get_db)) -> dict[str, Any]:
         "qa_status_counts": qa_status_counts,
         "inference_job_status_counts": inference_job_counts,
         "audit_events_total": audit_events_total,
+    }
+
+
+@app.get("/api/v1/monitoring/drift")
+def get_drift_report(
+    window_days: int = Query(7, ge=1, le=90),
+    baseline_days: int | None = Query(None, ge=1, le=365),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    baseline_days = baseline_days or window_days
+    window_start = now - timedelta(days=window_days)
+    baseline_start = window_start - timedelta(days=baseline_days)
+
+    window_start_iso = window_start.isoformat()
+    window_end_iso = now.isoformat()
+    baseline_start_iso = baseline_start.isoformat()
+    baseline_end_iso = window_start_iso
+
+    current_jobs = (
+        db.query(InferenceJob)
+        .filter(InferenceJob.completed_at >= window_start_iso, InferenceJob.completed_at < window_end_iso)
+        .all()
+    )
+    baseline_jobs = (
+        db.query(InferenceJob)
+        .filter(InferenceJob.completed_at >= baseline_start_iso, InferenceJob.completed_at < baseline_end_iso)
+        .all()
+    )
+    current_qa = (
+        db.query(QACheckResult)
+        .filter(QACheckResult.created_at >= window_start_iso, QACheckResult.created_at < window_end_iso)
+        .all()
+    )
+    baseline_qa = (
+        db.query(QACheckResult)
+        .filter(QACheckResult.created_at >= baseline_start_iso, QACheckResult.created_at < baseline_end_iso)
+        .all()
+    )
+
+    current_inference = summarize_inference_jobs(current_jobs)
+    baseline_inference = summarize_inference_jobs(baseline_jobs)
+    current_qa_summary = summarize_qa_results(current_qa)
+    baseline_qa_summary = summarize_qa_results(baseline_qa)
+
+    inference_deltas = compute_deltas(
+        current_inference,
+        baseline_inference,
+        ["confidence_avg", "confidence_median", "failure_rate"],
+    )
+    qa_deltas = compute_deltas(
+        current_qa_summary,
+        baseline_qa_summary,
+        ["pass_rate", "quality_score_avg"],
+    )
+
+    alerts: list[dict[str, Any]] = []
+    confidence_delta = inference_deltas.get("confidence_avg")
+    failure_delta = inference_deltas.get("failure_rate")
+    pass_rate_delta = qa_deltas.get("pass_rate")
+    score_delta = qa_deltas.get("quality_score_avg")
+
+    if confidence_delta is not None and abs(confidence_delta) >= get_threshold("DRIFT_CONFIDENCE_DELTA", 0.1):
+        alerts.append(
+            {
+                "metric": "inference.confidence_avg",
+                "delta": confidence_delta,
+                "threshold": get_threshold("DRIFT_CONFIDENCE_DELTA", 0.1),
+            }
+        )
+    if failure_delta is not None and abs(failure_delta) >= get_threshold("DRIFT_INFERENCE_FAILURE_DELTA", 0.05):
+        alerts.append(
+            {
+                "metric": "inference.failure_rate",
+                "delta": failure_delta,
+                "threshold": get_threshold("DRIFT_INFERENCE_FAILURE_DELTA", 0.05),
+            }
+        )
+    if pass_rate_delta is not None and abs(pass_rate_delta) >= get_threshold("DRIFT_QA_PASS_RATE_DELTA", 0.1):
+        alerts.append(
+            {
+                "metric": "qa.pass_rate",
+                "delta": pass_rate_delta,
+                "threshold": get_threshold("DRIFT_QA_PASS_RATE_DELTA", 0.1),
+            }
+        )
+    if score_delta is not None and abs(score_delta) >= get_threshold("DRIFT_QA_SCORE_DELTA", 5.0):
+        alerts.append(
+            {
+                "metric": "qa.quality_score_avg",
+                "delta": score_delta,
+                "threshold": get_threshold("DRIFT_QA_SCORE_DELTA", 5.0),
+            }
+        )
+
+    return {
+        "window_days": window_days,
+        "baseline_days": baseline_days,
+        "window": {"start": window_start_iso, "end": window_end_iso},
+        "baseline_window": {"start": baseline_start_iso, "end": baseline_end_iso},
+        "current": {"inference": current_inference, "qa": current_qa_summary},
+        "baseline": {"inference": baseline_inference, "qa": baseline_qa_summary},
+        "delta": {"inference": inference_deltas, "qa": qa_deltas},
+        "alerts": alerts,
     }
 
 
