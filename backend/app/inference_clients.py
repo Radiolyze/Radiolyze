@@ -258,6 +258,65 @@ def _extract_evidence_indices(payload: dict[str, Any] | None) -> list[int] | Non
     return indices or None
 
 
+def _dicom_web_base_url() -> str:
+    """Get the DICOMweb base URL accessible from the backend/worker."""
+    return os.getenv("DICOM_WEB_BASE_URL", "http://orthanc:8042/dicom-web").rstrip("/")
+
+
+def _dicom_web_base_url_with_auth() -> str:
+    """Get the DICOMweb base URL with embedded Basic Auth credentials if configured.
+    
+    Returns URL like 'http://user:pass@orthanc:8042/dicom-web' for vLLM to access.
+    """
+    base_url = _dicom_web_base_url()
+    username = os.getenv("DICOM_WEB_USERNAME") or os.getenv("ORTHANC_USERNAME")
+    password = os.getenv("DICOM_WEB_PASSWORD") or os.getenv("ORTHANC_PASSWORD")
+    
+    if not username or not password:
+        return base_url
+    
+    # Parse URL and inject credentials
+    # URL format: http://host:port/path -> http://user:pass@host:port/path
+    if "://" in base_url:
+        scheme, rest = base_url.split("://", 1)
+        return f"{scheme}://{username}:{password}@{rest}"
+    
+    return base_url
+
+
+def _rewrite_image_url(url: str) -> str:
+    """Rewrite frontend image URLs to be accessible from the Docker network.
+    
+    Frontend URLs like 'http://localhost:5173/dicom-web/...' need to be
+    rewritten to 'http://orthanc:8042/dicom-web/...' for vLLM to access.
+    """
+    if not url:
+        return url
+    
+    # Extract the path after /dicom-web/
+    dicom_web_markers = ["/dicom-web/", "/dicom-web"]
+    for marker in dicom_web_markers:
+        idx = url.find(marker)
+        if idx != -1:
+            path = url[idx + len("/dicom-web"):]
+            if path.startswith("/"):
+                path = path[1:]
+            # Use URL with embedded auth for vLLM access
+            new_url = f"{_dicom_web_base_url_with_auth()}/{path}"
+            logger.debug("Rewrote image URL: %s -> %s (credentials hidden)", url, _dicom_web_base_url() + "/" + path)
+            return new_url
+    
+    # If no dicom-web marker found, return original URL
+    return url
+
+
+def _rewrite_image_urls(urls: list[str] | None) -> list[str]:
+    """Rewrite a list of image URLs for backend/vLLM access."""
+    if not urls:
+        return []
+    return [_rewrite_image_url(url) for url in urls]
+
+
 def _vllm_base_url() -> str:
     return os.getenv("VLLM_BASE_URL", "http://vllm-medgemma:8000/v1").rstrip("/")
 
@@ -286,8 +345,12 @@ def _vllm_chat_completion(
     image_paths: list[str] | None = None,
 ) -> str:
     url = f"{_vllm_base_url()}/chat/completions"
-    normalized_urls = _normalize_list(image_urls)
+    # Rewrite frontend URLs to be accessible from Docker network
+    rewritten_urls = _rewrite_image_urls(image_urls)
+    normalized_urls = _normalize_list(rewritten_urls)
     normalized_paths = _normalize_list(image_paths)
+    if rewritten_urls != (image_urls or []):
+        logger.info("Rewrote %d image URLs for vLLM access", len(normalized_urls))
     has_images = bool(normalized_urls or normalized_paths)
     content: str | list[dict[str, Any]]
     if has_images:
