@@ -3,15 +3,25 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// Plugin to fix MIME type for worker files served from node_modules
+// Plugin to fix MIME type for worker files served from node_modules/.vite/deps
 function workerMimeTypeFix(): Plugin {
   return {
     name: "worker-mime-type-fix",
     configureServer(server) {
+      // Add middleware early to intercept worker file requests
       server.middlewares.use((req, res, next) => {
-        // Fix MIME type for worker files
-        if (req.url?.includes("worker") && req.url?.endsWith(".js")) {
-          res.setHeader("Content-Type", "application/javascript");
+        const url = req.url || "";
+        // Detect worker files from Vite deps cache
+        if (url.includes(".vite/deps") && url.includes("Worker")) {
+          // Intercept the response to ensure Content-Type is set
+          const originalEnd = res.end.bind(res);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          res.end = function (...args: any[]) {
+            if (!res.headersSent && !res.getHeader("content-type")) {
+              res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+            }
+            return originalEnd(...args);
+          };
         }
         next();
       });
@@ -96,6 +106,7 @@ export default defineConfig(({ mode }) => {
       include: [
         "@cornerstonejs/core",
         "@cornerstonejs/tools",
+        "@cornerstonejs/dicom-image-loader",
         "dicom-parser",
         // vtk.js and its dependencies need CJS transformation
         "@kitware/vtk.js",
@@ -105,10 +116,6 @@ export default defineConfig(({ mode }) => {
         "@cornerstonejs/codec-libjpeg-turbo-8bit",
         "@cornerstonejs/codec-openjpeg",
         "@cornerstonejs/codec-openjph",
-      ],
-      // Exclude dicom-image-loader from pre-bundling to preserve worker handling
-      exclude: [
-        "@cornerstonejs/dicom-image-loader",
       ],
       esbuildOptions: {
         target: "esnext",

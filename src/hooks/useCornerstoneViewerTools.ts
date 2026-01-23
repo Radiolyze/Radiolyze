@@ -7,11 +7,13 @@ import type { ViewerToolId, AnnotationToolId, AllToolId } from '@/types/viewer';
 import type { WindowLevelPreset } from '@/config/viewer';
 
 // Map viewer tool IDs to Cornerstone tool names
-const viewerToolNameMap: Record<ViewerToolId, string> = {
+// Note: 'window' is an alias for 'windowLevel' (used in user preferences)
+const viewerToolNameMap: Record<ViewerToolId | 'window', string> = {
   zoom: cornerstoneToolNames.zoom,
   pan: cornerstoneToolNames.pan,
   measure: cornerstoneToolNames.length,
   windowLevel: cornerstoneToolNames.windowLevel,
+  window: cornerstoneToolNames.windowLevel, // Alias for backwards compatibility
 };
 
 // Map annotation tool IDs to Cornerstone tool names
@@ -23,8 +25,8 @@ const annotationToolNameMap: Record<AnnotationToolId, string> = {
   arrow: cornerstoneToolNames.arrow,
 };
 
-// Combined map
-const allToolNameMap: Record<AllToolId, string> = {
+// Combined map (includes 'window' alias)
+const allToolNameMap: Record<AllToolId | 'window', string> = {
   ...viewerToolNameMap,
   ...annotationToolNameMap,
 };
@@ -41,7 +43,7 @@ export const useCornerstoneViewerTools = ({
   presets,
 }: UseCornerstoneViewerToolsOptions) => {
   const applyToolSelection = useCallback(
-    (tool: AllToolId) => {
+    (tool: AllToolId | 'window') => {
       const toolGroup = toolGroupRef.current;
       if (!toolGroup) {
         return;

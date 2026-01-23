@@ -6,6 +6,7 @@ import {
   buildWadorsRenderedFrameUrl,
   orthancClient,
 } from '@/services/orthancClient';
+import { prefetchWadorsMetadata } from '@/services/cornerstone';
 
 type InstanceInfo = {
   instanceId: string;
@@ -149,6 +150,13 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
           }
           return a.instanceNumber - b.instanceNumber;
         });
+
+        // Pre-fetch metadata for all unique instances (required for WADORS decoding)
+        await Promise.all(
+          parsed.map((instance) =>
+            prefetchWadorsMetadata(series.studyId, series.id, instance.instanceId, instance.frames)
+          )
+        );
 
         const ids: string[] = [];
         const refs: ImageRef[] = [];

@@ -1,5 +1,8 @@
-import { init as initCornerstoneCore, isCornerstoneInitialized, imageLoader } from '@cornerstonejs/core';
+import { init as initCornerstoneCore, isCornerstoneInitialized, imageLoader, metaData } from '@cornerstonejs/core';
 import * as cornerstoneDICOMImageLoader from '@cornerstonejs/dicom-image-loader';
+
+// Re-export for use in other modules
+export { metaData, cornerstoneDICOMImageLoader };
 import {
   addTool,
   init as initCornerstoneTools,
@@ -53,9 +56,10 @@ export const initCornerstone = async () => {
   try {
     // Initialize the DICOM image loader (v4 API)
     // Note: Auth is handled by Vite proxy, so no client-side auth config needed
-    // Workers are enabled for better performance - CSP headers configured in vite.config.ts
+    // Disable web workers to avoid Vite bundling issues with worker MIME types
+    // This uses main-thread decoding which is slower but more reliable
     cornerstoneDICOMImageLoader.init({
-      maxWebWorkers: navigator.hardwareConcurrency ? Math.min(navigator.hardwareConcurrency, 4) : 2,
+      maxWebWorkers: 0,
     });
 
     // Register metadata providers with cornerstone core
@@ -108,4 +112,50 @@ export const initCornerstone = async () => {
   log('[cornerstone] All tools registered (navigation + annotation + 3D)');
 
   initialized = true;
+};
+
+/**
+ * Pre-fetch and register metadata for WADORS images.
+ * This must be called before loading images to ensure pixel module data is available.
+ * 
+ * @param studyId - DICOM Study Instance UID
+ * @param seriesId - DICOM Series Instance UID  
+ * @param instanceId - DICOM SOP Instance UID
+ * @param numberOfFrames - Number of frames in the instance (for multi-frame images)
+ */
+export const prefetchWadorsMetadata = async (
+  studyId: string,
+  seriesId: string,
+  instanceId: string,
+  numberOfFrames = 1
+): Promise<void> => {
+  // Import dynamically to avoid circular dependency
+  const { buildDicomWebUrl, buildWadorsImageId } = await import('@/services/orthancClient');
+  
+  try {
+    const metadataUrl = buildDicomWebUrl(
+      `studies/${studyId}/series/${seriesId}/instances/${instanceId}/metadata`
+    );
+    const response = await fetch(metadataUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch metadata: ${response.status}`);
+    }
+    
+    const metadata = await response.json();
+    
+    // The metadata response is an array with one object for the instance
+    const instanceMetadata = Array.isArray(metadata) ? metadata[0] : metadata;
+    
+    if (instanceMetadata && cornerstoneDICOMImageLoader.wadors?.metaDataManager) {
+      // Register metadata for each frame
+      for (let frame = 1; frame <= numberOfFrames; frame++) {
+        const imageId = buildWadorsImageId(studyId, seriesId, instanceId, frame);
+        cornerstoneDICOMImageLoader.wadors.metaDataManager.add(imageId, instanceMetadata);
+      }
+      log('[cornerstone] Metadata pre-fetched for', instanceId, `(${numberOfFrames} frames)`);
+    }
+  } catch (err) {
+    console.warn('[cornerstone] Failed to prefetch metadata:', err);
+  }
 };
