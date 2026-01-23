@@ -149,6 +149,13 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
     );
   }
 
+  // Show warning for modalities that may lack proper 3D metadata
+  const modalitiesWithLimitedSupport = ['US', 'XA', 'RF', 'SC'];
+  const hasLimitedSupport = modalitiesWithLimitedSupport.includes(series.modality);
+  const limitedSupportWarning = hasLimitedSupport 
+    ? `Hinweis: ${series.modality}-Bilder haben oft keine räumlichen Metadaten. Die 3D-Darstellung kann ungenau sein.`
+    : null;
+
   return (
     <div className={cn('h-full flex flex-col bg-viewer', className)}>
       {/* Toolbar */}
@@ -178,9 +185,15 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
       {/* Error state */}
       {effectiveError && !isLoading && (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-destructive">
+          <div className="text-center text-destructive max-w-md px-4">
             <p className="text-sm font-medium">Fehler beim Laden</p>
             <p className="text-xs text-muted-foreground mt-1">{effectiveError}</p>
+            {hasLimitedSupport && (
+              <p className="text-xs text-yellow-500 mt-2">
+                {series.modality}-Bilder sind für 3D-Rendering nicht optimal geeignet, 
+                da oft räumliche Metadaten (PixelSpacing, ImageOrientation) fehlen.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -219,6 +232,9 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
                 <div className="absolute bottom-3 right-3 text-right text-xs text-white/70 bg-black/40 rounded px-2 py-1">
                   <p className="truncate max-w-[200px]">{series.seriesDescription}</p>
                   <p>{series.modality} • {imageIds.length} Bilder</p>
+                  {limitedSupportWarning && (
+                    <p className="text-yellow-400 text-[10px] mt-1 max-w-[200px]">{limitedSupportWarning}</p>
+                  )}
                 </div>
               )}
             </>

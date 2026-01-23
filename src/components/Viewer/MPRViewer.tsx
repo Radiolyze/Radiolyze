@@ -157,6 +157,10 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
     );
   }
 
+  // Show warning for modalities that may lack proper 3D metadata
+  const modalitiesWithLimitedSupport = ['US', 'XA', 'RF', 'SC'];
+  const hasLimitedSupport = modalitiesWithLimitedSupport.includes(series.modality);
+
   const renderViewport = (orientation: MPROrientation) => {
     const config = MPR_VIEWPORTS.find(v => v.orientation === orientation)!;
     const state = sliceState[orientation];
@@ -211,9 +215,15 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
       {/* Error state */}
       {effectiveError && !isLoading && (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-destructive">
+          <div className="text-center text-destructive max-w-md px-4">
             <p className="text-sm font-medium">Fehler beim Laden</p>
             <p className="text-xs text-muted-foreground mt-1">{effectiveError}</p>
+            {hasLimitedSupport && (
+              <p className="text-xs text-yellow-500 mt-2">
+                {series.modality}-Bilder sind für MPR nicht optimal geeignet, 
+                da oft räumliche Metadaten (PixelSpacing, ImageOrientation) fehlen.
+              </p>
+            )}
           </div>
         </div>
       )}

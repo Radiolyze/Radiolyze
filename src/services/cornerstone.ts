@@ -30,6 +30,34 @@ const log = (...args: Parameters<typeof console.log>) => {
   }
 };
 
+// Fallback metadata provider for missing DICOM attributes required by Volume rendering
+const fallbackMetadataProvider = (type: string, imageId: string) => {
+  // Only provide fallbacks for specific metadata types that Volume rendering requires
+  if (type === 'imagePlaneModule') {
+    // Get existing metadata first
+    const existing = metaData.get(type, imageId);
+    if (existing?.pixelSpacing && existing?.imageOrientationPatient) {
+      return existing;
+    }
+    // Provide sensible defaults for missing fields
+    return {
+      pixelSpacing: existing?.pixelSpacing || [1, 1],
+      imageOrientationPatient: existing?.imageOrientationPatient || [1, 0, 0, 0, 1, 0],
+      imagePositionPatient: existing?.imagePositionPatient || [0, 0, 0],
+      sliceThickness: existing?.sliceThickness || 1,
+      sliceLocation: existing?.sliceLocation || 0,
+      frameOfReferenceUID: existing?.frameOfReferenceUID || '',
+      rows: existing?.rows,
+      columns: existing?.columns,
+      rowCosines: existing?.rowCosines || [1, 0, 0],
+      columnCosines: existing?.columnCosines || [0, 1, 0],
+      rowPixelSpacing: existing?.rowPixelSpacing || (existing?.pixelSpacing?.[0]) || 1,
+      columnPixelSpacing: existing?.columnPixelSpacing || (existing?.pixelSpacing?.[1]) || 1,
+    };
+  }
+  return undefined;
+};
+
 export const cornerstoneToolNames = {
   // Navigation tools
   pan: PanTool.toolName,
@@ -77,6 +105,11 @@ export const initCornerstone = async () => {
       cornerstoneDICOMImageLoader.wadouri.register();
       log('[cornerstone] wadouri metadata provider registered');
     }
+    
+    // Register fallback provider with low priority (runs after DICOM loaders)
+    // This provides default values for missing metadata required by Volume rendering
+    metaData.addProvider(fallbackMetadataProvider, 1);
+    log('[cornerstone] fallback metadata provider registered');
     
     // Register image loaders
     if (cornerstoneDICOMImageLoader.wadors?.loadImage) {
