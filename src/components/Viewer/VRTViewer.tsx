@@ -8,6 +8,24 @@ import { ViewerEmptyState } from './ViewerEmptyState';
 import { VRT_PRESETS, DEFAULT_VRT_SETTINGS, type VRTViewAngle } from '@/types/vrt';
 import { cn } from '@/lib/utils';
 
+// Keyboard shortcut mappings
+const PRESET_SHORTCUTS: Record<string, number> = {
+  '1': 0, // CT Bone
+  '2': 1, // CT Lung
+  '3': 2, // CT Soft Tissue
+  '4': 3, // CT Angiography
+  '5': 4, // CT Muscle/Bone
+};
+
+const VIEW_ANGLE_SHORTCUTS: Record<string, VRTViewAngle> = {
+  'a': 'anterior',
+  'p': 'posterior',
+  'l': 'left',
+  'r': 'right',
+  's': 'superior',
+  'i': 'inferior',
+};
+
 interface VRTViewerProps {
   series: Series | null;
   className?: string;
@@ -58,6 +76,48 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
     applyPreset(DEFAULT_VRT_SETTINGS.presetId);
     setSettings(DEFAULT_VRT_SETTINGS);
   }, [resetCamera, applyPreset, setSettings]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!isReady) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if focused on input elements
+      if (e.target instanceof HTMLInputElement || 
+          e.target instanceof HTMLTextAreaElement ||
+          e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+
+      // Preset shortcuts (1-5)
+      if (key in PRESET_SHORTCUTS) {
+        const presetIndex = PRESET_SHORTCUTS[key];
+        if (presetIndex < VRT_PRESETS.length) {
+          e.preventDefault();
+          applyPreset(VRT_PRESETS[presetIndex].id);
+        }
+        return;
+      }
+
+      // View angle shortcuts (A/P/L/R/S/I)
+      if (key in VIEW_ANGLE_SHORTCUTS) {
+        e.preventDefault();
+        setViewAngle(VIEW_ANGLE_SHORTCUTS[key]);
+        return;
+      }
+
+      // Reset with Escape
+      if (key === 'escape') {
+        e.preventDefault();
+        handleReset();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isReady, applyPreset, setViewAngle, handleReset]);
 
   if (!series) {
     return (
@@ -147,6 +207,11 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
                 <p><kbd className="px-1 bg-black/40 rounded">LMB</kbd> Rotieren</p>
                 <p><kbd className="px-1 bg-black/40 rounded">RMB</kbd> Pan</p>
                 <p><kbd className="px-1 bg-black/40 rounded">Scroll</kbd> Zoom</p>
+                <div className="border-t border-white/20 mt-1 pt-1">
+                  <p><kbd className="px-1 bg-black/40 rounded">1-5</kbd> Presets</p>
+                  <p><kbd className="px-1 bg-black/40 rounded">A/P/L/R/S/I</kbd> Ansicht</p>
+                  <p><kbd className="px-1 bg-black/40 rounded">Esc</kbd> Reset</p>
+                </div>
               </div>
 
               {/* Series info */}
