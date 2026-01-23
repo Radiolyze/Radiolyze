@@ -7,7 +7,10 @@
     "processing": "Verarbeite Sprache...",
     "wordCount": "{{count}} Wörter",
     "lastSaved": "Zuletzt gespeichert: {{time}}",
-    "unsavedChanges": "Ungespeicherte Änderungen"
+    "unsavedChanges": "Ungespeicherte Änderungen",
+    "analyzeImages": "KI-Analyse",
+    "analyzeImagesHint": "Bilder analysieren und Befund generieren",
+    "analyzing": "Analysiere Bilder..."
   },
   "impression": {
     "title": "Beurteilung",

@@ -12,9 +12,11 @@ interface RightPanelProps {
   impression: string;
   qaChecks: QACheck[];
   isGeneratingImpression: boolean;
+  isAnalyzingImages?: boolean;
   onFindingsChange: (text: string) => void;
   onImpressionChange: (text: string) => void;
   onGenerateImpression: () => Promise<void>;
+  onAnalyzeImages?: () => Promise<void>;
   onApprove: (signature?: string) => void;
   onSaveFindings?: () => void;
   onAsrStatusChange?: (status: 'idle' | 'listening' | 'processing', confidence: number) => void;
@@ -30,9 +32,11 @@ export function RightPanel({
   impression,
   qaChecks,
   isGeneratingImpression,
+  isAnalyzingImages,
   onFindingsChange,
   onImpressionChange,
   onGenerateImpression,
+  onAnalyzeImages,
   onApprove,
   onSaveFindings,
   onAsrStatusChange,
@@ -58,6 +62,8 @@ export function RightPanel({
         onFindingsChange={onFindingsChange}
         onSave={onSaveFindings}
         onAsrStatusChange={onAsrStatusChange}
+        onAnalyzeImages={onAnalyzeImages}
+        isAnalyzing={isAnalyzingImages}
       />
 
       <div className="flex-1 overflow-y-auto">

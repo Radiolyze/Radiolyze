@@ -71,6 +71,7 @@ export const ReportWorkspace = () => {
     setReport,
     qaChecks,
     generateImpression,
+    analyzeImages,
     runQAChecks,
     approveReport,
     updateFindings,
@@ -78,6 +79,7 @@ export const ReportWorkspace = () => {
   const [findings, setFindings] = useState('');
   const [impression, setImpression] = useState('');
   const [aiStatus, setAiStatus] = useState<AIStatus>('idle');
+  const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
   const [asrStatus, setAsrStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
   const [asrConfidence, setAsrConfidence] = useState(0);
 
@@ -177,6 +179,38 @@ export const ReportWorkspace = () => {
       toast.error('KI-Analyse fehlgeschlagen');
     }
   }, [findings, generateImpression, imageRefs, isGenerating, priorImageRefs, report?.id, runQAChecks, useAllFrames]);
+
+  const handleAnalyzeImages = useCallback(async () => {
+    if (isGenerating || isAnalyzingImages) return;
+    if (imageRefs.length === 0 && priorImageRefs.length === 0) {
+      toast.error('Keine Bilder zum Analysieren vorhanden');
+      return;
+    }
+
+    setIsAnalyzingImages(true);
+    try {
+      const result = await analyzeImages({
+        onStatus: setAiStatus,
+        imageRefs,
+        priorImageRefs,
+        includeAllFrames: useAllFrames,
+      });
+      setFindings(result.findings);
+      setImpression(result.impression);
+      await runQAChecks({
+        reportId: report?.id,
+        findingsText: result.findings,
+        impressionText: result.impression,
+      });
+      toast.success('KI-Analyse abgeschlossen');
+    } catch (error) {
+      console.warn('Failed to analyze images', error);
+      setAiStatus('error');
+      toast.error('KI-Analyse fehlgeschlagen');
+    } finally {
+      setIsAnalyzingImages(false);
+    }
+  }, [analyzeImages, imageRefs, isAnalyzingImages, isGenerating, priorImageRefs, report?.id, runQAChecks, useAllFrames]);
 
   const handleApprove = useCallback(async (signature?: string) => {
     const name = signature?.trim();
@@ -318,9 +352,11 @@ export const ReportWorkspace = () => {
             impression={impression}
             qaChecks={qaChecks}
             isGeneratingImpression={false}
+            isAnalyzingImages={isAnalyzingImages}
             onFindingsChange={setFindings}
             onImpressionChange={setImpression}
             onGenerateImpression={handleGenerateImpression}
+            onAnalyzeImages={handleAnalyzeImages}
             onApprove={handleApprove}
             onSaveFindings={handleSaveFindings}
             onExportSr={handleExportSr}
@@ -369,9 +405,11 @@ export const ReportWorkspace = () => {
           impression={impression}
           qaChecks={qaChecks}
           isGeneratingImpression={isGenerating}
+          isAnalyzingImages={isAnalyzingImages}
           onFindingsChange={setFindings}
           onImpressionChange={setImpression}
           onGenerateImpression={handleGenerateImpression}
+          onAnalyzeImages={handleAnalyzeImages}
           onApprove={handleApprove}
           onSaveFindings={handleSaveFindings}
           onExportSr={handleExportSr}

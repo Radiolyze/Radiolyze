@@ -34,6 +34,22 @@ interface GenerateImpressionOptions {
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+interface AnalyzeImagesOptions {
+  reportId?: string;
+  studyId?: string;
+  requestedBy?: string;
+  modelVersion?: string;
+  imageRefs?: ImageRef[];
+  priorImageRefs?: ImageRef[];
+  includeAllFrames?: boolean;
+  onStatus?: (status: AIStatus) => void;
+}
+
+interface AnalyzeImagesResult {
+  findings: string;
+  impression: string;
+}
+
 interface UseReportReturn {
   report: Report | null;
   isLoading: boolean;
@@ -41,6 +57,7 @@ interface UseReportReturn {
   updateFindings: (text: string) => Promise<void>;
   updateImpression: (text: string) => Promise<void>;
   generateImpression: (findings: string, options?: GenerateImpressionOptions) => Promise<string>;
+  analyzeImages: (options?: AnalyzeImagesOptions) => Promise<AnalyzeImagesResult>;
   runQAChecks: (input?: {
     reportId?: string;
     findingsText?: string;
@@ -235,6 +252,102 @@ export function useReport(initialReport?: Report): UseReportReturn {
     }
   }, [report?.id, report?.studyId]);
 
+  const analyzeImages = useCallback(async (
+    options?: AnalyzeImagesOptions
+  ): Promise<AnalyzeImagesResult> => {
+    setIsLoading(true);
+
+    const reportId = options?.reportId ?? report?.id;
+    const studyId = options?.studyId ?? report?.studyId;
+    const onStatus = options?.onStatus;
+    const requestedBy = options?.requestedBy;
+    const modelVersion = options?.modelVersion;
+    const selectedCurrentRefs = selectInferenceImageRefs(options?.imageRefs, {
+      includeAllFrames: options?.includeAllFrames,
+      role: 'current',
+    });
+    const selectedPriorRefs = selectInferenceImageRefs(options?.priorImageRefs, {
+      includeAllFrames: options?.includeAllFrames,
+      role: 'prior',
+    });
+    const selectedImageRefs = [...selectedCurrentRefs, ...selectedPriorRefs];
+    const imageUrls = selectedImageRefs.map((ref) => ref.inferenceUrl ?? ref.wadoUrl);
+    let succeeded = false;
+
+    try {
+      onStatus?.('queued');
+      // Call inference without findings - the AI will analyze the images directly
+      const queueResponse = await inferenceClient.queueInference({
+        reportId,
+        studyId,
+        findingsText: '', // Empty - let AI generate from images
+        imageUrls,
+        imageRefs: selectedImageRefs,
+        requestedBy,
+        modelVersion,
+      });
+
+      const jobId = queueResponse.job_id ?? queueResponse.jobId;
+      if (!jobId) {
+        throw new Error('Inference queue missing job id');
+      }
+
+      setReport(prev => prev ? {
+        ...prev,
+        inferenceJobId: jobId,
+        inferenceStatus: queueResponse.status ?? 'queued',
+        inferenceModelVersion: queueResponse.model_version ?? queueResponse.modelVersion ?? modelVersion,
+        inferenceImageRefs: selectedImageRefs,
+      } : null);
+
+      const result = await pollInferenceResult(jobId, onStatus);
+      const summary = extractInferenceSummary(result);
+      if (!summary) {
+        throw new Error('Inference result missing summary');
+      }
+
+      const confidence = extractInferenceConfidence(result);
+      const inferredModel = extractInferenceModel(result);
+      const completedAt = extractInferenceCompletedAt(result);
+      const inferredImageRefs = extractInferenceImageRefs(result);
+      const evidenceIndices = extractInferenceEvidenceIndices(result);
+      const inferenceMetadata = extractInferenceMetadata(result);
+
+      // Use the AI-generated summary as both findings and impression
+      setReport(prev => prev ? {
+        ...prev,
+        findingsText: summary,
+        impressionText: summary,
+        updatedAt: new Date().toISOString(),
+        status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
+        inferenceStatus: 'finished',
+        inferenceSummary: summary,
+        inferenceConfidence: confidence,
+        inferenceModelVersion: inferredModel ?? prev.inferenceModelVersion ?? modelVersion,
+        inferenceCompletedAt: completedAt,
+        inferenceImageRefs: inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
+        inferenceEvidenceIndices: evidenceIndices ?? prev.inferenceEvidenceIndices,
+        inferenceMetadata: inferenceMetadata ?? prev.inferenceMetadata,
+      } : null);
+
+      succeeded = true;
+      return { findings: summary, impression: summary };
+    } catch (error) {
+      console.warn('Image analysis failed.', error);
+      setReport(prev => prev ? {
+        ...prev,
+        inferenceStatus: 'failed',
+      } : null);
+      onStatus?.('error');
+      throw error;
+    } finally {
+      setIsLoading(false);
+      if (succeeded) {
+        onStatus?.('idle');
+      }
+    }
+  }, [report?.id, report?.studyId]);
+
   const runQAChecks = useCallback(async (input?: {
     reportId?: string;
     findingsText?: string;
@@ -315,6 +428,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
     updateFindings,
     updateImpression,
     generateImpression,
+    analyzeImages,
     runQAChecks,
     approveReport,
     setReport,

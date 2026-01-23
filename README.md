@@ -75,7 +75,12 @@ docker compose up --build
 
 ### Mit GPU (NVIDIA CUDA)
 
+**Voraussetzung**: NVIDIA Container Toolkit muss installiert sein.
+
 ```bash
+# NVIDIA Container Toolkit einrichten (einmalig):
+sudo ./scripts/setup-nvidia-docker.sh
+
 # .env Datei erstellen (siehe env.example)
 # HUGGINGFACE_HUB_TOKEN setzen
 

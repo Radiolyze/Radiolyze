@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mic, MicOff, Edit3, Save } from 'lucide-react';
+import { Mic, MicOff, Edit3, Save, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfidenceBar } from '@/components/Common/ConfidenceBar';
 import { useASR } from '@/hooks/useASR';
@@ -14,6 +14,8 @@ interface FindingsPanelProps {
   onFindingsChange: (text: string) => void;
   onSave?: () => void;
   onAsrStatusChange?: (status: 'idle' | 'listening' | 'processing', confidence: number) => void;
+  onAnalyzeImages?: () => Promise<void>;
+  isAnalyzing?: boolean;
 }
 
 export function FindingsPanel({
@@ -22,6 +24,8 @@ export function FindingsPanel({
   onFindingsChange,
   onSave,
   onAsrStatusChange,
+  onAnalyzeImages,
+  isAnalyzing,
 }: FindingsPanelProps) {
   const { t } = useTranslation('report');
   const { t: tCommon } = useTranslation('common');
@@ -64,6 +68,24 @@ export function FindingsPanel({
       <div className="panel-header">
         <h3 className="text-sm font-semibold uppercase tracking-wide">{t('findings.title')}</h3>
         <div className="flex items-center gap-2">
+          {/* AI Analysis Button */}
+          {onAnalyzeImages && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAnalyzeImages}
+              disabled={isAnalyzing || status === 'processing'}
+              title={t('findings.analyzeImagesHint')}
+              className={cn(
+                'transition-all',
+                isAnalyzing && 'animate-pulse'
+              )}
+            >
+              <Sparkles className={cn('h-4 w-4 mr-1.5', isAnalyzing && 'animate-spin')} />
+              {isAnalyzing ? t('findings.analyzing') : t('findings.analyzeImages')}
+            </Button>
+          )}
+
           {/* Mic Button */}
           <Button
             size="icon"
@@ -75,7 +97,7 @@ export function FindingsPanel({
               status === 'processing' && 'opacity-50 cursor-wait'
             )}
             onClick={handleMicClick}
-            disabled={status === 'processing'}
+            disabled={status === 'processing' || isAnalyzing}
             title={isRecording ? t('findings.stopDictation') : t('findings.startDictation')}
           >
             {isRecording ? (
@@ -90,6 +112,7 @@ export function FindingsPanel({
             variant="outline"
             size="sm"
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+            disabled={isAnalyzing}
           >
             {isEditing ? (
               <>
