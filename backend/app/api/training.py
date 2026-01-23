@@ -61,6 +61,17 @@ class ExportResponse(BaseModel):
         populate_by_name = True
 
 
+class ManifestRequest(BaseModel):
+    study_ids: list[str] | None = Field(default=None, alias="studyIds")
+    categories: list[str] | None = None
+    verified_only: bool = Field(default=True, alias="verifiedOnly")
+    split_ratio: float = Field(default=0.8, alias="splitRatio", ge=0.5, le=0.95)
+    limit: int | None = Field(default=None, ge=1, le=20000)
+
+    class Config:
+        populate_by_name = True
+
+
 def _generate_export_id() -> str:
     """Generate unique export ID."""
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
@@ -109,6 +120,26 @@ def _collect_image_entries(
                 "splits": set(),
             }
         entries[image_key]["splits"].add(split)
+
+
+def _build_manifest(entries: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    manifest: list[dict[str, Any]] = []
+    for entry in entries.values():
+        splits = sorted(entry.get("splits") or [])
+        manifest.append(
+            {
+                "id": entry["id"],
+                "image_path": entry["image_path"],
+                "wado_url": entry["wado_url"],
+                "study_id": entry["study_id"],
+                "series_id": entry["series_id"],
+                "instance_id": entry["instance_id"],
+                "frame_index": entry["frame_index"],
+                "frame_number": entry["frame_number"],
+                "splits": splits,
+            }
+        )
+    return manifest
 
 
 def _build_coco_dataset(annotations: list[Annotation]) -> dict[str, Any]:
@@ -499,11 +530,9 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
 
         if include_images and image_entries:
             headers = _dicom_auth_headers()
-            manifest: list[dict[str, Any]] = []
+            manifest = _build_manifest(image_entries)
             with httpx.Client(timeout=20) as client:
-                for entry in image_entries.values():
-                    splits = sorted(entry.pop("splits"))
-                    entry["splits"] = splits
+                for entry in manifest:
                     try:
                         response = client.get(entry["wado_url"], headers=headers)
                         response.raise_for_status()
@@ -515,7 +544,6 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
                     except Exception as exc:
                         entry["status"] = "error"
                         entry["error"] = str(exc)
-                    manifest.append(entry)
 
             zf.writestr("images/manifest.json", json.dumps(manifest, indent=2))
     
@@ -602,6 +630,41 @@ def export_training_data(
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@router.post("/api/v1/training/manifest")
+def export_manifest(
+    payload: ManifestRequest,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Preview manifest entries for data capture."""
+    query = db.query(Annotation)
+
+    if payload.study_ids:
+        query = query.filter(Annotation.study_id.in_(payload.study_ids))
+
+    if payload.categories:
+        query = query.filter(Annotation.category.in_(payload.categories))
+
+    if payload.verified_only:
+        query = query.filter(Annotation.verified_by.isnot(None))
+
+    annotations = query.order_by(Annotation.created_at).all()
+    if not annotations:
+        raise HTTPException(status_code=400, detail="No annotations found matching criteria")
+
+    split_idx = int(len(annotations) * payload.split_ratio)
+    train_anns = annotations[:split_idx]
+    val_anns = annotations[split_idx:]
+    image_entries: dict[str, dict[str, Any]] = {}
+    _collect_image_entries(train_anns, "train", image_entries)
+    _collect_image_entries(val_anns, "val", image_entries)
+    manifest = _build_manifest(image_entries)
+    total = len(manifest)
+    if payload.limit:
+        manifest = manifest[: payload.limit]
+
+    return {"total": total, "images": manifest}
 
 
 @router.get("/api/v1/training/categories")

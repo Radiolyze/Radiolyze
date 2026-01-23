@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
@@ -27,8 +27,11 @@ import {
   getTrainingStats,
   getAnnotationCategories,
   exportAndDownload,
+  getTrainingManifest,
+  downloadBlob,
   type ExportFormat,
   type ExportRequest,
+  type ManifestResponse,
 } from '@/services/trainingClient';
 import { toast } from 'sonner';
 
@@ -55,6 +58,9 @@ export default function Training() {
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [splitRatio, setSplitRatio] = useState([0.8]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [includeImages, setIncludeImages] = useState(false);
+  const [manifest, setManifest] = useState<ManifestResponse | null>(null);
+  const [isDownloadingManifest, setIsDownloadingManifest] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['training-stats', verifiedOnly],
@@ -80,14 +86,58 @@ export default function Training() {
     },
   });
 
+  const manifestMutation = useMutation({
+    mutationFn: getTrainingManifest,
+    onSuccess: (data) => {
+      setManifest(data);
+      toast.success('Manifest erzeugt', {
+        description: `${data.total} Bilder im Data-Capture-Katalog.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error('Manifest fehlgeschlagen', {
+        description: error.message,
+      });
+    },
+  });
+
   const handleExport = () => {
     const request: ExportRequest = {
       format: selectedFormat,
       verifiedOnly,
       splitRatio: splitRatio[0],
       categories: selectedCategories.length > 0 ? selectedCategories : undefined,
+      includeImages,
     };
     exportMutation.mutate(request);
+  };
+
+  const buildManifestRequest = (limit?: number) => ({
+    verifiedOnly,
+    splitRatio: splitRatio[0],
+    categories: selectedCategories.length > 0 ? selectedCategories : undefined,
+    limit,
+  });
+
+  const handleManifestPreview = () => {
+    manifestMutation.mutate(buildManifestRequest(50));
+  };
+
+  const handleManifestDownload = async () => {
+    setIsDownloadingManifest(true);
+    try {
+      const data = await getTrainingManifest(buildManifestRequest());
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const timestamp = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `medgemma-manifest-${timestamp}.json`);
+      toast.success('Manifest heruntergeladen');
+    } catch (error) {
+      toast.error('Manifest Download fehlgeschlagen', {
+        description: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      });
+    } finally {
+      setIsDownloadingManifest(false);
+    }
   };
 
   const toggleCategory = (category: string) => {
@@ -97,6 +147,16 @@ export default function Training() {
         : [...prev, category]
     );
   };
+
+  useEffect(() => {
+    if (!includeImages) {
+      setManifest(null);
+    }
+  }, [includeImages]);
+
+  useEffect(() => {
+    setManifest(null);
+  }, [selectedCategories, verifiedOnly, splitRatio]);
 
   const verifiedPercentage = stats
     ? Math.round((stats.verifiedAnnotations / stats.totalAnnotations) * 100) || 0
@@ -315,6 +375,89 @@ export default function Training() {
                   >
                     Filter zurücksetzen
                   </Button>
+                )}
+              </div>
+
+              {/* Data Capture */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="include-images">Rendered Images einschließen</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Fügt PNGs + Manifest für Data Capture hinzu (größere ZIP-Datei).
+                    </p>
+                  </div>
+                  <Switch
+                    id="include-images"
+                    checked={includeImages}
+                    onCheckedChange={setIncludeImages}
+                  />
+                </div>
+
+                {includeImages && (
+                  <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleManifestPreview}
+                        disabled={manifestMutation.isPending || !stats?.totalAnnotations}
+                      >
+                        {manifestMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Manifest wird erzeugt...
+                          </>
+                        ) : (
+                          'Manifest erzeugen'
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleManifestDownload}
+                        disabled={isDownloadingManifest || !stats?.totalAnnotations}
+                      >
+                        {isDownloadingManifest ? 'Download läuft...' : 'Manifest herunterladen'}
+                      </Button>
+                    </div>
+
+                    {manifest && (
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                          {manifest.total} Bilder im Katalog
+                          {manifest.images.length !== manifest.total && (
+                            <span className="text-muted-foreground">
+                              (Preview: {manifest.images.length})
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          {manifest.images.slice(0, 3).map((entry) => (
+                            <div
+                              key={entry.id}
+                              className="flex items-center justify-between rounded bg-background px-2 py-1 text-xs"
+                            >
+                              <span className="font-mono">{entry.id}</span>
+                              <span className="text-muted-foreground">
+                                {entry.splits.join(', ')}
+                              </span>
+                            </div>
+                          ))}
+                          {manifest.images.length > 3 && (
+                            <div className="text-xs text-muted-foreground">
+                              + {manifest.images.length - 3} weitere Einträge im Preview
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <AlertCircle className="h-4 w-4 mt-0.5" />
+                          Das ZIP enthält `images/manifest.json` inklusive Hashes und Status.
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </CardContent>
