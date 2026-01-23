@@ -43,6 +43,12 @@ Alert-Schwellen koennen per ENV konfiguriert werden:
 - `DRIFT_QA_PASS_RATE_DELTA` (Default: 0.1)
 - `DRIFT_QA_SCORE_DELTA` (Default: 5.0)
 
+Optional kann ein Snapshot persistiert werden:
+
+- `GET /api/v1/monitoring/drift?persist=true`
+- Snapshots koennen via `/api/v1/monitoring/drift/snapshots` abgefragt werden
+- Persistenz erzeugt Audit Events (`drift_snapshot_created`, `drift_alert_triggered`)
+
 ## Tracing
 
 Empfohlen: OpenTelemetry fuer Request Traces

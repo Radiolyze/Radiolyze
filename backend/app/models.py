@@ -69,6 +69,16 @@ class InferenceJob(Base):
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
 
 
+class DriftSnapshot(Base):
+    __tablename__ = "drift_snapshots"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    window_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    baseline_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+
 class PromptTemplate(Base):
     __tablename__ = "prompt_templates"
 

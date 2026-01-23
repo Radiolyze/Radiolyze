@@ -20,7 +20,7 @@ from .audit import add_audit_event
 from .db import Base, SessionLocal, engine
 from .inference_clients import generate_impression_text, transcribe_audio
 from .mock_logic import run_qa_checks, utc_now
-from .models import AuditEvent, InferenceJob, QACheckResult, Report
+from .models import AuditEvent, DriftSnapshot, InferenceJob, QACheckResult, Report
 from .queue import get_queue, get_redis
 from .schemas import (
     ASRResponse,
@@ -997,6 +997,7 @@ def get_metrics(db: Session = Depends(get_db)) -> dict[str, Any]:
 def get_drift_report(
     window_days: int = Query(7, ge=1, le=90),
     baseline_days: int | None = Query(None, ge=1, le=365),
+    persist: bool = Query(False),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     now = datetime.now(timezone.utc)
@@ -1085,7 +1086,7 @@ def get_drift_report(
             }
         )
 
-    return {
+    response_payload = {
         "window_days": window_days,
         "baseline_days": baseline_days,
         "window": {"start": window_start_iso, "end": window_end_iso},
@@ -1095,6 +1096,65 @@ def get_drift_report(
         "delta": {"inference": inference_deltas, "qa": qa_deltas},
         "alerts": alerts,
     }
+
+    if persist:
+        snapshot_id = str(uuid.uuid4())
+        snapshot = DriftSnapshot(
+            id=snapshot_id,
+            created_at=now_iso(),
+            window_days=window_days,
+            baseline_days=baseline_days,
+            payload=response_payload,
+        )
+        db.add(snapshot)
+        add_audit_event(
+            db,
+            event_type="drift_snapshot_created",
+            actor_id="system",
+            metadata={
+                "snapshot_id": snapshot_id,
+                "alerts_count": len(alerts),
+                "window_days": window_days,
+                "baseline_days": baseline_days,
+            },
+            source="api",
+        )
+        if alerts:
+            add_audit_event(
+                db,
+                event_type="drift_alert_triggered",
+                actor_id="system",
+                metadata={"snapshot_id": snapshot_id, "alerts": alerts},
+                source="api",
+            )
+        db.commit()
+
+    return response_payload
+
+
+@app.get("/api/v1/monitoring/drift/snapshots")
+def list_drift_snapshots(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> list[dict[str, Any]]:
+    snapshots = (
+        db.query(DriftSnapshot)
+        .order_by(DriftSnapshot.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": snapshot.id,
+            "created_at": snapshot.created_at,
+            "window_days": snapshot.window_days,
+            "baseline_days": snapshot.baseline_days,
+            "payload": snapshot.payload,
+        }
+        for snapshot in snapshots
+    ]
 
 
 @app.websocket("/api/v1/ws")
