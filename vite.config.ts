@@ -66,6 +66,14 @@ export default defineConfig(({ mode }) => {
         "@cornerstonejs/tools",
         "@cornerstonejs/dicom-image-loader",
         "dicom-parser",
+        // vtk.js and its dependencies need CJS transformation
+        "@kitware/vtk.js",
+        "globalthis",
+        // Codec packages need CJS transformation for their JS wrappers
+        "@cornerstonejs/codec-charls",
+        "@cornerstonejs/codec-libjpeg-turbo-8bit",
+        "@cornerstonejs/codec-openjpeg",
+        "@cornerstonejs/codec-openjph",
       ],
       esbuildOptions: {
         target: "esnext",
