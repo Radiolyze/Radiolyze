@@ -13,6 +13,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .audit import add_audit_event
@@ -167,6 +168,14 @@ def format_datetime(value: datetime | str | None) -> str | None:
     if isinstance(value, str):
         return value
     return value.isoformat()
+
+
+def counts_to_dict(rows: list[tuple[str | None, int]]) -> dict[str, int]:
+    result: dict[str, int] = {}
+    for key, count in rows:
+        label = key or "unknown"
+        result[label] = count
+    return result
 
 
 def get_latest_inference_job(db: Session, report_id: str | None) -> InferenceJob | None:
@@ -881,6 +890,30 @@ def list_audit_events(
         query = query.filter(AuditEvent.report_id == report_id)
     events = query.order_by(AuditEvent.timestamp.desc()).offset(offset).limit(limit).all()
     return [serialize_audit_event(event) for event in events]
+
+
+@app.get("/api/v1/metrics")
+def get_metrics(db: Session = Depends(get_db)) -> dict[str, Any]:
+    reports_total = db.query(func.count(Report.id)).scalar() or 0
+    reports_by_status = counts_to_dict(
+        db.query(Report.status, func.count(Report.id)).group_by(Report.status).all()
+    )
+    qa_status_counts = counts_to_dict(
+        db.query(Report.qa_status, func.count(Report.id)).group_by(Report.qa_status).all()
+    )
+    inference_job_counts = counts_to_dict(
+        db.query(InferenceJob.status, func.count(InferenceJob.id)).group_by(InferenceJob.status).all()
+    )
+    audit_events_total = db.query(func.count(AuditEvent.id)).scalar() or 0
+
+    return {
+        "timestamp": now_iso(),
+        "reports_total": reports_total,
+        "reports_by_status": reports_by_status,
+        "qa_status_counts": qa_status_counts,
+        "inference_job_status_counts": inference_job_counts,
+        "audit_events_total": audit_events_total,
+    }
 
 
 @app.websocket("/api/v1/ws")
