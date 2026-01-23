@@ -73,6 +73,56 @@ def _build_multimodal_content(prompt: str, image_urls: list[str], image_paths: l
     return content
 
 
+def _build_image_manifest(
+    image_urls: list[str] | None,
+    image_paths: list[str] | None,
+    image_refs: list[dict[str, Any]] | None,
+) -> str:
+    normalized_urls = _normalize_list(image_urls)
+    normalized_paths = _normalize_list(image_paths)
+    if image_refs:
+        lines: list[str] = []
+        for index, ref in enumerate(image_refs, start=1):
+            if not isinstance(ref, dict):
+                continue
+            role = ref.get("role")
+            if role not in {"current", "prior"}:
+                role = None
+            study_date = ref.get("study_date") or ref.get("studyDate")
+            series_description = ref.get("series_description") or ref.get("seriesDescription")
+            series_modality = ref.get("series_modality") or ref.get("seriesModality")
+            frame_index = ref.get("frame_index") if "frame_index" in ref else ref.get("frameIndex")
+            stack_index = ref.get("stack_index") if "stack_index" in ref else ref.get("stackIndex")
+
+            parts = [f"{index})"]
+            if role:
+                parts.append(f"role={role}")
+            if study_date:
+                parts.append(f"study_date={study_date}")
+            if series_description:
+                parts.append(f"series={series_description}")
+            if series_modality:
+                parts.append(f"modality={series_modality}")
+            if isinstance(frame_index, int):
+                parts.append(f"frame={frame_index}")
+            if isinstance(stack_index, int):
+                parts.append(f"stack={stack_index}")
+            lines.append(" ".join(parts))
+
+        if lines:
+            return "\n".join(lines)
+
+    if not (normalized_urls or normalized_paths):
+        return ""
+
+    lines: list[str] = []
+    for index in range(len(normalized_urls)):
+        lines.append(f"{index + 1}) source=url")
+    for index in range(len(normalized_paths)):
+        lines.append(f"{len(lines) + index + 1}) source=path")
+    return "\n".join(lines)
+
+
 def _vllm_base_url() -> str:
     return os.getenv("VLLM_BASE_URL", "http://vllm-medgemma:8000/v1").rstrip("/")
 
@@ -133,12 +183,24 @@ def _vllm_chat_completion(
     return content.strip()
 
 
-def _build_impression_prompt(findings_text: str | None) -> str:
-    return render_prompt_text("impression", {"findings_text": (findings_text or "").strip()})
+def _build_impression_prompt(findings_text: str | None, image_manifest: str | None) -> str:
+    return render_prompt_text(
+        "impression",
+        {
+            "findings_text": (findings_text or "").strip(),
+            "image_manifest": image_manifest or "",
+        },
+    )
 
 
-def _build_summary_prompt(findings_text: str | None) -> str:
-    return render_prompt_text("summary", {"findings_text": (findings_text or "").strip()})
+def _build_summary_prompt(findings_text: str | None, image_manifest: str | None) -> str:
+    return render_prompt_text(
+        "summary",
+        {
+            "findings_text": (findings_text or "").strip(),
+            "image_manifest": image_manifest or "",
+        },
+    )
 
 
 def generate_impression_text(
@@ -146,6 +208,7 @@ def generate_impression_text(
     *,
     image_urls: list[str] | None = None,
     image_paths: list[str] | None = None,
+    image_refs: list[dict[str, Any]] | None = None,
 ) -> tuple[str, float, str, dict[str, Any]]:
     findings_text = (findings_text or "").strip()
     has_images = bool(_normalize_list(image_urls) or _normalize_list(image_paths))
@@ -153,11 +216,12 @@ def generate_impression_text(
         text, confidence = generate_impression(findings_text)
         return text, confidence, "mock-impression-v1", {"provider": "mock"}
 
+    image_manifest = _build_image_manifest(image_urls, image_paths, image_refs)
     model_name = _vllm_model_name()
     try:
         start_time = time.monotonic()
         text = _vllm_chat_completion(
-            _build_impression_prompt(findings_text),
+            _build_impression_prompt(findings_text, image_manifest),
             model_name=model_name,
             system_prompt=render_prompt_text("system"),
             image_urls=image_urls,
@@ -180,6 +244,7 @@ def generate_inference_summary_text(
     *,
     image_urls: list[str] | None = None,
     image_paths: list[str] | None = None,
+    image_refs: list[dict[str, Any]] | None = None,
 ) -> tuple[str, float | None, str, dict[str, Any]]:
     findings_text = (findings_text or "").strip()
     has_images = bool(_normalize_list(image_urls) or _normalize_list(image_paths))
@@ -187,11 +252,12 @@ def generate_inference_summary_text(
         text, confidence = generate_inference_summary(findings_text)
         return text, confidence, model_name or "mock-medgemma-0.1", {"provider": "mock"}
 
+    image_manifest = _build_image_manifest(image_urls, image_paths, image_refs)
     resolved_model = _vllm_model_name(model_name)
     try:
         start_time = time.monotonic()
         text = _vllm_chat_completion(
-            _build_summary_prompt(findings_text),
+            _build_summary_prompt(findings_text, image_manifest),
             model_name=resolved_model,
             system_prompt=render_prompt_text("system"),
             image_urls=image_urls,

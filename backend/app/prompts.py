@@ -39,6 +39,8 @@ DEFAULT_PROMPTS: dict[PromptType, str] = {
         "If findings text is empty, rely solely on the images.\n"
         "Output: 1-2 sentences, no bullet points, no headings.\n"
         "Return only the summary text.\n\n"
+        "Image manifest:\n"
+        "{{image_manifest}}\n\n"
         "Findings (optional):\n"
         "{{findings_text}}"
     ),
@@ -48,6 +50,8 @@ DEFAULT_PROMPTS: dict[PromptType, str] = {
         "If uncertain, qualify with \"likely\" or \"cannot exclude\".\n"
         "Output: 1-3 short sentences, no bullet points, no headings.\n"
         "Return only the impression text.\n\n"
+        "Image manifest:\n"
+        "{{image_manifest}}\n\n"
         "Findings (optional):\n"
         "{{findings_text}}"
     ),
@@ -55,8 +59,8 @@ DEFAULT_PROMPTS: dict[PromptType, str] = {
 
 ALLOWED_VARIABLES: dict[PromptType, set[str]] = {
     "system": set(),
-    "summary": {"findings_text"},
-    "impression": {"findings_text"},
+    "summary": {"findings_text", "image_manifest"},
+    "impression": {"findings_text", "image_manifest"},
 }
 
 VARIABLE_PATTERN = re.compile(r"{{\s*([a-zA-Z0-9_]+)\s*}}")

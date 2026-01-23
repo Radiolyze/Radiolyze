@@ -75,6 +75,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             model_name=requested_model_version,
             image_urls=image_urls,
             image_paths=image_paths,
+            image_refs=image_refs,
         )
         completed_at = utc_now()
         output_summary = summary[:240]
