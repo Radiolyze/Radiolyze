@@ -46,6 +46,8 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
     isReady,
     sliceState,
     jumpToSlice,
+    slabSettings,
+    setSlabSettings,
   } = useMPRVolumeViewport({
     isEnabled: Boolean(series) && imageIds.length > 0,
     imageIds,
@@ -69,7 +71,9 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
     setActiveTool('crosshairs');
     setSelectedPresetId(windowLevelPresets[0].id);
     setMaximizedViewport(null);
-  }, []);
+    // Reset slab settings
+    setSlabSettings({ thickness: 0, blendMode: 'composite' });
+  }, [setSlabSettings]);
 
   const handleMaximize = useCallback((orientation: MPROrientation | null) => {
     setMaximizedViewport(orientation);
@@ -105,6 +109,7 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
         isActive={activeViewport === orientation}
         onClick={() => handleViewportClick(orientation)}
         className="flex-1"
+        slabSettings={slabSettings}
       />
     );
   };
@@ -122,6 +127,8 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
         activeViewport={activeViewport}
         onMaximize={handleMaximize}
         isMaximized={Boolean(maximizedViewport)}
+        slabSettings={slabSettings}
+        onSlabSettingsChange={setSlabSettings}
       />
 
       {/* Loading state */}

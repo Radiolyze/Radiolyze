@@ -53,6 +53,7 @@ Rolle:
 - Multi-Planar Rekonstruktion (Axial, Sagittal, Coronal)
 - 3D-Volumen-Rendering mit Cornerstone3D VolumeViewport
 - Crosshair-Navigation für synchronisierte Ebenen
+- Slab-Thickness mit MIP/MinIP/Average Projektion
 
 Features:
 
@@ -61,12 +62,17 @@ Features:
 - **Farbkodierte Referenzlinien**: Rot (Axial), Grün (Sagittal), Blau (Coronal)
 - **Maximieren**: Einzelne Ansicht auf Vollbild
 - **W/L Presets**: CT-optimierte Fensterung
+- **Slab/MIP Rendering**:
+  - MIP (Maximum Intensity Projection): Gefäße, Knochen
+  - MinIP (Minimum Intensity Projection): Lunge, Atemwege
+  - Average: Rauschreduktion
+  - Einstellbare Schichtdicke (0-100mm)
 
 Implementierung:
 
-- `useMPRVolumeViewport`: Volume-Loading und Viewport-Setup
-- `MPRViewport`: Einzelne Ansicht mit Orientierungs-Markern
-- `MPRToolbar`: Tool-Auswahl und Layout-Kontrolle
+- `useMPRVolumeViewport`: Volume-Loading, Viewport-Setup, Slab-Kontrolle
+- `MPRViewport`: Einzelne Ansicht mit Orientierungs-Markern + Slab-Indikator
+- `MPRToolbar`: Tool-Auswahl, Layout-Kontrolle, Slab-Settings Popover
 - Aktivierung via MPR-Button (nur für CT/MR mit ≥10 Frames)
 
 Controls:

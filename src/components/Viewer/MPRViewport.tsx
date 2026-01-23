@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import type { MPROrientation, MPRViewportConfig } from '@/types/mpr';
+import type { MPRViewportConfig, SlabSettings } from '@/types/mpr';
+import { SLAB_BLEND_MODE_LABELS } from '@/types/mpr';
 
 interface MPRViewportProps {
   config: MPRViewportConfig;
@@ -9,10 +10,13 @@ interface MPRViewportProps {
   isActive?: boolean;
   onClick?: () => void;
   className?: string;
+  slabSettings?: SlabSettings;
 }
 
 export const MPRViewport = forwardRef<HTMLDivElement, MPRViewportProps>(
-  ({ config, sliceIndex, totalSlices, isActive, onClick, className }, ref) => {
+  ({ config, sliceIndex, totalSlices, isActive, onClick, className, slabSettings }, ref) => {
+    const isSlabActive = slabSettings && slabSettings.thickness > 0;
+    
     return (
       <div
         className={cn(
@@ -35,6 +39,13 @@ export const MPRViewport = forwardRef<HTMLDivElement, MPRViewportProps>(
         >
           {config.label}
         </div>
+
+        {/* Slab indicator */}
+        {isSlabActive && (
+          <div className="absolute top-2 right-2 z-10 bg-accent text-accent-foreground px-2 py-0.5 rounded text-xs font-semibold">
+            {SLAB_BLEND_MODE_LABELS[slabSettings.blendMode]} {slabSettings.thickness}mm
+          </div>
+        )}
 
         {/* Slice info */}
         {totalSlices > 0 && (
