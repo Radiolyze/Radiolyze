@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
+SCHEMA_VERSION = "1.0"
+
 
 def _normalize_indices(value: Any) -> list[int] | None:
     if value is None:

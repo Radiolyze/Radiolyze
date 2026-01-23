@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from .ai_schemas import ImpressionOutput, SummaryOutput
+from .ai_schemas import SCHEMA_VERSION, ImpressionOutput, SummaryOutput
 from .mock_logic import generate_asr_transcript, generate_impression, generate_inference_summary
 from .prompts import render_prompt_with_metadata
 
@@ -345,9 +345,10 @@ def _parse_structured_output(
     *,
     model_type: type[SummaryOutput] | type[ImpressionOutput],
     text_key: str,
+    schema_name: str,
 ) -> tuple[str, dict[str, Any], list[int] | None, str | None]:
     parsed, parse_error = _parse_json_response(raw_text)
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = {"schema_name": schema_name, "schema_version": SCHEMA_VERSION}
     evidence_indices = None
     confidence_label = None
 
@@ -412,6 +413,7 @@ def generate_impression_text(
             raw_text,
             model_type=ImpressionOutput,
             text_key="impression",
+            schema_name="impression_output",
         )
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
@@ -465,6 +467,7 @@ def generate_inference_summary_text(
             raw_text,
             model_type=SummaryOutput,
             text_key="summary",
+            schema_name="summary_output",
         )
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
