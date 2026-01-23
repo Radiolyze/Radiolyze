@@ -421,8 +421,11 @@ def generate_impression_text(
             **parse_metadata,
             "prompt": {"system": system_meta, "task": prompt_meta},
         }
+        json_metadata["images_used"] = has_images
         if evidence_indices:
             json_metadata["evidence_indices"] = evidence_indices
+        if has_images and not evidence_indices:
+            json_metadata["evidence_missing"] = True
         if confidence_label:
             json_metadata["confidence_label"] = confidence_label
         return text, confidence, model_name, _compact_metadata(
@@ -475,8 +478,11 @@ def generate_inference_summary_text(
             **parse_metadata,
             "prompt": {"system": system_meta, "task": prompt_meta},
         }
+        json_metadata["images_used"] = has_images
         if evidence_indices:
             json_metadata["evidence_indices"] = evidence_indices
+        if has_images and not evidence_indices:
+            json_metadata["evidence_missing"] = True
         if confidence_label:
             json_metadata["confidence_label"] = confidence_label
         return text, confidence, resolved_model, _compact_metadata(
