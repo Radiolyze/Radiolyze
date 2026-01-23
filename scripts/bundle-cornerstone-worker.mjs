@@ -7,7 +7,7 @@
 import * as esbuild from 'esbuild';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, mkdirSync, copyFileSync, readdirSync } from 'fs';
+import { existsSync, mkdirSync, copyFileSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..');
@@ -49,17 +49,32 @@ const nodeBuiltinsPlugin = {
 };
 
 // Banner to fix WASM file loading paths in web worker context
-// The Emscripten-generated code uses scriptDirectory which is empty in workers,
-// so WASM files get fetched from wrong URL. This sets the correct base path.
+// The Emscripten-generated code uses scriptDirectory which may be empty or incorrect,
+// so WASM files get fetched from wrong URL. This intercepts fetch and fixes paths.
 const wasmPathBanner = `
 // Fix WASM file loading in web worker context
 var __wasmBasePath__ = '/workers/';
+var __wasmFiles__ = ['libjpegturbowasm_decode.wasm', 'libjpegturbowasm.wasm', 'charlswasm_decode.wasm', 'charlswasm.wasm', 'openjpegwasm_decode.wasm', 'openjpegwasm.wasm', 'openjphjs.wasm'];
 var __originalFetch__ = self.fetch;
 self.fetch = function(input, init) {
   if (typeof input === 'string') {
-    // Intercept requests for bare .wasm filenames and prepend the correct path
+    // Check for bare .wasm filenames
     if (input.match(/^[a-zA-Z0-9_-]+\\.wasm$/)) {
+      console.log('[WASM loader] Fixing bare path:', input, '->', __wasmBasePath__ + input);
       input = __wasmBasePath__ + input;
+    }
+    // Check for incorrect root path (e.g., http://localhost:5173/filename.wasm)
+    else {
+      for (var i = 0; i < __wasmFiles__.length; i++) {
+        var wasmFile = __wasmFiles__[i];
+        // Match URLs ending with /filename.wasm but not /workers/filename.wasm
+        if (input.endsWith('/' + wasmFile) && !input.includes('/workers/')) {
+          var fixedUrl = input.replace('/' + wasmFile, '/workers/' + wasmFile);
+          console.log('[WASM loader] Fixing URL:', input, '->', fixedUrl);
+          input = fixedUrl;
+          break;
+        }
+      }
     }
   }
   return __originalFetch__.call(this, input, init);
@@ -104,6 +119,44 @@ try {
   
   if (result.warnings.length > 0) {
     console.log('Warnings:', result.warnings);
+  }
+
+  // Post-process: Fix WASM paths directly in the bundle
+  // The Emscripten code sets wasmBinaryFile = "filename.wasm" which then gets
+  // resolved relative to the page URL instead of the worker URL.
+  // We fix this by replacing the bare filenames with absolute paths.
+  console.log('\nFixing WASM paths in bundle...');
+  let bundleContent = readFileSync(outputFile, 'utf-8');
+  
+  const wasmFiles = [
+    'libjpegturbowasm_decode.wasm',
+    'libjpegturbowasm.wasm',
+    'charlswasm_decode.wasm',
+    'charlswasm.wasm',
+    'openjpegwasm_decode.wasm',
+    'openjpegwasm.wasm',
+    'openjphjs.wasm',
+  ];
+  
+  let replacements = 0;
+  for (const wasmFile of wasmFiles) {
+    // Replace: wasmBinaryFile = "filename.wasm"
+    // With:    wasmBinaryFile = "/workers/filename.wasm"
+    const pattern = new RegExp(`wasmBinaryFile = "${wasmFile}"`, 'g');
+    const replacement = `wasmBinaryFile = "/workers/${wasmFile}"`;
+    const matches = bundleContent.match(pattern);
+    if (matches) {
+      bundleContent = bundleContent.replace(pattern, replacement);
+      replacements += matches.length;
+      console.log(`  Fixed: ${wasmFile} (${matches.length} occurrences)`);
+    }
+  }
+  
+  if (replacements > 0) {
+    writeFileSync(outputFile, bundleContent);
+    console.log(`Total WASM path fixes: ${replacements}`);
+  } else {
+    console.log('  No WASM paths found to fix (may already be correct)');
   }
 
   // Copy WASM files from codec packages
