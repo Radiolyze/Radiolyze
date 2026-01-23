@@ -26,6 +26,7 @@ interface GenerateImpressionOptions {
   requestedBy?: string;
   modelVersion?: string;
   imageRefs?: ImageRef[];
+  priorImageRefs?: ImageRef[];
   includeAllFrames?: boolean;
   onStatus?: (status: AIStatus) => void;
 }
@@ -107,10 +108,15 @@ export function useReport(initialReport?: Report): UseReportReturn {
     const onStatus = options?.onStatus;
     const requestedBy = options?.requestedBy;
     const modelVersion = options?.modelVersion;
-    const selectedImageRefs = selectInferenceImageRefs(options?.imageRefs, {
+    const selectedCurrentRefs = selectInferenceImageRefs(options?.imageRefs, {
       includeAllFrames: options?.includeAllFrames,
       role: 'current',
     });
+    const selectedPriorRefs = selectInferenceImageRefs(options?.priorImageRefs, {
+      includeAllFrames: options?.includeAllFrames,
+      role: 'prior',
+    });
+    const selectedImageRefs = [...selectedCurrentRefs, ...selectedPriorRefs];
     const imageUrls = selectedImageRefs.map((ref) => ref.inferenceUrl ?? ref.wadoUrl);
     let succeeded = false;
 

@@ -43,6 +43,7 @@ export const ReportWorkspace = () => {
   const [selectedQueueItem, setSelectedQueueItem] = useState<QueueItem | null>(null);
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [imageRefs, setImageRefs] = useState<ImageRef[]>([]);
+  const [priorImageRefs, setPriorImageRefs] = useState<ImageRef[]>([]);
   const [evidenceSelection, setEvidenceSelection] = useState<{ seriesId: string; stackIndex: number } | null>(null);
   const [useAllFrames, setUseAllFrames] = useState(false);
 
@@ -142,6 +143,7 @@ export const ReportWorkspace = () => {
       const result = await generateImpression(findings, {
         onStatus: setAiStatus,
         imageRefs,
+        priorImageRefs,
         includeAllFrames: useAllFrames,
       });
       setImpression(result);
@@ -155,7 +157,7 @@ export const ReportWorkspace = () => {
       setAiStatus('error');
       toast.error('KI-Analyse fehlgeschlagen');
     }
-  }, [findings, generateImpression, imageRefs, isGenerating, report?.id, runQAChecks, useAllFrames]);
+  }, [findings, generateImpression, imageRefs, isGenerating, priorImageRefs, report?.id, runQAChecks, useAllFrames]);
 
   const handleApprove = useCallback(async (signature?: string) => {
     const name = signature?.trim();
@@ -223,6 +225,25 @@ export const ReportWorkspace = () => {
     () => (Array.isArray(priorStudiesRaw) ? priorStudiesRaw : []),
     [priorStudiesRaw]
   );
+
+  const priorStudyDateBySeries = useMemo(() => {
+    const map = new Map<string, string>();
+    priorStudies.forEach((study) => {
+      study.series.forEach((series) => {
+        map.set(series.id, study.studyDate);
+      });
+    });
+    return map;
+  }, [priorStudies]);
+
+  const handlePriorImageRefsChange = useCallback((refs: ImageRef[]) => {
+    const enriched = refs.map((ref) => ({
+      ...ref,
+      studyDate: ref.studyDate ?? priorStudyDateBySeries.get(ref.seriesId),
+      role: ref.role ?? 'prior',
+    }));
+    setPriorImageRefs(enriched);
+  }, [priorStudyDateBySeries]);
 
   useEffect(() => {
     if (priorStudiesError) {
@@ -313,6 +334,7 @@ export const ReportWorkspace = () => {
             qaStatus: liveStatus?.qaStatus || report.qaStatus,
           }}
           onImageRefsChange={handleImageRefsChange}
+          onPriorImageRefsChange={handlePriorImageRefsChange}
           evidenceSelection={evidenceSelection}
         />
       }
