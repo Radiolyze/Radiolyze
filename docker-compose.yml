@@ -113,6 +113,8 @@ services:
       ORTHANC_USERNAME: orthanc
       ORTHANC_PASSWORD: orthanc
       ORTHANC_SEED_ENABLED: "true"
+      # Seed modes: minimal, mri, ct, multiframe, us, rg, compression, color, full
+      ORTHANC_SEED_MODE: "full"
     entrypoint: ["/bin/sh", "/seed/seed.sh"]
 
   db:

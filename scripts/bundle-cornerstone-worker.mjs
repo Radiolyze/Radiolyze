@@ -48,6 +48,24 @@ const nodeBuiltinsPlugin = {
   },
 };
 
+// Banner to fix WASM file loading paths in web worker context
+// The Emscripten-generated code uses scriptDirectory which is empty in workers,
+// so WASM files get fetched from wrong URL. This sets the correct base path.
+const wasmPathBanner = `
+// Fix WASM file loading in web worker context
+var __wasmBasePath__ = '/workers/';
+var __originalFetch__ = self.fetch;
+self.fetch = function(input, init) {
+  if (typeof input === 'string') {
+    // Intercept requests for bare .wasm filenames and prepend the correct path
+    if (input.match(/^[a-zA-Z0-9_-]+\\.wasm$/)) {
+      input = __wasmBasePath__ + input;
+    }
+  }
+  return __originalFetch__.call(this, input, init);
+};
+`;
+
 try {
   const result = await esbuild.build({
     entryPoints: [workerEntryPoint],
@@ -70,6 +88,10 @@ try {
     // Define for proper environment detection
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    },
+    // Add banner to fix WASM paths
+    banner: {
+      js: wasmPathBanner,
     },
   });
 
