@@ -35,3 +35,27 @@ export const MPR_VIEWPORTS: MPRViewportConfig[] = [
   { id: 'sagittal', orientation: 'sagittal', label: 'Sagittal', color: 'hsl(var(--chart-2))' },
   { id: 'coronal', orientation: 'coronal', label: 'Coronal', color: 'hsl(var(--chart-3))' },
 ];
+
+// Slab/MIP rendering modes
+export type SlabBlendMode = 'composite' | 'mip' | 'minip' | 'average';
+
+export interface SlabSettings {
+  thickness: number; // in mm
+  blendMode: SlabBlendMode;
+}
+
+export const SLAB_BLEND_MODE_LABELS: Record<SlabBlendMode, string> = {
+  composite: 'Normal',
+  mip: 'MIP',
+  minip: 'MinIP',
+  average: 'Average',
+};
+
+export const SLAB_THICKNESS_PRESETS = [
+  { value: 0, label: 'Dünn (0mm)' },
+  { value: 5, label: '5mm' },
+  { value: 10, label: '10mm' },
+  { value: 20, label: '20mm' },
+  { value: 50, label: '50mm' },
+  { value: 100, label: '100mm' },
+];

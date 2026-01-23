@@ -13,7 +13,7 @@ import {
   Enums as ToolEnums,
 } from '@cornerstonejs/tools';
 import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
-import type { MPROrientation, MPRViewportState } from '@/types/mpr';
+import type { MPROrientation, MPRViewportState, SlabBlendMode, SlabSettings } from '@/types/mpr';
 
 // Ensure CrosshairsTool is registered
 let crosshairsRegistered = false;
@@ -26,6 +26,14 @@ const registerCrosshairs = () => {
       // Already registered
     }
   }
+};
+
+// Map our blend mode to Cornerstone BlendModes
+const blendModeToCornerstone: Record<SlabBlendMode, Enums.BlendModes> = {
+  composite: Enums.BlendModes.COMPOSITE,
+  mip: Enums.BlendModes.MAXIMUM_INTENSITY_BLEND,
+  minip: Enums.BlendModes.MINIMUM_INTENSITY_BLEND,
+  average: Enums.BlendModes.AVERAGE_INTENSITY_BLEND,
 };
 
 interface UseMPRVolumeViewportOptions {
@@ -57,6 +65,9 @@ interface UseMPRVolumeViewportResult {
   isReady: boolean;
   sliceState: MPRViewportState;
   jumpToSlice: (orientation: MPROrientation, sliceIndex: number) => void;
+  slabSettings: SlabSettings;
+  setSlabSettings: (settings: SlabSettings) => void;
+  renderingEngineRef: React.RefObject<RenderingEngine | null>;
 }
 
 const orientationToAxis: Record<MPROrientation, Enums.OrientationAxis> = {
@@ -97,6 +108,10 @@ export const useMPRVolumeViewport = ({
     axial: { sliceIndex: 0, totalSlices: 0 },
     sagittal: { sliceIndex: 0, totalSlices: 0 },
     coronal: { sliceIndex: 0, totalSlices: 0 },
+  });
+  const [slabSettings, setSlabSettingsState] = useState<SlabSettings>({
+    thickness: 0,
+    blendMode: 'composite',
   });
 
   const onSliceChangeRef = useRef(onSliceChange);
@@ -341,6 +356,42 @@ export const useMPRVolumeViewport = ({
     return () => clearInterval(interval);
   }, [isReady, updateSliceState]);
 
+  // Apply slab settings to all viewports
+  const setSlabSettings = useCallback((settings: SlabSettings) => {
+    setSlabSettingsState(settings);
+    
+    const viewports = [volumeViewports.axial, volumeViewports.sagittal, volumeViewports.coronal];
+    viewports.forEach((viewport) => {
+      if (!viewport) return;
+      
+      try {
+        // Set blend mode
+        const cornerstoneBlendMode = blendModeToCornerstone[settings.blendMode];
+        viewport.setBlendMode(cornerstoneBlendMode);
+        
+        // Set slab thickness
+        if (settings.thickness > 0) {
+          viewport.setSlabThickness(settings.thickness);
+        } else {
+          viewport.resetSlabThickness();
+        }
+        
+        viewport.render();
+      } catch (e) {
+        console.warn('Failed to apply slab settings:', e);
+      }
+    });
+    
+    // Trigger re-render of all viewports
+    if (renderingEngineRef.current) {
+      renderingEngineRef.current.renderViewports([
+        viewportIds.axial,
+        viewportIds.sagittal,
+        viewportIds.coronal,
+      ]);
+    }
+  }, [volumeViewports, viewportIds]);
+
   return {
     viewportRefs: {
       axial: axialRef,
@@ -352,5 +403,8 @@ export const useMPRVolumeViewport = ({
     isReady,
     sliceState,
     jumpToSlice,
+    slabSettings,
+    setSlabSettings,
+    renderingEngineRef,
   };
 };
