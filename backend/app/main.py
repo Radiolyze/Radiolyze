@@ -7,7 +7,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import annotations, audit, inference, monitoring, prompts, reports, ws
+from .api import annotations, audit, inference, monitoring, prompts, reports, training, ws
 from .db import Base, engine
 from .ws_events import run_ws_bridge
 from .ws_manager import manager
@@ -28,6 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(annotations.router)
+app.include_router(training.router)
 app.include_router(reports.router)
 app.include_router(inference.router)
 app.include_router(prompts.router)
