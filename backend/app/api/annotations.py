@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..audit import add_audit_event
 from ..deps import get_db
 from ..models import Annotation
-from ..utils.time import utc_iso
+from ..utils.time import now_iso
 
 router = APIRouter()
 
@@ -144,7 +144,7 @@ def create_annotation(
     payload: AnnotationCreateRequest,
     db: Session = Depends(get_db),
 ) -> AnnotationResponse:
-    now = utc_iso()
+    now = now_iso()
     geometry = {
         "handles": [h.model_dump() for h in payload.handles],
     }
@@ -248,7 +248,7 @@ def update_annotation(
             geometry["bounding_box"] = payload.bounding_box.model_dump()
         ann.geometry_json = geometry
 
-    ann.updated_at = utc_iso()
+    ann.updated_at = now_iso()
     db.commit()
     db.refresh(ann)
 
@@ -298,7 +298,7 @@ def verify_annotation(
     if not ann:
         raise HTTPException(status_code=404, detail="Annotation not found")
 
-    now = utc_iso()
+    now = now_iso()
     ann.verified_by = payload.actor_id
     ann.verified_at = now
     ann.updated_at = now

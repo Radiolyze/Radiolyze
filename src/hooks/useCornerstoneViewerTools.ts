@@ -83,6 +83,13 @@ export const useCornerstoneViewerTools = ({
         return;
       }
 
+      // Ensure an image is loaded before trying to apply window/level settings
+      // Otherwise Cornerstone throws: Cannot destructure property 'windowCenter' of 'this.csImage'
+      const currentImageId = viewport.getCurrentImageId?.();
+      if (!currentImageId) {
+        return;
+      }
+
       if (presetId === 'auto') {
         viewport.resetProperties();
         viewport.render();

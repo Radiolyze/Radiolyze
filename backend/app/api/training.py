@@ -20,7 +20,7 @@ import httpx
 
 from ..deps import get_db
 from ..models import Annotation
-from ..utils.time import utc_iso
+from ..utils.time import now_iso
 
 router = APIRouter()
 
@@ -226,7 +226,7 @@ def _build_coco_dataset(annotations: list[Annotation]) -> dict[str, Any]:
             "description": "MedGemma Training Dataset",
             "version": "1.0",
             "year": datetime.utcnow().year,
-            "date_created": utc_iso(),
+            "date_created": now_iso(),
         },
         "licenses": [
             {"id": 1, "name": "Internal Use Only", "url": ""}
