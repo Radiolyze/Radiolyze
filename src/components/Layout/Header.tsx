@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bell, Settings, User, Activity, Sun, Moon, Monitor, History, LayoutGrid } from 'lucide-react';
+import { Bell, Settings, User, Activity, Sun, Moon, Monitor, History, LayoutGrid, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -95,6 +95,13 @@ export function Header() {
           <Link to="/batch">
             <Button variant="ghost" size="icon" title={t('navigation.batch')}>
               <LayoutGrid className="h-5 w-5" />
+            </Button>
+          </Link>
+
+          {/* Training */}
+          <Link to="/training">
+            <Button variant="ghost" size="icon" title="Training Export">
+              <GraduationCap className="h-5 w-5" />
             </Button>
           </Link>
 
