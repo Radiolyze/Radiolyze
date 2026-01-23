@@ -42,6 +42,10 @@ const mapImageRefsToPayload = (refs: ImageRef[] | undefined) => {
     stack_index: ref.stackIndex,
     wado_url: ref.wadoUrl,
     image_id: ref.imageId,
+    study_date: ref.studyDate,
+    series_description: ref.seriesDescription,
+    series_modality: ref.seriesModality,
+    role: ref.role,
   }));
 };
 

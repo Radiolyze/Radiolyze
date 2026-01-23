@@ -133,6 +133,8 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
               wadoUrl,
               inferenceUrl,
               imageId,
+              seriesDescription: series.seriesDescription,
+              seriesModality: series.modality,
             });
             stackIndex += 1;
           }

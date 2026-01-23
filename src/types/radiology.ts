@@ -38,6 +38,10 @@ export interface ImageRef {
   wadoUrl: string;
   inferenceUrl?: string;
   imageId?: string;
+  studyDate?: string;
+  seriesDescription?: string;
+  seriesModality?: string;
+  role?: 'current' | 'prior';
 }
 
 export interface Report {

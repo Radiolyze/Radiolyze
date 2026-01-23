@@ -122,8 +122,14 @@ export const ReportWorkspace = () => {
   }, []);
 
   const handleImageRefsChange = useCallback((refs: ImageRef[]) => {
-    setImageRefs(refs);
-  }, []);
+    const studyDate = selectedQueueItem?.study.studyDate;
+    const enriched = refs.map((ref) => ({
+      ...ref,
+      studyDate: ref.studyDate ?? studyDate,
+      role: ref.role ?? 'current',
+    }));
+    setImageRefs(enriched);
+  }, [selectedQueueItem?.study.studyDate]);
 
   const handleEvidenceSelect = useCallback((ref: ImageRef) => {
     setEvidenceSelection({ seriesId: ref.seriesId, stackIndex: ref.stackIndex });

@@ -176,6 +176,12 @@ const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null =
     return null;
   }
   const imageId = typeof value.image_id === 'string' ? value.image_id : value.imageId;
+  const studyDate = typeof value.study_date === 'string' ? value.study_date : value.studyDate;
+  const seriesDescription =
+    typeof value.series_description === 'string' ? value.series_description : value.seriesDescription;
+  const seriesModality =
+    typeof value.series_modality === 'string' ? value.series_modality : value.seriesModality;
+  const role = typeof value.role === 'string' ? value.role : undefined;
   return {
     studyId,
     seriesId,
@@ -184,6 +190,10 @@ const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null =
     stackIndex,
     wadoUrl,
     imageId: typeof imageId === 'string' ? imageId : undefined,
+    studyDate: typeof studyDate === 'string' ? studyDate : undefined,
+    seriesDescription: typeof seriesDescription === 'string' ? seriesDescription : undefined,
+    seriesModality: typeof seriesModality === 'string' ? seriesModality : undefined,
+    role: role === 'current' || role === 'prior' ? role : undefined,
   };
 };
 
