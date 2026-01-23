@@ -175,6 +175,23 @@ export const extractInferenceCompletedAt = (result?: Record<string, unknown> | n
   return undefined;
 };
 
+const readNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+};
+
+const normalizeNumberArray = (raw: unknown) => {
+  if (!Array.isArray(raw)) return undefined;
+  const values = raw
+    .map(readNumber)
+    .filter((entry): entry is number => typeof entry === 'number');
+  return values.length > 0 ? values : undefined;
+};
+
 const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null => {
   const studyId = typeof value.study_id === 'string' ? value.study_id : value.studyId;
   const seriesId = typeof value.series_id === 'string' ? value.series_id : value.seriesId;
@@ -199,6 +216,12 @@ const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null =
   const seriesModality =
     typeof value.series_modality === 'string' ? value.series_modality : value.seriesModality;
   const role = typeof value.role === 'string' ? value.role : undefined;
+  const pixelSpacing = normalizeNumberArray(value.pixel_spacing ?? value.pixelSpacing);
+  const sliceThickness = readNumber(value.slice_thickness ?? value.sliceThickness);
+  const spacingBetweenSlices = readNumber(value.spacing_between_slices ?? value.spacingBetweenSlices);
+  const imageOrientation = normalizeNumberArray(value.image_orientation ?? value.imageOrientation);
+  const imagePosition = normalizeNumberArray(value.image_position ?? value.imagePosition);
+  const instanceNumber = readNumber(value.instance_number ?? value.instanceNumber);
   return {
     studyId,
     seriesId,
@@ -211,6 +234,12 @@ const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null =
     seriesDescription: typeof seriesDescription === 'string' ? seriesDescription : undefined,
     seriesModality: typeof seriesModality === 'string' ? seriesModality : undefined,
     role: role === 'current' || role === 'prior' ? role : undefined,
+    pixelSpacing,
+    sliceThickness,
+    spacingBetweenSlices,
+    imageOrientation,
+    imagePosition,
+    instanceNumber: typeof instanceNumber === 'number' ? instanceNumber : undefined,
   };
 };
 

@@ -54,6 +54,42 @@ def _normalize_list(values: list[str] | None) -> list[str]:
     return [value.strip() for value in values if isinstance(value, str) and value.strip()]
 
 
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _as_int(value: Any) -> int | None:
+    parsed = _as_float(value)
+    if parsed is None or not parsed.is_integer():
+        return None
+    return int(parsed)
+
+
+def _format_float(value: float) -> str:
+    return f"{value:.4f}".rstrip("0").rstrip(".")
+
+
+def _normalize_float_list(raw: Any) -> list[float] | None:
+    if not isinstance(raw, list):
+        return None
+    values: list[float] = []
+    for entry in raw:
+        parsed = _as_float(entry)
+        if parsed is None:
+            continue
+        values.append(parsed)
+    return values or None
+
+
 def _encode_image_path(path: str) -> str:
     file_path = Path(path)
     if not file_path.is_file():
@@ -94,6 +130,14 @@ def _build_image_manifest(
             series_modality = ref.get("series_modality") or ref.get("seriesModality")
             frame_index = ref.get("frame_index") if "frame_index" in ref else ref.get("frameIndex")
             stack_index = ref.get("stack_index") if "stack_index" in ref else ref.get("stackIndex")
+            instance_number = ref.get("instance_number") if "instance_number" in ref else ref.get("instanceNumber")
+            slice_thickness = ref.get("slice_thickness") if "slice_thickness" in ref else ref.get("sliceThickness")
+            spacing_between_slices = (
+                ref.get("spacing_between_slices")
+                if "spacing_between_slices" in ref
+                else ref.get("spacingBetweenSlices")
+            )
+            pixel_spacing = ref.get("pixel_spacing") if "pixel_spacing" in ref else ref.get("pixelSpacing")
 
             parts = [f"{index})"]
             if role:
@@ -108,6 +152,21 @@ def _build_image_manifest(
                 parts.append(f"frame={frame_index}")
             if isinstance(stack_index, int):
                 parts.append(f"stack={stack_index}")
+            instance_number_value = _as_int(instance_number)
+            if instance_number_value is not None:
+                parts.append(f"instance={instance_number_value}")
+            slice_value = _as_float(slice_thickness)
+            if slice_value is not None:
+                parts.append(f"slice_thickness={_format_float(slice_value)}")
+            spacing_value = _as_float(spacing_between_slices)
+            if spacing_value is not None:
+                parts.append(f"spacing_between_slices={_format_float(spacing_value)}")
+            pixel_values = _normalize_float_list(pixel_spacing)
+            if pixel_values and len(pixel_values) >= 2:
+                parts.append(
+                    "pixel_spacing="
+                    f"{_format_float(pixel_values[0])}x{_format_float(pixel_values[1])}"
+                )
             lines.append(" ".join(parts))
 
         if lines:

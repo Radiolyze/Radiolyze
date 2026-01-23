@@ -46,6 +46,12 @@ const mapImageRefsToPayload = (refs: ImageRef[] | undefined) => {
     series_description: ref.seriesDescription,
     series_modality: ref.seriesModality,
     role: ref.role,
+    pixel_spacing: ref.pixelSpacing,
+    slice_thickness: ref.sliceThickness,
+    spacing_between_slices: ref.spacingBetweenSlices,
+    image_orientation: ref.imageOrientation,
+    image_position: ref.imagePosition,
+    instance_number: ref.instanceNumber,
   }));
 };
 

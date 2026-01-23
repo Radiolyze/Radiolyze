@@ -42,6 +42,12 @@ export interface ImageRef {
   seriesDescription?: string;
   seriesModality?: string;
   role?: 'current' | 'prior';
+  pixelSpacing?: number[];
+  sliceThickness?: number;
+  spacingBetweenSlices?: number;
+  imageOrientation?: number[];
+  imagePosition?: number[];
+  instanceNumber?: number;
 }
 
 export interface Report {
