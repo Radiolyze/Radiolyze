@@ -8,29 +8,8 @@ from .db import SessionLocal
 from .inference_clients import generate_inference_summary_text
 from .mock_logic import utc_now
 from .models import InferenceJob, Report
+from .utils.inference import build_image_metadata
 from .ws_events import publish_report_status
-
-
-def _build_image_metadata(
-    image_urls: list[str] | None,
-    image_paths: list[str] | None,
-    image_refs: list[dict[str, Any]] | None,
-) -> dict[str, Any]:
-    normalized_urls = [url.strip() for url in (image_urls or []) if url and url.strip()]
-    normalized_paths = [path.strip() for path in (image_paths or []) if path and path.strip()]
-    count = len(normalized_urls) + len(normalized_paths)
-    refs_count = len(image_refs or [])
-    if count == 0:
-        return {"image_refs_count": refs_count} if refs_count else {}
-    sources = []
-    if normalized_urls:
-        sources.append("url")
-    if normalized_paths:
-        sources.append("path")
-    metadata: dict[str, Any] = {"image_count": count, "image_sources": sources}
-    if refs_count:
-        metadata["image_refs_count"] = refs_count
-    return metadata
 
 
 def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
@@ -44,7 +23,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     requested_model_version = payload.get("model_version") or "mock-medgemma-0.1"
     input_hash = payload.get("input_hash")
     job_id = payload.get("job_id")
-    image_metadata = _build_image_metadata(image_urls, image_paths, image_refs)
+    image_metadata = build_image_metadata(image_urls, image_paths, image_refs)
 
     db = SessionLocal()
     try:
