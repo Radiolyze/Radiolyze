@@ -27,6 +27,36 @@ const buildReport = (study: Study): Report => {
   };
 };
 
+const countSeriesInstances = async (studyId: string, seriesId: string): Promise<number> => {
+  try {
+    const response = await orthancClient.listInstances(studyId, seriesId);
+    const instances = Array.isArray(response)
+      ? response
+      : Array.isArray((response as { Instances?: unknown[] }).Instances)
+        ? (response as { Instances: unknown[] }).Instances
+        : [];
+    
+    // Count total frames across all instances
+    let totalFrames = 0;
+    for (const instance of instances) {
+      if (!instance || typeof instance !== 'object') {
+        totalFrames += 1;
+        continue;
+      }
+      const record = instance as Record<string, unknown>;
+      // Check NumberOfFrames tag (00280008)
+      const framesTag = record['00280008'] as { Value?: unknown[] } | undefined;
+      const framesValue = framesTag?.Value?.[0];
+      const frames = typeof framesValue === 'number' ? framesValue : 
+                     typeof framesValue === 'string' ? parseInt(framesValue, 10) : 1;
+      totalFrames += (Number.isFinite(frames) && frames > 0) ? frames : 1;
+    }
+    return totalFrames || instances.length || 1;
+  } catch {
+    return 1;
+  }
+};
+
 const resolveSeries = async (studyId: string): Promise<Series[]> => {
   const response = await orthancClient.listSeries(studyId);
   const rawSeries = Array.isArray(response)
@@ -35,9 +65,22 @@ const resolveSeries = async (studyId: string): Promise<Series[]> => {
       ? (response as { Series: unknown[] }).Series
       : [];
 
-  return rawSeries
+  const mappedSeries = rawSeries
     .map((entry) => mapSeriesRecordToSeries(entry as DicomJsonRecord, studyId))
     .filter((series): series is Series => Boolean(series));
+
+  // If frameCount is missing or 1, fetch actual instance count
+  const seriesWithFrameCounts = await Promise.all(
+    mappedSeries.map(async (series) => {
+      if (series.frameCount > 1) {
+        return series;
+      }
+      const actualFrameCount = await countSeriesInstances(studyId, series.id);
+      return { ...series, frameCount: actualFrameCount };
+    })
+  );
+
+  return seriesWithFrameCounts;
 };
 
 const buildFallbackPatient = (studyId: string) => ({
