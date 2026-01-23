@@ -1,8 +1,11 @@
-import { init as initCornerstoneCore, isCornerstoneInitialized, imageLoader, metaData } from '@cornerstonejs/core';
+import { init as initCornerstoneCore, isCornerstoneInitialized, imageLoader, metaData, getWebWorkerManager } from '@cornerstonejs/core';
 import * as cornerstoneDICOMImageLoader from '@cornerstonejs/dicom-image-loader';
 
 // Re-export for use in other modules
 export { metaData, cornerstoneDICOMImageLoader };
+
+// Path to our pre-bundled Cornerstone worker (in public folder)
+const WORKER_BUNDLE_PATH = '/workers/cornerstone-decode-worker.bundle.js';
 import {
   addTool,
   init as initCornerstoneTools,
@@ -54,13 +57,14 @@ export const initCornerstone = async () => {
   }
 
   try {
-    // Initialize the DICOM image loader (v4 API)
-    // Note: Auth is handled by Vite proxy, so no client-side auth config needed
-    // Disable web workers to avoid Vite bundling issues with worker MIME types
-    // This uses main-thread decoding which is slower but more reliable
-    cornerstoneDICOMImageLoader.init({
-      maxWebWorkers: 0,
-    });
+    // Initialize the DICOM image loader with custom worker configuration
+    // We use our pre-bundled worker from the public folder because Vite doesn't
+    // properly handle the worker files from node_modules
+    
+    // Set options using internal API (without calling default init which uses broken worker URL)
+    if (cornerstoneDICOMImageLoader.internal?.setOptions) {
+      cornerstoneDICOMImageLoader.internal.setOptions({});
+    }
 
     // Register metadata providers with cornerstone core
     // This is required for wadors to resolve metadata when loading images
@@ -85,7 +89,24 @@ export const initCornerstone = async () => {
       log('[cornerstone] wadouri image loader registered');
     }
     
-    log('[cornerstone] DICOM image loader initialized successfully');
+    // Register our custom pre-bundled worker with the worker manager
+    // This worker is bundled by scripts/bundle-cornerstone-worker.mjs
+    const workerManager = getWebWorkerManager();
+    const maxWorkers = navigator.hardwareConcurrency 
+      ? Math.max(1, Math.floor(navigator.hardwareConcurrency / 2))
+      : 2;
+    
+    // Create worker factory function that uses our bundled worker
+    const workerFn = () => {
+      log('[cornerstone] Creating worker from:', WORKER_BUNDLE_PATH);
+      return new Worker(WORKER_BUNDLE_PATH, { type: 'module' });
+    };
+    
+    workerManager.registerWorker('dicomImageLoader', workerFn, {
+      maxWorkerInstances: maxWorkers,
+    });
+    
+    log('[cornerstone] DICOM image loader initialized with', maxWorkers, 'workers');
   } catch (err) {
     console.warn('[cornerstone] DICOM image loader init skipped:', err);
   }
@@ -136,7 +157,7 @@ export const prefetchWadorsMetadata = async (
     const metadataUrl = buildDicomWebUrl(
       `studies/${studyId}/series/${seriesId}/instances/${instanceId}/metadata`
     );
-    console.log('[cornerstone] Fetching metadata from:', metadataUrl);
+    log('[cornerstone] Fetching metadata from:', metadataUrl);
     
     const response = await fetch(metadataUrl);
     
@@ -145,7 +166,6 @@ export const prefetchWadorsMetadata = async (
     }
     
     const metadata = await response.json();
-    console.log('[cornerstone] Metadata received, array length:', Array.isArray(metadata) ? metadata.length : 'not array');
     
     // The metadata response is an array with one object for the instance
     const instanceMetadata = Array.isArray(metadata) ? metadata[0] : metadata;
@@ -155,9 +175,8 @@ export const prefetchWadorsMetadata = async (
       for (let frame = 1; frame <= numberOfFrames; frame++) {
         const imageId = buildWadorsImageId(studyId, seriesId, instanceId, frame);
         cornerstoneDICOMImageLoader.wadors.metaDataManager.add(imageId, instanceMetadata);
-        console.log('[cornerstone] Registered metadata for:', imageId);
       }
-      console.log('[cornerstone] Metadata pre-fetched for', instanceId, `(${numberOfFrames} frames)`);
+      log('[cornerstone] Metadata pre-fetched for', instanceId, `(${numberOfFrames} frames)`);
     } else {
       console.warn('[cornerstone] No metaDataManager available or no metadata');
     }

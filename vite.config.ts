@@ -1,38 +1,7 @@
-import { defineConfig, loadEnv, Plugin } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
-
-// Plugin to handle Cornerstone worker files that Vite can't serve
-// When maxWebWorkers: 0 is set, we don't need actual workers, so serve a no-op stub
-function cornerstoneWorkerStub(): Plugin {
-  return {
-    name: "cornerstone-worker-stub",
-    configureServer(server) {
-      // Add middleware BEFORE Vite's default middleware to intercept worker requests
-      server.middlewares.use((req, res, next) => {
-        const url = req.url || "";
-        // Intercept requests for Cornerstone worker files that would otherwise 404
-        if (url.includes("decodeImageFrameWorker") && url.includes("worker_file")) {
-          // Serve a minimal no-op worker module
-          res.setHeader("Content-Type", "application/javascript; charset=utf-8");
-          res.setHeader("Access-Control-Allow-Origin", "*");
-          res.statusCode = 200;
-          // Empty worker that just exports nothing - Cornerstone will fall back to main thread
-          res.end(`
-            // Stub worker for Cornerstone - actual decoding happens on main thread (maxWebWorkers: 0)
-            self.onmessage = function(e) {
-              // No-op: decoding disabled in workers
-              self.postMessage({ error: 'Workers disabled' });
-            };
-          `);
-          return;
-        }
-        next();
-      });
-    },
-  };
-}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -88,7 +57,6 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      cornerstoneWorkerStub(),
       mode === "development" && componentTagger(),
     ].filter(Boolean),
     resolve: {

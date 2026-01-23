@@ -41,27 +41,17 @@ export const useCornerstoneStackSetup = ({
       onError?.(null);
 
       try {
-        console.log('[useCornerstoneStackSetup] Setting up stack with', imageIds.length, 'images');
-        console.log('[useCornerstoneStackSetup] First image ID:', imageIds[0]);
-        
         applyToolSelection(activeToolRef.current);
-        
-        console.log('[useCornerstoneStackSetup] Calling setStack...');
         await viewport.setStack(imageIds, 0);
-        console.log('[useCornerstoneStackSetup] setStack complete, calling render...');
-        
         viewport.render();
-        console.log('[useCornerstoneStackSetup] render complete');
-
         applyWindowLevelPreset(selectedPresetId);
 
         const camera = viewport.getCamera();
         if (isActive) {
           initialParallelScaleRef.current = camera?.parallelScale ?? null;
-          console.log('[useCornerstoneStackSetup] Stack setup complete, parallelScale:', camera?.parallelScale);
         }
       } catch (error) {
-        console.error('[useCornerstoneStackSetup] Stack setup failed:', error);
+        console.warn('Cornerstone stack setup failed', error);
         if (isActive) {
           onError?.('Viewer konnte nicht initialisiert werden.');
         }

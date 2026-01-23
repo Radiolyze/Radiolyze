@@ -7,6 +7,9 @@ RUN npm ci
 
 COPY . .
 
+# Bundle Cornerstone worker (required for DICOM image decoding)
+RUN npm run bundle:worker
+
 EXPOSE 5173
 
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
