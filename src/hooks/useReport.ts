@@ -106,7 +106,10 @@ export function useReport(initialReport?: Report): UseReportReturn {
     const onStatus = options?.onStatus;
     const requestedBy = options?.requestedBy;
     const modelVersion = options?.modelVersion;
-    const selectedImageRefs = selectInferenceImageRefs(options?.imageRefs, options?.includeAllFrames);
+    const selectedImageRefs = selectInferenceImageRefs(options?.imageRefs, {
+      includeAllFrames: options?.includeAllFrames,
+      role: 'current',
+    });
     const imageUrls = selectedImageRefs.map((ref) => ref.inferenceUrl ?? ref.wadoUrl);
     let succeeded = false;
 

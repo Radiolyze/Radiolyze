@@ -50,6 +50,12 @@ Orthanc Login (lokal):
 
 Beim ersten Start wird automatisch ein kleines DICOM Sample geladen.
 
+## Frontend Env (optional)
+
+- `VITE_INFERENCE_MAX_FRAMES_CURRENT` (default: 16)
+- `VITE_INFERENCE_MAX_FRAMES_PRIOR` (default: 8)
+- `VITE_INFERENCE_MAX_FRAMES` (legacy fallback)
+
 ## Install
 
 ```bash
