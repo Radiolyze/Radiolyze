@@ -137,9 +137,7 @@
     @apply border-border;
   }
 
-  html {
-    @apply dark;
-  }
+  /* Theme class is applied via index.html inline script to prevent FOUC */
 
   body {
     @apply bg-background text-foreground antialiased;
