@@ -30,32 +30,29 @@ const log = (...args: Parameters<typeof console.log>) => {
   }
 };
 
-// Fallback metadata provider for missing DICOM attributes required by Volume rendering
-const fallbackMetadataProvider = (type: string, imageId: string) => {
-  // Only provide fallbacks for specific metadata types that Volume rendering requires
-  if (type === 'imagePlaneModule') {
-    // Get existing metadata first
-    const existing = metaData.get(type, imageId);
-    if (existing?.pixelSpacing && existing?.imageOrientationPatient) {
-      return existing;
-    }
-    // Provide sensible defaults for missing fields
-    return {
-      pixelSpacing: existing?.pixelSpacing || [1, 1],
-      imageOrientationPatient: existing?.imageOrientationPatient || [1, 0, 0, 0, 1, 0],
-      imagePositionPatient: existing?.imagePositionPatient || [0, 0, 0],
-      sliceThickness: existing?.sliceThickness || 1,
-      sliceLocation: existing?.sliceLocation || 0,
-      frameOfReferenceUID: existing?.frameOfReferenceUID || '',
-      rows: existing?.rows,
-      columns: existing?.columns,
-      rowCosines: existing?.rowCosines || [1, 0, 0],
-      columnCosines: existing?.columnCosines || [0, 1, 0],
-      rowPixelSpacing: existing?.rowPixelSpacing || (existing?.pixelSpacing?.[0]) || 1,
-      columnPixelSpacing: existing?.columnPixelSpacing || (existing?.pixelSpacing?.[1]) || 1,
-    };
+// Fallback metadata provider for missing DICOM attributes required by Volume rendering.
+// Registered with very low priority so it only runs after all other providers.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const fallbackMetadataProvider = (type: string, _imageId: string) => {
+  // Only provide fallbacks for imagePlaneModule (required for Volume rendering)
+  if (type !== 'imagePlaneModule') {
+    return undefined;
   }
-  return undefined;
+  
+  // Return sensible defaults for missing fields.
+  // These will only be used if no other provider returned data.
+  return {
+    pixelSpacing: [1, 1],
+    imageOrientationPatient: [1, 0, 0, 0, 1, 0],
+    imagePositionPatient: [0, 0, 0],
+    sliceThickness: 1,
+    sliceLocation: 0,
+    frameOfReferenceUID: '',
+    rowCosines: [1, 0, 0],
+    columnCosines: [0, 1, 0],
+    rowPixelSpacing: 1,
+    columnPixelSpacing: 1,
+  };
 };
 
 export const cornerstoneToolNames = {
@@ -106,10 +103,10 @@ export const initCornerstone = async () => {
       log('[cornerstone] wadouri metadata provider registered');
     }
     
-    // Register fallback provider with low priority (runs after DICOM loaders)
+    // Register fallback provider with very low priority (high number = runs last, after DICOM loaders)
     // This provides default values for missing metadata required by Volume rendering
-    metaData.addProvider(fallbackMetadataProvider, 1);
-    log('[cornerstone] fallback metadata provider registered');
+    metaData.addProvider(fallbackMetadataProvider, 10000);
+    log('[cornerstone] fallback metadata provider registered with low priority');
     
     // Register image loaders
     if (cornerstoneDICOMImageLoader.wadors?.loadImage) {
