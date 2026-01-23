@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Loader2, Box } from 'lucide-react';
 import type { Series } from '@/types/radiology';
-import type { MPROrientation } from '@/types/mpr';
+import type { MPROrientation, SlabBlendMode } from '@/types/mpr';
 import { MPR_VIEWPORTS } from '@/types/mpr';
 import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
 import { useMPRVolumeViewport } from '@/hooks/useMPRVolumeViewport';
@@ -10,6 +10,13 @@ import { MPRToolbar, type MPRToolId } from './MPRToolbar';
 import { ViewerEmptyState } from './ViewerEmptyState';
 import { windowLevelPresets } from '@/config/viewer';
 import { cn } from '@/lib/utils';
+
+// Keyboard shortcut mappings
+const MAXIMIZE_SHORTCUTS: Record<string, MPROrientation> = {
+  '1': 'axial',
+  '2': 'sagittal',
+  '3': 'coronal',
+};
 
 interface MPRViewerProps {
   series: Series | null;
@@ -85,6 +92,61 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
   const handleViewportClick = useCallback((orientation: MPROrientation) => {
     setActiveViewport(orientation);
   }, []);
+
+  // Toggle MIP mode
+  const toggleMIP = useCallback(() => {
+    const newBlendMode: SlabBlendMode = slabSettings.blendMode === 'mip' ? 'composite' : 'mip';
+    const newThickness = newBlendMode === 'mip' && slabSettings.thickness === 0 ? 20 : slabSettings.thickness;
+    setSlabSettings({ 
+      blendMode: newBlendMode, 
+      thickness: newThickness 
+    });
+  }, [slabSettings, setSlabSettings]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!isReady) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if focused on input elements
+      if (e.target instanceof HTMLInputElement || 
+          e.target instanceof HTMLTextAreaElement ||
+          e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+
+      // Maximize shortcuts (1/2/3)
+      if (key in MAXIMIZE_SHORTCUTS) {
+        e.preventDefault();
+        const orientation = MAXIMIZE_SHORTCUTS[key];
+        // Toggle: if already maximized, return to grid
+        if (maximizedViewport === orientation) {
+          handleMaximize(null);
+        } else {
+          handleMaximize(orientation);
+        }
+        return;
+      }
+
+      // MIP toggle (M)
+      if (key === 'm') {
+        e.preventDefault();
+        toggleMIP();
+        return;
+      }
+
+      // Reset with Escape
+      if (key === 'escape') {
+        e.preventDefault();
+        handleReset();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isReady, maximizedViewport, handleMaximize, toggleMIP, handleReset]);
 
   if (!series) {
     return (
@@ -195,6 +257,11 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
                   <p><kbd className="px-1 bg-muted rounded">RMB</kbd> Pan</p>
                   <p><kbd className="px-1 bg-muted rounded">Scroll</kbd> Zoom</p>
                   <p><kbd className="px-1 bg-muted rounded">Shift+LMB</kbd> W/L</p>
+                  <div className="border-t border-border mt-2 pt-2">
+                    <p><kbd className="px-1 bg-muted rounded">1/2/3</kbd> Maximieren</p>
+                    <p><kbd className="px-1 bg-muted rounded">M</kbd> MIP Toggle</p>
+                    <p><kbd className="px-1 bg-muted rounded">Esc</kbd> Reset</p>
+                  </div>
                 </div>
 
                 {series && (
