@@ -36,6 +36,31 @@ unvollstaendig fuer 3D- und Longitudinal-Analysen.
 | Klinische Dokumente/EHR | nicht | Keine EHR-Importe; nur Report-Text im System | - |
 | Speech (MedASR) | genutzt | ASR Service via vLLM; UI nimmt Diktat auf | `backend/app/inference_clients.py`, `src/hooks/useASR.ts` |
 
+## Ergaenzung: 3D-Daten und MedGemma-Inputformat
+
+### Chat/Multimodal Format (Ist im Projekt)
+- vLLM nutzt ein OpenAI-kompatibles Chat-Format mit multimodalem `content`.
+- Das Projekt sendet `image_url` Eintraege (WADO-RS URLs oder base64 Data-URLs).
+- Keine direkte Uebergabe von DICOM/NIfTI; alles laeuft ueber gerenderte 2D-Bilder.
+- Referenzen: `backend/app/inference_clients.py` (`_build_multimodal_content`, `_encode_image_path`).
+
+### 3D-Volumen (CT/MR) - MedGemma 1.5
+- Native 3D-Unterstuetzung setzt Preprocessing auf Slice-Sequenzen voraus.
+- Typische Schritte: Laden (DICOM/NIfTI) -> Normalisieren/Resampling -> Slices -> 896x896 -> Liste von Bildern.
+- Anzahl Slices durch Kontextbudget limitiert; Auswahlstrategie ist entscheidend.
+
+### Ist-Stand im Projekt (Konsequenzen)
+- Die Pipeline entspricht dem Slice-Ansatz (WADO-RS Render Frames), aber:
+  - Slice-Auswahl wird stark reduziert (Sampling/Frame-Limits).
+  - Preprocessing-Details (Window/Level, HU-Skalierung, Resampling) werden nicht persistiert.
+  - vLLM Kontextlimit ist aktuell auf `--max-model-len 4096` gesetzt; `VLLM_MAX_TOKENS` default 512.
+- Referenzen: `docker-compose.yml`, `src/hooks/reporting/inferenceHelpers.ts`.
+
+### Im Datenerhebungs-Setup fehlen 3D-Parameter
+- SliceThickness, PixelSpacing, ImageOrientation, SpacingBetweenSlices.
+- Slice-Reihenfolge und Auswahlstrategie (z.B. uniform sampling vs. key slices).
+- Rendering-Parameter (Window/Level Preset, VOI).
+
 ## Datenerhebung heute (ohne Fine-Tuning)
 
 ### Was bereits erfasst wird
