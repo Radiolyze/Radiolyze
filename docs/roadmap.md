@@ -39,9 +39,9 @@
 
 ## Phase 4: Compliance Ready (10-14 Wochen)
 
-- [~] Human Oversight Dialog + Audit Trail (Dialog vorhanden; Audit-Pflichtfelder wie Input-Hash/Model-Version noch nicht durchgaengig)
+- [~] Human Oversight Dialog + Audit Trail (Dialog vorhanden; Pflichtfelder fuer Inference/Impression/QA/ASR, Report-Events noch nicht durchgaengig)
 - [~] EU AI Act Dokumentation (Annex IV Entwurf vorhanden, offene TODOs)
-- [ ] Drift Monitoring (Post-Market)
+- [~] Drift Monitoring (API-Report + Snapshot-Persistenz, Scheduling/UI offen)
 - [~] Security Hardening (Baseline Doku; AuthN/AuthZ, TLS, Rate Limits offen)
 
 ## Phase 5: Production (14-22 Wochen)
@@ -52,7 +52,7 @@
 - [ ] DICOM -> Image Pipeline fuer Multimodal Inference (WADO-RS/JPEG)
 - [x] Batch Reporting Dashboard (Multi-Select, Bulk Actions, Analytics + API Anbindung)
 - [x] Report History / Audit Log UI
-- [ ] Observability (Metrics + Tracing)
+- [~] Observability (Metrics-Endpoint + Drift-Report, Tracing offen)
 
 ## Phase 6: Scale & Optimization (22+ Wochen)
 
@@ -64,10 +64,10 @@
 
 ## Naechste Schritte (naechster Sprint)
 
-1. Audit Trail vervollstaendigen (Input-Hash/Model-Version/Output-Short in Events) + Doku angleichen.
-2. Annex IV ausfuellen (Risikoanalyse, Data-Governance, Model Cards, KPI/Drift).
-3. Security Hardening umsetzen (JWT/OIDC, RBAC, TLS-Termination, Rate Limits).
-4. Drift Monitoring + Observability starten (Metriken definieren, OTEL/Tracing, Dashboard).
+1. Annex IV ausfuellen (Risikoanalyse, Data-Governance, Model Cards, KPI/Drift).
+2. Security Hardening umsetzen (JWT/OIDC, RBAC, TLS-Termination, Rate Limits).
+3. Drift Monitoring operationalisieren (Scheduler, Alerts-UI, Review-Prozess).
+4. Observability/Tracing (OpenTelemetry, Dashboard, Log-Korrelation).
 5. Templates/Guidelines RAG konzipieren (Vector Store, Retrieval API, UI Hook).
 6. DICOM -> Image Pipeline fuer Multimodal (WADO-RS Render/JPEG, Caching/TTL).
 
