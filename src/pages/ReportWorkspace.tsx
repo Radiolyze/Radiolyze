@@ -27,6 +27,24 @@ const placeholderReport: Report = {
   qaWarnings: [],
 };
 
+const toStudyTimestamp = (value?: string) => {
+  if (!value) return undefined;
+  const datePart = value.split('T')[0];
+  const parts = datePart.split('-').map((entry) => Number(entry));
+  if (parts.length === 3 && parts.every((entry) => Number.isFinite(entry))) {
+    return Date.UTC(parts[0], parts[1] - 1, parts[2]);
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+const computeDeltaDays = (currentDate?: string, priorDate?: string) => {
+  const currentTimestamp = toStudyTimestamp(currentDate);
+  const priorTimestamp = toStudyTimestamp(priorDate);
+  if (currentTimestamp === undefined || priorTimestamp === undefined) return undefined;
+  return Math.round((currentTimestamp - priorTimestamp) / (1000 * 60 * 60 * 24));
+};
+
 export const ReportWorkspace = () => {
   const { items: queueItemsRaw, isLoading: isQueueLoading, error: queueError } = useDicomWebQueue();
   // Defensive: when DICOMweb requests fail, ensure we never call .map on non-arrays.
@@ -128,6 +146,7 @@ export const ReportWorkspace = () => {
       ...ref,
       studyDate: ref.studyDate ?? studyDate,
       role: ref.role ?? 'current',
+      timeDeltaDays: studyDate ? 0 : ref.timeDeltaDays,
     }));
     setImageRefs(enriched);
   }, [selectedQueueItem?.study.studyDate]);
@@ -237,13 +256,18 @@ export const ReportWorkspace = () => {
   }, [priorStudies]);
 
   const handlePriorImageRefsChange = useCallback((refs: ImageRef[]) => {
-    const enriched = refs.map((ref) => ({
-      ...ref,
-      studyDate: ref.studyDate ?? priorStudyDateBySeries.get(ref.seriesId),
-      role: ref.role ?? 'prior',
-    }));
+    const currentStudyDate = selectedQueueItem?.study.studyDate;
+    const enriched = refs.map((ref) => {
+      const priorStudyDate = ref.studyDate ?? priorStudyDateBySeries.get(ref.seriesId);
+      return {
+        ...ref,
+        studyDate: priorStudyDate,
+        role: ref.role ?? 'prior',
+        timeDeltaDays: computeDeltaDays(currentStudyDate, priorStudyDate),
+      };
+    });
     setPriorImageRefs(enriched);
-  }, [priorStudyDateBySeries]);
+  }, [priorStudyDateBySeries, selectedQueueItem?.study.studyDate]);
 
   useEffect(() => {
     if (priorStudiesError) {

@@ -211,6 +211,7 @@ const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null =
   }
   const imageId = typeof value.image_id === 'string' ? value.image_id : value.imageId;
   const studyDate = typeof value.study_date === 'string' ? value.study_date : value.studyDate;
+  const timeDeltaDays = readNumber(value.time_delta_days ?? value.timeDeltaDays);
   const seriesDescription =
     typeof value.series_description === 'string' ? value.series_description : value.seriesDescription;
   const seriesModality =
@@ -231,6 +232,7 @@ const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null =
     wadoUrl,
     imageId: typeof imageId === 'string' ? imageId : undefined,
     studyDate: typeof studyDate === 'string' ? studyDate : undefined,
+    timeDeltaDays: typeof timeDeltaDays === 'number' ? timeDeltaDays : undefined,
     seriesDescription: typeof seriesDescription === 'string' ? seriesDescription : undefined,
     seriesModality: typeof seriesModality === 'string' ? seriesModality : undefined,
     role: role === 'current' || role === 'prior' ? role : undefined,

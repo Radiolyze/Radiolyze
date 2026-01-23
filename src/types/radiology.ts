@@ -39,6 +39,7 @@ export interface ImageRef {
   inferenceUrl?: string;
   imageId?: string;
   studyDate?: string;
+  timeDeltaDays?: number;
   seriesDescription?: string;
   seriesModality?: string;
   role?: 'current' | 'prior';

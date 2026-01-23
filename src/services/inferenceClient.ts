@@ -43,6 +43,7 @@ const mapImageRefsToPayload = (refs: ImageRef[] | undefined) => {
     wado_url: ref.wadoUrl,
     image_id: ref.imageId,
     study_date: ref.studyDate,
+    time_delta_days: ref.timeDeltaDays,
     series_description: ref.seriesDescription,
     series_modality: ref.seriesModality,
     role: ref.role,

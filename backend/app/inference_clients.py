@@ -126,6 +126,7 @@ def _build_image_manifest(
             if role not in {"current", "prior"}:
                 role = None
             study_date = ref.get("study_date") or ref.get("studyDate")
+            time_delta_days = ref.get("time_delta_days") or ref.get("timeDeltaDays")
             series_description = ref.get("series_description") or ref.get("seriesDescription")
             series_modality = ref.get("series_modality") or ref.get("seriesModality")
             frame_index = ref.get("frame_index") if "frame_index" in ref else ref.get("frameIndex")
@@ -144,6 +145,9 @@ def _build_image_manifest(
                 parts.append(f"role={role}")
             if study_date:
                 parts.append(f"study_date={study_date}")
+            delta_days = _as_int(time_delta_days)
+            if delta_days is not None:
+                parts.append(f"time_delta_days={delta_days}")
             if series_description:
                 parts.append(f"series={series_description}")
             if series_modality:
