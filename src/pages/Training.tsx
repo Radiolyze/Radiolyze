@@ -67,10 +67,13 @@ export default function Training() {
     queryFn: () => getTrainingStats({ verifiedOnly }),
   });
 
-  const { data: categories = [] } = useQuery({
+  const { data: categoriesData } = useQuery({
     queryKey: ['annotation-categories'],
     queryFn: getAnnotationCategories,
   });
+  
+  // Defensive: ensure categories is always an array
+  const categories = Array.isArray(categoriesData) ? categoriesData : [];
 
   const exportMutation = useMutation({
     mutationFn: exportAndDownload,
