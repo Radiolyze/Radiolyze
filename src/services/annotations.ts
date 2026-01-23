@@ -3,7 +3,7 @@ import type { Series } from '@/types/radiology';
 import { cornerstoneToolNames } from '@/services/cornerstone';
 
 interface ExportAnnotationsOptions {
-  element: HTMLElement;
+  element: HTMLDivElement;
   series: Series;
   toolNames?: string[];
 }
@@ -14,7 +14,7 @@ export const exportAnnotations = ({
   toolNames = [cornerstoneToolNames.length],
 }: ExportAnnotationsOptions) => {
   const annotations = toolNames.flatMap((toolName) => {
-    const toolAnnotations = annotation.state.getAnnotations(toolName, element) ?? [];
+    const toolAnnotations = annotation.state.getAnnotations(toolName, element as unknown as Parameters<typeof annotation.state.getAnnotations>[1]) ?? [];
     return toolAnnotations.map((item) => ({
       annotationUID: item.annotationUID ?? '',
       toolName,
