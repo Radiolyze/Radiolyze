@@ -46,6 +46,10 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _schema_strict() -> bool:
+    return _env_flag("VLLM_SCHEMA_STRICT", False)
+
+
 def _compact_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in metadata.items() if value is not None}
 
@@ -415,6 +419,8 @@ def generate_impression_text(
             text_key="impression",
             schema_name="impression_output",
         )
+        if _schema_strict() and not parse_metadata.get("json_schema_valid"):
+            raise RuntimeError(f"Schema validation failed: {parse_metadata.get('json_error', 'unknown')}")
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
         json_metadata = {
@@ -472,6 +478,8 @@ def generate_inference_summary_text(
             text_key="summary",
             schema_name="summary_output",
         )
+        if _schema_strict() and not parse_metadata.get("json_schema_valid"):
+            raise RuntimeError(f"Schema validation failed: {parse_metadata.get('json_error', 'unknown')}")
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
         json_metadata = {

@@ -254,6 +254,15 @@ export const extractInferenceImageRefs = (result?: Record<string, unknown> | nul
     .filter((entry): entry is ImageRef => Boolean(entry));
 };
 
+export const extractInferenceMetadata = (
+  result?: Record<string, unknown> | null
+): Record<string, unknown> | undefined => {
+  if (!result) return undefined;
+  const raw = (result.metadata ?? result.meta) as unknown;
+  if (!raw || typeof raw !== 'object') return undefined;
+  return raw as Record<string, unknown>;
+};
+
 const mapJobStatusToAiStatus = (status?: string): AIStatus | null => {
   if (!status) return null;
   if (status === 'queued' || status === 'deferred' || status === 'scheduled') return 'queued';

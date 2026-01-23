@@ -69,6 +69,7 @@ class ImpressionResponse(ApiBaseModel):
     confidence: float
     model: str
     generated_at: str
+    metadata: dict[str, Any] | None = None
 
 
 class QACheckRequest(ApiBaseModel):

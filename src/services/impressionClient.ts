@@ -9,6 +9,7 @@ export interface ImpressionServiceResponse {
   model?: string;
   generated_at?: string;
   generatedAt?: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface ImpressionPayload {

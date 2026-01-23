@@ -23,6 +23,28 @@ from ..ws_manager import broadcast_status
 router = APIRouter()
 
 
+def _filter_inference_metadata(metadata: dict | None) -> dict[str, object] | None:
+    if not isinstance(metadata, dict):
+        return None
+    allowed_keys = {
+        "schema_name",
+        "schema_version",
+        "json_parsed",
+        "json_schema_valid",
+        "json_error",
+        "evidence_missing",
+        "images_used",
+        "confidence_label",
+        "provider",
+        "latency_ms",
+    }
+    filtered = {key: metadata[key] for key in allowed_keys if key in metadata}
+    prompt = metadata.get("prompt")
+    if isinstance(prompt, dict):
+        filtered["prompt"] = prompt
+    return filtered or None
+
+
 def _get_inference_job_timeout() -> int:
     return int(os.getenv("INFERENCE_JOB_TIMEOUT", "600"))
 
@@ -142,9 +164,11 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
         if job_record.status == "finished":
             image_refs = None
             evidence_indices = None
+            metadata = None
             if isinstance(job_record.metadata_json, dict):
                 image_refs = job_record.metadata_json.get("image_refs")
                 evidence_indices = job_record.metadata_json.get("evidence_indices")
+                metadata = _filter_inference_metadata(job_record.metadata_json)
             result = {
                 "summary": job_record.summary_text,
                 "confidence": job_record.confidence,
@@ -152,6 +176,7 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
                 "completed_at": job_record.completed_at,
                 "image_refs": image_refs,
                 "evidence_indices": evidence_indices,
+                "metadata": metadata,
             }
         return InferenceStatusResponse(
             job_id=job_record.id,

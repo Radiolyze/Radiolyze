@@ -73,6 +73,7 @@ export interface Report {
   inferenceCompletedAt?: string;
   inferenceImageRefs?: ImageRef[];
   inferenceEvidenceIndices?: number[];
+  inferenceMetadata?: Record<string, unknown>;
 }
 
 export type ReportStatus = 'pending' | 'in_progress' | 'draft' | 'approved' | 'finalized';

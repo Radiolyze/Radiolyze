@@ -91,6 +91,13 @@
     "evidence": "Evidence ({{count}})",
     "frame": "Frame {{frame}}",
     "useAllFrames": "Use all frames",
-    "useAllFramesHelp": "Disable to sample frames for faster inference."
+    "useAllFramesHelp": "Disable to sample frames for faster inference.",
+    "schema": "Schema",
+    "schemaValid": "valid",
+    "schemaInvalid": "invalid",
+    "schemaError": "Schema error: {{error}}",
+    "promptSystem": "Prompt (system)",
+    "promptTask": "Prompt (task)",
+    "evidenceMissing": "Evidence missing"
   }
 }

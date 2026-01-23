@@ -91,6 +91,13 @@
     "evidence": "Evidenz ({{count}})",
     "frame": "Frame {{frame}}",
     "useAllFrames": "Alle Frames verwenden",
-    "useAllFramesHelp": "Deaktivieren, um Frames fuer schnellere Inferenz zu sampeln."
+    "useAllFramesHelp": "Deaktivieren, um Frames fuer schnellere Inferenz zu sampeln.",
+    "schema": "Schema",
+    "schemaValid": "gueltig",
+    "schemaInvalid": "ungueltig",
+    "schemaError": "Schema-Fehler: {{error}}",
+    "promptSystem": "Prompt (System)",
+    "promptTask": "Prompt (Task)",
+    "evidenceMissing": "Evidenz fehlt"
   }
 }
