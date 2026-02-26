@@ -21,6 +21,10 @@ interface ComparisonViewerProps {
   evidenceSelection?: { seriesId: string; stackIndex: number } | null;
   /** AI-detected bounding-box findings for the current series (from report.inferenceFindings) */
   findings?: FindingBox[];
+  /** Callback to analyze current frame (on-demand localization) */
+  onAnalyzeFrame?: (imageRef: ImageRef) => Promise<void>;
+  /** Whether frame analysis is in progress */
+  isAnalyzingFrame?: boolean;
 }
 
 export function ComparisonViewer({
@@ -32,6 +36,8 @@ export function ComparisonViewer({
   onPriorImageRefsChange,
   evidenceSelection,
   findings = [],
+  onAnalyzeFrame,
+  isAnalyzingFrame = false,
 }: ComparisonViewerProps) {
   const { t } = useTranslation('viewer');
   const [isCompareMode, setIsCompareMode] = useState(false);
@@ -201,6 +207,8 @@ export function ComparisonViewer({
         priorStudiesCount={priorStudies.length}
         onEnableCompare={handleEnableCompare}
         findings={findings}
+        onAnalyzeFrame={onAnalyzeFrame}
+        isAnalyzingFrame={isAnalyzingFrame}
       />
     );
   }
@@ -241,6 +249,8 @@ export function ComparisonViewer({
           requestedFrameIndex={leftEvidenceFrame}
           emptyMessage={t('comparison.noStudySelected')}
           findings={leftFindings}
+          onAnalyzeFrame={!isSwapped ? onAnalyzeFrame : undefined}
+          isAnalyzingFrame={isAnalyzingFrame}
         />
 
         {/* Right Panel */}
@@ -257,6 +267,8 @@ export function ComparisonViewer({
           requestedFrameIndex={rightEvidenceFrame}
           emptyMessage={t('comparison.noStudySelected')}
           findings={rightFindings}
+          onAnalyzeFrame={isSwapped ? onAnalyzeFrame : undefined}
+          isAnalyzingFrame={isAnalyzingFrame}
         />
 
         <ComparisonSyncIndicator isVisible={showSyncIndicator} syncOptions={syncOptions} />

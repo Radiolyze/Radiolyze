@@ -25,6 +25,10 @@ interface ComparisonSingleViewProps {
   onEnableCompare: () => void;
   /** AI-detected bounding-box findings to overlay on the image */
   findings?: FindingBox[];
+  /** Callback to analyze current frame (on-demand localization) */
+  onAnalyzeFrame?: (imageRef: ImageRef) => Promise<void>;
+  /** Whether frame analysis is in progress */
+  isAnalyzingFrame?: boolean;
 }
 
 export function ComparisonSingleView({
@@ -36,6 +40,8 @@ export function ComparisonSingleView({
   priorStudiesCount,
   onEnableCompare,
   findings = [],
+  onAnalyzeFrame,
+  isAnalyzingFrame = false,
 }: ComparisonSingleViewProps) {
   const { t } = useTranslation('viewer');
   const [viewerMode, setViewerMode] = useState<ViewerMode>('stack');
@@ -61,6 +67,8 @@ export function ComparisonSingleView({
           onImageRefsChange={onImageRefsChange}
           requestedFrameIndex={requestedFrameIndex}
           findings={findings}
+          onAnalyzeFrame={onAnalyzeFrame}
+          isAnalyzingFrame={isAnalyzingFrame}
         />
       )}
       {viewerMode === 'mpr' && (

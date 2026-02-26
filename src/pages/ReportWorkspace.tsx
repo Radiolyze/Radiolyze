@@ -13,6 +13,11 @@ import { toast } from 'sonner';
 import { auditLogger } from '@/services/auditLogger';
 import { reportClient } from '@/services/reportClient';
 import { formatDate } from '@/data/mockData';
+import { inferenceClient } from '@/services/inferenceClient';
+import {
+  extractInferenceFindings,
+  pollInferenceResult,
+} from '@/hooks/reporting/inferenceHelpers';
 
 const placeholderReport: Report = {
   id: 'placeholder',
@@ -82,6 +87,7 @@ export const ReportWorkspace = () => {
   const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
   const [asrStatus, setAsrStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
   const [asrConfidence, setAsrConfidence] = useState(0);
+  const [isAnalyzingFrame, setIsAnalyzingFrame] = useState(false);
 
   // Apply live status updates to current report
   const liveStatus = report ? getReportStatus(report.id) : undefined;
@@ -156,6 +162,56 @@ export const ReportWorkspace = () => {
   const handleEvidenceSelect = useCallback((ref: ImageRef) => {
     setEvidenceSelection({ seriesId: ref.seriesId, stackIndex: ref.stackIndex });
   }, []);
+
+  const handleAnalyzeFrame = useCallback(
+    async (imageRef: ImageRef) => {
+      if (isAnalyzingFrame || isGenerating) return;
+      if (!report?.id || !selectedQueueItem) {
+        toast.error('Kein Report ausgewählt');
+        return;
+      }
+      setIsAnalyzingFrame(true);
+      try {
+        const response = await inferenceClient.queueLocalize({
+          reportId: report.id,
+          studyId: selectedQueueItem.study.id,
+          imageRef,
+        });
+        const jobId = response.job_id ?? response.jobId;
+        if (!jobId) {
+          throw new Error('Keine Job-ID erhalten');
+        }
+        const result = await pollInferenceResult(jobId, setAiStatus);
+        const newFindings = extractInferenceFindings(result);
+        if (newFindings && newFindings.length > 0) {
+          setReport((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  inferenceFindings: [...(prev.inferenceFindings ?? []), ...newFindings],
+                }
+              : prev
+          );
+          toast.success(`${newFindings.length} Befund(e) lokalisiert`);
+        } else {
+          toast.info('Keine Befunde in diesem Frame erkannt');
+        }
+      } catch (error) {
+        console.warn('Frame-Lokalisierung fehlgeschlagen', error);
+        setAiStatus('error');
+        toast.error('Frame-Analyse fehlgeschlagen');
+      } finally {
+        setIsAnalyzingFrame(false);
+      }
+    },
+    [
+      isAnalyzingFrame,
+      isGenerating,
+      report?.id,
+      selectedQueueItem,
+      setReport,
+    ]
+  );
 
   const handleGenerateImpression = useCallback(async () => {
     if (!findings || isGenerating) return;
@@ -397,6 +453,8 @@ export const ReportWorkspace = () => {
           onPriorImageRefsChange={handlePriorImageRefsChange}
           evidenceSelection={evidenceSelection}
           findings={report?.inferenceFindings ?? []}
+          onAnalyzeFrame={handleAnalyzeFrame}
+          isAnalyzingFrame={isAnalyzingFrame}
         />
       }
       rightPanel={

@@ -56,22 +56,13 @@ ReportWorkspace (report.inferenceFindings vorhanden)
 
 **Roadmap:** Aktuellen Frame an Lokalisierungs-Endpoint senden, Findings im Overlay anzeigen.
 
-**Status:** ❌ **Nicht umgesetzt**
+**Status:** ✅ **Umsetzt** (Proposal 3)
 
 **Befund:**
-- `DicomViewerToolbar` hat:
-  - ImageControls (Tools)
-  - Annotation-Mode-Toggle
-  - Window/Level-Presets
-  - KI-Befunde Eye/EyeOff-Toggle (wenn `findingsCount > 0`)
-  - Export-Button
-- Kein "Frame analysieren"- oder "Lokalisieren"-Button.
-- `DicomViewer` hat keinen Callback `onLocalizeFrame` o.ä.
-
-**Erforderliche Änderung:**
-- Button in `DicomViewerToolbar` (z.B. "Frame analysieren" / Scan-Icon).
-- Callback `onAnalyzeFrame?: (imageRef: ImageRef) => void` in `DicomViewer` und Toolbar.
-- Im Callback: `POST /api/v1/inference/localize` mit aktuellem Frame-Ref aufrufen, Job pollen, `inferenceFindings` ins Report-State mergen (oder lokal im Viewer anzeigen).
+- "Frame analysieren"-Button in DicomViewerToolbar (Scan-Icon)
+- Callback onAnalyzeFrame durch ReportWorkspace → ComparisonViewer → ComparisonSingleView/ComparisonPane → DicomViewer → Toolbar
+- handleAnalyzeFrame: queueLocalize, pollInferenceResult, extractInferenceFindings, merge in report.inferenceFindings
+- i18n: tools.analyzeFrame, tools.analyzeFrameHint
 
 ---
 

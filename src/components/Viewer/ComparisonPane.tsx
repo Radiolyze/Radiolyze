@@ -23,6 +23,10 @@ interface ComparisonPaneProps {
   className?: string;
   /** AI-detected bounding-box findings to overlay on the image */
   findings?: FindingBox[];
+  /** Callback to analyze current frame (on-demand localization) */
+  onAnalyzeFrame?: (imageRef: ImageRef) => Promise<void>;
+  /** Whether frame analysis is in progress */
+  isAnalyzingFrame?: boolean;
 }
 
 const badgeClassNameByVariant: Record<BadgeVariant, string> = {
@@ -44,6 +48,8 @@ export function ComparisonPane({
   emptyMessage,
   className,
   findings = [],
+  onAnalyzeFrame,
+  isAnalyzingFrame = false,
 }: ComparisonPaneProps) {
   return (
     <div className={cn('flex-1 relative', className)}>
@@ -63,6 +69,8 @@ export function ComparisonPane({
           onImageRefsChange={onImageRefsChange}
           requestedFrameIndex={requestedFrameIndex}
           findings={findings}
+          onAnalyzeFrame={onAnalyzeFrame}
+          isAnalyzingFrame={isAnalyzingFrame}
         />
       ) : (
         <ViewerEmptyState title={emptyMessage} />

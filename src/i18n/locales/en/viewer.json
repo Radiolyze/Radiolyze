@@ -8,7 +8,9 @@
     "reset": "Reset",
     "invert": "Invert",
     "rotate": "Rotate",
-    "flip": "Flip"
+    "flip": "Flip",
+    "analyzeFrame": "Analyze frame",
+    "analyzeFrameHint": "Send current frame for AI localization"
   },
   "comparison": {
     "title": "Comparison",

@@ -65,7 +65,7 @@
 - [x] AI Findings Overlay (SVG-Overlay, Farbkodierung, Eye/EyeOff-Toggle, Hover-Details)
 - [x] Index.tsx Verdrahtung: report.inferenceFindings als findings-Prop an DicomViewer durchreichen
 - [x] On-Demand Frame-Lokalisierung: API-Endpunkt POST /api/v1/inference/localize (einzelner Frame, schnelle Antwort via Job-Polling)
-- [ ] "Frame analysieren"-Button in der DicomViewer-Toolbar (aktuellen Frame an Lokalisierungs-Endpoint senden)
+- [x] "Frame analysieren"-Button in der DicomViewer-Toolbar (aktuellen Frame an Lokalisierungs-Endpoint senden)
 - [ ] 3D-Readiness: Slice-Order, Spacing, VOI/WL Persistenz
 - [ ] Longitudinal Context: Current/Prior Paare + Time-Delta
 - [ ] Strukturierte Outputs (JSON Schema + Validation)

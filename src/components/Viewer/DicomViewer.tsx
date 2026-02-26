@@ -45,6 +45,10 @@ interface DicomViewerProps {
   showAnnotationPanel?: boolean;
   /** AI-detected bounding-box findings to overlay on the image */
   findings?: FindingBox[];
+  /** Callback to analyze current frame (on-demand localization) */
+  onAnalyzeFrame?: (imageRef: ImageRef) => Promise<void>;
+  /** Whether frame analysis is in progress */
+  isAnalyzingFrame?: boolean;
 }
 
 type Tool = ViewerToolId;
@@ -68,6 +72,8 @@ export function DicomViewer({
   requestedFrameIndex,
   showAnnotationPanel = true,
   findings = [],
+  onAnalyzeFrame,
+  isAnalyzingFrame = false,
 }: DicomViewerProps) {
   const { preferences } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -303,6 +309,9 @@ export function DicomViewer({
         findingsCount={findings.length}
         showFindingsOverlay={showFindingsOverlay}
         onFindingsOverlayToggle={() => setShowFindingsOverlay((prev) => !prev)}
+        onAnalyzeFrame={onAnalyzeFrame}
+        currentImageRef={imageRefs[currentFrame]}
+        isAnalyzingFrame={isAnalyzingFrame}
       />
 
       {/* Series Info */}
