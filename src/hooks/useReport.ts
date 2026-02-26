@@ -10,6 +10,7 @@ import {
   extractInferenceCompletedAt,
   extractInferenceConfidence,
   extractInferenceEvidenceIndices,
+  extractInferenceFindings,
   extractInferenceImageRefs,
   extractInferenceMetadata,
   extractInferenceModel,
@@ -174,6 +175,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
       const completedAt = extractInferenceCompletedAt(result);
       const inferredImageRefs = extractInferenceImageRefs(result);
       const evidenceIndices = extractInferenceEvidenceIndices(result);
+      const inferenceFindings = extractInferenceFindings(result);
       const inferenceMetadata = extractInferenceMetadata(result);
 
       setReport(prev => prev ? {
@@ -188,6 +190,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         inferenceCompletedAt: completedAt,
         inferenceImageRefs: inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
         inferenceEvidenceIndices: evidenceIndices ?? prev.inferenceEvidenceIndices,
+        inferenceFindings: inferenceFindings ?? prev.inferenceFindings,
         inferenceMetadata: inferenceMetadata ?? prev.inferenceMetadata,
       } : null);
 
@@ -311,6 +314,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
       const completedAt = extractInferenceCompletedAt(result);
       const inferredImageRefs = extractInferenceImageRefs(result);
       const evidenceIndices = extractInferenceEvidenceIndices(result);
+      const inferenceFindings = extractInferenceFindings(result);
       const inferenceMetadata = extractInferenceMetadata(result);
 
       // Use the AI-generated summary as both findings and impression
@@ -327,6 +331,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         inferenceCompletedAt: completedAt,
         inferenceImageRefs: inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
         inferenceEvidenceIndices: evidenceIndices ?? prev.inferenceEvidenceIndices,
+        inferenceFindings: inferenceFindings ?? prev.inferenceFindings,
         inferenceMetadata: inferenceMetadata ?? prev.inferenceMetadata,
       } : null);
 

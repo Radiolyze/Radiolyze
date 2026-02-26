@@ -1,4 +1,4 @@
-import type { AIStatus, ImageRef } from '@/types/radiology';
+import type { AIStatus, FindingBox, ImageRef } from '@/types/radiology';
 import { inferenceClient } from '@/services/inferenceClient';
 
 type InferenceImageRole = 'current' | 'prior';
@@ -252,6 +252,34 @@ export const extractInferenceImageRefs = (result?: Record<string, unknown> | nul
   return raw
     .map((entry) => (entry && typeof entry === 'object' ? mapInferenceImageRef(entry as Record<string, unknown>) : null))
     .filter((entry): entry is ImageRef => Boolean(entry));
+};
+
+export const extractInferenceFindings = (
+  result?: Record<string, unknown> | null
+): FindingBox[] | undefined => {
+  if (!result) return undefined;
+  const raw = result.findings;
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const findings: FindingBox[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const entry = item as Record<string, unknown>;
+    const box = entry.box_2d;
+    const label = entry.label;
+    const confidence = entry.confidence;
+    if (
+      !Array.isArray(box) ||
+      box.length !== 4 ||
+      box.some((c) => typeof c !== 'number')
+    ) continue;
+    if (typeof label !== 'string' || !label.trim()) continue;
+    findings.push({
+      box_2d: box as [number, number, number, number],
+      label: label.trim(),
+      confidence: typeof confidence === 'number' ? confidence : undefined,
+    });
+  }
+  return findings.length > 0 ? findings : undefined;
 };
 
 export const extractInferenceMetadata = (

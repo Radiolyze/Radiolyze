@@ -1,4 +1,4 @@
-import { Download, Tag, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Download, Eye, EyeOff, Tag, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -30,6 +30,9 @@ interface DicomViewerToolbarProps {
   hasStack: boolean;
   annotationMode?: boolean;
   onAnnotationModeToggle?: () => void;
+  findingsCount?: number;
+  showFindingsOverlay?: boolean;
+  onFindingsOverlayToggle?: () => void;
 }
 
 export function DicomViewerToolbar({
@@ -45,6 +48,9 @@ export function DicomViewerToolbar({
   hasStack,
   annotationMode = false,
   onAnnotationModeToggle,
+  findingsCount = 0,
+  showFindingsOverlay = true,
+  onFindingsOverlayToggle,
 }: DicomViewerToolbarProps) {
   return (
     <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
@@ -127,6 +133,33 @@ export function DicomViewerToolbar({
             ))}
           </SelectContent>
         </Select>
+        {findingsCount > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={showFindingsOverlay ? 'default' : 'outline'}
+                size="sm"
+                className={cn(
+                  'h-8 px-2 gap-1.5 relative',
+                  showFindingsOverlay && 'bg-amber-600 hover:bg-amber-700 text-white border-amber-600'
+                )}
+                onClick={onFindingsOverlayToggle}
+              >
+                {showFindingsOverlay ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
+                <span className="text-xs font-mono">{findingsCount}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {showFindingsOverlay
+                ? `KI-Befunde ausblenden (${findingsCount})`
+                : `KI-Befunde einblenden (${findingsCount})`}
+            </TooltipContent>
+          </Tooltip>
+        )}
         <Button
           variant="outline"
           size="sm"
