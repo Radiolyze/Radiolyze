@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import logging
 import uuid
-
-logger = logging.getLogger(__name__)
 from typing import Any
 
 from .audit import add_audit_event
 from .db import SessionLocal
-from .inference_clients import generate_inference_summary_text, generate_localization_findings
+from .inference_clients import generate_inference_summary_text
 from .mock_logic import utc_now
 from .models import InferenceJob, Report
 from .utils.inference import build_image_metadata
@@ -83,21 +80,6 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         completed_at = utc_now()
         output_summary = summary[:240]
 
-        # Run localization after summary — best-effort, failures don't fail the job
-        localization_findings: list[dict] = []
-        localization_meta: dict = {}
-        has_images = bool(image_urls or image_paths)
-        try:
-            localization_findings, _loc_model, localization_meta = generate_localization_findings(
-                findings_text,
-                image_urls=image_urls,
-                image_paths=image_paths,
-                image_refs=image_refs,
-            )
-        except Exception as loc_exc:
-            logger.warning("Localization step failed (non-fatal): %s", loc_exc)
-            localization_meta = {"error": str(loc_exc)}
-
         job.status = "finished"
         job.completed_at = completed_at
         job.summary_text = summary
@@ -109,8 +91,6 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "requested_model": requested_model_version,
             "resolved_model": resolved_model,
             "image_refs": image_refs,
-            "findings": localization_findings,
-            "localization": localization_meta,
         }
         db.commit()
 
@@ -129,7 +109,6 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "output_summary": output_summary,
                 "confidence": confidence,
                 "image_refs": image_refs,
-                "findings_count": len(localization_findings),
                 **(metadata or {}),
                 **image_metadata,
             },
