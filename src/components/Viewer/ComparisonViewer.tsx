@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SyncOptions, ViewportState } from '@/types/viewerSync';
-import type { ImageRef, Series, Study } from '@/types/radiology';
+import type { FindingBox, ImageRef, Series, Study } from '@/types/radiology';
 import { useViewportSync } from '@/hooks/useViewportSync';
 import type { ViewerProgress } from './DicomViewer';
 import type { PriorStudy } from './comparisonTypes';
@@ -19,6 +19,12 @@ interface ComparisonViewerProps {
   onImageRefsChange?: (refs: ImageRef[]) => void;
   onPriorImageRefsChange?: (refs: ImageRef[]) => void;
   evidenceSelection?: { seriesId: string; stackIndex: number } | null;
+  /** AI-detected bounding-box findings for the current series (from report.inferenceFindings) */
+  findings?: FindingBox[];
+  /** Callback to analyze current frame (on-demand localization) */
+  onAnalyzeFrame?: (imageRef: ImageRef) => Promise<void>;
+  /** Whether frame analysis is in progress */
+  isAnalyzingFrame?: boolean;
 }
 
 export function ComparisonViewer({
@@ -29,6 +35,9 @@ export function ComparisonViewer({
   onImageRefsChange,
   onPriorImageRefsChange,
   evidenceSelection,
+  findings = [],
+  onAnalyzeFrame,
+  isAnalyzingFrame = false,
 }: ComparisonViewerProps) {
   const { t } = useTranslation('viewer');
   const [isCompareMode, setIsCompareMode] = useState(false);
@@ -182,6 +191,9 @@ export function ComparisonViewer({
   const leftBadgeVariant = isSwapped ? 'secondary' : 'primary';
   const rightBadgeVariant = isSwapped ? 'primary' : 'secondary';
   const showSyncIndicator = Boolean(selectedPriorSeries) && (syncOptions.frames || hasSyncEnabled);
+  // Findings apply to current series: left when not swapped, right when swapped
+  const leftFindings = !isSwapped ? findings : [];
+  const rightFindings = isSwapped ? findings : [];
 
   // Single viewer mode
   if (!isCompareMode) {
@@ -194,6 +206,9 @@ export function ComparisonViewer({
         evidenceSelection={evidenceSelection}
         priorStudiesCount={priorStudies.length}
         onEnableCompare={handleEnableCompare}
+        findings={findings}
+        onAnalyzeFrame={onAnalyzeFrame}
+        isAnalyzingFrame={isAnalyzingFrame}
       />
     );
   }
@@ -233,6 +248,9 @@ export function ComparisonViewer({
           onImageRefsChange={leftImageRefsChange ?? leftPriorImageRefsChange}
           requestedFrameIndex={leftEvidenceFrame}
           emptyMessage={t('comparison.noStudySelected')}
+          findings={leftFindings}
+          onAnalyzeFrame={!isSwapped ? onAnalyzeFrame : undefined}
+          isAnalyzingFrame={isAnalyzingFrame}
         />
 
         {/* Right Panel */}
@@ -248,6 +266,9 @@ export function ComparisonViewer({
           onImageRefsChange={rightImageRefsChange ?? rightPriorImageRefsChange}
           requestedFrameIndex={rightEvidenceFrame}
           emptyMessage={t('comparison.noStudySelected')}
+          findings={rightFindings}
+          onAnalyzeFrame={isSwapped ? onAnalyzeFrame : undefined}
+          isAnalyzingFrame={isAnalyzingFrame}
         />
 
         <ComparisonSyncIndicator isVisible={showSyncIndicator} syncOptions={syncOptions} />

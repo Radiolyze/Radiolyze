@@ -1,4 +1,5 @@
-import { Download, Eye, EyeOff, Tag, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Download, Eye, EyeOff, Scan, Tag, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -12,6 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { ImageRef } from '@/types/radiology';
 import type { ViewerToolConfig, AnnotationToolConfig, AllToolId } from '@/types/viewer';
 import type { WindowLevelPreset } from '@/config/viewer';
 import { ImageControls } from './ImageControls';
@@ -33,6 +35,12 @@ interface DicomViewerToolbarProps {
   findingsCount?: number;
   showFindingsOverlay?: boolean;
   onFindingsOverlayToggle?: () => void;
+  /** Callback to analyze current frame (on-demand localization) */
+  onAnalyzeFrame?: (imageRef: ImageRef) => Promise<void>;
+  /** Current frame's image ref for analyze button */
+  currentImageRef?: ImageRef | null;
+  /** Whether frame analysis is in progress */
+  isAnalyzingFrame?: boolean;
 }
 
 export function DicomViewerToolbar({
@@ -51,7 +59,11 @@ export function DicomViewerToolbar({
   findingsCount = 0,
   showFindingsOverlay = true,
   onFindingsOverlayToggle,
+  onAnalyzeFrame,
+  currentImageRef,
+  isAnalyzingFrame = false,
 }: DicomViewerToolbarProps) {
+  const { t } = useTranslation('viewer');
   return (
     <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
       {/* Navigation tools */}
@@ -133,6 +145,27 @@ export function DicomViewerToolbar({
             ))}
           </SelectContent>
         </Select>
+        {onAnalyzeFrame && currentImageRef && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 gap-1.5"
+                onClick={() => onAnalyzeFrame(currentImageRef)}
+                disabled={!hasStack || isAnalyzingFrame}
+              >
+                <Scan className={cn('h-4 w-4', isAnalyzingFrame && 'animate-pulse')} />
+                <span className="text-xs">
+                  {isAnalyzingFrame ? t('progress.ai.running') : t('tools.analyzeFrame')}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('tools.analyzeFrameHint')}
+            </TooltipContent>
+          </Tooltip>
+        )}
         {findingsCount > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>

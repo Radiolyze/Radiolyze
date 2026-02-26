@@ -8,7 +8,9 @@
     "reset": "Zurücksetzen",
     "invert": "Invertieren",
     "rotate": "Drehen",
-    "flip": "Spiegeln"
+    "flip": "Spiegeln",
+    "analyzeFrame": "Frame analysieren",
+    "analyzeFrameHint": "Aktuellen Frame an KI-Lokalisierung senden"
   },
   "comparison": {
     "title": "Vergleich",

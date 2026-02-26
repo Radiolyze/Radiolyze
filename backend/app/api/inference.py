@@ -13,9 +13,14 @@ from ..deps import get_db
 from ..mock_logic import utc_now
 from ..models import InferenceJob, Report
 from ..queue import get_queue, get_redis
-from ..schemas import InferenceQueueRequest, InferenceQueueResponse, InferenceStatusResponse
-from ..tasks import run_inference_job
-from ..utils.hashing import compute_input_hash
+from ..schemas import (
+    InferenceQueueRequest,
+    InferenceQueueResponse,
+    InferenceStatusResponse,
+    LocalizeRequest,
+)
+from ..tasks import run_inference_job, run_localize_job
+from ..utils.hashing import compute_input_hash, compute_localize_hash
 from ..utils.inference import build_image_metadata
 from ..utils.time import format_datetime
 from ..ws_manager import broadcast_status
@@ -128,6 +133,99 @@ async def queue_inference(
             "input_hash": input_hash,
             "image_refs": image_refs,
             **image_metadata,
+        },
+        timestamp=queued_at,
+        source="api",
+    )
+
+    if report:
+        if report.status == "pending":
+            report.status = "in_progress"
+        report.updated_at = queued_at
+
+    db.commit()
+
+    if payload.report_id:
+        await broadcast_status(
+            payload.report_id,
+            {"aiStatus": "queued", "qaStatus": report.qa_status if report else "pending", "asrStatus": "idle"},
+        )
+
+    return InferenceQueueResponse(
+        job_id=job.id,
+        status=job.get_status(),
+        queued_at=queued_at,
+        report_id=payload.report_id,
+        study_id=study_id,
+        model_version=model_version,
+    )
+
+
+@router.post("/api/v1/inference/localize", response_model=InferenceQueueResponse)
+async def queue_localize(
+    payload: LocalizeRequest,
+    db: Session = Depends(get_db),
+) -> InferenceQueueResponse:
+    """Queue on-demand single-frame localization (bounding-box findings)."""
+    report = None
+    if payload.report_id:
+        report = db.get(Report, payload.report_id)
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+
+    requested_by = payload.requested_by or "system"
+    study_id = payload.study_id or (report.study_id if report else None)
+    image_ref = payload.image_ref.model_dump()
+    model_version = payload.model_version or _get_model_version()
+    input_hash = compute_localize_hash(study_id, image_ref)
+    queued_at = utc_now()
+
+    job_id = str(uuid.uuid4())
+    job_payload = {
+        "job_id": job_id,
+        "report_id": payload.report_id,
+        "study_id": study_id,
+        "image_ref": image_ref,
+        "requested_by": requested_by,
+        "model_version": model_version,
+        "input_hash": input_hash,
+    }
+
+    queue = get_queue()
+    job = queue.enqueue(
+        run_localize_job,
+        job_payload,
+        job_id=job_id,
+        job_timeout=_get_inference_job_timeout(),
+        result_ttl=_get_inference_result_ttl(),
+        failure_ttl=_get_inference_result_ttl(),
+    )
+
+    db.add(
+        InferenceJob(
+            id=job_id,
+            report_id=payload.report_id,
+            study_id=study_id,
+            status="queued",
+            model_version=model_version,
+            input_hash=input_hash,
+            queued_at=queued_at,
+            metadata_json={"requested_by": requested_by, "image_ref": image_ref, "job_type": "localize"},
+        )
+    )
+
+    add_audit_event(
+        db,
+        event_type="inference_queued",
+        actor_id=requested_by,
+        report_id=payload.report_id,
+        study_id=study_id,
+        metadata={
+            "job_id": job_id,
+            "job_type": "localize",
+            "model_version": model_version,
+            "input_hash": input_hash,
+            "image_ref": image_ref,
         },
         timestamp=queued_at,
         source="api",

@@ -144,6 +144,16 @@ class InferenceStatusResponse(ApiBaseModel):
     error: str | None = None
 
 
+class LocalizeRequest(ApiBaseModel):
+    """Request for on-demand single-frame localization (bounding-box findings)."""
+
+    report_id: str | None = None
+    study_id: str | None = None
+    image_ref: ImageRef
+    requested_by: str | None = None
+    model_version: str | None = None
+
+
 PromptType = Literal["system", "summary", "impression"]
 
 

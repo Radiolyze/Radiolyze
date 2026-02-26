@@ -5,7 +5,7 @@ from typing import Any
 
 from .audit import add_audit_event
 from .db import SessionLocal
-from .inference_clients import generate_inference_summary_text
+from .inference_clients import generate_inference_summary_text, generate_localize_findings
 from .mock_logic import utc_now
 from .models import InferenceJob, Report
 from .utils.inference import build_image_metadata
@@ -158,6 +158,138 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "error": str(exc),
                 "image_refs": image_refs,
                 **image_metadata,
+            },
+            source="worker",
+        )
+        db.commit()
+        raise
+    finally:
+        db.close()
+
+
+def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
+    """Run single-frame localization; returns findings for overlay."""
+    report_id = payload.get("report_id")
+    study_id = payload.get("study_id")
+    image_ref = payload.get("image_ref") or {}
+    requested_by = payload.get("requested_by") or "system"
+    requested_model_version = payload.get("model_version") or "mock-medgemma-0.1"
+    input_hash = payload.get("input_hash")
+    job_id = payload.get("job_id")
+
+    db = SessionLocal()
+    job = None
+    try:
+        if job_id:
+            job = db.get(InferenceJob, job_id)
+        if not job:
+            job = InferenceJob(
+                id=job_id or str(uuid.uuid4()),
+                report_id=report_id,
+                study_id=study_id,
+                status="queued",
+                model_version=requested_model_version,
+                input_hash=input_hash,
+                queued_at=utc_now(),
+                metadata_json={"image_ref": image_ref, "job_type": "localize"},
+            )
+            db.add(job)
+            db.commit()
+
+        started_at = utc_now()
+        job.status = "started"
+        job.started_at = started_at
+        job.error_message = None
+        db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "processing"})
+
+        add_audit_event(
+            db,
+            event_type="inference_started",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job.id,
+                "job_type": "localize",
+                "model_version": requested_model_version,
+                "image_ref": image_ref,
+            },
+            source="worker",
+        )
+        db.commit()
+
+        findings, resolved_model, metadata = generate_localize_findings(
+            image_ref,
+            model_name=requested_model_version,
+        )
+        completed_at = utc_now()
+        summary = f"Localized {len(findings)} finding(s)" if findings else "No findings"
+
+        job.status = "finished"
+        job.completed_at = completed_at
+        job.summary_text = summary
+        job.confidence = 0.0
+        job.model_version = resolved_model
+        job.metadata_json = {
+            **(job.metadata_json or {}),
+            "requested_model": requested_model_version,
+            "resolved_model": resolved_model,
+            "image_ref": image_ref,
+            "findings": findings,
+            **(metadata or {}),
+        }
+        db.commit()
+
+        add_audit_event(
+            db,
+            event_type="inference_completed",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job.id,
+                "job_type": "localize",
+                "model_version": requested_model_version,
+                "findings_count": len(findings),
+                "image_ref": image_ref,
+            },
+            source="worker",
+        )
+        db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "idle"})
+
+        return {
+            "summary": summary,
+            "findings": findings,
+            "model_version": resolved_model,
+            "completed_at": completed_at,
+        }
+    except Exception as exc:
+        if job_id:
+            loc_job = db.get(InferenceJob, job_id)
+            if loc_job:
+                loc_job.status = "failed"
+                loc_job.completed_at = utc_now()
+                loc_job.error_message = str(exc)
+                db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "error"})
+
+        add_audit_event(
+            db,
+            event_type="inference_failed",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job_id,
+                "job_type": "localize",
+                "model_version": requested_model_version,
+                "error": str(exc),
+                "image_ref": image_ref,
             },
             source="worker",
         )

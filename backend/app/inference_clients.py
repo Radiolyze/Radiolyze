@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from .ai_schemas import SCHEMA_VERSION, ImpressionOutput, SummaryOutput
+from .ai_schemas import SCHEMA_VERSION, ImpressionOutput, LocalizeOutput, SummaryOutput
 from .mock_logic import generate_asr_transcript, generate_impression, generate_inference_summary
 from .prompts import render_prompt_with_metadata
 
@@ -578,6 +578,96 @@ def generate_inference_summary_text(
             text, confidence = generate_inference_summary(findings_text)
             return text, confidence, model_name or "mock-medgemma-0.1", {"provider": "mock", "error": str(exc)}
         raise RuntimeError("vLLM inference failed") from exc
+
+
+LOCALIZE_PROMPT = (
+    "Task: Identify and localize imaging findings in this medical image.\n"
+    "For each finding, provide a bounding box in normalized coordinates (0-1000 space).\n"
+    "Format: box_2d = [y_min, x_min, y_max, x_max] where (0,0) is top-left.\n"
+    "Return a JSON object with key 'findings' (array of objects).\n"
+    "Each object: { \"box_2d\": [y1,x1,y2,x2], \"label\": \"finding name\", \"confidence\": 0.0-1.0 }\n"
+    "Return only valid JSON. No markdown or code fences.\n"
+    "If no findings, return {\"findings\": []}."
+)
+
+
+def generate_localize_findings(
+    image_ref: dict[str, Any],
+    model_name: str | None = None,
+) -> tuple[list[dict[str, Any]], str, dict[str, Any]]:
+    """Run single-frame localization; returns (findings, model_version, metadata)."""
+    wado_url = image_ref.get("wado_url") or image_ref.get("wadoUrl")
+    if not isinstance(wado_url, str) or not wado_url.strip():
+        return [], model_name or "mock-localize-0.1", {"provider": "mock", "error": "no_wado_url"}
+
+    image_urls = [_rewrite_image_url(wado_url.strip())]
+    if not _env_flag("VLLM_ENABLED", False):
+        # Mock: return empty or one placeholder finding for testing
+        mock_finding = {
+            "box_2d": [100, 100, 300, 300],
+            "label": "Mock finding (VLLM_ENABLED=false)",
+            "confidence": 0.5,
+        }
+        return [mock_finding], model_name or "mock-localize-0.1", {"provider": "mock"}
+
+    resolved_model = _vllm_model_name(model_name)
+    try:
+        start_time = time.monotonic()
+        system_prompt, system_meta = render_prompt_with_metadata("system")
+        raw_text = _vllm_chat_completion(
+            LOCALIZE_PROMPT,
+            model_name=resolved_model,
+            system_prompt=system_prompt,
+            image_urls=image_urls,
+        )
+        parsed, parse_error = _parse_json_response(raw_text)
+        metadata: dict[str, Any] = {"schema_name": "localize_output", "schema_version": SCHEMA_VERSION}
+        findings: list[dict[str, Any]] = []
+
+        if parsed:
+            try:
+                output = LocalizeOutput.model_validate(parsed)
+                for f in output.findings:
+                    findings.append({
+                        "box_2d": f.box_2d,
+                        "label": f.label,
+                        "confidence": f.confidence,
+                    })
+                metadata["json_parsed"] = True
+                metadata["json_schema_valid"] = True
+            except ValidationError:
+                metadata["json_parsed"] = True
+                metadata["json_schema_valid"] = False
+                metadata["json_error"] = "schema_validation_failed"
+                raw_findings = parsed.get("findings")
+                if isinstance(raw_findings, list):
+                    for item in raw_findings:
+                        if isinstance(item, dict) and "box_2d" in item and "label" in item:
+                            box = item.get("box_2d")
+                            if isinstance(box, list) and len(box) == 4:
+                                findings.append({
+                                    "box_2d": [float(x) for x in box],
+                                    "label": str(item.get("label", "")),
+                                    "confidence": item.get("confidence"),
+                                })
+        else:
+            metadata["json_parsed"] = False
+            metadata["json_error"] = parse_error or "no_json_object"
+
+        latency_ms = int((time.monotonic() - start_time) * 1000)
+        metadata["latency_ms"] = latency_ms
+        metadata["prompt"] = {"system": system_meta, "task": "localize"}
+        return findings, resolved_model, {"provider": "vllm", **metadata}
+    except Exception as exc:
+        logger.warning("vLLM localize failed: %s", exc)
+        if _env_flag("VLLM_FALLBACK_TO_MOCK", True):
+            mock_finding = {
+                "box_2d": [150, 150, 350, 350],
+                "label": "Fallback (vLLM error)",
+                "confidence": 0.3,
+            }
+            return [mock_finding], model_name or "mock-localize-0.1", {"provider": "mock", "error": str(exc)}
+        raise RuntimeError("vLLM localize failed") from exc
 
 
 async def transcribe_audio(

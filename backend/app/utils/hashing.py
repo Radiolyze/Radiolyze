@@ -27,6 +27,13 @@ def compute_input_hash(
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def compute_localize_hash(study_id: str | None, image_ref: dict[str, Any] | None) -> str:
+    """Hash for single-frame localization input."""
+    ref_str = json.dumps(image_ref or {}, sort_keys=True)
+    raw = f"localize|{study_id or ''}|{ref_str}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def compute_text_hash(*values: str | None) -> str:
     normalized = [value.strip() for value in values if value and value.strip()]
     raw = "|".join(normalized)

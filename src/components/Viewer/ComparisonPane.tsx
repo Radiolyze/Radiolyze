@@ -1,4 +1,4 @@
-import type { ImageRef, Series } from '@/types/radiology';
+import type { FindingBox, ImageRef, Series } from '@/types/radiology';
 import type { ViewerProgress } from './DicomViewer';
 import type { ViewportState } from '@/types/viewerSync';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,12 @@ interface ComparisonPaneProps {
   requestedFrameIndex?: number | null;
   emptyMessage: string;
   className?: string;
+  /** AI-detected bounding-box findings to overlay on the image */
+  findings?: FindingBox[];
+  /** Callback to analyze current frame (on-demand localization) */
+  onAnalyzeFrame?: (imageRef: ImageRef) => Promise<void>;
+  /** Whether frame analysis is in progress */
+  isAnalyzingFrame?: boolean;
 }
 
 const badgeClassNameByVariant: Record<BadgeVariant, string> = {
@@ -41,6 +47,9 @@ export function ComparisonPane({
   requestedFrameIndex,
   emptyMessage,
   className,
+  findings = [],
+  onAnalyzeFrame,
+  isAnalyzingFrame = false,
 }: ComparisonPaneProps) {
   return (
     <div className={cn('flex-1 relative', className)}>
@@ -59,6 +68,9 @@ export function ComparisonPane({
           syncState={syncState}
           onImageRefsChange={onImageRefsChange}
           requestedFrameIndex={requestedFrameIndex}
+          findings={findings}
+          onAnalyzeFrame={onAnalyzeFrame}
+          isAnalyzingFrame={isAnalyzingFrame}
         />
       ) : (
         <ViewerEmptyState title={emptyMessage} />

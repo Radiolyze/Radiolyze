@@ -70,6 +70,41 @@ class SummaryOutput(BaseAIOutput):
         return _normalize_text(value)
 
 
+class FindingBoxOutput(BaseAIOutput):
+    """Single finding with bounding box (MedGemma format: y_min, x_min, y_max, x_max in 0-1000 space)."""
+
+    box_2d: list[float]
+    label: str
+    confidence: float | None = None
+
+    @field_validator("box_2d")
+    @classmethod
+    def _validate_box(cls, value: Any) -> list[float]:
+        if not isinstance(value, list) or len(value) != 4:
+            raise ValueError("box_2d must be a list of 4 numbers")
+        return [float(v) for v in value]
+
+
+class LocalizeOutput(BaseAIOutput):
+    """Output for single-frame localization (bounding-box findings)."""
+
+    findings: list[FindingBoxOutput] = Field(default_factory=list)
+
+    @field_validator("findings", mode="before")
+    @classmethod
+    def _coerce_findings(cls, value: Any) -> list[FindingBoxOutput]:
+        if not isinstance(value, list):
+            return []
+        result: list[FindingBoxOutput] = []
+        for item in value:
+            if isinstance(item, dict):
+                try:
+                    result.append(FindingBoxOutput.model_validate(item))
+                except Exception:
+                    continue
+        return result
+
+
 class ImpressionOutput(BaseAIOutput):
     impression: str
     comparison: str | None = None
