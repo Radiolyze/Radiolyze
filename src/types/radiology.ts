@@ -1,5 +1,16 @@
 // MedGemma Radiology Types
 
+/**
+ * A single AI-detected finding with a bounding box.
+ * Coordinates are in MedGemma's normalized 0-1000 space:
+ * box_2d = [y_min, x_min, y_max, x_max]
+ */
+export interface FindingBox {
+  box_2d: [number, number, number, number];
+  label: string;
+  confidence?: number;
+}
+
 export interface Patient {
   id: string;
   name: string;
@@ -73,6 +84,7 @@ export interface Report {
   inferenceCompletedAt?: string;
   inferenceImageRefs?: ImageRef[];
   inferenceEvidenceIndices?: number[];
+  inferenceFindings?: FindingBox[];
   inferenceMetadata?: Record<string, unknown>;
 }
 

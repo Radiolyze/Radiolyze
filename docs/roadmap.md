@@ -61,6 +61,11 @@
 
 ## Phase 5.5: MedGemma Capability Expansion (16-24 Wochen)
 
+- [x] MedGemma Bounding-Box Lokalisierung Pipeline (Backend: Prompt, Parser, DB-Persistenz)
+- [x] AI Findings Overlay (SVG-Overlay, Farbkodierung, Eye/EyeOff-Toggle, Hover-Details)
+- [ ] Index.tsx Verdrahtung: report.inferenceFindings als findings-Prop an DicomViewer durchreichen
+- [ ] On-Demand Frame-Lokalisierung: API-Endpunkt POST /api/v1/inference/localize (einzelner Frame, schnelle Antwort via Job-Polling)
+- [ ] "Frame analysieren"-Button in der DicomViewer-Toolbar (aktuellen Frame an Lokalisierungs-Endpoint senden)
 - [ ] 3D-Readiness: Slice-Order, Spacing, VOI/WL Persistenz
 - [ ] Longitudinal Context: Current/Prior Paare + Time-Delta
 - [ ] Strukturierte Outputs (JSON Schema + Validation)
@@ -78,15 +83,23 @@
 
 ## Naechste Schritte (naechster Sprint)
 
-1. Annex IV ausfuellen (Risikoanalyse, Data-Governance, Model Cards, KPI/Drift).
-2. Security Hardening umsetzen (JWT/OIDC, RBAC, TLS-Termination, Rate Limits).
-3. Drift Monitoring operationalisieren (Scheduler, Alerts-UI, Review-Prozess).
-4. Observability/Tracing (OpenTelemetry, Dashboard, Log-Korrelation).
-5. Templates/Guidelines RAG konzipieren (Vector Store, Retrieval API, UI Hook).
-6. DICOM -> Image Pipeline fuer Multimodal (WADO-RS Render/JPEG, Caching/TTL).
-7. 3D-Readiness: Slice-Metadaten + Sampling-Strategien erfassen.
-8. Longitudinal Context: Time-Delta + Prior Mapping persistieren.
-9. Strukturierte JSON-Outputs + Schema-Validierung vorbereiten.
+### MedGemma Overlay (Proposals 3-5, sofort umsetzbar)
+
+1. Index.tsx verdrahten: `report.inferenceFindings` als `findings`-Prop an `<DicomViewer>` weiterreichen — macht das Overlay funktional.
+2. On-Demand Frame-Lokalisierung: Backend-Endpunkt `POST /api/v1/inference/localize` fuer einzelnen Frame (Job-Queue, schnelles Polling).
+3. "Frame analysieren"-Button in der DicomViewer-Toolbar: aktuellen Frame-ImageRef an Lokalisierungs-Endpunkt senden, Findings direkt im Overlay anzeigen.
+
+### Mittelfristig
+
+4. Annex IV ausfuellen (Risikoanalyse, Data-Governance, Model Cards, KPI/Drift).
+5. Security Hardening umsetzen (JWT/OIDC, RBAC, TLS-Termination, Rate Limits).
+6. Drift Monitoring operationalisieren (Scheduler, Alerts-UI, Review-Prozess).
+7. Observability/Tracing (OpenTelemetry, Dashboard, Log-Korrelation).
+8. Templates/Guidelines RAG konzipieren (Vector Store, Retrieval API, UI Hook).
+9. DICOM -> Image Pipeline fuer Multimodal (WADO-RS Render/JPEG, Caching/TTL).
+10. 3D-Readiness: Slice-Metadaten + Sampling-Strategien erfassen.
+11. Longitudinal Context: Time-Delta + Prior Mapping persistieren.
+12. Strukturierte JSON-Outputs + Schema-Validierung vorbereiten.
 
 ## Risiken und Abhaengigkeiten
 

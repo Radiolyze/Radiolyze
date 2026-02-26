@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import type { AIStatus, ImageRef, QAStatus, Series } from '@/types/radiology';
+import type { AIStatus, FindingBox, ImageRef, QAStatus, Series } from '@/types/radiology';
 import type { AnnotationToolId, AllToolId } from '@/types/viewer';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
@@ -19,6 +19,7 @@ import { DicomViewerFrameOverlays } from './DicomViewerFrameOverlays';
 import { ViewerEmptyState } from './ViewerEmptyState';
 import { AnnotationPanel } from './AnnotationPanel';
 import { AnnotationLabelDialog } from './AnnotationLabelDialog';
+import { AIFindingsOverlay } from './AIFindingsOverlay';
 import { exportAnnotations } from '@/services/annotations';
 import type { ViewportState } from '@/types/viewerSync';
 import type { AnnotationCategory, TrainingAnnotation } from '@/types/annotations';
@@ -42,6 +43,8 @@ interface DicomViewerProps {
   requestedFrameIndex?: number | null;
   /** Show annotation panel */
   showAnnotationPanel?: boolean;
+  /** AI-detected bounding-box findings to overlay on the image */
+  findings?: FindingBox[];
 }
 
 type Tool = ViewerToolId;
@@ -55,15 +58,16 @@ export interface ViewerProgress {
   qaStatus: QAStatus;
 }
 
-export function DicomViewer({ 
-  series, 
-  onFrameChange, 
-  progress, 
-  onViewportChange, 
-  syncState, 
-  onImageRefsChange, 
+export function DicomViewer({
+  series,
+  onFrameChange,
+  progress,
+  onViewportChange,
+  syncState,
+  onImageRefsChange,
   requestedFrameIndex,
   showAnnotationPanel = true,
+  findings = [],
 }: DicomViewerProps) {
   const { preferences } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -71,6 +75,7 @@ export function DicomViewer({
   const [zoom, setZoom] = useState(1);
   const [selectedPresetId, setSelectedPresetId] = useState(windowLevelPresets[0].id);
   const [viewerError, setViewerError] = useState<string | null>(null);
+  const [showFindingsOverlay, setShowFindingsOverlay] = useState(true);
 
   const {
     imageIds,
@@ -295,6 +300,9 @@ export function DicomViewer({
         hasStack={hasStack}
         annotationMode={isAnnotationMode}
         onAnnotationModeToggle={handleAnnotationModeToggle}
+        findingsCount={findings.length}
+        showFindingsOverlay={showFindingsOverlay}
+        onFindingsOverlayToggle={() => setShowFindingsOverlay((prev) => !prev)}
       />
 
       {/* Series Info */}
@@ -318,6 +326,10 @@ export function DicomViewer({
       {/* Main Viewer Area */}
       <div className="flex-1 relative bg-viewer">
         <div ref={viewportRef} className="h-full w-full cursor-crosshair" />
+
+        {showFindingsOverlay && findings.length > 0 && hasStack && !isLoading && (
+          <AIFindingsOverlay findings={findings} />
+        )}
 
         <DicomViewerStateOverlay
           isLoading={isLoading}
