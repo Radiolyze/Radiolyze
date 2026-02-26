@@ -3,6 +3,8 @@ import type { ImageRef } from '@/types/radiology';
 
 const INFERENCE_QUEUE_ENDPOINT =
   import.meta.env.VITE_INFERENCE_QUEUE_URL ?? '/api/v1/inference/queue';
+const INFERENCE_LOCALIZE_ENDPOINT =
+  import.meta.env.VITE_INFERENCE_LOCALIZE_URL ?? '/api/v1/inference/localize';
 const INFERENCE_STATUS_ENDPOINT =
   import.meta.env.VITE_INFERENCE_STATUS_URL ?? '/api/v1/inference/status';
 
@@ -12,6 +14,14 @@ export interface InferenceQueuePayload {
   findingsText?: string;
   imageUrls?: string[];
   imageRefs?: ImageRef[];
+  requestedBy?: string;
+  modelVersion?: string;
+}
+
+export interface LocalizePayload {
+  reportId?: string;
+  studyId?: string;
+  imageRef: ImageRef;
   requestedBy?: string;
   modelVersion?: string;
 }
@@ -78,6 +88,24 @@ export const inferenceClient = {
       findings_text: payload.findingsText,
       image_urls: payload.imageUrls,
       image_refs: mapImageRefsToPayload(payload.imageRefs),
+      requested_by: payload.requestedBy,
+      model_version: payload.modelVersion,
+    });
+  },
+  async queueLocalize(payload: LocalizePayload): Promise<InferenceQueueResponse> {
+    const refs = mapImageRefsToPayload([payload.imageRef]);
+    const imageRef = refs?.[0] ?? {
+      study_id: payload.imageRef.studyId,
+      series_id: payload.imageRef.seriesId,
+      instance_id: payload.imageRef.instanceId,
+      frame_index: payload.imageRef.frameIndex,
+      stack_index: payload.imageRef.stackIndex,
+      wado_url: payload.imageRef.wadoUrl,
+    };
+    return apiClient.post<InferenceQueueResponse>(INFERENCE_LOCALIZE_ENDPOINT, {
+      report_id: payload.reportId,
+      study_id: payload.studyId,
+      image_ref: imageRef,
       requested_by: payload.requestedBy,
       model_version: payload.modelVersion,
     });

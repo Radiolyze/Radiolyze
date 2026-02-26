@@ -42,21 +42,13 @@ ReportWorkspace (report.inferenceFindings vorhanden)
 
 **Roadmap:** Backend-Endpunkt für einzelnen Frame (Job-Queue, schnelles Polling).
 
-**Status:** ❌ **Nicht umgesetzt**
+**Status:** ✅ **Umsetzt** (Proposal 2)
 
 **Befund:**
-- Vorhandene Inference-Endpunkte:
-  - `POST /api/v1/inference/queue` – Full-Report-Inferenz
-  - `GET /api/v1/inference/status/{job_id}` – Job-Status
-- Kein Endpunkt `POST /api/v1/inference/localize` vorhanden.
-- `backend/app/api/inference.py` enthält nur `queue_inference` und `inference_status`.
-
-**Erforderliche Änderung:**
-- Neuer Endpunkt `POST /api/v1/inference/localize` mit Payload z.B.:
-  - `report_id`, `image_ref` (oder `series_id`, `frame_index`), optional `study_id`
-- Job in RQ-Queue für Lokalisierungs-Task.
-- Worker-Task für Einzel-Frame-Lokalisierung (MedGemma Bounding-Box).
-- Response: `job_id` für Polling via bestehenden `GET /api/v1/inference/status/{job_id}`.
+- `POST /api/v1/inference/localize` mit `LocalizeRequest` (report_id, study_id, image_ref)
+- `run_localize_job` Task in tasks.py, `generate_localize_findings` in inference_clients
+- Frontend: `inferenceClient.queueLocalize(payload)` in inferenceClient.ts
+- Polling via bestehenden `GET /api/v1/inference/status/{job_id}` (result.findings)
 
 ---
 
