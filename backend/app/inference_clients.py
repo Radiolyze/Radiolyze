@@ -12,8 +12,8 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from .ai_schemas import SCHEMA_VERSION, ImpressionOutput, SummaryOutput
-from .mock_logic import generate_asr_transcript, generate_impression, generate_inference_summary
+from .ai_schemas import SCHEMA_VERSION, FindingBox, ImpressionOutput, LocalizationOutput, SummaryOutput
+from .mock_logic import generate_asr_transcript, generate_impression, generate_inference_summary, generate_localization_findings as _mock_localization
 from .prompts import render_prompt_with_metadata
 
 logger = logging.getLogger(__name__)
@@ -578,6 +578,127 @@ def generate_inference_summary_text(
             text, confidence = generate_inference_summary(findings_text)
             return text, confidence, model_name or "mock-medgemma-0.1", {"provider": "mock", "error": str(exc)}
         raise RuntimeError("vLLM inference failed") from exc
+
+
+def _build_localization_prompt(
+    findings_text: str | None,
+    image_manifest: str | None,
+) -> tuple[str, dict[str, Any]]:
+    return render_prompt_with_metadata(
+        "localization",
+        {
+            "findings_text": (findings_text or "").strip(),
+            "image_manifest": image_manifest or "",
+        },
+    )
+
+
+def _parse_localization_response(raw_text: str) -> tuple[list[FindingBox], dict[str, Any]]:
+    """Parse vLLM response into a list of validated FindingBox objects.
+
+    Handles both wrapped {"findings": [...]} and bare [...] array responses.
+    Invalid individual findings are skipped rather than failing the whole parse.
+    """
+    metadata: dict[str, Any] = {"schema_name": "localization_output", "schema_version": SCHEMA_VERSION}
+    candidate = _strip_code_fences(raw_text)
+
+    # Try object-wrapped response first: {"findings": [...]}
+    obj, parse_error = _parse_json_response(candidate)
+    if obj is None:
+        # Try bare JSON array: [{...}, ...]
+        stripped = candidate.strip()
+        if stripped.startswith("["):
+            try:
+                arr = json.loads(stripped)
+                if isinstance(arr, list):
+                    obj = {"findings": arr}
+                    parse_error = None
+            except json.JSONDecodeError:
+                pass
+
+    if obj is None:
+        metadata["json_parsed"] = False
+        metadata["json_schema_valid"] = False
+        metadata["json_error"] = parse_error or "no_json_object"
+        return [], metadata
+
+    metadata["json_parsed"] = True
+
+    try:
+        output = LocalizationOutput.model_validate(obj)
+    except Exception as exc:
+        metadata["json_schema_valid"] = False
+        metadata["json_error"] = str(exc)
+        return [], metadata
+
+    valid_findings: list[FindingBox] = []
+    skipped = 0
+    from pydantic import ValidationError as _ValidationError
+    for raw_finding in output.findings:
+        if isinstance(raw_finding, FindingBox):
+            valid_findings.append(raw_finding)
+        else:
+            try:
+                valid_findings.append(FindingBox.model_validate(raw_finding))
+            except _ValidationError:
+                skipped += 1
+
+    metadata["json_schema_valid"] = True
+    metadata["findings_count"] = len(valid_findings)
+    if skipped:
+        metadata["findings_skipped"] = skipped
+    return valid_findings, metadata
+
+
+def generate_localization_findings(
+    findings_text: str | None = None,
+    *,
+    image_urls: list[str] | None = None,
+    image_paths: list[str] | None = None,
+    image_refs: list[dict[str, Any]] | None = None,
+) -> tuple[list[dict[str, Any]], str, dict[str, Any]]:
+    """Run MedGemma anatomical localization and return bounding-box findings.
+
+    Returns:
+        findings: list of serialized FindingBox dicts (box_2d, label, confidence)
+        model_version: the model name used
+        metadata: parse + latency metadata for audit logging
+    """
+    has_images = bool(_normalize_list(image_urls) or _normalize_list(image_paths))
+
+    if not has_images or not _env_flag("VLLM_ENABLED", False):
+        mock_findings, _ = _mock_localization(has_images=has_images)
+        return mock_findings, "mock-localization-v1", {"provider": "mock"}
+
+    image_manifest = _build_image_manifest(image_urls, image_paths, image_refs)
+    model_name = _vllm_model_name()
+    try:
+        start_time = time.monotonic()
+        system_prompt, system_meta = render_prompt_with_metadata("system")
+        prompt_text, prompt_meta = _build_localization_prompt(findings_text, image_manifest)
+        raw_text = _vllm_chat_completion(
+            prompt_text,
+            model_name=model_name,
+            system_prompt=system_prompt,
+            image_urls=image_urls,
+            image_paths=image_paths,
+        )
+        findings, parse_metadata = _parse_localization_response(raw_text)
+        latency_ms = int((time.monotonic() - start_time) * 1000)
+        metadata = _compact_metadata({
+            "provider": "vllm",
+            "latency_ms": latency_ms,
+            "prompt": {"system": system_meta, "task": prompt_meta},
+            **parse_metadata,
+        })
+        serialized = [f.model_dump() for f in findings]
+        return serialized, model_name, metadata
+    except Exception as exc:
+        logger.warning("vLLM localization failed: %s", exc)
+        if _env_flag("VLLM_FALLBACK_TO_MOCK", True):
+            mock_findings, _ = _mock_localization(has_images=has_images)
+            return mock_findings, "mock-localization-v1", {"provider": "mock", "error": str(exc)}
+        raise RuntimeError("vLLM localization failed") from exc
 
 
 async def transcribe_audio(

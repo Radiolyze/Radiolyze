@@ -13,15 +13,16 @@ from .db import SessionLocal
 from .mock_logic import utc_now
 from .models import PromptTemplate
 
-PromptType = Literal["system", "summary", "impression"]
+PromptType = Literal["system", "summary", "impression", "localization"]
 PromptSource = Literal["db", "env", "default"]
 
-PROMPT_TYPES: tuple[PromptType, ...] = ("system", "summary", "impression")
+PROMPT_TYPES: tuple[PromptType, ...] = ("system", "summary", "impression", "localization")
 
 PROMPT_ENV_KEYS: dict[PromptType, str] = {
     "system": "VLLM_SYSTEM_PROMPT",
     "summary": "VLLM_IMAGE_SUMMARY_PROMPT",
     "impression": "VLLM_IMAGE_IMPRESSION_PROMPT",
+    "localization": "VLLM_LOCALIZATION_PROMPT",
 }
 
 DEFAULT_PROMPTS: dict[PromptType, str] = {
@@ -64,12 +65,29 @@ DEFAULT_PROMPTS: dict[PromptType, str] = {
         "Findings (optional):\n"
         "{{findings_text}}"
     ),
+    "localization": (
+        "Task: Locate all pathological and anatomical findings visible in this medical image.\n"
+        "For each finding, output a bounding box with coordinates normalized to 0-1000 "
+        "(top-left origin, x = horizontal, y = vertical).\n"
+        "Return a JSON object with a single key \"findings\" containing an array of objects.\n"
+        "Each object must have:\n"
+        "- box_2d: [y_min, x_min, y_max, x_max] (4 integers, each 0-1000)\n"
+        "- label: short descriptive name of the finding in the same language as the findings text (string)\n"
+        "- confidence: certainty score 0.0-1.0 (number, optional)\n"
+        "If no findings are visible, return {\"findings\": []}.\n"
+        "Return only valid JSON. No markdown or code fences.\n\n"
+        "Image manifest:\n"
+        "{{image_manifest}}\n\n"
+        "Findings context (optional):\n"
+        "{{findings_text}}"
+    ),
 }
 
 ALLOWED_VARIABLES: dict[PromptType, set[str]] = {
     "system": set(),
     "summary": {"findings_text", "image_manifest"},
     "impression": {"findings_text", "image_manifest"},
+    "localization": {"findings_text", "image_manifest"},
 }
 
 VARIABLE_PATTERN = re.compile(r"{{\s*([a-zA-Z0-9_]+)\s*}}")

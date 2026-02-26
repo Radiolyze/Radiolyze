@@ -59,6 +59,36 @@ def generate_inference_summary(findings_text: str | None) -> tuple[str, float]:
     return summary, confidence
 
 
+# Plausible chest X-ray findings for mock localization
+# Coordinates: [y_min, x_min, y_max, x_max], normalized 0-1000
+_MOCK_FINDINGS: list[dict] = [
+    {"box_2d": [80, 520, 580, 950], "label": "Rechte Lunge", "confidence": 0.94},
+    {"box_2d": [80, 50, 580, 480], "label": "Linke Lunge", "confidence": 0.93},
+    {"box_2d": [200, 380, 680, 620], "label": "Mediastinum", "confidence": 0.91},
+    {"box_2d": [130, 580, 300, 780], "label": "Rundherd rechts apikal", "confidence": 0.81},
+    {"box_2d": [480, 60, 620, 460], "label": "Basale Atelektase links", "confidence": 0.76},
+    {"box_2d": [500, 520, 640, 900], "label": "Pleuraerguss rechts", "confidence": 0.78},
+    {"box_2d": [650, 250, 780, 750], "label": "Zwerchfell", "confidence": 0.89},
+    {"box_2d": [250, 390, 550, 610], "label": "Herzsilhouette", "confidence": 0.92},
+]
+
+
+def generate_localization_findings(has_images: bool = True) -> tuple[list[dict], float]:
+    """Return mock localization findings for development without vLLM.
+
+    Returns a tuple of (findings, confidence) where findings is a list of
+    dicts with box_2d, label, and confidence keys.
+    """
+    if not has_images:
+        return [], 0.0
+    count = random.randint(2, 4)
+    chosen = random.sample(_MOCK_FINDINGS, min(count, len(_MOCK_FINDINGS)))
+    overall_confidence = round(
+        sum(f["confidence"] for f in chosen) / len(chosen), 2
+    )
+    return chosen, overall_confidence
+
+
 def run_qa_checks(findings_text: str | None, impression_text: str | None) -> tuple[list[QACheck], list[str], list[str], float]:
     findings_text = (findings_text or "").strip()
     impression_text = (impression_text or "").strip()
