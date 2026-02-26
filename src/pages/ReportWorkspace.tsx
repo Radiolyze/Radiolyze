@@ -396,6 +396,7 @@ export const ReportWorkspace = () => {
           onImageRefsChange={handleImageRefsChange}
           onPriorImageRefsChange={handlePriorImageRefsChange}
           evidenceSelection={evidenceSelection}
+          findings={report?.inferenceFindings ?? []}
         />
       }
       rightPanel={

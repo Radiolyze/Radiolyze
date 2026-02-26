@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Columns2, Box, View } from 'lucide-react';
-import type { ImageRef, Series } from '@/types/radiology';
+import type { FindingBox, ImageRef, Series } from '@/types/radiology';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,8 @@ interface ComparisonSingleViewProps {
   evidenceSelection?: { seriesId: string; stackIndex: number } | null;
   priorStudiesCount: number;
   onEnableCompare: () => void;
+  /** AI-detected bounding-box findings to overlay on the image */
+  findings?: FindingBox[];
 }
 
 export function ComparisonSingleView({
@@ -33,6 +35,7 @@ export function ComparisonSingleView({
   evidenceSelection,
   priorStudiesCount,
   onEnableCompare,
+  findings = [],
 }: ComparisonSingleViewProps) {
   const { t } = useTranslation('viewer');
   const [viewerMode, setViewerMode] = useState<ViewerMode>('stack');
@@ -57,6 +60,7 @@ export function ComparisonSingleView({
           onFrameChange={onFrameChange}
           onImageRefsChange={onImageRefsChange}
           requestedFrameIndex={requestedFrameIndex}
+          findings={findings}
         />
       )}
       {viewerMode === 'mpr' && (

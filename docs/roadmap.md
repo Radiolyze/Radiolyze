@@ -63,7 +63,7 @@
 
 - [x] MedGemma Bounding-Box Lokalisierung Pipeline (Backend: Prompt, Parser, DB-Persistenz)
 - [x] AI Findings Overlay (SVG-Overlay, Farbkodierung, Eye/EyeOff-Toggle, Hover-Details)
-- [ ] Index.tsx Verdrahtung: report.inferenceFindings als findings-Prop an DicomViewer durchreichen
+- [x] Index.tsx Verdrahtung: report.inferenceFindings als findings-Prop an DicomViewer durchreichen
 - [ ] On-Demand Frame-Lokalisierung: API-Endpunkt POST /api/v1/inference/localize (einzelner Frame, schnelle Antwort via Job-Polling)
 - [ ] "Frame analysieren"-Button in der DicomViewer-Toolbar (aktuellen Frame an Lokalisierungs-Endpoint senden)
 - [ ] 3D-Readiness: Slice-Order, Spacing, VOI/WL Persistenz
