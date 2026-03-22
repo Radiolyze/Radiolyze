@@ -9,25 +9,33 @@ class ApiBaseModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+# Maximum character lengths for report text fields
+_MAX_FINDINGS_LENGTH = 50_000
+_MAX_IMPRESSION_LENGTH = 20_000
+
+
 class ReportCreateRequest(ApiBaseModel):
-    study_id: str
-    patient_id: str
+    study_id: str = Field(min_length=1, max_length=256)
+    patient_id: str = Field(min_length=1, max_length=256)
     status: str | None = "pending"
-    findings_text: str | None = ""
-    impression_text: str | None = ""
-    report_id: str | None = None
+    findings_text: str | None = Field(default="", max_length=_MAX_FINDINGS_LENGTH)
+    impression_text: str | None = Field(default="", max_length=_MAX_IMPRESSION_LENGTH)
+    report_id: str | None = Field(default=None, max_length=256)
 
 
 class ReportFinalizeRequest(ApiBaseModel):
-    approved_by: str | None = Field(default=None, alias="approvedBy")
-    signature: str | None = None
+    approved_by: str | None = Field(default=None, alias="approvedBy", max_length=256)
+    signature: str | None = Field(default=None, max_length=256)
+
+
+_ALLOWED_REPORT_STATUSES = Literal["pending", "in_progress", "draft", "finalized"]
 
 
 class ReportUpdateRequest(ApiBaseModel):
-    findings_text: str | None = None
-    impression_text: str | None = None
-    status: str | None = None
-    actor_id: str | None = Field(default=None, alias="actorId")
+    findings_text: str | None = Field(default=None, max_length=_MAX_FINDINGS_LENGTH)
+    impression_text: str | None = Field(default=None, max_length=_MAX_IMPRESSION_LENGTH)
+    status: _ALLOWED_REPORT_STATUSES | None = None
+    actor_id: str | None = Field(default=None, alias="actorId", max_length=256)
 
 
 class ReportResponse(ApiBaseModel):

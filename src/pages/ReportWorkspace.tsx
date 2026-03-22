@@ -214,7 +214,7 @@ export const ReportWorkspace = () => {
   );
 
   const handleGenerateImpression = useCallback(async () => {
-    if (!findings || isGenerating) return;
+    if (!findings?.trim() || isGenerating) return;
 
     try {
       const result = await generateImpression(findings, {
@@ -299,18 +299,20 @@ export const ReportWorkspace = () => {
       return;
     }
 
+    let blobUrl: string | null = null;
     try {
       const result = await reportClient.exportStructuredReport(report.id, format);
-      const url = URL.createObjectURL(result.blob);
+      blobUrl = URL.createObjectURL(result.blob);
       const link = document.createElement('a');
-      link.href = url;
+      link.href = blobUrl;
       link.download = result.fileName;
       link.click();
-      URL.revokeObjectURL(url);
       toast.success(`DICOM SR exportiert (${format.toUpperCase()})`);
     } catch (error) {
       console.warn('DICOM SR export failed', error);
       toast.error('DICOM SR Export fehlgeschlagen');
+    } finally {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
     }
   }, [report?.id]);
 

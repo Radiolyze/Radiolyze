@@ -25,6 +25,25 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Orchestrator API", version="0.1.0")
 
+
+# ---------------------------------------------------------------------------
+# Security Headers Middleware
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next) -> Response:
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(self), geolocation=()"
+    csp = os.getenv("CSP_POLICY", "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'")
+    response.headers["Content-Security-Policy"] = csp
+    if os.getenv("ENABLE_HSTS", "").lower() in {"1", "true", "yes"}:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")
 origin_list = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
 if not origin_list:
@@ -64,8 +83,10 @@ import time
 from collections import defaultdict
 
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
+_rate_limit_last_cleanup: float = 0.0
 RATE_LIMIT_WINDOW = 60  # seconds
 RATE_LIMIT_DEFAULT = int(os.getenv("RATE_LIMIT_DEFAULT", "100"))
+RATE_LIMIT_CLEANUP_INTERVAL = 300  # purge stale keys every 5 minutes
 
 # Stricter limits for specific paths
 _PATH_LIMITS: dict[str, int] = {
@@ -78,6 +99,8 @@ _PATH_LIMITS: dict[str, int] = {
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next) -> Response:
+    global _rate_limit_last_cleanup
+
     if request.url.path.startswith("/api/v1/health") or request.url.path.startswith("/api/v1/ws"):
         return await call_next(request)
 
@@ -88,6 +111,13 @@ async def rate_limit_middleware(request: Request, call_next) -> Response:
     limit = _PATH_LIMITS.get(path, RATE_LIMIT_DEFAULT)
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
+
+    # Periodic full cleanup of stale keys to prevent memory leak
+    if now - _rate_limit_last_cleanup > RATE_LIMIT_CLEANUP_INTERVAL:
+        stale_keys = [k for k, v in _rate_limit_store.items() if not v or v[-1] < window_start]
+        for k in stale_keys:
+            del _rate_limit_store[k]
+        _rate_limit_last_cleanup = now
 
     # Clean old entries and check
     _rate_limit_store[key] = [t for t in _rate_limit_store[key] if t > window_start]
@@ -154,7 +184,9 @@ async def on_shutdown() -> None:
 def health() -> dict[str, Any]:
     """Comprehensive health check for all services."""
     from typing import Any
+
     import httpx
+    from sqlalchemy import text
 
     from .db import SessionLocal
     from .queue import get_redis
@@ -164,18 +196,13 @@ def health() -> dict[str, Any]:
     # Database
     try:
         db = SessionLocal()
-        db.execute(db.bind.dialect.do_ping(db.bind) if hasattr(db.bind.dialect, "do_ping") else None)  # type: ignore[arg-type]
-        db.close()
-        services["database"] = {"status": "ok"}
-    except Exception as exc:
         try:
-            db = SessionLocal()
-            from sqlalchemy import text
             db.execute(text("SELECT 1"))
-            db.close()
             services["database"] = {"status": "ok"}
-        except Exception as exc2:
-            services["database"] = {"status": "error", "detail": str(exc2)}
+        finally:
+            db.close()
+    except Exception as exc:
+        services["database"] = {"status": "error", "detail": str(exc)}
 
     # Redis
     try:
@@ -185,39 +212,22 @@ def health() -> dict[str, Any]:
     except Exception as exc:
         services["redis"] = {"status": "error", "detail": str(exc)}
 
-    # vLLM
-    vllm_url = os.getenv("VLLM_BASE_URL", "")
-    if vllm_url:
+    # External service checks
+    def _check_url(name: str, url: str, path: str) -> None:
+        if not url:
+            services[name] = {"status": "disabled"}
+            return
         try:
-            resp = httpx.get(f"{vllm_url}/health", timeout=5)
-            services["vllm"] = {"status": "ok" if resp.status_code == 200 else "degraded"}
+            resp = httpx.get(f"{url}{path}", timeout=5)
+            services[name] = {"status": "ok" if resp.status_code == 200 else "degraded"}
         except Exception as exc:
-            services["vllm"] = {"status": "error", "detail": str(exc)}
-    else:
-        services["vllm"] = {"status": "disabled"}
+            services[name] = {"status": "error", "detail": str(exc)}
 
-    # MedASR
-    medasr_url = os.getenv("MEDASR_BASE_URL", "")
-    if medasr_url:
-        try:
-            resp = httpx.get(f"{medasr_url}/health", timeout=5)
-            services["medasr"] = {"status": "ok" if resp.status_code == 200 else "degraded"}
-        except Exception as exc:
-            services["medasr"] = {"status": "error", "detail": str(exc)}
-    else:
-        services["medasr"] = {"status": "disabled"}
+    _check_url("vllm", os.getenv("VLLM_BASE_URL", ""), "/health")
+    _check_url("medasr", os.getenv("MEDASR_BASE_URL", ""), "/health")
 
-    # Orthanc
     orthanc_url = os.getenv("DICOM_WEB_BASE_URL", "")
-    if orthanc_url:
-        try:
-            base = orthanc_url.replace("/dicom-web", "")
-            resp = httpx.get(f"{base}/system", timeout=5)
-            services["orthanc"] = {"status": "ok" if resp.status_code == 200 else "degraded"}
-        except Exception as exc:
-            services["orthanc"] = {"status": "error", "detail": str(exc)}
-    else:
-        services["orthanc"] = {"status": "disabled"}
+    _check_url("orthanc", orthanc_url.replace("/dicom-web", "") if orthanc_url else "", "/system")
 
     overall = "ok"
     for svc in services.values():

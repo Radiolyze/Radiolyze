@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
@@ -207,6 +208,8 @@ async def finalize_report(
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+    if report.status == "finalized":
+        raise HTTPException(status_code=409, detail="Report already finalized")
 
     now = utc_now()
     approver = payload.approved_by or payload.signature
@@ -276,9 +279,12 @@ async def asr_transcript(
     report_id: str | None = Form(default=None),
     db: Session = Depends(get_db),
 ) -> ASRResponse:
-    content = await file.read()
+    max_audio_size = int(os.environ.get("ASR_MAX_FILE_SIZE", str(25 * 1024 * 1024)))  # 25 MB default
+    content = await file.read(max_audio_size + 1)
     if not content:
         raise HTTPException(status_code=400, detail="Empty audio payload")
+    if len(content) > max_audio_size:
+        raise HTTPException(status_code=413, detail=f"Audio file too large (max {max_audio_size // (1024*1024)} MB)")
     try:
         text, confidence, model_name, metadata = await transcribe_audio(
             content=content,

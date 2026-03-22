@@ -25,6 +25,29 @@ from ..utils.inference import build_image_metadata
 from ..utils.time import format_datetime
 from ..ws_manager import broadcast_status
 
+# Allowed base directories for image_paths (prevents path traversal)
+_ALLOWED_IMAGE_DIRS = [
+    os.getenv("IMAGE_STORAGE_DIR", "/data/images"),
+    "/tmp/dicom",
+]
+
+
+def _validate_image_paths(paths: list[str]) -> list[str]:
+    """Reject paths that escape allowed directories (path traversal prevention)."""
+    if not paths:
+        return []
+    from pathlib import Path
+    validated: list[str] = []
+    for raw_path in paths:
+        resolved = str(Path(raw_path).resolve())
+        if not any(resolved.startswith(allowed) for allowed in _ALLOWED_IMAGE_DIRS):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Image path not in allowed directory: {raw_path}",
+            )
+        validated.append(resolved)
+    return validated
+
 router = APIRouter()
 
 
@@ -77,7 +100,7 @@ async def queue_inference(
     study_id = payload.study_id or (report.study_id if report else None)
     findings_text = payload.findings_text or (report.findings_text if report else None)
     image_urls = payload.image_urls or []
-    image_paths = payload.image_paths or []
+    image_paths = _validate_image_paths(payload.image_paths or [])
     image_refs = [ref.model_dump() for ref in (payload.image_refs or [])]
     model_version = payload.model_version or _get_model_version()
     input_hash = compute_input_hash(study_id, findings_text, image_urls, image_paths, image_refs)
@@ -258,6 +281,19 @@ async def queue_localize(
 def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceStatusResponse:
     job_record = db.get(InferenceJob, job_id)
     if job_record:
+        # Detect stuck jobs: started but no completion within timeout
+        if job_record.status in ("queued", "started") and job_record.queued_at:
+            from datetime import datetime, timezone
+            timeout_seconds = _get_inference_job_timeout()
+            now = datetime.now(timezone.utc)
+            queued_at = job_record.queued_at if job_record.queued_at.tzinfo else job_record.queued_at.replace(tzinfo=timezone.utc)
+            elapsed = (now - queued_at).total_seconds()
+            if elapsed > timeout_seconds:
+                job_record.status = "failed"
+                job_record.error_message = f"Job timed out after {timeout_seconds}s"
+                job_record.completed_at = utc_now()
+                db.commit()
+
         result = None
         if job_record.status == "finished":
             image_refs = None
