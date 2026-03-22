@@ -28,10 +28,13 @@ class ReportFinalizeRequest(ApiBaseModel):
     signature: str | None = Field(default=None, max_length=256)
 
 
+_ALLOWED_REPORT_STATUSES = Literal["pending", "in_progress", "draft", "finalized"]
+
+
 class ReportUpdateRequest(ApiBaseModel):
     findings_text: str | None = Field(default=None, max_length=_MAX_FINDINGS_LENGTH)
     impression_text: str | None = Field(default=None, max_length=_MAX_IMPRESSION_LENGTH)
-    status: str | None = None
+    status: _ALLOWED_REPORT_STATUSES | None = None
     actor_id: str | None = Field(default=None, alias="actorId", max_length=256)
 
 
