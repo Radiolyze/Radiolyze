@@ -5,6 +5,7 @@ import json
 import logging
 import mimetypes
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,13 @@ from .mock_logic import generate_asr_transcript, generate_impression, generate_i
 from .prompts import render_prompt_with_metadata
 
 logger = logging.getLogger(__name__)
+
+_CRED_RE = re.compile(r"(https?://)([^:]+:[^@]+)@")
+
+
+def _redact_url(url: str) -> str:
+    """Replace embedded user:pass in URLs with ***:***."""
+    return _CRED_RE.sub(r"\1***:***@", url)
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
@@ -367,7 +375,7 @@ def _vllm_chat_completion(
         "temperature": _env_float("VLLM_TEMPERATURE", 0.1),
         "top_p": _env_float("VLLM_TOP_P", 0.9),
     }
-    logger.info("vLLM request to %s with model=%s, has_images=%s", url, model_name, has_images)
+    logger.info("vLLM request to %s with model=%s, has_images=%s", _redact_url(url), model_name, has_images)
     with httpx.Client(timeout=_vllm_timeout()) as client:
         response = client.post(url, json=payload, headers=_vllm_headers())
         response.raise_for_status()

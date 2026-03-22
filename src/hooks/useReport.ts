@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { AIStatus, ImageRef, QACheck, QAStatus, Report } from '@/types/radiology';
 import { mockAIImpressions, mockQAChecks } from '@/data/mockData';
+import { ApiError } from '@/services/apiClient';
 import { impressionClient } from '@/services/impressionClient';
 import { inferenceClient } from '@/services/inferenceClient';
 import { qaClient } from '@/services/qaClient';
@@ -197,6 +198,13 @@ export function useReport(initialReport?: Report): UseReportReturn {
       succeeded = true;
       return summary;
     } catch (error) {
+      // Only fall back to impression service for transient/network errors.
+      // Client errors (4xx) indicate a bug or bad input — don't mask them.
+      const isClientError = error instanceof ApiError && error.status >= 400 && error.status < 500;
+      if (isClientError) {
+        throw error;
+      }
+
       console.warn('Inference queue failed, falling back to impression service.', error);
       setReport(prev => prev ? {
         ...prev,
