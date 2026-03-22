@@ -157,9 +157,14 @@ async def on_startup() -> None:
     db = SessionLocal()
     try:
         if db.query(User).count() == 0:
+            admin_password = os.environ.get("ADMIN_PASSWORD", "admin")
+            if admin_password == "admin":
+                logger.warning(
+                    "Using default admin password. Set ADMIN_PASSWORD env var for production."
+                )
             admin = User(
-                username="admin",
-                password_hash=hash_password("admin"),
+                username=os.environ.get("ADMIN_USERNAME", "admin"),
+                password_hash=hash_password(admin_password),
                 role="admin",
                 is_active=True,
                 created_at=utc_now(),

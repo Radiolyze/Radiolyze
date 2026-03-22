@@ -135,6 +135,13 @@ export const ReportWorkspace = () => {
     });
   }, [enhancedQueueItems, setReport]);
 
+  // Sync local text state when the report is updated externally (e.g. via WebSocket)
+  useEffect(() => {
+    if (!report) return;
+    setFindings(prev => prev !== report.findingsText ? report.findingsText : prev);
+    setImpression(prev => prev !== report.impressionText ? report.impressionText : prev);
+  }, [report?.findingsText, report?.impressionText]);
+
   // Update report when queue item changes
   const handleSelectQueueItem = useCallback((item: QueueItem) => {
     setSelectedQueueItem(item);
@@ -270,7 +277,10 @@ export const ReportWorkspace = () => {
 
   const handleApprove = useCallback(async (signature?: string) => {
     const name = signature?.trim();
-    if (!name) return;
+    if (!name) {
+      toast.error('Bitte Name/Unterschrift eingeben');
+      return;
+    }
 
     try {
       await approveReport(name);

@@ -7,6 +7,12 @@ const SR_EXPORT_ENDPOINT = import.meta.env.VITE_SR_EXPORT_URL ?? '/api/v1/report
 
 const buildUrl = (path: string) => new URL(path, API_BASE_URL || window.location.origin).toString();
 
+/** Build auth headers matching apiClient's pattern. */
+const authHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('medgemma-auth-token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const getFileNameFromDisposition = (value: string | null) => {
   if (!value) return null;
   const match = value.match(/filename="?([^";]+)"?/i);
@@ -121,6 +127,7 @@ export const reportClient = {
       buildUrl(`${SR_EXPORT_ENDPOINT}/${reportId}/export-sr?format=${format}`),
       {
         method: 'GET',
+        headers: authHeaders(),
       }
     );
 
@@ -144,7 +151,7 @@ export const reportClient = {
   async exportPdf(reportId: string): Promise<PdfExportResult> {
     const response = await fetch(
       buildUrl(`${REPORTS_ENDPOINT}/${reportId}/export-pdf`),
-      { method: 'GET' }
+      { method: 'GET', headers: authHeaders() }
     );
     if (!response.ok) {
       const message = await response.text();

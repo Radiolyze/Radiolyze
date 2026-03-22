@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { AIStatus, ImageRef, QACheck, QAStatus, Report } from '@/types/radiology';
 import { mockAIImpressions, mockQAChecks } from '@/data/mockData';
+import { ApiError } from '@/services/apiClient';
 import { impressionClient } from '@/services/impressionClient';
 import { inferenceClient } from '@/services/inferenceClient';
 import { qaClient } from '@/services/qaClient';
@@ -54,6 +55,7 @@ interface AnalyzeImagesResult {
 interface UseReportReturn {
   report: Report | null;
   isLoading: boolean;
+  error: string | null;
   qaChecks: QACheck[];
   updateFindings: (text: string) => Promise<void>;
   updateImpression: (text: string) => Promise<void>;
@@ -71,10 +73,12 @@ interface UseReportReturn {
 export function useReport(initialReport?: Report): UseReportReturn {
   const [report, setReport] = useState<Report | null>(initialReport || null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [qaChecks, setQaChecks] = useState<QACheck[]>(allowMockFallback ? mockQAChecks : []);
 
   const updateFindings = useCallback(async (text: string) => {
     setIsLoading(true);
+    setError(null);
 
     try {
       if (report?.id) {
@@ -90,6 +94,10 @@ export function useReport(initialReport?: Report): UseReportReturn {
           status: 'draft',
         } : null);
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update findings';
+      setError(message);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -97,6 +105,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
 
   const updateImpression = useCallback(async (text: string) => {
     setIsLoading(true);
+    setError(null);
 
     try {
       if (report?.id) {
@@ -111,6 +120,10 @@ export function useReport(initialReport?: Report): UseReportReturn {
           updatedAt: new Date().toISOString(),
         } : null);
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update impression';
+      setError(message);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -197,6 +210,13 @@ export function useReport(initialReport?: Report): UseReportReturn {
       succeeded = true;
       return summary;
     } catch (error) {
+      // Only fall back to impression service for transient/network errors.
+      // Client errors (4xx) indicate a bug or bad input — don't mask them.
+      const isClientError = error instanceof ApiError && error.status >= 400 && error.status < 500;
+      if (isClientError) {
+        throw error;
+      }
+
       console.warn('Inference queue failed, falling back to impression service.', error);
       setReport(prev => prev ? {
         ...prev,
@@ -417,10 +437,15 @@ export function useReport(initialReport?: Report): UseReportReturn {
   const approveReport = useCallback(async (signature: string) => {
     if (!report?.id) return;
     setIsLoading(true);
+    setError(null);
 
     try {
       const response = await reportClient.finalizeReport(report.id, signature);
       setReport(prev => (prev ? mapReportResponse(response, prev) : mapReportResponse(response)));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to approve report';
+      setError(message);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -429,6 +454,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
   return {
     report,
     isLoading,
+    error,
     qaChecks,
     updateFindings,
     updateImpression,

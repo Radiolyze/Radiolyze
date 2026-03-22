@@ -341,11 +341,16 @@ async def generate_impression_endpoint(
     payload: ImpressionRequest,
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
+    import asyncio
     try:
-        text, confidence, model_name, metadata = generate_impression_text(
-            payload.findings_text,
-            image_urls=payload.image_urls,
-            image_paths=payload.image_paths,
+        loop = asyncio.get_running_loop()
+        text, confidence, model_name, metadata = await loop.run_in_executor(
+            None,
+            lambda: generate_impression_text(
+                payload.findings_text,
+                image_urls=payload.image_urls,
+                image_paths=payload.image_paths,
+            ),
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -354,11 +359,15 @@ async def generate_impression_endpoint(
     report = None
     if payload.report_id:
         report = db.get(Report, payload.report_id)
-        if report:
-            report.impression_text = text
-            report.updated_at = generated_at
-            if report.status in {"pending", "in_progress"}:
-                report.status = "draft"
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Report {payload.report_id} not found; impression was generated but not persisted",
+            )
+        report.impression_text = text
+        report.updated_at = generated_at
+        if report.status in {"pending", "in_progress"}:
+            report.status = "draft"
         input_hash = compute_input_hash(
             report.study_id if report else None,
             payload.findings_text,

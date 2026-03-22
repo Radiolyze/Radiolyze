@@ -134,13 +134,15 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
-        if job_id:
-            job = db.get(InferenceJob, job_id)
-            if job:
-                job.status = "failed"
-                job.completed_at = utc_now()
-                job.error_message = str(exc)
+        try:
+            failed_job = db.get(InferenceJob, job_id) if job_id else None
+            if failed_job:
+                failed_job.status = "failed"
+                failed_job.completed_at = utc_now()
+                failed_job.error_message = str(exc)[:1000]
                 db.commit()
+        except Exception:
+            logger.exception("Failed to update job %s status to failed", job_id)
 
         publish_report_status(report_id, {"aiStatus": "error"})
 
@@ -230,7 +232,8 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
         job.status = "finished"
         job.completed_at = completed_at
         job.summary_text = summary
-        job.confidence = 0.0
+        confidences = [f.get("confidence", 0.0) for f in findings if isinstance(f.get("confidence"), (int, float))]
+        job.confidence = sum(confidences) / len(confidences) if confidences else 0.0
         job.model_version = resolved_model
         job.metadata_json = {
             **(job.metadata_json or {}),

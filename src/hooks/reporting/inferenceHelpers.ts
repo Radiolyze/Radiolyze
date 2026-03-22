@@ -299,7 +299,7 @@ const mapJobStatusToAiStatus = (status?: string): AIStatus | null => {
 };
 
 export const pollInferenceResult = async (jobId: string, onStatus?: (status: AIStatus) => void) => {
-  const timeoutMs = 30000;
+  const timeoutMs = 120_000; // 2 minutes — allows for queue wait + inference processing
   const pollIntervalMs = 1500;
   const startedAt = Date.now();
   let lastStatus: AIStatus | null = null;
