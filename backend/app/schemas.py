@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .utils.sanitize import (
+    MAX_COMMENT_LENGTH,
+    MAX_FINDINGS_LENGTH,
+    MAX_IMPRESSION_LENGTH,
+    sanitize_medical_text,
+)
 
 
 class ApiBaseModel(BaseModel):
@@ -17,6 +24,16 @@ class ReportCreateRequest(ApiBaseModel):
     impression_text: str | None = ""
     report_id: str | None = None
 
+    @field_validator("findings_text", mode="before")
+    @classmethod
+    def sanitize_findings(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_FINDINGS_LENGTH)
+
+    @field_validator("impression_text", mode="before")
+    @classmethod
+    def sanitize_impression(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_IMPRESSION_LENGTH)
+
 
 class ReportFinalizeRequest(ApiBaseModel):
     approved_by: str | None = Field(default=None, alias="approvedBy")
@@ -28,6 +45,17 @@ class ReportUpdateRequest(ApiBaseModel):
     impression_text: str | None = None
     status: str | None = None
     actor_id: str | None = Field(default=None, alias="actorId")
+    structured_data: dict[str, Any] | None = Field(default=None, alias="structuredData")
+
+    @field_validator("findings_text", mode="before")
+    @classmethod
+    def sanitize_findings(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_FINDINGS_LENGTH)
+
+    @field_validator("impression_text", mode="before")
+    @classmethod
+    def sanitize_impression(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_IMPRESSION_LENGTH)
 
 
 class ReportResponse(ApiBaseModel):
@@ -43,6 +71,7 @@ class ReportResponse(ApiBaseModel):
     approved_by: str | None = None
     qa_status: str
     qa_warnings: list[str]
+    structured_data: dict[str, Any] | None = Field(default=None, alias="structuredData")
     inference_status: str | None = None
     inference_summary: str | None = None
     inference_confidence: float | None = None
@@ -224,10 +253,20 @@ class PeerReviewRequest(ApiBaseModel):
     assigned_to: str | None = Field(default=None, alias="assignedTo")
     comment: str | None = None
 
+    @field_validator("comment", mode="before")
+    @classmethod
+    def sanitize_comment(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_COMMENT_LENGTH)
+
 
 class PeerReviewSubmitRequest(ApiBaseModel):
     review_comment: str = Field(alias="reviewComment")
     decision: Literal["agree", "disagree", "revise"] = "agree"
+
+    @field_validator("review_comment", mode="before")
+    @classmethod
+    def sanitize_review_comment(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_COMMENT_LENGTH)
 
 
 class PeerReviewResponse(ApiBaseModel):

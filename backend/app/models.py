@@ -35,6 +35,8 @@ class Report(Base):
     approved_by: Mapped[str | None] = mapped_column(String, nullable=True)
     qa_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
     qa_warnings: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    # Structured data from field-based reporting templates (JSON key-value pairs)
+    structured_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class ReportRevision(Base):
