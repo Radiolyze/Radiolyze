@@ -56,8 +56,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/Common/EmptyState';
 import { useWebSocket, ReportStatusEvent } from '@/hooks/useWebSocket';
 import type { ReportStatus, QAStatus } from '@/types/radiology';
 import { reportClient, type ReportResponsePayload } from '@/services/reportClient';
@@ -667,23 +669,31 @@ export default function Batch() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading && (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
-                        <RefreshCw className="h-8 w-8 mx-auto mb-3 animate-spin" />
-                        <p>{t('table.loading')}</p>
-                      </TableCell>
+                  {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={`skel-${i}`}>
+                      <TableCell><Skeleton className="h-4 w-4 rounded" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-10" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
                     </TableRow>
-                  )}
+                  ))}
                   {errorMessage && !isLoading && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12 text-destructive">
-                        <XCircle className="h-8 w-8 mx-auto mb-3" />
-                        <p>{errorMessage}</p>
+                      <TableCell colSpan={9}>
+                        <EmptyState
+                          icon={XCircle}
+                          title={errorMessage}
+                          description="Bitte versuchen Sie es erneut oder kontaktieren Sie den Support."
+                        />
                       </TableCell>
                     </TableRow>
                   )}
-                  {filteredReports.map((report) => {
+                  {filteredReports.map((report, index) => {
                     const statusConf = statusConfig[report.status];
                     const qaConf = qaStatusConfig[report.qaStatus];
                     const priorityConf = priorityConfig[report.priority];
@@ -693,9 +703,10 @@ export default function Batch() {
                       <TableRow
                         key={report.id}
                         className={cn(
-                          'cursor-pointer',
+                          'cursor-pointer transition-colors animate-fade-in',
                           isSelected && 'bg-accent'
                         )}
+                        style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                         onClick={() => handleSelectOne(report.id)}
                       >
                         <TableCell onClick={(e) => e.stopPropagation()}>
@@ -751,9 +762,14 @@ export default function Batch() {
 
                   {filteredReports.length === 0 && !isLoading && !errorMessage && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12">
-                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                        <p className="text-muted-foreground">{t('table.noResults')}</p>
+                      <TableCell colSpan={9}>
+                        <EmptyState
+                          icon={FileText}
+                          title={t('table.noResults')}
+                          description={searchQuery || statusFilter !== 'all' || modalityFilter !== 'all'
+                            ? 'Passen Sie die Filter an um mehr Ergebnisse zu sehen.'
+                            : 'Es sind noch keine Reports vorhanden.'}
+                        />
                       </TableCell>
                     </TableRow>
                   )}
