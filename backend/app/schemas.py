@@ -187,6 +187,16 @@ class PromptUpdateRequest(ApiBaseModel):
     actor_id: str | None = Field(default=None, alias="actorId")
 
 
+class ReportRevisionResponse(ApiBaseModel):
+    id: str
+    report_id: str
+    findings_text: str
+    impression_text: str
+    changed_by: str | None = None
+    changed_at: str
+    change_reason: str | None = None
+
+
 class AuditEventRequest(ApiBaseModel):
     event_type: str = Field(alias="eventType")
     actor_id: str | None = Field(default=None, alias="actorId")

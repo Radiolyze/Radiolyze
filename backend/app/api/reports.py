@@ -9,7 +9,7 @@ from ..audit import add_audit_event
 from ..deps import get_db
 from ..inference_clients import generate_impression_text, transcribe_audio
 from ..mock_logic import run_qa_checks, utc_now
-from ..models import InferenceJob, QACheckResult, Report
+from ..models import InferenceJob, QACheckResult, Report, ReportRevision
 from ..schemas import (
     ASRResponse,
     ImpressionRequest,
@@ -19,6 +19,7 @@ from ..schemas import (
     ReportCreateRequest,
     ReportFinalizeRequest,
     ReportResponse,
+    ReportRevisionResponse,
     ReportUpdateRequest,
 )
 from ..sr import build_sr_export
@@ -131,6 +132,10 @@ async def update_report(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
+    # Capture old state for revision
+    old_findings = report.findings_text
+    old_impression = report.impression_text
+
     updated_fields: list[str] = []
     if payload.findings_text is not None:
         report.findings_text = payload.findings_text
@@ -144,6 +149,17 @@ async def update_report(
 
     if updated_fields:
         now = utc_now()
+
+        # Create revision snapshot of previous state
+        revision = ReportRevision(
+            report_id=report_id,
+            findings_text=old_findings,
+            impression_text=old_impression,
+            changed_by=payload.actor_id,
+            changed_at=now,
+        )
+        db.add(revision)
+
         report.updated_at = now
         if payload.status is None and report.status in {"pending", "in_progress"}:
             report.status = "draft"
@@ -379,7 +395,14 @@ async def generate_impression_endpoint(
 
 @router.post("/api/v1/reports/qa-check", response_model=QAResponse)
 async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QAResponse:
-    checks, warnings, failures, score = run_qa_checks(payload.findings_text, payload.impression_text)
+    # Use configurable rules if any exist, otherwise fall back to hardcoded logic
+    from ..models import QARule
+    from ..qa_engine import evaluate_rules
+    active_rules = db.query(QARule).filter(QARule.is_active == True).all()
+    if active_rules:
+        checks, warnings, failures, score = evaluate_rules(active_rules, payload.findings_text, payload.impression_text)
+    else:
+        checks, warnings, failures, score = run_qa_checks(payload.findings_text, payload.impression_text)
     passes = len(failures) == 0
     status = "pass"
     if failures:
@@ -441,4 +464,68 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
         warnings=warnings,
         quality_score=score,
         checks=checks,
+    )
+
+
+@router.get("/api/v1/reports/{report_id}/revisions", response_model=list[ReportRevisionResponse])
+def list_revisions(
+    report_id: str,
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+) -> list[ReportRevisionResponse]:
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    revisions = (
+        db.query(ReportRevision)
+        .filter(ReportRevision.report_id == report_id)
+        .order_by(ReportRevision.changed_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        ReportRevisionResponse(
+            id=r.id,
+            report_id=r.report_id,
+            findings_text=r.findings_text,
+            impression_text=r.impression_text,
+            changed_by=r.changed_by,
+            changed_at=r.changed_at,
+            change_reason=r.change_reason,
+        )
+        for r in revisions
+    ]
+
+
+@router.get("/api/v1/reports/{report_id}/export-pdf")
+def export_pdf(
+    report_id: str,
+    actor_id: str | None = None,
+    db: Session = Depends(get_db),
+) -> Response:
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    from ..pdf_export import build_pdf_export
+    try:
+        pdf_bytes, filename = build_pdf_export(report)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+
+    add_audit_event(
+        db,
+        event_type="report_exported",
+        actor_id=actor_id or report.approved_by,
+        report_id=report.id,
+        study_id=report.study_id,
+        metadata={"format": "pdf", "file_name": filename},
+        source="api",
+    )
+    db.commit()
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

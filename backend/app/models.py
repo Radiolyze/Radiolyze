@@ -9,6 +9,17 @@ def _new_uuid() -> str:
     return str(uuid.uuid4())
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    username: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    role: Mapped[str] = mapped_column(String, nullable=False, default="radiologist")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
 class Report(Base):
     __tablename__ = "reports"
 
@@ -26,6 +37,18 @@ class Report(Base):
     qa_warnings: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
 
+class ReportRevision(Base):
+    __tablename__ = "report_revisions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    report_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    findings_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    impression_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    changed_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    changed_at: Mapped[str] = mapped_column(String, nullable=False)
+    change_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
 class QACheckResult(Base):
     __tablename__ = "qa_results"
 
@@ -37,6 +60,20 @@ class QACheckResult(Base):
     failures: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     quality_score: Mapped[float | None] = mapped_column(nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class QARule(Base):
+    __tablename__ = "qa_rules"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    rule_type: Mapped[str] = mapped_column(String, nullable=False)
+    config_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    severity: Mapped[str] = mapped_column(String, nullable=False, default="warn")
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)
 
 
 class AuditEvent(Base):

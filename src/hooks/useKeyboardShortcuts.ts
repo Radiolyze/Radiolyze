@@ -11,6 +11,15 @@ interface ShortcutHandlers {
   onMeasureTool?: () => void;
   onResetView?: () => void;
   onToggleEdit?: () => void;
+  onQACheck?: () => void;
+  onNextCase?: () => void;
+  onToggleDictation?: () => void;
+  onPauseDictation?: () => void;
+  onToggleCine?: () => void;
+  onNextSeries?: () => void;
+  onPrevSeries?: () => void;
+  onFocusFindings?: () => void;
+  onFocusImpression?: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
@@ -23,9 +32,10 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       event.target instanceof HTMLInputElement ||
       event.target instanceof HTMLTextAreaElement
     ) {
-      const allowedKeys = new Set(['s', 'm', 'e', 'Enter']);
+      const allowedKeys = new Set(['s', 'm', 'e', 'Enter', 'q']);
       if (!(modKey && allowedKeys.has(key))) {
-        return;
+        // Allow F-keys anywhere
+        if (!key.startsWith('F')) return;
       }
     }
 
@@ -57,7 +67,35 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       return;
     }
 
-    // Arrow keys for frame navigation (without modifier)
+    // Ctrl+Q: Run QA Check
+    if (modKey && key === 'q') {
+      event.preventDefault();
+      handlers.onQACheck?.();
+      return;
+    }
+
+    // Ctrl+N: Next Case in Queue
+    if (modKey && key === 'n') {
+      event.preventDefault();
+      handlers.onNextCase?.();
+      return;
+    }
+
+    // F2: Start/Stop Dictation
+    if (key === 'F2') {
+      event.preventDefault();
+      handlers.onToggleDictation?.();
+      return;
+    }
+
+    // F3: Pause/Resume Dictation
+    if (key === 'F3') {
+      event.preventDefault();
+      handlers.onPauseDictation?.();
+      return;
+    }
+
+    // Arrow keys and tool shortcuts (without modifier)
     if (!modKey && !shiftKey) {
       switch (key) {
         case 'ArrowUp':
@@ -84,7 +122,6 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
           break;
         case 'm':
         case 'M':
-          // Only if not Ctrl+M
           if (!modKey) {
             event.preventDefault();
             handlers.onMeasureTool?.();
@@ -95,6 +132,40 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
           event.preventDefault();
           handlers.onResetView?.();
           break;
+        case ' ':
+          event.preventDefault();
+          handlers.onToggleCine?.();
+          break;
+      }
+    }
+
+    // PageUp/PageDown: Series navigation
+    if (key === 'PageUp') {
+      event.preventDefault();
+      handlers.onPrevSeries?.();
+    }
+    if (key === 'PageDown') {
+      event.preventDefault();
+      handlers.onNextSeries?.();
+    }
+
+    // Tab: Switch between findings/impression (only without modifier, outside text areas)
+    if (key === 'Tab' && !modKey && !shiftKey) {
+      if (
+        !(event.target instanceof HTMLInputElement) &&
+        !(event.target instanceof HTMLTextAreaElement)
+      ) {
+        event.preventDefault();
+        handlers.onFocusFindings?.();
+      }
+    }
+    if (key === 'Tab' && !modKey && shiftKey) {
+      if (
+        !(event.target instanceof HTMLInputElement) &&
+        !(event.target instanceof HTMLTextAreaElement)
+      ) {
+        event.preventDefault();
+        handlers.onFocusImpression?.();
       }
     }
   }, [handlers]);

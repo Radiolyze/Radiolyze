@@ -64,6 +64,21 @@ interface ReportListParams {
   offset?: number;
 }
 
+export interface ReportRevisionPayload {
+  id: string;
+  report_id: string;
+  findings_text: string;
+  impression_text: string;
+  changed_by: string | null;
+  changed_at: string;
+  change_reason: string | null;
+}
+
+export interface PdfExportResult {
+  blob: Blob;
+  fileName: string;
+}
+
 export const reportClient = {
   async getReport(reportId: string): Promise<ReportResponsePayload> {
     return apiClient.get<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}`);
@@ -122,5 +137,23 @@ export const reportClient = {
       `report-${reportId}-sr.${format === 'dicom' ? 'dcm' : 'json'}`;
 
     return { blob, fileName, contentType };
+  },
+  async getRevisions(reportId: string): Promise<ReportRevisionPayload[]> {
+    return apiClient.get<ReportRevisionPayload[]>(`${REPORTS_ENDPOINT}/${reportId}/revisions`);
+  },
+  async exportPdf(reportId: string): Promise<PdfExportResult> {
+    const response = await fetch(
+      buildUrl(`${REPORTS_ENDPOINT}/${reportId}/export-pdf`),
+      { method: 'GET' }
+    );
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || 'PDF export failed');
+    }
+    const blob = await response.blob();
+    const fileName =
+      getFileNameFromDisposition(response.headers.get('content-disposition')) ??
+      `report-${reportId}.pdf`;
+    return { blob, fileName };
   },
 };
