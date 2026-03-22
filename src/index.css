@@ -144,6 +144,32 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
+  /* Micro-interactions: subtle press feedback on all interactive elements */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    transition: opacity 0.15s ease, transform 0.1s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not(:disabled):active {
+    transform: scale(0.97);
+  }
+
+  /* Smooth transitions for badges and status indicators */
+  [class*="badge"],
+  [class*="status-"] {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+
+  /* Input focus glow */
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.4);
+    border-color: hsl(var(--ring) / 0.8);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+
   /* Custom scrollbar for radiology UI */
   ::-webkit-scrollbar {
     width: 8px;
