@@ -47,8 +47,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const connect = useCallback(() => {
     if (clientRef.current) return;
 
-    const wsUrl = import.meta.env.VITE_WS_URL || 
+    const authToken = localStorage.getItem('medgemma-auth-token');
+    const baseWsUrl = import.meta.env.VITE_WS_URL ||
       `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1/ws`;
+    const wsUrl = authToken ? `${baseWsUrl}?token=${encodeURIComponent(authToken)}` : baseWsUrl;
 
     clientRef.current = createWsClient({
       url: wsUrl,

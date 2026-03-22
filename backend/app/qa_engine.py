@@ -101,3 +101,69 @@ def evaluate_rules(
     score = round((passed_count / total) * 100, 1)
 
     return checks, warnings, failures, score
+
+
+# ---------------------------------------------------------------------------
+# Critical Finding Detection
+# ---------------------------------------------------------------------------
+
+# Default keywords that indicate a critical finding requiring immediate
+# communication to the referring physician (configurable via QA rules with
+# rule_type="critical_finding").
+_DEFAULT_CRITICAL_PATTERNS: list[dict[str, str]] = [
+    {"keyword": "pneumothorax", "finding_type": "Pneumothorax"},
+    {"keyword": "lungenembolie", "finding_type": "Lungenembolie"},
+    {"keyword": "pulmonary embolism", "finding_type": "Pulmonary Embolism"},
+    {"keyword": "aortendissektion", "finding_type": "Aortendissektion"},
+    {"keyword": "aortic dissection", "finding_type": "Aortic Dissection"},
+    {"keyword": "intrakranielle blutung", "finding_type": "Intrakranielle Blutung"},
+    {"keyword": "intracranial hemorrhage", "finding_type": "Intracranial Hemorrhage"},
+    {"keyword": "schlaganfall", "finding_type": "Schlaganfall"},
+    {"keyword": "stroke", "finding_type": "Stroke"},
+    {"keyword": "spannungspneumothorax", "finding_type": "Spannungspneumothorax"},
+    {"keyword": "tension pneumothorax", "finding_type": "Tension Pneumothorax"},
+    {"keyword": "perikarderguss", "finding_type": "Perikarderguss"},
+    {"keyword": "pericardial effusion", "finding_type": "Pericardial Effusion"},
+    {"keyword": "freie luft", "finding_type": "Freie abdominelle Luft"},
+    {"keyword": "free air", "finding_type": "Free Abdominal Air"},
+]
+
+
+def detect_critical_findings(
+    findings_text: str,
+    impression_text: str,
+    rules: list[QARule] | None = None,
+) -> list[dict[str, str]]:
+    """Return a list of detected critical findings from findings/impression text.
+
+    Each item: {"finding_type": ..., "severity": ..., "matched_text": ...}
+    """
+    combined = f"{findings_text or ''} {impression_text or ''}".lower()
+    results: list[dict[str, str]] = []
+
+    # Check DB-configured critical finding rules
+    if rules:
+        for rule in rules:
+            if rule.rule_type != "critical_finding" or not rule.is_active:
+                continue
+            keyword = rule.config_json.get("keyword", "").lower()
+            if keyword and keyword in combined:
+                results.append({
+                    "finding_type": rule.name,
+                    "severity": rule.severity or "critical",
+                    "matched_text": keyword,
+                })
+
+    # Check default patterns
+    for pattern in _DEFAULT_CRITICAL_PATTERNS:
+        kw = pattern["keyword"]
+        if kw in combined:
+            # Avoid duplicates if already matched by a DB rule
+            if not any(r["matched_text"] == kw for r in results):
+                results.append({
+                    "finding_type": pattern["finding_type"],
+                    "severity": "critical",
+                    "matched_text": kw,
+                })
+
+    return results

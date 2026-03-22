@@ -32,7 +32,7 @@ def get_current_user(
     from .auth import decode_access_token
     from .models import User
 
-    auth_required = os.getenv("AUTH_REQUIRED", "false").lower() == "true"
+    auth_required = os.getenv("AUTH_REQUIRED", "true").lower() == "true"
 
     if not credentials:
         if auth_required:

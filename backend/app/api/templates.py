@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_db
 from ..mock_logic import utc_now
-from ..models import ReportTemplate as ReportTemplateModel
+from ..models import PromptTemplate as ReportTemplateModel
 
 router = APIRouter()
 
@@ -175,3 +175,26 @@ def populate_template(
     }
     populated = _populate_template(template.template_text, variables)
     return {"text": populated, "template_id": template.id, "template_name": template.name}
+
+
+@router.get("/api/v1/report-templates/{template_id}/schema")
+def get_template_schema(
+    template_id: str,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Return the JSON Schema for structured reporting fields of a template."""
+    template = db.get(ReportTemplateModel, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    fields_schema = getattr(template, "fields_schema", None)
+    if not fields_schema:
+        raise HTTPException(status_code=404, detail="No structured schema for this template")
+
+    return {
+        "template_id": template.id,
+        "template_name": template.name,
+        "modality": getattr(template, "modality", None),
+        "body_region": getattr(template, "body_region", None),
+        "fields_schema": fields_schema,
+    }

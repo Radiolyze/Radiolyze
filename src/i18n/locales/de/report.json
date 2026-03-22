@@ -85,6 +85,36 @@
     "jobId": "Job-ID",
     "completedAt": "Abgeschlossen um"
   },
+  "criticalFinding": {
+    "title": "KRITISCHER BEFUND",
+    "acknowledge": "Bestätigen",
+    "acknowledged": "Bestätigte kritische Befunde",
+    "ackTitle": "Kritischen Befund bestätigen",
+    "ackDescription": "Bitte bestätigen Sie die Kenntnisnahme des kritischen Befundes und dokumentieren Sie Ihren Namen.",
+    "findingType": "Befundtyp",
+    "signaturePlaceholder": "Dr. Name",
+    "cancel": "Abbrechen",
+    "confirmAck": "Kenntnisnahme bestätigen"
+  },
+  "peerReview": {
+    "title": "Zweitmeinungen",
+    "request": "Zweitmeinung anfordern",
+    "requestTitle": "Zweitmeinung anfordern",
+    "requestDescription": "Fordern Sie eine Zweitmeinung eines Kollegen für diesen Befund an.",
+    "assignedToPlaceholder": "Zuweisen an (optional)",
+    "commentPlaceholder": "Fragestellung / Anmerkung...",
+    "cancel": "Abbrechen",
+    "submit": "Anfordern",
+    "submitTitle": "Zweitmeinung abgeben",
+    "reviewCommentPlaceholder": "Kommentar zur Zweitmeinung..."
+  },
+  "structuredForm": {
+    "general": "Allgemein",
+    "noSchema": "Kein strukturiertes Template verfügbar",
+    "structured": "Strukturiert",
+    "freetext": "Freitext",
+    "toggleLabel": "Strukturierte Eingabe"
+  },
   "inference": {
     "title": "KI-Analyse",
     "summary": "Zusammenfassung",

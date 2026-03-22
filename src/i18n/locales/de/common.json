@@ -7,7 +7,8 @@
     "home": "Startseite",
     "batch": "Batch-Reporting",
     "history": "Verlauf",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "dashboard": "Dashboard"
   },
   "actions": {
     "save": "Speichern",

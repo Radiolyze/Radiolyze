@@ -4,6 +4,11 @@ services:
       context: ./backend
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     environment:
       DATABASE_URL: postgresql+psycopg://app:app@db:5432/app
       CORS_ORIGINS: http://localhost:5173
@@ -102,6 +107,11 @@ services:
     environment:
       ORTHANC_USERNAME: orthanc
       ORTHANC_PASSWORD: orthanc
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8042/system"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   orthanc-seeder:
     image: curlimages/curl:8.6.0
@@ -128,11 +138,21 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   vllm-medgemma:
     image: vllm/vllm-openai:nightly

@@ -10,6 +10,7 @@ import History from "./pages/History";
 import Batch from "./pages/Batch";
 import Training from "./pages/Training";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/history" element={<History />} />
             <Route path="/batch" element={<Batch />} />
             <Route path="/training" element={<Training />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

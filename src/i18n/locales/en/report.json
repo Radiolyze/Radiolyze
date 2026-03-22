@@ -85,6 +85,36 @@
     "jobId": "Job ID",
     "completedAt": "Completed at"
   },
+  "criticalFinding": {
+    "title": "CRITICAL FINDING",
+    "acknowledge": "Acknowledge",
+    "acknowledged": "Acknowledged critical findings",
+    "ackTitle": "Acknowledge Critical Finding",
+    "ackDescription": "Please acknowledge the critical finding and document your name.",
+    "findingType": "Finding type",
+    "signaturePlaceholder": "Dr. Name",
+    "cancel": "Cancel",
+    "confirmAck": "Confirm Acknowledgement"
+  },
+  "peerReview": {
+    "title": "Peer Reviews",
+    "request": "Request Second Opinion",
+    "requestTitle": "Request Second Opinion",
+    "requestDescription": "Request a second opinion from a colleague for this report.",
+    "assignedToPlaceholder": "Assign to (optional)",
+    "commentPlaceholder": "Question / comment...",
+    "cancel": "Cancel",
+    "submit": "Request",
+    "submitTitle": "Submit Review",
+    "reviewCommentPlaceholder": "Review comment..."
+  },
+  "structuredForm": {
+    "general": "General",
+    "noSchema": "No structured template available",
+    "structured": "Structured",
+    "freetext": "Free text",
+    "toggleLabel": "Structured input"
+  },
   "inference": {
     "title": "AI Analysis",
     "summary": "Summary",
