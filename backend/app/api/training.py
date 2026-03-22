@@ -34,6 +34,7 @@ class ExportRequest(BaseModel):
     verified_only: bool = Field(default=True, alias="verifiedOnly")
     include_images: bool = Field(default=False, alias="includeImages")
     split_ratio: float = Field(default=0.8, alias="splitRatio", ge=0.5, le=0.95)
+    anonymize: bool = Field(default=True, description="De-identify PHI in exported data")
 
     class Config:
         populate_by_name = True
@@ -355,6 +356,7 @@ def _create_export_zip(
     annotations: list[Annotation],
     split_ratio: float,
     include_images: bool,
+    anonymize: bool = True,
 ) -> bytes:
     """Create ZIP file with exported dataset."""
     buffer = io.BytesIO()
@@ -369,11 +371,19 @@ def _create_export_zip(
             _collect_image_entries(train_anns, "train", image_entries)
             _collect_image_entries(val_anns, "val", image_entries)
         
+        if anonymize:
+            from ..anonymize import anonymize_annotation
+
         if export_format == "coco":
             # COCO format
             train_data = _build_coco_dataset(train_anns)
             val_data = _build_coco_dataset(val_anns)
-            
+            if anonymize:
+                for ann in train_data.get("annotations", []):
+                    ann["attributes"] = {k: v for k, v in ann.get("attributes", {}).items() if k not in ("created_by", "verified_by")}
+                for ann in val_data.get("annotations", []):
+                    ann["attributes"] = {k: v for k, v in ann.get("attributes", {}).items() if k not in ("created_by", "verified_by")}
+
             zf.writestr(
                 "annotations/train.json",
                 json.dumps(train_data, indent=2),
@@ -422,7 +432,10 @@ und ein `images/manifest.json` mit Metadaten/Hashes.
             # HuggingFace datasets format
             train_data = _build_huggingface_dataset(train_anns)
             val_data = _build_huggingface_dataset(val_anns)
-            
+            if anonymize:
+                train_data = [anonymize_annotation(s) for s in train_data]
+                val_data = [anonymize_annotation(s) for s in val_data]
+
             zf.writestr(
                 "data/train.jsonl",
                 "\n".join(json.dumps(s) for s in train_data),
@@ -482,7 +495,10 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
             # MedGemma multimodal format
             train_data = _build_medgemma_dataset(train_anns)
             val_data = _build_medgemma_dataset(val_anns)
-            
+            if anonymize:
+                train_data = [anonymize_annotation(s) for s in train_data]
+                val_data = [anonymize_annotation(s) for s in val_data]
+
             zf.writestr(
                 "train.json",
                 json.dumps(train_data, indent=2),
@@ -647,6 +663,7 @@ def export_training_data(
         annotations,
         payload.split_ratio,
         payload.include_images,
+        payload.anonymize,
     )
     
     export_id = _generate_export_id()

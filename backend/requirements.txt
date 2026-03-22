@@ -8,3 +8,6 @@ redis
 rq
 httpx
 pydicom
+python-jose[cryptography]
+passlib[bcrypt]
+reportlab

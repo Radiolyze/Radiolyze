@@ -30,10 +30,12 @@ const buildUrl = (path: string, query?: RequestOptions['query']) => {
 
 const request = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
   const { query, body, headers, ...rest } = options;
+  const authToken = localStorage.getItem('medgemma-auth-token');
   const response = await fetch(buildUrl(path, query), {
     ...rest,
     headers: {
       'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...(headers || {}),
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,

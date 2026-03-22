@@ -9,6 +9,7 @@ import Settings from "./pages/Settings";
 import History from "./pages/History";
 import Batch from "./pages/Batch";
 import Training from "./pages/Training";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
       <BrowserRouter>
         <ErrorBoundary>
           <Routes>
+            <Route path="/login" element={<Login />} />
             <Route path="/" element={<Index />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/history" element={<History />} />
