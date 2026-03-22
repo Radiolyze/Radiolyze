@@ -270,7 +270,10 @@ export const ReportWorkspace = () => {
 
   const handleApprove = useCallback(async (signature?: string) => {
     const name = signature?.trim();
-    if (!name) return;
+    if (!name) {
+      toast.error('Bitte Name/Unterschrift eingeben');
+      return;
+    }
 
     try {
       await approveReport(name);

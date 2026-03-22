@@ -341,11 +341,16 @@ async def generate_impression_endpoint(
     payload: ImpressionRequest,
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
+    import asyncio
     try:
-        text, confidence, model_name, metadata = generate_impression_text(
-            payload.findings_text,
-            image_urls=payload.image_urls,
-            image_paths=payload.image_paths,
+        loop = asyncio.get_running_loop()
+        text, confidence, model_name, metadata = await loop.run_in_executor(
+            None,
+            lambda: generate_impression_text(
+                payload.findings_text,
+                image_urls=payload.image_urls,
+                image_paths=payload.image_paths,
+            ),
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
