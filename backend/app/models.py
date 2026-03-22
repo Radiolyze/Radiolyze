@@ -106,6 +106,38 @@ class InferenceJob(Base):
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
 
 
+class CriticalFindingAlert(Base):
+    """Tracks critical/urgent findings that require immediate communication."""
+
+    __tablename__ = "critical_finding_alerts"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    report_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    finding_type: Mapped[str] = mapped_column(String, nullable=False)
+    severity: Mapped[str] = mapped_column(String, nullable=False, default="critical")
+    matched_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notified_at: Mapped[str] = mapped_column(String, nullable=False)
+    acknowledged_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    acknowledged_at: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class PeerReview(Base):
+    """Peer review / second opinion requests for reports."""
+
+    __tablename__ = "peer_reviews"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    report_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    requested_by: Mapped[str] = mapped_column(String, nullable=False)
+    assigned_to: Mapped[str | None] = mapped_column(String, nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    review_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="requested")
+    decision: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    completed_at: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
 class DriftSnapshot(Base):
     __tablename__ = "drift_snapshots"
 
@@ -129,6 +161,12 @@ class PromptTemplate(Base):
     created_by: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
     updated_at: Mapped[str] = mapped_column(String, nullable=False)
+    # JSON Schema for structured reporting fields (optional)
+    fields_schema: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Modality filter (e.g. "CT", "MR", "CR") for template selection
+    modality: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Body region filter (e.g. "Thorax", "Abdomen", "Head")
+    body_region: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class Annotation(Base):

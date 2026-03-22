@@ -197,6 +197,56 @@ class ReportRevisionResponse(ApiBaseModel):
     change_reason: str | None = None
 
 
+# ---------------------------------------------------------------------------
+# Critical Finding Alerts
+# ---------------------------------------------------------------------------
+
+class CriticalFindingAlertResponse(ApiBaseModel):
+    id: str
+    report_id: str
+    finding_type: str
+    severity: str
+    matched_text: str | None = None
+    notified_at: str
+    acknowledged_by: str | None = None
+    acknowledged_at: str | None = None
+
+
+class CriticalFindingAcknowledgeRequest(ApiBaseModel):
+    acknowledged_by: str = Field(alias="acknowledgedBy")
+
+
+# ---------------------------------------------------------------------------
+# Peer Review
+# ---------------------------------------------------------------------------
+
+class PeerReviewRequest(ApiBaseModel):
+    assigned_to: str | None = Field(default=None, alias="assignedTo")
+    comment: str | None = None
+
+
+class PeerReviewSubmitRequest(ApiBaseModel):
+    review_comment: str = Field(alias="reviewComment")
+    decision: Literal["agree", "disagree", "revise"] = "agree"
+
+
+class PeerReviewResponse(ApiBaseModel):
+    id: str
+    report_id: str
+    requested_by: str
+    assigned_to: str | None = None
+    comment: str | None = None
+    review_comment: str | None = None
+    status: str
+    decision: str | None = None
+    created_at: str
+    completed_at: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Audit Events
+# ---------------------------------------------------------------------------
+
 class AuditEventRequest(ApiBaseModel):
     event_type: str = Field(alias="eventType")
     actor_id: str | None = Field(default=None, alias="actorId")

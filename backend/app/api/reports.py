@@ -9,11 +9,16 @@ from ..audit import add_audit_event
 from ..deps import get_db
 from ..inference_clients import generate_impression_text, transcribe_audio
 from ..mock_logic import run_qa_checks, utc_now
-from ..models import InferenceJob, QACheckResult, Report, ReportRevision
+from ..models import CriticalFindingAlert, InferenceJob, PeerReview, QACheckResult, Report, ReportRevision
 from ..schemas import (
     ASRResponse,
+    CriticalFindingAcknowledgeRequest,
+    CriticalFindingAlertResponse,
     ImpressionRequest,
     ImpressionResponse,
+    PeerReviewRequest,
+    PeerReviewResponse,
+    PeerReviewSubmitRequest,
     QACheckRequest,
     QAResponse,
     ReportCreateRequest,
@@ -528,4 +533,289 @@ def export_pdf(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Critical Finding Alerts
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/api/v1/reports/{report_id}/check-critical",
+    response_model=list[CriticalFindingAlertResponse],
+)
+async def check_critical_findings(
+    report_id: str,
+    db: Session = Depends(get_db),
+) -> list[CriticalFindingAlertResponse]:
+    """Scan a report for critical findings and create alerts."""
+    from ..models import QARule
+    from ..qa_engine import detect_critical_findings
+
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    rules = db.query(QARule).filter(QARule.is_active == True).all()
+    detected = detect_critical_findings(report.findings_text, report.impression_text, rules)
+
+    alerts: list[CriticalFindingAlertResponse] = []
+    now = utc_now()
+
+    for item in detected:
+        alert = CriticalFindingAlert(
+            report_id=report_id,
+            finding_type=item["finding_type"],
+            severity=item["severity"],
+            matched_text=item.get("matched_text"),
+            notified_at=now,
+        )
+        db.add(alert)
+        db.flush()
+        add_audit_event(
+            db,
+            event_type="critical_finding_detected",
+            actor_id="system",
+            report_id=report_id,
+            study_id=report.study_id,
+            metadata={
+                "alert_id": alert.id,
+                "finding_type": item["finding_type"],
+                "severity": item["severity"],
+            },
+            timestamp=now,
+            source="api",
+        )
+        alerts.append(CriticalFindingAlertResponse(
+            id=alert.id,
+            report_id=report_id,
+            finding_type=alert.finding_type,
+            severity=alert.severity,
+            matched_text=alert.matched_text,
+            notified_at=now,
+        ))
+
+    db.commit()
+
+    if alerts:
+        await broadcast_status(
+            report_id,
+            {"criticalAlerts": [a.model_dump() for a in alerts]},
+        )
+
+    return alerts
+
+
+@router.get(
+    "/api/v1/reports/{report_id}/critical-alerts",
+    response_model=list[CriticalFindingAlertResponse],
+)
+def list_critical_alerts(
+    report_id: str,
+    db: Session = Depends(get_db),
+) -> list[CriticalFindingAlertResponse]:
+    alerts = (
+        db.query(CriticalFindingAlert)
+        .filter(CriticalFindingAlert.report_id == report_id)
+        .order_by(CriticalFindingAlert.notified_at.desc())
+        .all()
+    )
+    return [
+        CriticalFindingAlertResponse(
+            id=a.id,
+            report_id=a.report_id,
+            finding_type=a.finding_type,
+            severity=a.severity,
+            matched_text=a.matched_text,
+            notified_at=a.notified_at,
+            acknowledged_by=a.acknowledged_by,
+            acknowledged_at=a.acknowledged_at,
+        )
+        for a in alerts
+    ]
+
+
+@router.patch(
+    "/api/v1/reports/{report_id}/critical-alerts/{alert_id}/acknowledge",
+    response_model=CriticalFindingAlertResponse,
+)
+def acknowledge_critical_alert(
+    report_id: str,
+    alert_id: str,
+    payload: CriticalFindingAcknowledgeRequest,
+    db: Session = Depends(get_db),
+) -> CriticalFindingAlertResponse:
+    alert = db.get(CriticalFindingAlert, alert_id)
+    if not alert or alert.report_id != report_id:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    if alert.acknowledged_at:
+        raise HTTPException(status_code=409, detail="Alert already acknowledged")
+
+    now = utc_now()
+    alert.acknowledged_by = payload.acknowledged_by
+    alert.acknowledged_at = now
+
+    add_audit_event(
+        db,
+        event_type="critical_finding_acknowledged",
+        actor_id=payload.acknowledged_by,
+        report_id=report_id,
+        metadata={"alert_id": alert_id, "finding_type": alert.finding_type},
+        timestamp=now,
+        source="api",
+    )
+    db.commit()
+
+    return CriticalFindingAlertResponse(
+        id=alert.id,
+        report_id=alert.report_id,
+        finding_type=alert.finding_type,
+        severity=alert.severity,
+        matched_text=alert.matched_text,
+        notified_at=alert.notified_at,
+        acknowledged_by=alert.acknowledged_by,
+        acknowledged_at=alert.acknowledged_at,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Peer Review / Second Opinion
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/api/v1/reports/{report_id}/request-review",
+    response_model=PeerReviewResponse,
+)
+async def request_peer_review(
+    report_id: str,
+    payload: PeerReviewRequest,
+    db: Session = Depends(get_db),
+) -> PeerReviewResponse:
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    now = utc_now()
+    review = PeerReview(
+        report_id=report_id,
+        requested_by="system",
+        assigned_to=payload.assigned_to,
+        comment=payload.comment,
+        status="requested",
+        created_at=now,
+    )
+    db.add(review)
+    add_audit_event(
+        db,
+        event_type="peer_review_requested",
+        actor_id="system",
+        report_id=report_id,
+        study_id=report.study_id,
+        metadata={
+            "assigned_to": payload.assigned_to,
+            "comment": payload.comment,
+        },
+        timestamp=now,
+        source="api",
+    )
+    db.commit()
+    db.refresh(review)
+
+    await broadcast_status(report_id, {"peerReviewStatus": "requested"})
+
+    return PeerReviewResponse(
+        id=review.id,
+        report_id=review.report_id,
+        requested_by=review.requested_by,
+        assigned_to=review.assigned_to,
+        comment=review.comment,
+        status=review.status,
+        created_at=review.created_at,
+    )
+
+
+@router.get(
+    "/api/v1/reports/{report_id}/reviews",
+    response_model=list[PeerReviewResponse],
+)
+def list_peer_reviews(
+    report_id: str,
+    db: Session = Depends(get_db),
+) -> list[PeerReviewResponse]:
+    reviews = (
+        db.query(PeerReview)
+        .filter(PeerReview.report_id == report_id)
+        .order_by(PeerReview.created_at.desc())
+        .all()
+    )
+    return [
+        PeerReviewResponse(
+            id=r.id,
+            report_id=r.report_id,
+            requested_by=r.requested_by,
+            assigned_to=r.assigned_to,
+            comment=r.comment,
+            review_comment=r.review_comment,
+            status=r.status,
+            decision=r.decision,
+            created_at=r.created_at,
+            completed_at=r.completed_at,
+        )
+        for r in reviews
+    ]
+
+
+@router.post(
+    "/api/v1/reports/{report_id}/reviews/{review_id}/submit",
+    response_model=PeerReviewResponse,
+)
+async def submit_peer_review(
+    report_id: str,
+    review_id: str,
+    payload: PeerReviewSubmitRequest,
+    db: Session = Depends(get_db),
+) -> PeerReviewResponse:
+    review = db.get(PeerReview, review_id)
+    if not review or review.report_id != report_id:
+        raise HTTPException(status_code=404, detail="Review not found")
+    if review.status == "completed":
+        raise HTTPException(status_code=409, detail="Review already completed")
+
+    now = utc_now()
+    review.review_comment = payload.review_comment
+    review.decision = payload.decision
+    review.status = "completed"
+    review.completed_at = now
+
+    report = db.get(Report, report_id)
+    add_audit_event(
+        db,
+        event_type="peer_review_submitted",
+        actor_id=review.assigned_to,
+        report_id=report_id,
+        study_id=report.study_id if report else None,
+        metadata={
+            "review_id": review_id,
+            "decision": payload.decision,
+        },
+        timestamp=now,
+        source="api",
+    )
+    db.commit()
+
+    await broadcast_status(report_id, {"peerReviewStatus": "completed", "peerReviewDecision": payload.decision})
+
+    return PeerReviewResponse(
+        id=review.id,
+        report_id=review.report_id,
+        requested_by=review.requested_by,
+        assigned_to=review.assigned_to,
+        comment=review.comment,
+        review_comment=review.review_comment,
+        status=review.status,
+        decision=review.decision,
+        created_at=review.created_at,
+        completed_at=review.completed_at,
     )
