@@ -24,3 +24,7 @@ public/workers
 *.sln
 *.sw?
 .env
+
+# Python
+__pycache__/
+*.pyc
