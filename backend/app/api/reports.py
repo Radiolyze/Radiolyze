@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
@@ -254,6 +255,8 @@ async def finalize_report(
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+    if report.status == "finalized":
+        raise HTTPException(status_code=409, detail="Report already finalized")
 
     now = utc_now()
     approver = payload.approved_by or payload.signature
@@ -323,9 +326,12 @@ async def asr_transcript(
     report_id: str | None = Form(default=None),
     db: Session = Depends(get_db),
 ) -> ASRResponse:
-    content = await file.read()
+    max_audio_size = int(os.environ.get("ASR_MAX_FILE_SIZE", str(25 * 1024 * 1024)))  # 25 MB default
+    content = await file.read(max_audio_size + 1)
     if not content:
         raise HTTPException(status_code=400, detail="Empty audio payload")
+    if len(content) > max_audio_size:
+        raise HTTPException(status_code=413, detail=f"Audio file too large (max {max_audio_size // (1024*1024)} MB)")
     try:
         text, confidence, model_name, metadata = await transcribe_audio(
             content=content,
@@ -382,11 +388,16 @@ async def generate_impression_endpoint(
     payload: ImpressionRequest,
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
+    import asyncio
     try:
-        text, confidence, model_name, metadata = generate_impression_text(
-            payload.findings_text,
-            image_urls=payload.image_urls,
-            image_paths=payload.image_paths,
+        loop = asyncio.get_running_loop()
+        text, confidence, model_name, metadata = await loop.run_in_executor(
+            None,
+            lambda: generate_impression_text(
+                payload.findings_text,
+                image_urls=payload.image_urls,
+                image_paths=payload.image_paths,
+            ),
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -395,11 +406,15 @@ async def generate_impression_endpoint(
     report = None
     if payload.report_id:
         report = db.get(Report, payload.report_id)
-        if report:
-            report.impression_text = text
-            report.updated_at = generated_at
-            if report.status in {"pending", "in_progress"}:
-                report.status = "draft"
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Report {payload.report_id} not found; impression was generated but not persisted",
+            )
+        report.impression_text = text
+        report.updated_at = generated_at
+        if report.status in {"pending", "in_progress"}:
+            report.status = "draft"
         input_hash = compute_input_hash(
             report.study_id if report else None,
             payload.findings_text,

@@ -135,6 +135,13 @@ export const ReportWorkspace = () => {
     });
   }, [enhancedQueueItems, setReport]);
 
+  // Sync local text state when the report is updated externally (e.g. via WebSocket)
+  useEffect(() => {
+    if (!report) return;
+    setFindings(prev => prev !== report.findingsText ? report.findingsText : prev);
+    setImpression(prev => prev !== report.impressionText ? report.impressionText : prev);
+  }, [report?.findingsText, report?.impressionText]);
+
   // Update report when queue item changes
   const handleSelectQueueItem = useCallback((item: QueueItem) => {
     setSelectedQueueItem(item);
@@ -214,7 +221,7 @@ export const ReportWorkspace = () => {
   );
 
   const handleGenerateImpression = useCallback(async () => {
-    if (!findings || isGenerating) return;
+    if (!findings?.trim() || isGenerating) return;
 
     try {
       const result = await generateImpression(findings, {
@@ -270,7 +277,10 @@ export const ReportWorkspace = () => {
 
   const handleApprove = useCallback(async (signature?: string) => {
     const name = signature?.trim();
-    if (!name) return;
+    if (!name) {
+      toast.error('Bitte Name/Unterschrift eingeben');
+      return;
+    }
 
     try {
       await approveReport(name);
@@ -299,18 +309,20 @@ export const ReportWorkspace = () => {
       return;
     }
 
+    let blobUrl: string | null = null;
     try {
       const result = await reportClient.exportStructuredReport(report.id, format);
-      const url = URL.createObjectURL(result.blob);
+      blobUrl = URL.createObjectURL(result.blob);
       const link = document.createElement('a');
-      link.href = url;
+      link.href = blobUrl;
       link.download = result.fileName;
       link.click();
-      URL.revokeObjectURL(url);
       toast.success(`DICOM SR exportiert (${format.toUpperCase()})`);
     } catch (error) {
       console.warn('DICOM SR export failed', error);
       toast.error('DICOM SR Export fehlgeschlagen');
+    } finally {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
     }
   }, [report?.id]);
 

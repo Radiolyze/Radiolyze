@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIStatus, FindingBox, ImageRef, QAStatus, Series } from '@/types/radiology';
 import type { AnnotationToolId, AllToolId } from '@/types/viewer';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -92,10 +92,11 @@ export function DicomViewer({
 
   const activeToolRef = useRef<AllToolId>(activeTool);
 
-  const viewerInstanceId = useMemo(
-    () => `dicom-viewer-${Math.random().toString(36).slice(2, 9)}`,
-    []
-  );
+  const viewerInstanceIdRef = useRef<string | null>(null);
+  if (viewerInstanceIdRef.current === null) {
+    viewerInstanceIdRef.current = `dicom-viewer-${Math.random().toString(36).slice(2, 9)}`;
+  }
+  const viewerInstanceId = viewerInstanceIdRef.current;
   const renderingEngineId = `${viewerInstanceId}-engine`;
   const viewportId = `${viewerInstanceId}-viewport`;
   const toolGroupId = `${viewerInstanceId}-tools`;
@@ -192,7 +193,11 @@ export function DicomViewer({
     if (!element || !series) {
       return;
     }
-    exportAnnotations({ element, series });
+    try {
+      exportAnnotations({ element, series });
+    } catch (err) {
+      console.error('Annotation export failed', err);
+    }
   }, [series]);
 
   useEffect(() => {

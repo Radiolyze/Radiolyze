@@ -28,26 +28,71 @@ const buildUrl = (path: string, query?: RequestOptions['query']) => {
   return url.toString();
 };
 
+type ApiErrorHandler = (error: ApiError) => void;
+let _onApiError: ApiErrorHandler | null = null;
+
+/** Register a global handler called on every API error (e.g. for toast notifications). */
+export const setApiErrorHandler = (handler: ApiErrorHandler | null) => {
+  _onApiError = handler;
+};
+
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
+const RETRYABLE_STATUSES = new Set([502, 503, 504]);
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 const request = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
   const { query, body, headers, ...rest } = options;
   const authToken = localStorage.getItem('medgemma-auth-token');
   const requestId = crypto.randomUUID();
-  const response = await fetch(buildUrl(path, query), {
-    ...rest,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Request-ID': requestId,
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      ...(headers || {}),
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+
+  let response: Response | undefined;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      response = await fetch(buildUrl(path, query), {
+        ...rest,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': requestId,
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          ...(headers || {}),
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+
+      if (!RETRYABLE_STATUSES.has(response.status)) break;
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (err) {
+      lastError = err;
+      if (attempt === MAX_RETRIES) break;
+    }
+
+    await sleep(RETRY_DELAY_MS * 2 ** attempt);
+  }
+
+  if (!response) {
+    throw lastError instanceof Error ? lastError : new Error('Network request failed');
+  }
 
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json') ? await response.json() : await response.text();
 
   if (!response.ok) {
-    throw new ApiError(response.statusText || 'Request failed', response.status, payload);
+    // Handle 401: clear stale token and redirect to login
+    if (response.status === 401) {
+      localStorage.removeItem('medgemma-auth-token');
+      const loginPath = '/login';
+      if (window.location.pathname !== loginPath) {
+        window.location.href = loginPath;
+      }
+    }
+
+    const error = new ApiError(response.statusText || 'Request failed', response.status, payload);
+    _onApiError?.(error);
+    throw error;
   }
 
   return payload as T;
