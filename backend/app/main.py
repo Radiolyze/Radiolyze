@@ -77,14 +77,10 @@ async def request_id_middleware(request: Request, call_next) -> Response:
 
 
 # ---------------------------------------------------------------------------
-# Rate Limiting Middleware (simple in-memory, use Redis in production)
+# Rate Limiting Middleware (Redis-backed with in-memory fallback)
 # ---------------------------------------------------------------------------
-import time
-from collections import defaultdict
+from .rate_limiter import RateLimiter
 
-_rate_limit_store: dict[str, list[float]] = defaultdict(list)
-_rate_limit_last_cleanup: float = 0.0
-RATE_LIMIT_WINDOW = 60  # seconds
 RATE_LIMIT_DEFAULT = int(os.getenv("RATE_LIMIT_DEFAULT", "100"))
 RATE_LIMIT_CLEANUP_INTERVAL = 300  # purge stale keys every 5 minutes
 
@@ -95,6 +91,8 @@ _PATH_LIMITS: dict[str, int] = {
     "/api/v1/inference/localize": 10,
     "/api/v1/reports/asr-transcript": 20,
 }
+
+_rate_limiter = RateLimiter(window_seconds=60)
 
 
 @app.middleware("http")
@@ -109,29 +107,22 @@ async def rate_limit_middleware(request: Request, call_next) -> Response:
     key = f"{client_ip}:{path}"
 
     limit = _PATH_LIMITS.get(path, RATE_LIMIT_DEFAULT)
-    now = time.time()
-    window_start = now - RATE_LIMIT_WINDOW
+    allowed, remaining, retry_after = _rate_limiter.check(key, limit)
 
-    # Periodic full cleanup of stale keys to prevent memory leak
-    if now - _rate_limit_last_cleanup > RATE_LIMIT_CLEANUP_INTERVAL:
-        stale_keys = [k for k, v in _rate_limit_store.items() if not v or v[-1] < window_start]
-        for k in stale_keys:
-            del _rate_limit_store[k]
-        _rate_limit_last_cleanup = now
-
-    # Clean old entries and check
-    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if t > window_start]
-
-    if len(_rate_limit_store[key]) >= limit:
+    if not allowed:
         return Response(
             content='{"detail":"Rate limit exceeded"}',
             status_code=429,
             media_type="application/json",
-            headers={"Retry-After": str(RATE_LIMIT_WINDOW)},
+            headers={
+                "Retry-After": str(retry_after),
+                "X-RateLimit-Remaining": "0",
+            },
         )
 
-    _rate_limit_store[key].append(now)
-    return await call_next(request)
+    response = await call_next(request)
+    response.headers["X-RateLimit-Remaining"] = str(remaining)
+    return response
 
 app.include_router(qa.router)
 app.include_router(templates.router)
@@ -148,11 +139,15 @@ app.include_router(ws.router)
 
 @app.on_event("startup")
 async def on_startup() -> None:
+    # Validate JWT configuration before anything else
+    from .auth import validate_jwt_config
+    validate_jwt_config()
+
     Base.metadata.create_all(bind=engine)
     # Seed default admin user if none exists
     from .db import SessionLocal
     from .models import User
-    from .auth import hash_password
+    from .auth import hash_password, verify_password
     from .mock_logic import utc_now
     db = SessionLocal()
     try:
@@ -171,6 +166,18 @@ async def on_startup() -> None:
             )
             db.add(admin)
             db.commit()
+            logger.warning(
+                "Default admin user created with default password. "
+                "Change the admin password before deploying to production."
+            )
+        else:
+            # Warn if default admin still has the default password
+            admin = db.query(User).filter(User.username == "admin").first()
+            if admin and verify_password("admin", admin.password_hash):
+                logger.warning(
+                    "Admin user still has the default password. "
+                    "Change it before deploying to production."
+                )
     finally:
         db.close()
     app.state.ws_bridge_task = asyncio.create_task(run_ws_bridge(manager))

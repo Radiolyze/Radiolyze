@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .utils.sanitize import (
+    MAX_COMMENT_LENGTH,
+    MAX_FINDINGS_LENGTH,
+    MAX_IMPRESSION_LENGTH,
+    sanitize_medical_text,
+)
 
 
 class ApiBaseModel(BaseModel):
@@ -22,6 +29,16 @@ class ReportCreateRequest(ApiBaseModel):
     impression_text: str | None = Field(default="", max_length=_MAX_IMPRESSION_LENGTH)
     report_id: str | None = Field(default=None, max_length=256)
 
+    @field_validator("findings_text", mode="before")
+    @classmethod
+    def sanitize_findings(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_FINDINGS_LENGTH)
+
+    @field_validator("impression_text", mode="before")
+    @classmethod
+    def sanitize_impression(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_IMPRESSION_LENGTH)
+
 
 class ReportFinalizeRequest(ApiBaseModel):
     approved_by: str | None = Field(default=None, alias="approvedBy", max_length=256)
@@ -32,10 +49,21 @@ _ALLOWED_REPORT_STATUSES = Literal["pending", "in_progress", "draft", "finalized
 
 
 class ReportUpdateRequest(ApiBaseModel):
-    findings_text: str | None = Field(default=None, max_length=_MAX_FINDINGS_LENGTH)
-    impression_text: str | None = Field(default=None, max_length=_MAX_IMPRESSION_LENGTH)
+    findings_text: str | None = None
+    impression_text: str | None = None
     status: _ALLOWED_REPORT_STATUSES | None = None
     actor_id: str | None = Field(default=None, alias="actorId", max_length=256)
+    structured_data: dict[str, Any] | None = Field(default=None, alias="structuredData")
+
+    @field_validator("findings_text", mode="before")
+    @classmethod
+    def sanitize_findings(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_FINDINGS_LENGTH)
+
+    @field_validator("impression_text", mode="before")
+    @classmethod
+    def sanitize_impression(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_IMPRESSION_LENGTH)
 
 
 class ReportResponse(ApiBaseModel):
@@ -51,6 +79,7 @@ class ReportResponse(ApiBaseModel):
     approved_by: str | None = None
     qa_status: str
     qa_warnings: list[str]
+    structured_data: dict[str, Any] | None = Field(default=None, alias="structuredData")
     inference_status: str | None = None
     inference_summary: str | None = None
     inference_confidence: float | None = None
@@ -232,10 +261,20 @@ class PeerReviewRequest(ApiBaseModel):
     assigned_to: str | None = Field(default=None, alias="assignedTo")
     comment: str | None = None
 
+    @field_validator("comment", mode="before")
+    @classmethod
+    def sanitize_comment(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_COMMENT_LENGTH)
+
 
 class PeerReviewSubmitRequest(ApiBaseModel):
     review_comment: str = Field(alias="reviewComment")
     decision: Literal["agree", "disagree", "revise"] = "agree"
+
+    @field_validator("review_comment", mode="before")
+    @classmethod
+    def sanitize_review_comment(cls, v: str | None) -> str | None:
+        return sanitize_medical_text(v, MAX_COMMENT_LENGTH)
 
 
 class PeerReviewResponse(ApiBaseModel):

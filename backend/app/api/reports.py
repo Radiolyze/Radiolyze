@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
@@ -61,6 +61,7 @@ def _serialize_report(report: Report, inference_job: InferenceJob | None = None)
         approved_by=report.approved_by,
         qa_status=report.qa_status,
         qa_warnings=report.qa_warnings or [],
+        structured_data=getattr(report, 'structured_data', None),
         inference_status=inference_job.status if inference_job else None,
         inference_summary=inference_job.summary_text if inference_job else None,
         inference_confidence=inference_job.confidence if inference_job else None,
@@ -119,24 +120,67 @@ def list_reports(
     return [_serialize_report(report, _get_latest_inference_job(db, report.id)) for report in reports]
 
 
+@router.get("/api/v1/reports/by-patient/{patient_id}", response_model=list[ReportResponse])
+def list_reports_by_patient(
+    patient_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> list[ReportResponse]:
+    """List all reports for a patient, sorted by creation date (newest first)."""
+    reports = (
+        db.query(Report)
+        .filter(Report.patient_id == patient_id)
+        .order_by(Report.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return [_serialize_report(r, _get_latest_inference_job(db, r.id)) for r in reports]
+
+
+def _compute_etag(report: Report) -> str:
+    """Compute ETag from report's updated_at timestamp."""
+    import hashlib
+    return hashlib.sha256(report.updated_at.encode()).hexdigest()[:16]
+
+
 @router.get("/api/v1/reports/{report_id}", response_model=ReportResponse)
-def get_report(report_id: str, db: Session = Depends(get_db)) -> ReportResponse:
+def get_report(report_id: str, db: Session = Depends(get_db)) -> Response:
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     inference_job = _get_latest_inference_job(db, report.id)
-    return _serialize_report(report, inference_job)
+    data = _serialize_report(report, inference_job)
+    response = Response(
+        content=data.model_dump_json(),
+        media_type="application/json",
+        headers={"ETag": f'"{_compute_etag(report)}"'},
+    )
+    return response
 
 
 @router.patch("/api/v1/reports/{report_id}", response_model=ReportResponse)
 async def update_report(
     report_id: str,
     payload: ReportUpdateRequest,
+    request: Request = None,
     db: Session = Depends(get_db),
 ) -> ReportResponse:
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
+    # ETag-based conflict detection (If-Match header)
+    if request:
+        if_match = request.headers.get("If-Match")
+        if if_match:
+            current_etag = f'"{_compute_etag(report)}"'
+            if if_match.strip('" ') != current_etag.strip('" '):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Conflict: report was modified by another user",
+                )
 
     # Capture old state for revision
     old_findings = report.findings_text
@@ -152,6 +196,9 @@ async def update_report(
     if payload.status is not None:
         report.status = payload.status
         updated_fields.append("status")
+    if payload.structured_data is not None:
+        report.structured_data = payload.structured_data
+        updated_fields.append("structured_data")
 
     if updated_fields:
         now = utc_now()

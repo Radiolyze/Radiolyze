@@ -148,6 +148,12 @@ export const reportClient = {
   async getRevisions(reportId: string): Promise<ReportRevisionPayload[]> {
     return apiClient.get<ReportRevisionPayload[]>(`${REPORTS_ENDPOINT}/${reportId}/revisions`);
   },
+  async getReportsByPatient(patientId: string, limit = 20): Promise<ReportResponsePayload[]> {
+    return apiClient.get<ReportResponsePayload[]>(
+      `${REPORTS_ENDPOINT}/by-patient/${patientId}`,
+      { query: { limit } },
+    );
+  },
   async exportPdf(reportId: string): Promise<PdfExportResult> {
     const response = await fetch(
       buildUrl(`${REPORTS_ENDPOINT}/${reportId}/export-pdf`),

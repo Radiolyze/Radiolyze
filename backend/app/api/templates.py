@@ -23,6 +23,7 @@ class TemplateCreateRequest(BaseModel):
     description: str | None = None
     template_text: str = Field(alias="templateText")
     sections: list[str] = Field(default_factory=list)
+    fields_schema: dict | None = Field(default=None, alias="fieldsSchema")
 
     class Config:
         populate_by_name = True
@@ -52,6 +53,7 @@ class TemplateResponse(BaseModel):
     is_active: bool
     created_at: str
     updated_at: str
+    fields_schema: dict | None = Field(default=None, alias="fieldsSchema")
 
     class Config:
         populate_by_name = True
@@ -137,6 +139,9 @@ def create_template(payload: TemplateCreateRequest, db: Session = Depends(get_db
         is_active=True,
         created_at=now,
         updated_at=now,
+        fields_schema=payload.fields_schema,
+        modality=payload.modality,
+        body_region=payload.body_region,
     )
     db.add(template)
     db.commit()
