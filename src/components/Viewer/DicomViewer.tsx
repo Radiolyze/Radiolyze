@@ -193,7 +193,11 @@ export function DicomViewer({
     if (!element || !series) {
       return;
     }
-    exportAnnotations({ element, series });
+    try {
+      exportAnnotations({ element, series });
+    } catch (err) {
+      console.error('Annotation export failed', err);
+    }
   }, [series]);
 
   useEffect(() => {

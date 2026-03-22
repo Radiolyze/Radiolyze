@@ -232,7 +232,8 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
         job.status = "finished"
         job.completed_at = completed_at
         job.summary_text = summary
-        job.confidence = 0.0
+        confidences = [f.get("confidence", 0.0) for f in findings if isinstance(f.get("confidence"), (int, float))]
+        job.confidence = sum(confidences) / len(confidences) if confidences else 0.0
         job.model_version = resolved_model
         job.metadata_json = {
             **(job.metadata_json or {}),

@@ -359,11 +359,15 @@ async def generate_impression_endpoint(
     report = None
     if payload.report_id:
         report = db.get(Report, payload.report_id)
-        if report:
-            report.impression_text = text
-            report.updated_at = generated_at
-            if report.status in {"pending", "in_progress"}:
-                report.status = "draft"
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Report {payload.report_id} not found; impression was generated but not persisted",
+            )
+        report.impression_text = text
+        report.updated_at = generated_at
+        if report.status in {"pending", "in_progress"}:
+            report.status = "draft"
         input_hash = compute_input_hash(
             report.study_id if report else None,
             payload.findings_text,

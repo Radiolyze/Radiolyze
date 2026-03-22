@@ -102,6 +102,12 @@ async def queue_inference(
     image_urls = payload.image_urls or []
     image_paths = _validate_image_paths(payload.image_paths or [])
     image_refs = [ref.model_dump() for ref in (payload.image_refs or [])]
+    if not findings_text and not image_urls and not image_paths and not image_refs:
+        raise HTTPException(
+            status_code=422,
+            detail="At least one of findings_text, image_urls, image_paths, or image_refs is required",
+        )
+
     model_version = payload.model_version or _get_model_version()
     input_hash = compute_input_hash(study_id, findings_text, image_urls, image_paths, image_refs)
     queued_at = utc_now()
