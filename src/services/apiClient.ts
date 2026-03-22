@@ -28,6 +28,14 @@ const buildUrl = (path: string, query?: RequestOptions['query']) => {
   return url.toString();
 };
 
+type ApiErrorHandler = (error: ApiError) => void;
+let _onApiError: ApiErrorHandler | null = null;
+
+/** Register a global handler called on every API error (e.g. for toast notifications). */
+export const setApiErrorHandler = (handler: ApiErrorHandler | null) => {
+  _onApiError = handler;
+};
+
 const request = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
   const { query, body, headers, ...rest } = options;
   const authToken = localStorage.getItem('medgemma-auth-token');
@@ -47,7 +55,18 @@ const request = async <T>(path: string, options: RequestOptions = {}): Promise<T
   const payload = contentType.includes('application/json') ? await response.json() : await response.text();
 
   if (!response.ok) {
-    throw new ApiError(response.statusText || 'Request failed', response.status, payload);
+    // Handle 401: clear stale token and redirect to login
+    if (response.status === 401) {
+      localStorage.removeItem('medgemma-auth-token');
+      const loginPath = '/login';
+      if (window.location.pathname !== loginPath) {
+        window.location.href = loginPath;
+      }
+    }
+
+    const error = new ApiError(response.statusText || 'Request failed', response.status, payload);
+    _onApiError?.(error);
+    throw error;
   }
 
   return payload as T;

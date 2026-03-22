@@ -258,6 +258,19 @@ async def queue_localize(
 def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceStatusResponse:
     job_record = db.get(InferenceJob, job_id)
     if job_record:
+        # Detect stuck jobs: started but no completion within timeout
+        if job_record.status in ("queued", "started") and job_record.queued_at:
+            from datetime import datetime, timezone
+            timeout_seconds = _get_inference_job_timeout()
+            now = datetime.now(timezone.utc)
+            queued_at = job_record.queued_at if job_record.queued_at.tzinfo else job_record.queued_at.replace(tzinfo=timezone.utc)
+            elapsed = (now - queued_at).total_seconds()
+            if elapsed > timeout_seconds:
+                job_record.status = "failed"
+                job_record.error_message = f"Job timed out after {timeout_seconds}s"
+                job_record.completed_at = utc_now()
+                db.commit()
+
         result = None
         if job_record.status == "finished":
             image_refs = None
