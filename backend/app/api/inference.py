@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import UTC
 
 from fastapi import APIRouter, Depends, HTTPException
 from rq.exceptions import NoSuchJobError
@@ -37,6 +38,7 @@ def _validate_image_paths(paths: list[str]) -> list[str]:
     if not paths:
         return []
     from pathlib import Path
+
     validated: list[str] = []
     for raw_path in paths:
         resolved = str(Path(raw_path).resolve())
@@ -47,6 +49,7 @@ def _validate_image_paths(paths: list[str]) -> list[str]:
             )
         validated.append(resolved)
     return validated
+
 
 router = APIRouter()
 
@@ -82,7 +85,9 @@ def _get_inference_result_ttl() -> int:
 
 
 def _get_model_version() -> str:
-    return os.getenv("INFERENCE_MODEL_VERSION") or os.getenv("VLLM_MODEL_NAME", "mock-medgemma-0.1")
+    return (
+        os.getenv("INFERENCE_MODEL_VERSION") or os.getenv("VLLM_MODEL_NAME") or "mock-medgemma-0.1"
+    )
 
 
 @router.post("/api/v1/inference/queue", response_model=InferenceQueueResponse)
@@ -146,7 +151,11 @@ async def queue_inference(
             model_version=model_version,
             input_hash=input_hash,
             queued_at=queued_at,
-            metadata_json={"requested_by": requested_by, "image_refs": image_refs, **image_metadata},
+            metadata_json={
+                "requested_by": requested_by,
+                "image_refs": image_refs,
+                **image_metadata,
+            },
         )
     )
 
@@ -177,7 +186,11 @@ async def queue_inference(
     if payload.report_id:
         await broadcast_status(
             payload.report_id,
-            {"aiStatus": "queued", "qaStatus": report.qa_status if report else "pending", "asrStatus": "idle"},
+            {
+                "aiStatus": "queued",
+                "qaStatus": report.qa_status if report else "pending",
+                "asrStatus": "idle",
+            },
         )
 
     return InferenceQueueResponse(
@@ -239,7 +252,11 @@ async def queue_localize(
             model_version=model_version,
             input_hash=input_hash,
             queued_at=queued_at,
-            metadata_json={"requested_by": requested_by, "image_ref": image_ref, "job_type": "localize"},
+            metadata_json={
+                "requested_by": requested_by,
+                "image_ref": image_ref,
+                "job_type": "localize",
+            },
         )
     )
 
@@ -270,7 +287,11 @@ async def queue_localize(
     if payload.report_id:
         await broadcast_status(
             payload.report_id,
-            {"aiStatus": "queued", "qaStatus": report.qa_status if report else "pending", "asrStatus": "idle"},
+            {
+                "aiStatus": "queued",
+                "qaStatus": report.qa_status if report else "pending",
+                "asrStatus": "idle",
+            },
         )
 
     return InferenceQueueResponse(
@@ -289,10 +310,15 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
     if job_record:
         # Detect stuck jobs: started but no completion within timeout
         if job_record.status in ("queued", "started") and job_record.queued_at:
-            from datetime import datetime, timezone
+            from datetime import datetime
+
             timeout_seconds = _get_inference_job_timeout()
-            now = datetime.now(timezone.utc)
-            queued_at = job_record.queued_at if job_record.queued_at.tzinfo else job_record.queued_at.replace(tzinfo=timezone.utc)
+            now = datetime.now(UTC)
+            queued_at = (
+                job_record.queued_at
+                if job_record.queued_at.tzinfo
+                else job_record.queued_at.replace(tzinfo=UTC)
+            )
             elapsed = (now - queued_at).total_seconds()
             if elapsed > timeout_seconds:
                 job_record.status = "failed"

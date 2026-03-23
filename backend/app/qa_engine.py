@@ -81,7 +81,9 @@ def evaluate_rules(
             checks.append(QACheck(id=f"qa-{rule.id}", name=rule.name, status="pass"))
         else:
             status = "fail" if rule.severity == "fail" else "warn"
-            checks.append(QACheck(id=f"qa-{rule.id}", name=rule.name, status=status, message=message))
+            checks.append(
+                QACheck(id=f"qa-{rule.id}", name=rule.name, status=status, message=message)
+            )
             if status == "fail":
                 failures.append(message)
             else:
@@ -148,11 +150,13 @@ def detect_critical_findings(
                 continue
             keyword = rule.config_json.get("keyword", "").lower()
             if keyword and keyword in combined:
-                results.append({
-                    "finding_type": rule.name,
-                    "severity": rule.severity or "critical",
-                    "matched_text": keyword,
-                })
+                results.append(
+                    {
+                        "finding_type": rule.name,
+                        "severity": rule.severity or "critical",
+                        "matched_text": keyword,
+                    }
+                )
 
     # Check default patterns
     for pattern in _DEFAULT_CRITICAL_PATTERNS:
@@ -160,10 +164,12 @@ def detect_critical_findings(
         if kw in combined:
             # Avoid duplicates if already matched by a DB rule
             if not any(r["matched_text"] == kw for r in results):
-                results.append({
-                    "finding_type": pattern["finding_type"],
-                    "severity": "critical",
-                    "matched_text": kw,
-                })
+                results.append(
+                    {
+                        "finding_type": pattern["finding_type"],
+                        "severity": "critical",
+                        "matched_text": kw,
+                    }
+                )
 
     return results

@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from .models import Report
@@ -16,7 +16,7 @@ try:
     import pydicom
     from pydicom.dataset import Dataset, FileDataset, FileMetaDataset
     from pydicom.sequence import Sequence
-    from pydicom.uid import ExplicitVRLittleEndian, PYDICOM_IMPLEMENTATION_UID
+    from pydicom.uid import PYDICOM_IMPLEMENTATION_UID, ExplicitVRLittleEndian
 except ImportError:  # pragma: no cover - handled at runtime
     pydicom = None
     Dataset = None
@@ -32,7 +32,7 @@ def _new_uid() -> str:
 
 
 def _content_datetime() -> tuple[str, str]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return now.strftime("%Y%m%d"), now.strftime("%H%M%S")
 
 
@@ -89,9 +89,7 @@ def _build_sr_dataset(report: Report) -> Any:
         findings = Dataset()
         findings.RelationshipType = "CONTAINS"
         findings.ValueType = "TEXT"
-        findings.ConceptNameCodeSequence = Sequence(
-            [_code_item("121071", "DCM", "Findings")]
-        )
+        findings.ConceptNameCodeSequence = Sequence([_code_item("121071", "DCM", "Findings")])
         findings.TextValue = report.findings_text
         root.ContentSequence.append(findings)
 
@@ -99,9 +97,7 @@ def _build_sr_dataset(report: Report) -> Any:
         impression = Dataset()
         impression.RelationshipType = "CONTAINS"
         impression.ValueType = "TEXT"
-        impression.ConceptNameCodeSequence = Sequence(
-            [_code_item("121073", "DCM", "Impression")]
-        )
+        impression.ConceptNameCodeSequence = Sequence([_code_item("121073", "DCM", "Impression")])
         impression.TextValue = report.impression_text
         root.ContentSequence.append(impression)
 

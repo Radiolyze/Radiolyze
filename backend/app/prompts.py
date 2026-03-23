@@ -51,7 +51,7 @@ DEFAULT_PROMPTS: dict[PromptType, str] = {
     "impression": (
         "Task: Draft a concise radiology impression based on the images and findings.\n"
         "Prioritize the most clinically relevant findings.\n"
-        "If uncertain, qualify with \"likely\" or \"cannot exclude\".\n"
+        'If uncertain, qualify with "likely" or "cannot exclude".\n'
         "Output: 1-3 short sentences.\n"
         "Return a JSON object with keys:\n"
         "- impression (string)\n"

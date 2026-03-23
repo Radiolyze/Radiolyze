@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..auth import create_access_token, hash_password, verify_password
-from ..deps import get_db, get_current_user
+from ..deps import get_current_user, get_db
 from ..mock_logic import utc_now
 from ..models import User
 
@@ -47,7 +47,9 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
     token = create_access_token({"sub": user.id, "username": user.username, "role": user.role})
-    return LoginResponse(access_token=token, user_id=user.id, username=user.username, role=user.role)
+    return LoginResponse(
+        access_token=token, user_id=user.id, username=user.username, role=user.role
+    )
 
 
 @router.get("/api/v1/auth/me", response_model=UserResponse)
@@ -83,4 +85,10 @@ def create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
-    return UserResponse(id=user.id, username=user.username, role=user.role, is_active=user.is_active, created_at=user.created_at)
+    return UserResponse(
+        id=user.id,
+        username=user.username,
+        role=user.role,
+        is_active=user.is_active,
+        created_at=user.created_at,
+    )

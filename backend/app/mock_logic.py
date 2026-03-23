@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import random
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from .schemas import QACheck
-
 
 ASR_TRANSCRIPTS = [
     "Im CT Thorax mit Kontrastmittel zeigt sich ein 2,3 cm messender Rundherd im rechten Oberlappen.",
@@ -22,7 +21,7 @@ INFERENCE_SUMMARIES = [
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def generate_asr_transcript() -> tuple[str, float]:
@@ -59,7 +58,9 @@ def generate_inference_summary(findings_text: str | None) -> tuple[str, float]:
     return summary, confidence
 
 
-def run_qa_checks(findings_text: str | None, impression_text: str | None) -> tuple[list[QACheck], list[str], list[str], float]:
+def run_qa_checks(
+    findings_text: str | None, impression_text: str | None
+) -> tuple[list[QACheck], list[str], list[str], float]:
     findings_text = (findings_text or "").strip()
     impression_text = (impression_text or "").strip()
 
@@ -71,14 +72,26 @@ def run_qa_checks(findings_text: str | None, impression_text: str | None) -> tup
         checks.append(QACheck(id="qa-findings", name="Findings vorhanden", status="pass"))
     else:
         failures.append("Findings fehlen")
-        checks.append(QACheck(id="qa-findings", name="Findings vorhanden", status="fail", message="Findings fehlen"))
+        checks.append(
+            QACheck(
+                id="qa-findings",
+                name="Findings vorhanden",
+                status="fail",
+                message="Findings fehlen",
+            )
+        )
 
     if impression_text:
         checks.append(QACheck(id="qa-impression", name="Impression vorhanden", status="pass"))
     else:
         failures.append("Impression fehlt")
         checks.append(
-            QACheck(id="qa-impression", name="Impression vorhanden", status="fail", message="Impression fehlt")
+            QACheck(
+                id="qa-impression",
+                name="Impression vorhanden",
+                status="fail",
+                message="Impression fehlt",
+            )
         )
 
     if findings_text and len(findings_text) < 50:

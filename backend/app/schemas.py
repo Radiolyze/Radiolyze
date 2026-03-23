@@ -238,6 +238,7 @@ class ReportRevisionResponse(ApiBaseModel):
 # Critical Finding Alerts
 # ---------------------------------------------------------------------------
 
+
 class CriticalFindingAlertResponse(ApiBaseModel):
     id: str
     report_id: str
@@ -256,6 +257,7 @@ class CriticalFindingAcknowledgeRequest(ApiBaseModel):
 # ---------------------------------------------------------------------------
 # Peer Review
 # ---------------------------------------------------------------------------
+
 
 class PeerReviewRequest(ApiBaseModel):
     assigned_to: str | None = Field(default=None, alias="assignedTo")
@@ -293,6 +295,7 @@ class PeerReviewResponse(ApiBaseModel):
 # ---------------------------------------------------------------------------
 # Audit Events
 # ---------------------------------------------------------------------------
+
 
 class AuditEventRequest(ApiBaseModel):
     event_type: str = Field(alias="eventType")

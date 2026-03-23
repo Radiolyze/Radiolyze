@@ -11,12 +11,12 @@ import zipfile
 from datetime import datetime
 from typing import Any, Literal
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-import httpx
 
 from ..deps import get_db
 from ..models import Annotation
@@ -90,7 +90,7 @@ def _dicom_auth_headers() -> dict[str, str]:
     password = os.getenv("DICOM_WEB_PASSWORD") or os.getenv("ORTHANC_PASSWORD")
     if not username or not password:
         return {}
-    token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+    token = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
     return {"Authorization": f"Basic {token}"}
 
 
@@ -171,9 +171,9 @@ def _build_coco_dataset(annotations: list[Annotation]) -> dict[str, Any]:
     category_set = set()
     for ann in annotations:
         category_set.add(ann.category or "other")
-    
+
     category_map = {cat: idx + 1 for idx, cat in enumerate(sorted(category_set))}
-    
+
     # Build images list (unique by instance)
     images_map: dict[str, dict] = {}
     for ann in annotations:
@@ -189,39 +189,41 @@ def _build_coco_dataset(annotations: list[Annotation]) -> dict[str, Any]:
                 "instance_id": ann.instance_id,
                 "frame_index": ann.frame_index,
             }
-    
+
     # Build annotations list
     coco_annotations = []
     for idx, ann in enumerate(annotations):
         image_key = f"{ann.study_id}_{ann.series_id}_{ann.instance_id}_{ann.frame_index}"
         image_id = images_map[image_key]["id"]
-        
+
         geometry = ann.geometry_json or {}
         bbox = geometry.get("bounding_box", {})
-        
+
         # Calculate area from bounding box or handles
         x = bbox.get("x", 0)
         y = bbox.get("y", 0)
         w = bbox.get("width", 50)
         h = bbox.get("height", 50)
         area = w * h
-        
-        coco_annotations.append({
-            "id": idx + 1,
-            "image_id": image_id,
-            "category_id": category_map.get(ann.category or "other", 1),
-            "bbox": [x, y, w, h],
-            "area": area,
-            "iscrowd": 0,
-            "attributes": {
-                "label": ann.label,
-                "severity": ann.severity,
-                "tool_type": ann.tool_type,
-                "verified": ann.verified_by is not None,
-                "notes": ann.notes,
-            },
-        })
-    
+
+        coco_annotations.append(
+            {
+                "id": idx + 1,
+                "image_id": image_id,
+                "category_id": category_map.get(ann.category or "other", 1),
+                "bbox": [x, y, w, h],
+                "area": area,
+                "iscrowd": 0,
+                "attributes": {
+                    "label": ann.label,
+                    "severity": ann.severity,
+                    "tool_type": ann.tool_type,
+                    "verified": ann.verified_by is not None,
+                    "notes": ann.notes,
+                },
+            }
+        )
+
     return {
         "info": {
             "description": "MedGemma Training Dataset",
@@ -229,9 +231,7 @@ def _build_coco_dataset(annotations: list[Annotation]) -> dict[str, Any]:
             "year": datetime.utcnow().year,
             "date_created": now_iso(),
         },
-        "licenses": [
-            {"id": 1, "name": "Internal Use Only", "url": ""}
-        ],
+        "licenses": [{"id": 1, "name": "Internal Use Only", "url": ""}],
         "images": list(images_map.values()),
         "annotations": coco_annotations,
         "categories": [
@@ -244,7 +244,7 @@ def _build_coco_dataset(annotations: list[Annotation]) -> dict[str, Any]:
 def _build_huggingface_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
     """Build HuggingFace datasets format."""
     samples = []
-    
+
     # Group by image
     image_groups: dict[str, list[Annotation]] = {}
     for ann in annotations:
@@ -252,45 +252,49 @@ def _build_huggingface_dataset(annotations: list[Annotation]) -> list[dict[str, 
         if image_key not in image_groups:
             image_groups[image_key] = []
         image_groups[image_key].append(ann)
-    
+
     for image_key, anns in image_groups.items():
         first_ann = anns[0]
-        
+
         # Build objects list
         objects = []
         for ann in anns:
             geometry = ann.geometry_json or {}
             bbox = geometry.get("bounding_box", {})
-            objects.append({
-                "bbox": [
-                    bbox.get("x", 0),
-                    bbox.get("y", 0),
-                    bbox.get("x", 0) + bbox.get("width", 50),
-                    bbox.get("y", 0) + bbox.get("height", 50),
-                ],
-                "category": ann.category or "other",
-                "label": ann.label,
-                "severity": ann.severity,
-            })
-        
-        samples.append({
-            "image_id": image_key,
-            "image_path": f"images/{image_key}.png",
-            "study_id": first_ann.study_id,
-            "series_id": first_ann.series_id,
-            "instance_id": first_ann.instance_id,
-            "frame_index": first_ann.frame_index,
-            "objects": objects,
-            "num_objects": len(objects),
-        })
-    
+            objects.append(
+                {
+                    "bbox": [
+                        bbox.get("x", 0),
+                        bbox.get("y", 0),
+                        bbox.get("x", 0) + bbox.get("width", 50),
+                        bbox.get("y", 0) + bbox.get("height", 50),
+                    ],
+                    "category": ann.category or "other",
+                    "label": ann.label,
+                    "severity": ann.severity,
+                }
+            )
+
+        samples.append(
+            {
+                "image_id": image_key,
+                "image_path": f"images/{image_key}.png",
+                "study_id": first_ann.study_id,
+                "series_id": first_ann.series_id,
+                "instance_id": first_ann.instance_id,
+                "frame_index": first_ann.frame_index,
+                "objects": objects,
+                "num_objects": len(objects),
+            }
+        )
+
     return samples
 
 
 def _build_medgemma_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
     """Build MedGemma multimodal fine-tuning format."""
     samples = []
-    
+
     # Group by image
     image_groups: dict[str, list[Annotation]] = {}
     for ann in annotations:
@@ -298,56 +302,60 @@ def _build_medgemma_dataset(annotations: list[Annotation]) -> list[dict[str, Any
         if image_key not in image_groups:
             image_groups[image_key] = []
         image_groups[image_key].append(ann)
-    
+
     for image_key, anns in image_groups.items():
         first_ann = anns[0]
-        
+
         # Build findings description from annotations
         findings_parts = []
         for ann in anns:
             severity_text = f" ({ann.severity})" if ann.severity else ""
             location_text = f" in {ann.anatomical_region}" if ann.anatomical_region else ""
             laterality_text = f" {ann.laterality}" if ann.laterality else ""
-            findings_parts.append(
-                f"{ann.label}{severity_text}{laterality_text}{location_text}"
-            )
-        
-        findings_text = ". ".join(findings_parts) + "." if findings_parts else "No significant findings."
-        
+            findings_parts.append(f"{ann.label}{severity_text}{laterality_text}{location_text}")
+
+        findings_text = (
+            ". ".join(findings_parts) + "." if findings_parts else "No significant findings."
+        )
+
         # Build annotation list for training
         annotation_list = []
         for ann in anns:
             geometry = ann.geometry_json or {}
             bbox = geometry.get("bounding_box", {})
-            annotation_list.append({
-                "label": ann.label,
-                "category": ann.category,
-                "severity": ann.severity,
-                "bbox": [
-                    bbox.get("x", 0),
-                    bbox.get("y", 0),
-                    bbox.get("width", 50),
-                    bbox.get("height", 50),
-                ],
-                "tool_type": ann.tool_type,
-            })
-        
-        samples.append({
-            "id": image_key,
-            "image_path": f"images/{image_key}.png",
-            "wado_url": f"/wado-rs/studies/{first_ann.study_id}/series/{first_ann.series_id}/instances/{first_ann.instance_id}/frames/{first_ann.frame_index + 1}/rendered",
-            "prompt": "Describe the findings in this medical image. Identify any abnormalities and their locations.",
-            "response": findings_text,
-            "annotations": annotation_list,
-            "metadata": {
-                "study_id": first_ann.study_id,
-                "series_id": first_ann.series_id,
-                "instance_id": first_ann.instance_id,
-                "frame_index": first_ann.frame_index,
-                "modality": "CT",  # Should come from DICOM metadata
-            },
-        })
-    
+            annotation_list.append(
+                {
+                    "label": ann.label,
+                    "category": ann.category,
+                    "severity": ann.severity,
+                    "bbox": [
+                        bbox.get("x", 0),
+                        bbox.get("y", 0),
+                        bbox.get("width", 50),
+                        bbox.get("height", 50),
+                    ],
+                    "tool_type": ann.tool_type,
+                }
+            )
+
+        samples.append(
+            {
+                "id": image_key,
+                "image_path": f"images/{image_key}.png",
+                "wado_url": f"/wado-rs/studies/{first_ann.study_id}/series/{first_ann.series_id}/instances/{first_ann.instance_id}/frames/{first_ann.frame_index + 1}/rendered",
+                "prompt": "Describe the findings in this medical image. Identify any abnormalities and their locations.",
+                "response": findings_text,
+                "annotations": annotation_list,
+                "metadata": {
+                    "study_id": first_ann.study_id,
+                    "series_id": first_ann.series_id,
+                    "instance_id": first_ann.instance_id,
+                    "frame_index": first_ann.frame_index,
+                    "modality": "CT",  # Should come from DICOM metadata
+                },
+            }
+        )
+
     return samples
 
 
@@ -360,7 +368,7 @@ def _create_export_zip(
 ) -> bytes:
     """Create ZIP file with exported dataset."""
     buffer = io.BytesIO()
-    
+
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         # Split into train/val
         split_idx = int(len(annotations) * split_ratio)
@@ -370,9 +378,12 @@ def _create_export_zip(
         if include_images:
             _collect_image_entries(train_anns, "train", image_entries)
             _collect_image_entries(val_anns, "val", image_entries)
-        
+
         if anonymize:
             from ..anonymize import anonymize_annotation
+
+        train_data: dict[str, Any] | list[dict[str, Any]] = {}
+        val_data: dict[str, Any] | list[dict[str, Any]] = {}
 
         if export_format == "coco":
             # COCO format
@@ -380,9 +391,17 @@ def _create_export_zip(
             val_data = _build_coco_dataset(val_anns)
             if anonymize:
                 for ann in train_data.get("annotations", []):
-                    ann["attributes"] = {k: v for k, v in ann.get("attributes", {}).items() if k not in ("created_by", "verified_by")}
+                    ann["attributes"] = {
+                        k: v
+                        for k, v in ann.get("attributes", {}).items()
+                        if k not in ("created_by", "verified_by")
+                    }
                 for ann in val_data.get("annotations", []):
-                    ann["attributes"] = {k: v for k, v in ann.get("attributes", {}).items() if k not in ("created_by", "verified_by")}
+                    ann["attributes"] = {
+                        k: v
+                        for k, v in ann.get("attributes", {}).items()
+                        if k not in ("created_by", "verified_by")
+                    }
 
             zf.writestr(
                 "annotations/train.json",
@@ -392,7 +411,7 @@ def _create_export_zip(
                 "annotations/val.json",
                 json.dumps(val_data, indent=2),
             )
-            
+
             # Add README
             readme = """# COCO Format Dataset for MedGemma Fine-Tuning
 
@@ -427,7 +446,7 @@ Dieses Exportpaket enthaelt bereits gerenderte PNGs in `images/`
 und ein `images/manifest.json` mit Metadaten/Hashes.
 """
             zf.writestr("README.md", readme)
-            
+
         elif export_format == "huggingface":
             # HuggingFace datasets format
             train_data = _build_huggingface_dataset(train_anns)
@@ -444,7 +463,7 @@ und ein `images/manifest.json` mit Metadaten/Hashes.
                 "data/val.jsonl",
                 "\n".join(json.dumps(s) for s in val_data),
             )
-            
+
             # Dataset info
             dataset_info = {
                 "description": "MedGemma Medical Imaging Dataset",
@@ -461,7 +480,7 @@ und ein `images/manifest.json` mit Metadaten/Hashes.
                 },
             }
             zf.writestr("dataset_info.json", json.dumps(dataset_info, indent=2))
-            
+
             readme = """# HuggingFace Dataset for MedGemma Fine-Tuning
 
 ## Loading
@@ -490,7 +509,7 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
 `images/manifest.json` mit Metadaten/Hashes.
 """
             zf.writestr("README.md", readme)
-            
+
         elif export_format == "medgemma":
             # MedGemma multimodal format
             train_data = _build_medgemma_dataset(train_anns)
@@ -507,7 +526,7 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
                 "val.json",
                 json.dumps(val_data, indent=2),
             )
-            
+
             # LoRA fine-tuning config
             lora_config = {
                 "r": 16,
@@ -518,7 +537,7 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
                 "task_type": "CAUSAL_LM",
             }
             zf.writestr("lora_config.json", json.dumps(lora_config, indent=2))
-            
+
             readme = """# MedGemma 1.5 Fine-Tuning Dataset
 
 ## Format
@@ -589,7 +608,7 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
                 "images/manifest.json",
                 json.dumps({"images": manifest, "status": status_counts}, indent=2),
             )
-    
+
     buffer.seek(0)
     return buffer.read()
 
@@ -602,22 +621,22 @@ def get_training_stats(
 ) -> ExportStats:
     """Get annotation statistics for training."""
     query = db.query(Annotation)
-    
+
     if study_ids:
         ids = [s.strip() for s in study_ids.split(",")]
         query = query.filter(Annotation.study_id.in_(ids))
-    
+
     if verified_only:
         query = query.filter(Annotation.verified_by.isnot(None))
-    
+
     annotations = query.all()
-    
+
     # Count categories
     categories: dict[str, int] = {}
     studies = set()
     series = set()
     verified_count = 0
-    
+
     for ann in annotations:
         cat = ann.category or "other"
         categories[cat] = categories.get(cat, 0) + 1
@@ -625,7 +644,7 @@ def get_training_stats(
         series.add(f"{ann.study_id}_{ann.series_id}")
         if ann.verified_by:
             verified_count += 1
-    
+
     return ExportStats(
         totalAnnotations=len(annotations),
         verifiedAnnotations=verified_count,
@@ -642,21 +661,21 @@ def export_training_data(
 ):
     """Export annotations in specified format."""
     query = db.query(Annotation)
-    
+
     if payload.study_ids:
         query = query.filter(Annotation.study_id.in_(payload.study_ids))
-    
+
     if payload.categories:
         query = query.filter(Annotation.category.in_(payload.categories))
-    
+
     if payload.verified_only:
         query = query.filter(Annotation.verified_by.isnot(None))
-    
+
     annotations = query.order_by(Annotation.created_at).all()
-    
+
     if not annotations:
         raise HTTPException(status_code=400, detail="No annotations found matching criteria")
-    
+
     # Create ZIP file
     zip_content = _create_export_zip(
         payload.format,
@@ -665,10 +684,10 @@ def export_training_data(
         payload.include_images,
         payload.anonymize,
     )
-    
+
     export_id = _generate_export_id()
     filename = f"{export_id}_{payload.format}.zip"
-    
+
     return StreamingResponse(
         io.BytesIO(zip_content),
         media_type="application/zip",
@@ -724,12 +743,7 @@ def list_annotation_categories(
 ) -> list[dict[str, Any]]:
     """List all annotation categories with counts."""
     results = (
-        db.query(Annotation.category, func.count(Annotation.id))
-        .group_by(Annotation.category)
-        .all()
+        db.query(Annotation.category, func.count(Annotation.id)).group_by(Annotation.category).all()
     )
-    
-    return [
-        {"category": cat or "other", "count": count}
-        for cat, count in results
-    ]
+
+    return [{"category": cat or "other", "count": count} for cat, count in results]

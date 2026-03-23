@@ -59,7 +59,7 @@ def list_qa_rules(
 ) -> list[QARuleResponse]:
     query = db.query(QARule)
     if active_only:
-        query = query.filter(QARule.is_active == True)
+        query = query.filter(QARule.is_active)
     rules = query.order_by(QARule.created_at).all()
     return [QARuleResponse.model_validate(r) for r in rules]
 
@@ -68,7 +68,10 @@ def list_qa_rules(
 def create_qa_rule(payload: QARuleCreate, db: Session = Depends(get_db)) -> QARuleResponse:
     valid_types = {"required_keyword", "min_length", "max_length", "regex_match", "field_present"}
     if payload.rule_type not in valid_types:
-        raise HTTPException(status_code=400, detail=f"Invalid rule_type. Must be one of: {', '.join(sorted(valid_types))}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid rule_type. Must be one of: {', '.join(sorted(valid_types))}",
+        )
     now = utc_now()
     rule = QARule(
         name=payload.name,
@@ -87,7 +90,9 @@ def create_qa_rule(payload: QARuleCreate, db: Session = Depends(get_db)) -> QARu
 
 
 @router.patch("/api/v1/qa-rules/{rule_id}", response_model=QARuleResponse)
-def update_qa_rule(rule_id: str, payload: QARuleUpdate, db: Session = Depends(get_db)) -> QARuleResponse:
+def update_qa_rule(
+    rule_id: str, payload: QARuleUpdate, db: Session = Depends(get_db)
+) -> QARuleResponse:
     rule = db.get(QARule, rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="QA rule not found")

@@ -44,7 +44,7 @@ export const useStackFrameNavigation = ({
         });
       }
     },
-    [hasStack, stackViewportRef, totalFrames]
+    [hasStack, stackViewportRef, totalFrames, setCurrentFrame]
   );
 
   useEffect(() => {

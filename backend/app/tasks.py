@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Any
 
@@ -10,6 +11,8 @@ from .mock_logic import utc_now
 from .models import InferenceJob, Report
 from .utils.inference import build_image_metadata
 from .ws_events import publish_report_status
+
+logger = logging.getLogger(__name__)
 
 
 def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
@@ -232,7 +235,11 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
         job.status = "finished"
         job.completed_at = completed_at
         job.summary_text = summary
-        confidences = [f.get("confidence", 0.0) for f in findings if isinstance(f.get("confidence"), (int, float))]
+        confidences = [
+            f.get("confidence", 0.0)
+            for f in findings
+            if isinstance(f.get("confidence"), (int, float))
+        ]
         job.confidence = sum(confidences) / len(confidences) if confidences else 0.0
         job.model_version = resolved_model
         job.metadata_json = {

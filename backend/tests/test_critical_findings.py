@@ -8,9 +8,12 @@ def test_check_critical_creates_alerts(client, sample_report):
     report_id = sample_report["id"]
 
     # Update findings with critical content
-    client.patch(f"/api/v1/reports/{report_id}", json={
-        "findings_text": "Großer Pneumothorax rechts. Aortendissektion Typ A.",
-    })
+    client.patch(
+        f"/api/v1/reports/{report_id}",
+        json={
+            "findings_text": "Großer Pneumothorax rechts. Aortendissektion Typ A.",
+        },
+    )
 
     resp = client.post(f"/api/v1/reports/{report_id}/check-critical")
     assert resp.status_code == 200
@@ -33,9 +36,12 @@ def test_check_critical_no_findings(client, sample_report):
 def test_list_critical_alerts(client, sample_report):
     """List endpoint returns previously created alerts."""
     report_id = sample_report["id"]
-    client.patch(f"/api/v1/reports/{report_id}", json={
-        "findings_text": "Pneumothorax rechts",
-    })
+    client.patch(
+        f"/api/v1/reports/{report_id}",
+        json={
+            "findings_text": "Pneumothorax rechts",
+        },
+    )
     client.post(f"/api/v1/reports/{report_id}/check-critical")
 
     resp = client.get(f"/api/v1/reports/{report_id}/critical-alerts")
@@ -46,9 +52,12 @@ def test_list_critical_alerts(client, sample_report):
 def test_acknowledge_critical_alert(client, sample_report):
     """Acknowledging an alert sets acknowledged_by and timestamp."""
     report_id = sample_report["id"]
-    client.patch(f"/api/v1/reports/{report_id}", json={
-        "findings_text": "Pneumothorax rechts",
-    })
+    client.patch(
+        f"/api/v1/reports/{report_id}",
+        json={
+            "findings_text": "Pneumothorax rechts",
+        },
+    )
     alerts_resp = client.post(f"/api/v1/reports/{report_id}/check-critical")
     alert_id = alerts_resp.json()[0]["id"]
 
@@ -65,9 +74,12 @@ def test_acknowledge_critical_alert(client, sample_report):
 def test_acknowledge_already_acknowledged(client, sample_report):
     """Acknowledging an already-acknowledged alert returns 409."""
     report_id = sample_report["id"]
-    client.patch(f"/api/v1/reports/{report_id}", json={
-        "findings_text": "Pneumothorax rechts",
-    })
+    client.patch(
+        f"/api/v1/reports/{report_id}",
+        json={
+            "findings_text": "Pneumothorax rechts",
+        },
+    )
     alerts_resp = client.post(f"/api/v1/reports/{report_id}/check-critical")
     alert_id = alerts_resp.json()[0]["id"]
 

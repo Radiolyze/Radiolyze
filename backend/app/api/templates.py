@@ -92,7 +92,7 @@ def list_templates(
         ReportTemplateModel.prompt_type == "report_template"
     )
     if active_only:
-        query = query.filter(ReportTemplateModel.is_active == True)
+        query = query.filter(ReportTemplateModel.is_active)
     templates = query.order_by(ReportTemplateModel.name).all()
 
     results = []
@@ -108,23 +108,29 @@ def list_templates(
         if modality and meta.get("modality") and meta["modality"] != modality:
             continue
 
-        results.append(TemplateResponse(
-            id=t.id,
-            name=t.name,
-            modality=meta.get("modality"),
-            bodyRegion=meta.get("body_region"),
-            description=meta.get("description", ""),
-            templateText=t.template_text,
-            sections=[s.strip() for s in t.template_text.split("\n") if s.strip().endswith(":")],
-            is_active=t.is_active,
-            created_at=t.created_at,
-            updated_at=t.updated_at,
-        ))
+        results.append(
+            TemplateResponse(
+                id=t.id,
+                name=t.name,
+                modality=meta.get("modality"),
+                bodyRegion=meta.get("body_region"),
+                description=meta.get("description", ""),
+                templateText=t.template_text,
+                sections=[
+                    s.strip() for s in t.template_text.split("\n") if s.strip().endswith(":")
+                ],
+                is_active=t.is_active,
+                created_at=t.created_at,
+                updated_at=t.updated_at,
+            )
+        )
     return results
 
 
 @router.post("/api/v1/report-templates", response_model=TemplateResponse, status_code=201)
-def create_template(payload: TemplateCreateRequest, db: Session = Depends(get_db)) -> TemplateResponse:
+def create_template(
+    payload: TemplateCreateRequest, db: Session = Depends(get_db)
+) -> TemplateResponse:
     now = utc_now()
     variables = [
         {"key": "modality", "value": payload.modality or ""},

@@ -653,7 +653,7 @@ export default function Batch() {
                     <TableHead className="w-12">
                       <Checkbox
                         checked={isAllSelected}
-                        // @ts-ignore - indeterminate is valid
+                        // @ts-expect-error - indeterminate is valid
                         indeterminate={isSomeSelected}
                         onCheckedChange={handleSelectAll}
                       />

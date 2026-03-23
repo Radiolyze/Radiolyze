@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -33,7 +33,9 @@ def get_metrics(db: Session = Depends(get_db)) -> dict[str, Any]:
         db.query(Report.qa_status, func.count(Report.id)).group_by(Report.qa_status).all()
     )
     inference_job_counts = counts_to_dict(
-        db.query(InferenceJob.status, func.count(InferenceJob.id)).group_by(InferenceJob.status).all()
+        db.query(InferenceJob.status, func.count(InferenceJob.id))
+        .group_by(InferenceJob.status)
+        .all()
     )
     audit_events_total = db.query(func.count(AuditEvent.id)).scalar() or 0
 
@@ -54,7 +56,7 @@ def get_drift_report(
     persist: bool = Query(False),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     baseline_days = baseline_days or window_days
     window_start = now - timedelta(days=window_days)
     baseline_start = window_start - timedelta(days=baseline_days)
@@ -66,22 +68,33 @@ def get_drift_report(
 
     current_jobs = (
         db.query(InferenceJob)
-        .filter(InferenceJob.completed_at >= window_start_iso, InferenceJob.completed_at < window_end_iso)
+        .filter(
+            InferenceJob.completed_at >= window_start_iso,
+            InferenceJob.completed_at < window_end_iso,
+        )
         .all()
     )
     baseline_jobs = (
         db.query(InferenceJob)
-        .filter(InferenceJob.completed_at >= baseline_start_iso, InferenceJob.completed_at < baseline_end_iso)
+        .filter(
+            InferenceJob.completed_at >= baseline_start_iso,
+            InferenceJob.completed_at < baseline_end_iso,
+        )
         .all()
     )
     current_qa = (
         db.query(QACheckResult)
-        .filter(QACheckResult.created_at >= window_start_iso, QACheckResult.created_at < window_end_iso)
+        .filter(
+            QACheckResult.created_at >= window_start_iso, QACheckResult.created_at < window_end_iso
+        )
         .all()
     )
     baseline_qa = (
         db.query(QACheckResult)
-        .filter(QACheckResult.created_at >= baseline_start_iso, QACheckResult.created_at < baseline_end_iso)
+        .filter(
+            QACheckResult.created_at >= baseline_start_iso,
+            QACheckResult.created_at < baseline_end_iso,
+        )
         .all()
     )
 
@@ -107,7 +120,9 @@ def get_drift_report(
     pass_rate_delta = qa_deltas.get("pass_rate")
     score_delta = qa_deltas.get("quality_score_avg")
 
-    if confidence_delta is not None and abs(confidence_delta) >= get_threshold("DRIFT_CONFIDENCE_DELTA", 0.1):
+    if confidence_delta is not None and abs(confidence_delta) >= get_threshold(
+        "DRIFT_CONFIDENCE_DELTA", 0.1
+    ):
         alerts.append(
             {
                 "metric": "inference.confidence_avg",
@@ -115,7 +130,9 @@ def get_drift_report(
                 "threshold": get_threshold("DRIFT_CONFIDENCE_DELTA", 0.1),
             }
         )
-    if failure_delta is not None and abs(failure_delta) >= get_threshold("DRIFT_INFERENCE_FAILURE_DELTA", 0.05):
+    if failure_delta is not None and abs(failure_delta) >= get_threshold(
+        "DRIFT_INFERENCE_FAILURE_DELTA", 0.05
+    ):
         alerts.append(
             {
                 "metric": "inference.failure_rate",
@@ -123,7 +140,9 @@ def get_drift_report(
                 "threshold": get_threshold("DRIFT_INFERENCE_FAILURE_DELTA", 0.05),
             }
         )
-    if pass_rate_delta is not None and abs(pass_rate_delta) >= get_threshold("DRIFT_QA_PASS_RATE_DELTA", 0.1):
+    if pass_rate_delta is not None and abs(pass_rate_delta) >= get_threshold(
+        "DRIFT_QA_PASS_RATE_DELTA", 0.1
+    ):
         alerts.append(
             {
                 "metric": "qa.pass_rate",
