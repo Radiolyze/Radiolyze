@@ -3,14 +3,31 @@ from __future__ import annotations
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
 from ..deps import get_db
 from ..inference_clients import generate_impression_text, transcribe_audio
 from ..mock_logic import run_qa_checks, utc_now
-from ..models import CriticalFindingAlert, InferenceJob, PeerReview, QACheckResult, Report, ReportRevision
+from ..models import (
+    CriticalFindingAlert,
+    InferenceJob,
+    PeerReview,
+    QACheckResult,
+    Report,
+    ReportRevision,
+)
 from ..schemas import (
     ASRResponse,
     CriticalFindingAcknowledgeRequest,
@@ -61,7 +78,7 @@ def _serialize_report(report: Report, inference_job: InferenceJob | None = None)
         approved_by=report.approved_by,
         qa_status=report.qa_status,
         qa_warnings=report.qa_warnings or [],
-        structured_data=getattr(report, 'structured_data', None),
+        structured_data=getattr(report, "structured_data", None),
         inference_status=inference_job.status if inference_job else None,
         inference_summary=inference_job.summary_text if inference_job else None,
         inference_confidence=inference_job.confidence if inference_job else None,
@@ -117,7 +134,9 @@ def list_reports(
     if status:
         query = query.filter(Report.status == status)
     reports = query.order_by(Report.created_at.desc()).offset(offset).limit(limit).all()
-    return [_serialize_report(report, _get_latest_inference_job(db, report.id)) for report in reports]
+    return [
+        _serialize_report(report, _get_latest_inference_job(db, report.id)) for report in reports
+    ]
 
 
 @router.get("/api/v1/reports/by-patient/{patient_id}", response_model=list[ReportResponse])
@@ -142,6 +161,7 @@ def list_reports_by_patient(
 def _compute_etag(report: Report) -> str:
     """Compute ETag from report's updated_at timestamp."""
     import hashlib
+
     return hashlib.sha256(report.updated_at.encode()).hexdigest()[:16]
 
 
@@ -326,12 +346,17 @@ async def asr_transcript(
     report_id: str | None = Form(default=None),
     db: Session = Depends(get_db),
 ) -> ASRResponse:
-    max_audio_size = int(os.environ.get("ASR_MAX_FILE_SIZE", str(25 * 1024 * 1024)))  # 25 MB default
+    max_audio_size = int(
+        os.environ.get("ASR_MAX_FILE_SIZE", str(25 * 1024 * 1024))
+    )  # 25 MB default
     content = await file.read(max_audio_size + 1)
     if not content:
         raise HTTPException(status_code=400, detail="Empty audio payload")
     if len(content) > max_audio_size:
-        raise HTTPException(status_code=413, detail=f"Audio file too large (max {max_audio_size // (1024*1024)} MB)")
+        raise HTTPException(
+            status_code=413,
+            detail=f"Audio file too large (max {max_audio_size // (1024 * 1024)} MB)",
+        )
     try:
         text, confidence, model_name, metadata = await transcribe_audio(
             content=content,
@@ -389,6 +414,7 @@ async def generate_impression_endpoint(
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
     import asyncio
+
     try:
         loop = asyncio.get_running_loop()
         text, confidence, model_name, metadata = await loop.run_in_executor(
@@ -448,7 +474,11 @@ async def generate_impression_endpoint(
 
         await broadcast_status(
             payload.report_id,
-            {"aiStatus": "idle", "qaStatus": report.qa_status if report else "pending", "asrStatus": "idle"},
+            {
+                "aiStatus": "idle",
+                "qaStatus": report.qa_status if report else "pending",
+                "asrStatus": "idle",
+            },
         )
 
     return ImpressionResponse(
@@ -465,11 +495,18 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
     # Use configurable rules if any exist, otherwise fall back to hardcoded logic
     from ..models import QARule
     from ..qa_engine import evaluate_rules
-    active_rules = db.query(QARule).filter(QARule.is_active == True).all()
+
+    active_rules = db.query(QARule).filter(QARule.is_active).all()
     if active_rules:
-        checks, warnings, failures, score = evaluate_rules(active_rules, payload.findings_text, payload.impression_text)
+        checks, warnings, failures, score = evaluate_rules(
+            active_rules,
+            payload.findings_text or "",
+            payload.impression_text or "",
+        )
     else:
-        checks, warnings, failures, score = run_qa_checks(payload.findings_text, payload.impression_text)
+        checks, warnings, failures, score = run_qa_checks(
+            payload.findings_text, payload.impression_text
+        )
     passes = len(failures) == 0
     status = "pass"
     if failures:
@@ -575,6 +612,7 @@ def export_pdf(
         raise HTTPException(status_code=404, detail="Report not found")
 
     from ..pdf_export import build_pdf_export
+
     try:
         pdf_bytes, filename = build_pdf_export(report)
     except RuntimeError as exc:
@@ -619,7 +657,7 @@ async def check_critical_findings(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    rules = db.query(QARule).filter(QARule.is_active == True).all()
+    rules = db.query(QARule).filter(QARule.is_active).all()
     detected = detect_critical_findings(report.findings_text, report.impression_text, rules)
 
     alerts: list[CriticalFindingAlertResponse] = []
@@ -649,14 +687,16 @@ async def check_critical_findings(
             timestamp=now,
             source="api",
         )
-        alerts.append(CriticalFindingAlertResponse(
-            id=alert.id,
-            report_id=report_id,
-            finding_type=alert.finding_type,
-            severity=alert.severity,
-            matched_text=alert.matched_text,
-            notified_at=now,
-        ))
+        alerts.append(
+            CriticalFindingAlertResponse(
+                id=alert.id,
+                report_id=report_id,
+                finding_type=alert.finding_type,
+                severity=alert.severity,
+                matched_text=alert.matched_text,
+                notified_at=now,
+            )
+        )
 
     db.commit()
 
@@ -867,7 +907,9 @@ async def submit_peer_review(
     )
     db.commit()
 
-    await broadcast_status(report_id, {"peerReviewStatus": "completed", "peerReviewDecision": payload.decision})
+    await broadcast_status(
+        report_id, {"peerReviewStatus": "completed", "peerReviewDecision": payload.decision}
+    )
 
     return PeerReviewResponse(
         id=review.id,

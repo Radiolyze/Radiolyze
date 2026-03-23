@@ -4,11 +4,14 @@ from __future__ import annotations
 
 
 def test_create_audit_event(client):
-    response = client.post("/api/v1/audit-log", json={
-        "eventType": "test_event",
-        "actorId": "test-user",
-        "metadata": {"key": "value"},
-    })
+    response = client.post(
+        "/api/v1/audit-log",
+        json={
+            "eventType": "test_event",
+            "actorId": "test-user",
+            "metadata": {"key": "value"},
+        },
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["event_type"] == "test_event"

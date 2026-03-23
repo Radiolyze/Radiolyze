@@ -198,7 +198,7 @@ export function DicomViewer({
     } catch (err) {
       console.error('Annotation export failed', err);
     }
-  }, [series]);
+  }, [series, viewportRef]);
 
   useEffect(() => {
     setCurrentFrame(0);

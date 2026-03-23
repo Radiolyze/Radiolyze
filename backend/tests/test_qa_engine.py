@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
-
-from app.qa_engine import detect_critical_findings, evaluate_rules
 from app.models import QARule
+from app.qa_engine import detect_critical_findings, evaluate_rules
 
 
 def _make_rule(
@@ -36,18 +34,24 @@ class TestEvalRequiredKeyword:
         assert all(c.status == "pass" for c in checks if c.id != "qa-overall")
 
     def test_keyword_missing(self):
-        rule = _make_rule("required_keyword", {"keyword": "Lunge", "target": "findings", "message": "Lunge fehlt"})
+        rule = _make_rule(
+            "required_keyword", {"keyword": "Lunge", "target": "findings", "message": "Lunge fehlt"}
+        )
         checks, warnings, failures, score = evaluate_rules([rule], "Herz unauffällig", "")
         assert "Lunge fehlt" in warnings
 
     def test_case_insensitive(self):
-        rule = _make_rule("required_keyword", {"keyword": "LUNGE", "case_sensitive": False, "target": "findings"})
+        rule = _make_rule(
+            "required_keyword", {"keyword": "LUNGE", "case_sensitive": False, "target": "findings"}
+        )
         checks, _, _, _ = evaluate_rules([rule], "lunge unauffällig", "")
         passed = [c for c in checks if c.id != "qa-overall" and c.status == "pass"]
         assert len(passed) == 1
 
     def test_case_sensitive(self):
-        rule = _make_rule("required_keyword", {"keyword": "LUNGE", "case_sensitive": True, "target": "findings"})
+        rule = _make_rule(
+            "required_keyword", {"keyword": "LUNGE", "case_sensitive": True, "target": "findings"}
+        )
         checks, warnings, _, _ = evaluate_rules([rule], "lunge unauffällig", "")
         assert len(warnings) == 1
 
@@ -59,7 +63,11 @@ class TestEvalMinMaxLength:
         assert all(c.status == "pass" for c in checks if c.id != "qa-overall")
 
     def test_min_length_fail(self):
-        rule = _make_rule("min_length", {"min_length": 100, "target": "findings", "message": "Zu kurz"}, severity="fail")
+        rule = _make_rule(
+            "min_length",
+            {"min_length": 100, "target": "findings", "message": "Zu kurz"},
+            severity="fail",
+        )
         _, _, failures, _ = evaluate_rules([rule], "Kurz", "")
         assert "Zu kurz" in failures
 
@@ -69,7 +77,9 @@ class TestEvalMinMaxLength:
         assert all(c.status == "pass" for c in checks if c.id != "qa-overall")
 
     def test_max_length_fail(self):
-        rule = _make_rule("max_length", {"max_length": 5, "target": "findings", "message": "Zu lang"})
+        rule = _make_rule(
+            "max_length", {"max_length": 5, "target": "findings", "message": "Zu lang"}
+        )
         _, warnings, _, _ = evaluate_rules([rule], "This is way too long", "")
         assert "Zu lang" in warnings
 
@@ -81,7 +91,10 @@ class TestEvalRegex:
         assert all(c.status == "pass" for c in checks if c.id != "qa-overall")
 
     def test_regex_no_match(self):
-        rule = _make_rule("regex_match", {"pattern": r"\d+\s*(mm|cm)", "target": "findings", "message": "Maße fehlen"})
+        rule = _make_rule(
+            "regex_match",
+            {"pattern": r"\d+\s*(mm|cm)", "target": "findings", "message": "Maße fehlen"},
+        )
         _, warnings, _, _ = evaluate_rules([rule], "Knoten vorhanden", "")
         assert "Maße fehlen" in warnings
 
@@ -114,7 +127,9 @@ class TestScoring:
         assert score == 100.0
 
     def test_all_fail_score_0(self):
-        rule = _make_rule("field_present", {"target": "findings", "message": "Missing"}, severity="fail")
+        rule = _make_rule(
+            "field_present", {"target": "findings", "message": "Missing"}, severity="fail"
+        )
         _, _, _, score = evaluate_rules([rule], "", "")
         assert score == 0.0
 
@@ -137,12 +152,19 @@ class TestCriticalFindings:
         assert results == []
 
     def test_custom_rule_detection(self):
-        rule = _make_rule("critical_finding", {"keyword": "fraktur"}, name="Fraktur", severity="critical")
+        rule = _make_rule(
+            "critical_finding", {"keyword": "fraktur"}, name="Fraktur", severity="critical"
+        )
         results = detect_critical_findings("Fraktur des Femurs", "", rules=[rule])
         assert any(r["finding_type"] == "Fraktur" for r in results)
 
     def test_no_duplicate_when_rule_and_default_match(self):
-        rule = _make_rule("critical_finding", {"keyword": "pneumothorax"}, name="Custom Pneumothorax", severity="critical")
+        rule = _make_rule(
+            "critical_finding",
+            {"keyword": "pneumothorax"},
+            name="Custom Pneumothorax",
+            severity="critical",
+        )
         results = detect_critical_findings("Pneumothorax rechts", "", rules=[rule])
         pneumothorax_matches = [r for r in results if "pneumothorax" in r["matched_text"].lower()]
         assert len(pneumothorax_matches) == 1

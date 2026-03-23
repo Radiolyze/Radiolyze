@@ -79,7 +79,9 @@ def summarize_qa_results(results: list[QACheckResult]) -> dict[str, Any]:
     }
 
 
-def compute_deltas(current: dict[str, Any], baseline: dict[str, Any], keys: list[str]) -> dict[str, float | None]:
+def compute_deltas(
+    current: dict[str, Any], baseline: dict[str, Any], keys: list[str]
+) -> dict[str, float | None]:
     deltas: dict[str, float | None] = {}
     for key in keys:
         current_value = current.get(key)

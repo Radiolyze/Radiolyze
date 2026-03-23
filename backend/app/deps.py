@@ -29,6 +29,7 @@ def get_current_user(
     unauthenticated access during development.
     """
     import os
+
     from .auth import decode_access_token
     from .models import User
 
@@ -36,7 +37,9 @@ def get_current_user(
 
     if not credentials:
         if auth_required:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+            )
         return None
 
     try:

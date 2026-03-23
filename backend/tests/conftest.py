@@ -63,8 +63,8 @@ def db():
 def seed_admin(db):
     """Create a default admin user and return its ID."""
     from app.auth import hash_password
-    from app.models import User
     from app.mock_logic import utc_now
+    from app.models import User
 
     admin = User(
         id="admin-001",
@@ -83,8 +83,8 @@ def seed_admin(db):
 def seed_radiologist(db):
     """Create a radiologist user and return its ID."""
     from app.auth import hash_password
-    from app.models import User
     from app.mock_logic import utc_now
+    from app.models import User
 
     user = User(
         id="radio-001",
@@ -102,11 +102,14 @@ def seed_radiologist(db):
 @pytest.fixture()
 def sample_report(client):
     """Create and return a sample report via the API."""
-    resp = client.post("/api/v1/reports/create", json={
-        "study_id": "study-001",
-        "patient_id": "patient-001",
-        "findings_text": "Normal chest x-ray.",
-        "impression_text": "",
-    })
+    resp = client.post(
+        "/api/v1/reports/create",
+        json={
+            "study_id": "study-001",
+            "patient_id": "patient-001",
+            "findings_text": "Normal chest x-ray.",
+            "impression_text": "",
+        },
+    )
     assert resp.status_code == 200
     return resp.json()

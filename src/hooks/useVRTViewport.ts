@@ -13,6 +13,22 @@ import {
 import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
 import { VRT_PRESETS, VRT_VIEW_ANGLES, DEFAULT_VRT_SETTINGS, type VRTSettings, type VRTViewAngle, type VRTPreset } from '@/types/vrt';
 
+/** Minimal VTK actor property interface (VTK.js types not shipped by Cornerstone). */
+interface VTKActorProperty {
+  getRGBTransferFunction?: (index: number) => { removeAllPoints: () => void; addRGBPoint: (x: number, r: number, g: number, b: number) => void };
+  getScalarOpacity?: (index: number) => { removeAllPoints: () => void; addPoint: (x: number, y: number) => void };
+  setAmbient?: (v: number) => void;
+  setDiffuse?: (v: number) => void;
+  setSpecular?: (v: number) => void;
+  setSpecularPower?: (v: number) => void;
+}
+interface VTKActor {
+  getProperty: () => VTKActorProperty;
+}
+interface VTKVolumeActor {
+  actor: VTKActor;
+  getProperty: () => VTKActorProperty;
+}
 
 interface UseVRTViewportOptions {
   isEnabled: boolean;
@@ -47,7 +63,7 @@ export const useVRTViewport = ({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const renderingEngineRef = useRef<RenderingEngine | null>(null);
   const volumeIdRef = useRef<string | null>(null);
-  const volumeActorRef = useRef<any>(null);
+  const volumeActorRef = useRef<VTKVolumeActor | null>(null);
   
   const [volumeViewport, setVolumeViewport] = useState<VolumeViewport3D | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -69,8 +85,8 @@ export const useVRTViewport = ({
       const volumeActor = viewport.getDefaultActor();
       if (!volumeActor?.actor) return;
 
-      const actor = volumeActor.actor as any;
-      const property = actor.getProperty() as any;
+      const actor = volumeActor.actor as VTKActor;
+      const property = actor.getProperty();
       
       // Get or create transfer functions
       const colorTF = property.getRGBTransferFunction?.(0);
@@ -177,7 +193,7 @@ export const useVRTViewport = ({
       // Apply lighting settings to volume actor
       const volumeActor = volumeViewport.getDefaultActor();
       if (volumeActor?.actor) {
-        const property = (volumeActor.actor as any).getProperty() as any;
+        const property = (volumeActor.actor as VTKActor).getProperty();
         property.setAmbient?.(newSettings.ambient);
         property.setDiffuse?.(newSettings.diffuse);
         property.setSpecular?.(newSettings.specular);
@@ -245,7 +261,7 @@ export const useVRTViewport = ({
         await viewport.setVolumes([
           {
             volumeId,
-            callback: ({ volumeActor }: { volumeActor: any }) => {
+            callback: ({ volumeActor }: { volumeActor: VTKVolumeActor }) => {
               volumeActorRef.current = volumeActor;
               
               const property = volumeActor.getProperty();
@@ -342,6 +358,7 @@ export const useVRTViewport = ({
       setVolumeViewport(null);
       setIsReady(false);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- settings.presetId is intentionally only read at init time
   }, [isEnabled, imageIds, renderingEngineId, viewportId, toolGroupId]);
 
   return {

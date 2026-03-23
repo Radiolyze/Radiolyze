@@ -10,11 +10,11 @@ import pytest
 
 def test_validate_jwt_config_dev_default_warns(caplog):
     """In development mode, using the default secret logs a warning."""
-    from app.auth import validate_jwt_config
 
     with patch.dict(os.environ, {"ENVIRONMENT": "development", "JWT_SECRET_KEY": ""}, clear=False):
         # Re-import is tricky; just test the function directly
         import app.auth as auth_mod
+
         original = auth_mod.SECRET_KEY
         auth_mod.SECRET_KEY = auth_mod._DEV_SECRET
         try:
@@ -28,6 +28,7 @@ def test_validate_jwt_config_dev_default_warns(caplog):
 def test_validate_jwt_config_production_rejects_default():
     """In production mode, using the default secret raises RuntimeError."""
     import app.auth as auth_mod
+
     original = auth_mod.SECRET_KEY
     auth_mod.SECRET_KEY = auth_mod._DEV_SECRET
     try:
@@ -41,6 +42,7 @@ def test_validate_jwt_config_production_rejects_default():
 def test_validate_jwt_config_production_rejects_short_secret():
     """In production mode, a short secret raises RuntimeError."""
     import app.auth as auth_mod
+
     original = auth_mod.SECRET_KEY
     auth_mod.SECRET_KEY = "short"
     try:
@@ -54,6 +56,7 @@ def test_validate_jwt_config_production_rejects_short_secret():
 def test_validate_jwt_config_production_accepts_strong_secret():
     """In production mode, a sufficiently long secret passes validation."""
     import app.auth as auth_mod
+
     original = auth_mod.SECRET_KEY
     auth_mod.SECRET_KEY = "a" * 64
     try:
@@ -65,10 +68,13 @@ def test_validate_jwt_config_production_accepts_strong_secret():
 
 def test_login_returns_token(client, seed_admin):
     """Verify login endpoint returns a JWT token."""
-    resp = client.post("/api/v1/auth/login", json={
-        "username": "testadmin",
-        "password": "adminpass",
-    })
+    resp = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "testadmin",
+            "password": "adminpass",
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
@@ -77,10 +83,13 @@ def test_login_returns_token(client, seed_admin):
 
 def test_login_wrong_password(client, seed_admin):
     """Verify login rejects wrong credentials."""
-    resp = client.post("/api/v1/auth/login", json={
-        "username": "testadmin",
-        "password": "wrongpass",
-    })
+    resp = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "testadmin",
+            "password": "wrongpass",
+        },
+    )
     assert resp.status_code == 401
 
 

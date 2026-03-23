@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -189,7 +189,7 @@ export default function History() {
     return new Date(timestamp).toLocaleString();
   };
 
-  const groupByDate = (entries: AuditLogEntry[]): Map<string, AuditLogEntry[]> => {
+  const groupByDate = useCallback((entries: AuditLogEntry[]): Map<string, AuditLogEntry[]> => {
     const groups = new Map<string, AuditLogEntry[]>();
     
     entries.forEach((entry) => {
@@ -214,7 +214,7 @@ export default function History() {
     });
 
     return groups;
-  };
+  }, [t]);
 
   const studyIds = useMemo(
     () => Array.from(new Set(auditEntries.map((entry) => entry.studyId).filter(Boolean))) as string[],
@@ -315,7 +315,7 @@ export default function History() {
   }, [displayEntries, searchQuery, eventFilter, actorFilter]);
 
   // Group by date
-  const groupedEntries = useMemo(() => groupByDate(filteredEntries), [filteredEntries]);
+  const groupedEntries = useMemo(() => groupByDate(filteredEntries), [filteredEntries, groupByDate]);
 
   // Stats
   const todayCount = auditEntries.filter((e) => {

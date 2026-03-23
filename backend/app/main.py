@@ -1,16 +1,29 @@
-from __future__ import annotations
-
 import asyncio
 import contextlib
+import contextvars
 import logging
 import os
 import uuid
+from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import annotations, audit, auth, inference, monitoring, prompts, qa, reports, templates, training, ws
+from .api import annotations as annotations_api
+from .api import (
+    audit,
+    auth,
+    inference,
+    monitoring,
+    prompts,
+    qa,
+    reports,
+    templates,
+    training,
+    ws,
+)
 from .db import Base, engine
+from .rate_limiter import RateLimiter
 from .ws_events import run_ws_bridge
 from .ws_manager import manager
 
@@ -37,7 +50,10 @@ async def security_headers_middleware(request: Request, call_next) -> Response:
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(self), geolocation=()"
-    csp = os.getenv("CSP_POLICY", "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'")
+    csp = os.getenv(
+        "CSP_POLICY",
+        "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'",
+    )
     response.headers["Content-Security-Policy"] = csp
     if os.getenv("ENABLE_HSTS", "").lower() in {"1", "true", "yes"}:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
@@ -61,8 +77,6 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Request-ID Middleware for distributed tracing
 # ---------------------------------------------------------------------------
-import contextvars
-
 request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="")
 
 
@@ -79,8 +93,6 @@ async def request_id_middleware(request: Request, call_next) -> Response:
 # ---------------------------------------------------------------------------
 # Rate Limiting Middleware (Redis-backed with in-memory fallback)
 # ---------------------------------------------------------------------------
-from .rate_limiter import RateLimiter
-
 RATE_LIMIT_DEFAULT = int(os.getenv("RATE_LIMIT_DEFAULT", "100"))
 RATE_LIMIT_CLEANUP_INTERVAL = 300  # purge stale keys every 5 minutes
 
@@ -124,10 +136,11 @@ async def rate_limit_middleware(request: Request, call_next) -> Response:
     response.headers["X-RateLimit-Remaining"] = str(remaining)
     return response
 
+
 app.include_router(qa.router)
 app.include_router(templates.router)
 app.include_router(auth.router)
-app.include_router(annotations.router)
+app.include_router(annotations_api.router)
 app.include_router(training.router)
 app.include_router(reports.router)
 app.include_router(inference.router)
@@ -141,14 +154,16 @@ app.include_router(ws.router)
 async def on_startup() -> None:
     # Validate JWT configuration before anything else
     from .auth import validate_jwt_config
+
     validate_jwt_config()
 
     Base.metadata.create_all(bind=engine)
     # Seed default admin user if none exists
-    from .db import SessionLocal
-    from .models import User
     from .auth import hash_password, verify_password
+    from .db import SessionLocal
     from .mock_logic import utc_now
+    from .models import User
+
     db = SessionLocal()
     try:
         if db.query(User).count() == 0:
@@ -195,8 +210,6 @@ async def on_shutdown() -> None:
 @app.get("/api/v1/health")
 def health() -> dict[str, Any]:
     """Comprehensive health check for all services."""
-    from typing import Any
-
     import httpx
     from sqlalchemy import text
 

@@ -115,7 +115,9 @@ def _encode_image_path(path: str) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
-def _build_multimodal_content(prompt: str, image_urls: list[str], image_paths: list[str]) -> list[dict[str, Any]]:
+def _build_multimodal_content(
+    prompt: str, image_urls: list[str], image_paths: list[str]
+) -> list[dict[str, Any]]:
     content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
     for url in image_urls:
         content.append({"type": "image_url", "image_url": {"url": url}})
@@ -145,14 +147,24 @@ def _build_image_manifest(
             series_modality = ref.get("series_modality") or ref.get("seriesModality")
             frame_index = ref.get("frame_index") if "frame_index" in ref else ref.get("frameIndex")
             stack_index = ref.get("stack_index") if "stack_index" in ref else ref.get("stackIndex")
-            instance_number = ref.get("instance_number") if "instance_number" in ref else ref.get("instanceNumber")
-            slice_thickness = ref.get("slice_thickness") if "slice_thickness" in ref else ref.get("sliceThickness")
+            instance_number = (
+                ref.get("instance_number")
+                if "instance_number" in ref
+                else ref.get("instanceNumber")
+            )
+            slice_thickness = (
+                ref.get("slice_thickness")
+                if "slice_thickness" in ref
+                else ref.get("sliceThickness")
+            )
             spacing_between_slices = (
                 ref.get("spacing_between_slices")
                 if "spacing_between_slices" in ref
                 else ref.get("spacingBetweenSlices")
             )
-            pixel_spacing = ref.get("pixel_spacing") if "pixel_spacing" in ref else ref.get("pixelSpacing")
+            pixel_spacing = (
+                ref.get("pixel_spacing") if "pixel_spacing" in ref else ref.get("pixelSpacing")
+            )
 
             parts = [f"{index})"]
             if role:
@@ -193,12 +205,12 @@ def _build_image_manifest(
     if not (normalized_urls or normalized_paths):
         return ""
 
-    lines: list[str] = []
+    url_lines: list[str] = []
     for index in range(len(normalized_urls)):
-        lines.append(f"{index + 1}) source=url")
+        url_lines.append(f"{index + 1}) source=url")
     for index in range(len(normalized_paths)):
-        lines.append(f"{len(lines) + index + 1}) source=path")
-    return "\n".join(lines)
+        url_lines.append(f"{len(url_lines) + index + 1}) source=path")
+    return "\n".join(url_lines)
 
 
 def _strip_code_fences(text: str) -> str:
@@ -273,47 +285,51 @@ def _dicom_web_base_url() -> str:
 
 def _dicom_web_base_url_with_auth() -> str:
     """Get the DICOMweb base URL with embedded Basic Auth credentials if configured.
-    
+
     Returns URL like 'http://user:pass@orthanc:8042/dicom-web' for vLLM to access.
     """
     base_url = _dicom_web_base_url()
     username = os.getenv("DICOM_WEB_USERNAME") or os.getenv("ORTHANC_USERNAME")
     password = os.getenv("DICOM_WEB_PASSWORD") or os.getenv("ORTHANC_PASSWORD")
-    
+
     if not username or not password:
         return base_url
-    
+
     # Parse URL and inject credentials
     # URL format: http://host:port/path -> http://user:pass@host:port/path
     if "://" in base_url:
         scheme, rest = base_url.split("://", 1)
         return f"{scheme}://{username}:{password}@{rest}"
-    
+
     return base_url
 
 
 def _rewrite_image_url(url: str) -> str:
     """Rewrite frontend image URLs to be accessible from the Docker network.
-    
+
     Frontend URLs like 'http://localhost:5173/dicom-web/...' need to be
     rewritten to 'http://orthanc:8042/dicom-web/...' for vLLM to access.
     """
     if not url:
         return url
-    
+
     # Extract the path after /dicom-web/
     dicom_web_markers = ["/dicom-web/", "/dicom-web"]
     for marker in dicom_web_markers:
         idx = url.find(marker)
         if idx != -1:
-            path = url[idx + len("/dicom-web"):]
+            path = url[idx + len("/dicom-web") :]
             if path.startswith("/"):
                 path = path[1:]
             # Use URL with embedded auth for vLLM access
             new_url = f"{_dicom_web_base_url_with_auth()}/{path}"
-            logger.debug("Rewrote image URL: %s -> %s (credentials hidden)", url, _dicom_web_base_url() + "/" + path)
+            logger.debug(
+                "Rewrote image URL: %s -> %s (credentials hidden)",
+                url,
+                _dicom_web_base_url() + "/" + path,
+            )
             return new_url
-    
+
     # If no dicom-web marker found, return original URL
     return url
 
@@ -330,7 +346,7 @@ def _vllm_base_url() -> str:
 
 
 def _vllm_model_name(model_name: str | None = None) -> str:
-    return model_name or os.getenv("VLLM_MODEL_NAME", "medgemma-radiology")
+    return model_name or os.getenv("VLLM_MODEL_NAME") or "medgemma-radiology"
 
 
 def _vllm_timeout() -> float:
@@ -375,7 +391,9 @@ def _vllm_chat_completion(
         "temperature": _env_float("VLLM_TEMPERATURE", 0.1),
         "top_p": _env_float("VLLM_TOP_P", 0.9),
     }
-    logger.info("vLLM request to %s with model=%s, has_images=%s", _redact_url(url), model_name, has_images)
+    logger.info(
+        "vLLM request to %s with model=%s, has_images=%s", _redact_url(url), model_name, has_images
+    )
     with httpx.Client(timeout=_vllm_timeout()) as client:
         response = client.post(url, json=payload, headers=_vllm_headers())
         response.raise_for_status()
@@ -393,13 +411,17 @@ def _vllm_chat_completion(
         )
         raise RuntimeError("vLLM returned no choices")
     message = choices[0].get("message") or {}
-    content = message.get("content")
+    response_text: str | None = message.get("content")
     finish_reason = choices[0].get("finish_reason")
-    logger.info("vLLM finish_reason=%s, content_length=%d", finish_reason, len(content) if content else 0)
-    if not content:
+    logger.info(
+        "vLLM finish_reason=%s, content_length=%d",
+        finish_reason,
+        len(response_text) if response_text else 0,
+    )
+    if not response_text:
         logger.error("vLLM returned empty content. Choice: %s", choices[0])
         raise RuntimeError("vLLM returned empty content")
-    return content.strip()
+    return response_text.strip()
 
 
 def _build_impression_prompt(
@@ -504,7 +526,9 @@ def generate_impression_text(
             schema_name="impression_output",
         )
         if _schema_strict() and not parse_metadata.get("json_schema_valid"):
-            raise RuntimeError(f"Schema validation failed: {parse_metadata.get('json_error', 'unknown')}")
+            raise RuntimeError(
+                f"Schema validation failed: {parse_metadata.get('json_error', 'unknown')}"
+            )
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
         json_metadata = {
@@ -518,8 +542,11 @@ def generate_impression_text(
             json_metadata["evidence_missing"] = True
         if confidence_label:
             json_metadata["confidence_label"] = confidence_label
-        return text, confidence, model_name, _compact_metadata(
-            {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
+        return (
+            text,
+            confidence,
+            model_name,
+            _compact_metadata({"provider": "vllm", "latency_ms": latency_ms, **json_metadata}),
         )
     except Exception as exc:
         logger.warning("vLLM impression failed: %s", exc)
@@ -563,7 +590,9 @@ def generate_inference_summary_text(
             schema_name="summary_output",
         )
         if _schema_strict() and not parse_metadata.get("json_schema_valid"):
-            raise RuntimeError(f"Schema validation failed: {parse_metadata.get('json_error', 'unknown')}")
+            raise RuntimeError(
+                f"Schema validation failed: {parse_metadata.get('json_error', 'unknown')}"
+            )
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
         json_metadata = {
@@ -577,14 +606,22 @@ def generate_inference_summary_text(
             json_metadata["evidence_missing"] = True
         if confidence_label:
             json_metadata["confidence_label"] = confidence_label
-        return text, confidence, resolved_model, _compact_metadata(
-            {"provider": "vllm", "latency_ms": latency_ms, **json_metadata}
+        return (
+            text,
+            confidence,
+            resolved_model,
+            _compact_metadata({"provider": "vllm", "latency_ms": latency_ms, **json_metadata}),
         )
     except Exception as exc:
         logger.warning("vLLM inference failed: %s", exc)
         if _env_flag("VLLM_FALLBACK_TO_MOCK", True):
             text, confidence = generate_inference_summary(findings_text)
-            return text, confidence, model_name or "mock-medgemma-0.1", {"provider": "mock", "error": str(exc)}
+            return (
+                text,
+                confidence,
+                model_name or "mock-medgemma-0.1",
+                {"provider": "mock", "error": str(exc)},
+            )
         raise RuntimeError("vLLM inference failed") from exc
 
 
@@ -593,9 +630,9 @@ LOCALIZE_PROMPT = (
     "For each finding, provide a bounding box in normalized coordinates (0-1000 space).\n"
     "Format: box_2d = [y_min, x_min, y_max, x_max] where (0,0) is top-left.\n"
     "Return a JSON object with key 'findings' (array of objects).\n"
-    "Each object: { \"box_2d\": [y1,x1,y2,x2], \"label\": \"finding name\", \"confidence\": 0.0-1.0 }\n"
+    'Each object: { "box_2d": [y1,x1,y2,x2], "label": "finding name", "confidence": 0.0-1.0 }\n'
     "Return only valid JSON. No markdown or code fences.\n"
-    "If no findings, return {\"findings\": []}."
+    'If no findings, return {"findings": []}.'
 )
 
 
@@ -629,18 +666,23 @@ def generate_localize_findings(
             image_urls=image_urls,
         )
         parsed, parse_error = _parse_json_response(raw_text)
-        metadata: dict[str, Any] = {"schema_name": "localize_output", "schema_version": SCHEMA_VERSION}
+        metadata: dict[str, Any] = {
+            "schema_name": "localize_output",
+            "schema_version": SCHEMA_VERSION,
+        }
         findings: list[dict[str, Any]] = []
 
         if parsed:
             try:
                 output = LocalizeOutput.model_validate(parsed)
                 for f in output.findings:
-                    findings.append({
-                        "box_2d": f.box_2d,
-                        "label": f.label,
-                        "confidence": f.confidence,
-                    })
+                    findings.append(
+                        {
+                            "box_2d": f.box_2d,
+                            "label": f.label,
+                            "confidence": f.confidence,
+                        }
+                    )
                 metadata["json_parsed"] = True
                 metadata["json_schema_valid"] = True
             except ValidationError:
@@ -653,11 +695,13 @@ def generate_localize_findings(
                         if isinstance(item, dict) and "box_2d" in item and "label" in item:
                             box = item.get("box_2d")
                             if isinstance(box, list) and len(box) == 4:
-                                findings.append({
-                                    "box_2d": [float(x) for x in box],
-                                    "label": str(item.get("label", "")),
-                                    "confidence": item.get("confidence"),
-                                })
+                                findings.append(
+                                    {
+                                        "box_2d": [float(x) for x in box],
+                                        "label": str(item.get("label", "")),
+                                        "confidence": item.get("confidence"),
+                                    }
+                                )
         else:
             metadata["json_parsed"] = False
             metadata["json_error"] = parse_error or "no_json_object"
@@ -674,7 +718,11 @@ def generate_localize_findings(
                 "label": "Fallback (vLLM error)",
                 "confidence": 0.3,
             }
-            return [mock_finding], model_name or "mock-localize-0.1", {"provider": "mock", "error": str(exc)}
+            return (
+                [mock_finding],
+                model_name or "mock-localize-0.1",
+                {"provider": "mock", "error": str(exc)},
+            )
         raise RuntimeError("vLLM localize failed") from exc
 
 
@@ -718,7 +766,12 @@ async def transcribe_audio(
         if confidence is None:
             confidence = _env_float("MEDASR_DEFAULT_CONFIDENCE", 0.0)
         latency_ms = int((time.monotonic() - start_time) * 1000)
-        return text, float(confidence), model_name, _compact_metadata({"provider": "medasr", "latency_ms": latency_ms})
+        return (
+            text,
+            float(confidence),
+            model_name,
+            _compact_metadata({"provider": "medasr", "latency_ms": latency_ms}),
+        )
     except Exception as exc:
         logger.warning("MEDASR transcription failed: %s", exc)
         if _env_flag("MEDASR_FALLBACK_TO_MOCK", True):

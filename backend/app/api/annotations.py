@@ -29,9 +29,7 @@ class BoundingBox(BaseModel):
     height: float
 
 
-AnnotationToolType = Literal[
-    "length", "rectangle", "ellipse", "freehand", "bidirectional", "arrow"
-]
+AnnotationToolType = Literal["length", "rectangle", "ellipse", "freehand", "bidirectional", "arrow"]
 AnnotationCategory = Literal[
     "nodule", "mass", "infiltrate", "effusion", "fracture", "lesion", "anatomical", "other"
 ]
@@ -202,7 +200,7 @@ def list_annotations(
         query = query.filter(Annotation.category == category)
     if verified_only:
         query = query.filter(Annotation.verified_by.isnot(None))
-    
+
     annotations = query.order_by(Annotation.created_at.desc()).offset(offset).limit(limit).all()
     return [_serialize_annotation(ann) for ann in annotations]
 

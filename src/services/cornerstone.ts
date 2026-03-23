@@ -32,7 +32,6 @@ const log = (...args: Parameters<typeof console.log>) => {
 
 // Fallback metadata provider for missing DICOM attributes required by Volume rendering.
 // Registered with very low priority so it only runs after all other providers.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const fallbackMetadataProvider = (type: string, _imageId: string) => {
   // Only provide fallbacks for imagePlaneModule (required for Volume rendering)
   if (type !== 'imagePlaneModule') {

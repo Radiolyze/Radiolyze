@@ -49,7 +49,7 @@ def _pseudonymize(value: str, salt: str = "medgemma") -> str:
     """Generate a consistent pseudonym using SHA-256 hash."""
     if not value:
         return ""
-    digest = hashlib.sha256(f"{salt}:{value}".encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(f"{salt}:{value}".encode()).hexdigest()
     return f"ANON-{digest[:12].upper()}"
 
 
@@ -129,5 +129,6 @@ def anonymize_annotation(
 def _to_snake_case(name: str) -> str:
     """Convert CamelCase to snake_case."""
     import re
+
     s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()

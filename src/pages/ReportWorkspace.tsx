@@ -140,6 +140,7 @@ export const ReportWorkspace = () => {
     if (!report) return;
     setFindings(prev => prev !== report.findingsText ? report.findingsText : prev);
     setImpression(prev => prev !== report.impressionText ? report.impressionText : prev);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally watching only specific fields, not whole report object
   }, [report?.findingsText, report?.impressionText]);
 
   // Update report when queue item changes

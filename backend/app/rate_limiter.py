@@ -26,6 +26,7 @@ class RateLimiter:
     def _init_redis(self) -> None:
         try:
             from .queue import get_redis
+
             r = get_redis()
             r.ping()
             self._redis = r

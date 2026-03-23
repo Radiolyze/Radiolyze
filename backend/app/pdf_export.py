@@ -3,17 +3,25 @@
 from __future__ import annotations
 
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from .models import Report
 
 try:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_LEFT, TA_CENTER
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
     from reportlab.lib.colors import HexColor
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        HRFlowable,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
     _HAS_REPORTLAB = True
 except ImportError:
     _HAS_REPORTLAB = False
@@ -25,7 +33,9 @@ def build_pdf_export(report: Report) -> tuple[bytes, str]:
     Returns (pdf_bytes, filename).
     """
     if not _HAS_REPORTLAB:
-        raise RuntimeError("reportlab is required for PDF export. Install with: pip install reportlab")
+        raise RuntimeError(
+            "reportlab is required for PDF export. Install with: pip install reportlab"
+        )
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -80,24 +90,38 @@ def build_pdf_export(report: Report) -> tuple[bytes, str]:
     elements.append(Spacer(1, 4 * mm))
 
     # Patient metadata table
-    now_str = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+    now_str = datetime.now(UTC).strftime("%d.%m.%Y %H:%M UTC")
     meta_data = [
         ["Patienten-ID:", report.patient_id, "Studien-ID:", report.study_id],
-        ["Status:", report.status.upper(), "Erstellt:", report.created_at[:19] if report.created_at else "—"],
-        ["Genehmigt von:", report.approved_by or "—", "Genehmigt am:", report.approved_at[:19] if report.approved_at else "—"],
+        [
+            "Status:",
+            report.status.upper(),
+            "Erstellt:",
+            report.created_at[:19] if report.created_at else "—",
+        ],
+        [
+            "Genehmigt von:",
+            report.approved_by or "—",
+            "Genehmigt am:",
+            report.approved_at[:19] if report.approved_at else "—",
+        ],
         ["QA-Status:", report.qa_status.upper(), "Exportiert:", now_str],
     ]
 
     meta_table = Table(meta_data, colWidths=[80, 140, 80, 140])
-    meta_table.setStyle(TableStyle([
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
-        ("TEXTCOLOR", (0, 0), (0, -1), HexColor("#333333")),
-        ("TEXTCOLOR", (2, 0), (2, -1), HexColor("#333333")),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-    ]))
+    meta_table.setStyle(
+        TableStyle(
+            [
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (0, -1), HexColor("#333333")),
+                ("TEXTCOLOR", (2, 0), (2, -1), HexColor("#333333")),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
     elements.append(meta_table)
     elements.append(Spacer(1, 6 * mm))
     elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor("#cccccc")))
@@ -113,7 +137,9 @@ def build_pdf_export(report: Report) -> tuple[bytes, str]:
 
     # Impression
     elements.append(Paragraph("Beurteilung", section_style))
-    impression = report.impression_text.strip() if report.impression_text else "Keine Beurteilung erfasst."
+    impression = (
+        report.impression_text.strip() if report.impression_text else "Keine Beurteilung erfasst."
+    )
     for paragraph in impression.split("\n"):
         if paragraph.strip():
             elements.append(Paragraph(paragraph.strip(), body_style))
@@ -133,15 +159,27 @@ def build_pdf_export(report: Report) -> tuple[bytes, str]:
     if report.approved_by:
         elements.append(Spacer(1, 10 * mm))
         elements.append(Paragraph(f"Digital signiert von: {report.approved_by}", meta_style))
-        elements.append(Paragraph(f"Datum: {report.approved_at[:19] if report.approved_at else now_str}", meta_style))
+        elements.append(
+            Paragraph(
+                f"Datum: {report.approved_at[:19] if report.approved_at else now_str}", meta_style
+            )
+        )
 
     # Footer
     elements.append(Spacer(1, 8 * mm))
     elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor("#cccccc")))
-    elements.append(Paragraph(
-        f"Generiert von MedGemma Insight | Report-ID: {report.id} | {now_str}",
-        ParagraphStyle("Footer", parent=meta_style, fontSize=7, textColor=HexColor("#999999"), alignment=TA_CENTER),
-    ))
+    elements.append(
+        Paragraph(
+            f"Generiert von MedGemma Insight | Report-ID: {report.id} | {now_str}",
+            ParagraphStyle(
+                "Footer",
+                parent=meta_style,
+                fontSize=7,
+                textColor=HexColor("#999999"),
+                alignment=TA_CENTER,
+            ),
+        )
+    )
 
     doc.build(elements)
     buffer.seek(0)
