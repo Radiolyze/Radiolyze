@@ -169,4 +169,63 @@ export const reportClient = {
       `report-${reportId}.pdf`;
     return { blob, fileName };
   },
+
+  /**
+   * Stream impression tokens via SSE.
+   *
+   * Returns an async generator that yields text chunks as the model produces
+   * them. Falls back to a single non-streaming response when streaming is not
+   * supported.
+   *
+   * @example
+   * let text = '';
+   * for await (const chunk of reportClient.streamImpression({ findingsText })) {
+   *   text += chunk;
+   *   setImpression(text);
+   * }
+   */
+  async *streamImpression(params: {
+    findingsText?: string;
+    imageUrls?: string[];
+    reportId?: string;
+  }): AsyncGenerator<string> {
+    const body = JSON.stringify({
+      findings_text: params.findingsText ?? '',
+      image_urls: params.imageUrls ?? [],
+      report_id: params.reportId,
+    });
+
+    const response = await fetch(buildUrl('/api/v1/reports/stream-impression'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body,
+    });
+
+    if (!response.ok || !response.body) {
+      const msg = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Stream impression failed (${response.status}): ${msg}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice('data:'.length).trim();
+        if (payload === '[DONE]') return;
+        // Restore escaped newlines
+        yield payload.replace(/\\n/g, '\n');
+      }
+    }
+  },
 };

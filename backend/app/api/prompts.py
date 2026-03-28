@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_db
+from ..deps import get_db, require_admin
 from ..prompts import (
     ALLOWED_VARIABLES,
     PROMPT_TYPES,
@@ -64,6 +64,7 @@ def get_prompt(prompt_type: PromptType, db: Session = Depends(get_db)) -> Prompt
 def update_prompt(
     prompt_type: PromptType,
     payload: PromptUpdateRequest,
+    _: None = require_admin,
     db: Session = Depends(get_db),
 ) -> PromptTemplateResponse:
     if not prompt_config_enabled():

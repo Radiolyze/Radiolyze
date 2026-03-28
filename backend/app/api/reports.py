@@ -14,11 +14,12 @@ from fastapi import (
     Response,
     UploadFile,
 )
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_db
-from ..inference_clients import generate_impression_text, transcribe_audio
+from ..deps import get_db, require_admin, require_radiologist_or_admin
+from ..inference_clients import generate_impression_stream, generate_impression_text, transcribe_audio
 from ..mock_logic import run_qa_checks, utc_now
 from ..models import (
     CriticalFindingAlert,
@@ -45,6 +46,7 @@ from ..schemas import (
     ReportRevisionResponse,
     ReportUpdateRequest,
 )
+from ..dicom_client import store_sr
 from ..sr import build_sr_export
 from ..utils.hashing import compute_bytes_hash, compute_input_hash, compute_text_hash
 from ..utils.inference import build_image_metadata, build_output_summary
@@ -89,7 +91,11 @@ def _serialize_report(report: Report, inference_job: InferenceJob | None = None)
 
 
 @router.post("/api/v1/reports/create", response_model=ReportResponse)
-def create_report(payload: ReportCreateRequest, db: Session = Depends(get_db)) -> ReportResponse:
+def create_report(
+    payload: ReportCreateRequest,
+    _: None = require_radiologist_or_admin,
+    db: Session = Depends(get_db),
+) -> ReportResponse:
     report_id = payload.report_id or str(uuid.uuid4())
     now = utc_now()
 
@@ -270,6 +276,7 @@ async def update_report(
 async def finalize_report(
     report_id: str,
     payload: ReportFinalizeRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> ReportResponse:
     report = db.get(Report, report_id)
@@ -322,13 +329,28 @@ def export_structured_report(
         raise HTTPException(status_code=400, detail="Unsupported SR export format")
 
     content, filename, media_type = build_sr_export(report, normalized)
+
+    # Archive DICOM SR to Orthanc via STOW-RS when binary format is requested
+    orthanc_url: str | None = None
+    if normalized == "dicom" and isinstance(content, (bytes, bytearray)):
+        try:
+            orthanc_url = store_sr(report.study_id, bytes(content))
+            report.dicom_sr_orthanc_url = orthanc_url
+        except RuntimeError as exc:
+            import logging as _log
+            _log.getLogger(__name__).warning("STOW-RS archival failed (non-fatal): %s", exc)
+
     add_audit_event(
         db,
         event_type="report_exported",
         actor_id=actor_id or report.approved_by,
         report_id=report.id,
         study_id=report.study_id,
-        metadata={"format": normalized, "file_name": filename},
+        metadata={
+            "format": normalized,
+            "file_name": filename,
+            "orthanc_url": orthanc_url,
+        },
         source="api",
     )
     db.commit()
@@ -487,6 +509,45 @@ async def generate_impression_endpoint(
         model=model_name,
         generated_at=generated_at,
         metadata=metadata,
+    )
+
+
+@router.post("/api/v1/reports/stream-impression")
+async def stream_impression_endpoint(
+    payload: ImpressionRequest,
+    _: None = require_radiologist_or_admin,
+) -> StreamingResponse:
+    """Stream impression generation tokens via Server-Sent Events (SSE).
+
+    The client receives lines of the form ``data: <token>\\n\\n``.
+    The stream ends with ``data: [DONE]\\n\\n``.
+    """
+
+    async def _event_stream():
+        try:
+            async for token in generate_impression_stream(
+                payload.findings_text,
+                image_urls=payload.image_urls,
+                image_refs=getattr(payload, "image_refs", None),
+            ):
+                # Escape newlines within a token to keep SSE framing intact
+                escaped = token.replace("\n", "\\n")
+                yield f"data: {escaped}\n\n"
+        except Exception as exc:
+            logger.error("SSE impression stream error: %s", exc)
+        finally:
+            yield "data: [DONE]\n\n"
+
+    import logging as _logging
+    logger = _logging.getLogger(__name__)
+
+    return StreamingResponse(
+        _event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

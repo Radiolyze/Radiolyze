@@ -102,3 +102,137 @@ def test_create_access_token_and_decode():
     assert decoded["sub"] == "user-123"
     assert decoded["role"] == "admin"
     assert "exp" in decoded
+
+
+# ---------------------------------------------------------------------------
+# RBAC enforcement tests (AUTH_REQUIRED=true)
+# ---------------------------------------------------------------------------
+
+import os  # noqa: E402
+from unittest.mock import patch  # noqa: E402
+
+
+def _login_as(client, username: str, password: str) -> str:
+    """Helper: log in and return bearer token."""
+    resp = client.post("/api/v1/auth/login", json={"username": username, "password": password})
+    assert resp.status_code == 200, f"Login failed: {resp.json()}"
+    return resp.json()["access_token"]
+
+
+def _auth_header(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_rbac_admin_can_create_qa_rule(client, seed_admin):
+    """Admin users may create QA rules."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        token = _login_as(client, "testadmin", "adminpass")
+        resp = client.post(
+            "/api/v1/qa-rules",
+            json={"name": "min-length", "rule_type": "min_length", "config": {"min_length": 10}},
+            headers=_auth_header(token),
+        )
+        assert resp.status_code == 201
+
+
+def test_rbac_radiologist_cannot_create_qa_rule(client, seed_radiologist):
+    """Radiologist users are blocked from creating QA rules."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        token = _login_as(client, "testradiologist", "radiopass")
+        resp = client.post(
+            "/api/v1/qa-rules",
+            json={"name": "min-length", "rule_type": "min_length", "config": {"min_length": 10}},
+            headers=_auth_header(token),
+        )
+        assert resp.status_code == 403
+
+
+def test_rbac_admin_can_delete_qa_rule(client, seed_admin):
+    """Admin users may delete QA rules."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        token = _login_as(client, "testadmin", "adminpass")
+        # Create a rule first
+        create = client.post(
+            "/api/v1/qa-rules",
+            json={"name": "tmp-rule", "rule_type": "min_length", "config": {"min_length": 5}},
+            headers=_auth_header(token),
+        )
+        assert create.status_code == 201
+        rule_id = create.json()["id"]
+        # Now delete it
+        resp = client.delete(f"/api/v1/qa-rules/{rule_id}", headers=_auth_header(token))
+        assert resp.status_code == 204
+
+
+def test_rbac_radiologist_cannot_update_prompt(client, seed_radiologist):
+    """Radiologist users are blocked from updating prompt templates."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        token = _login_as(client, "testradiologist", "radiopass")
+        resp = client.put(
+            "/api/v1/prompts/impression",
+            json={"template_text": "New template {{findings_text}}"},
+            headers=_auth_header(token),
+        )
+        assert resp.status_code == 403
+
+
+def test_rbac_admin_can_update_prompt(client, seed_admin):
+    """Admin users may update prompt templates when PROMPT_CONFIG_ENABLED=true."""
+    with patch.dict(
+        os.environ, {"AUTH_REQUIRED": "true", "PROMPT_CONFIG_ENABLED": "true"}
+    ):
+        token = _login_as(client, "testadmin", "adminpass")
+        resp = client.put(
+            "/api/v1/prompts/impression",
+            json={"template_text": "New template {{findings_text}}"},
+            headers=_auth_header(token),
+        )
+        # 200 (success) or 400 (template validation) — either way not 403
+        assert resp.status_code != 403
+
+
+def test_rbac_radiologist_can_create_report(client, seed_radiologist):
+    """Radiologist users may create reports."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        token = _login_as(client, "testradiologist", "radiopass")
+        resp = client.post(
+            "/api/v1/reports/create",
+            json={"study_id": "study-rbac", "patient_id": "patient-rbac"},
+            headers=_auth_header(token),
+        )
+        assert resp.status_code == 200
+
+
+def test_rbac_unauthenticated_blocked_from_report_create(client):
+    """Unauthenticated requests are rejected when AUTH_REQUIRED=true."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        resp = client.post(
+            "/api/v1/reports/create",
+            json={"study_id": "study-x", "patient_id": "patient-x"},
+        )
+        assert resp.status_code == 401
+
+
+def test_rbac_admin_can_export_training_data(client, seed_admin):
+    """Admin users may trigger training data export."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        token = _login_as(client, "testadmin", "adminpass")
+        resp = client.post(
+            "/api/v1/training/export",
+            json={"format": "coco"},
+            headers=_auth_header(token),
+        )
+        # 200 (empty export ok) or any non-403 response is acceptable
+        assert resp.status_code != 403
+
+
+def test_rbac_radiologist_cannot_export_training_data(client, seed_radiologist):
+    """Radiologist users are blocked from training data export."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        token = _login_as(client, "testradiologist", "radiopass")
+        resp = client.post(
+            "/api/v1/training/export",
+            json={"format": "coco"},
+            headers=_auth_header(token),
+        )
+        assert resp.status_code == 403

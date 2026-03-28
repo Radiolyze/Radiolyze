@@ -13,6 +13,7 @@ from .api import annotations as annotations_api
 from .api import (
     audit,
     auth,
+    guidelines,
     inference,
     monitoring,
     prompts,
@@ -147,6 +148,7 @@ app.include_router(inference.router)
 app.include_router(prompts.router)
 app.include_router(audit.router)
 app.include_router(monitoring.router)
+app.include_router(guidelines.router)
 app.include_router(ws.router)
 
 

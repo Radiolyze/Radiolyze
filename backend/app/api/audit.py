@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_db
+from ..deps import get_db, require_admin, require_radiologist_or_admin
 from ..mock_logic import utc_now
 from ..models import AuditEvent
 from ..schemas import AuditEventRequest, AuditEventResponse
@@ -50,6 +50,7 @@ def list_audit_events(
     report_id: str | None = None,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[AuditEventResponse]:
     query = db.query(AuditEvent)

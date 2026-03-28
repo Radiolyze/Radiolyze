@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 
 def _normalize_indices(value: Any) -> list[int] | None:
@@ -50,6 +50,7 @@ class SummaryOutput(BaseAIOutput):
         validation_alias=AliasChoices("evidence_indices", "evidenceIndices"),
     )
     limitations: str | None = None
+    confidence: str | None = None
 
     @field_validator("summary")
     @classmethod
@@ -67,6 +68,11 @@ class SummaryOutput(BaseAIOutput):
     @field_validator("limitations", mode="before")
     @classmethod
     def _coerce_limitations(cls, value: Any) -> str | None:
+        return _normalize_text(value)
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def _coerce_confidence(cls, value: Any) -> str | None:
         return _normalize_text(value)
 
 
@@ -136,3 +142,35 @@ class ImpressionOutput(BaseAIOutput):
     @classmethod
     def _coerce_confidence(cls, value: Any) -> str | None:
         return _normalize_text(value)
+
+
+# ---------------------------------------------------------------------------
+# JSON Schema exports (for vLLM guided_json and API documentation)
+# ---------------------------------------------------------------------------
+
+
+def get_summary_schema() -> dict[str, Any]:
+    """Return the JSON Schema for SummaryOutput (used by vLLM guided_json)."""
+    return SummaryOutput.model_json_schema()
+
+
+def get_impression_schema() -> dict[str, Any]:
+    """Return the JSON Schema for ImpressionOutput."""
+    return ImpressionOutput.model_json_schema()
+
+
+def get_localize_schema() -> dict[str, Any]:
+    """Return the JSON Schema for LocalizeOutput."""
+    return LocalizeOutput.model_json_schema()
+
+
+def get_all_schemas() -> dict[str, Any]:
+    """Return all output schemas keyed by name, plus schema version."""
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "schemas": {
+            "summary_output": get_summary_schema(),
+            "impression_output": get_impression_schema(),
+            "localize_output": get_localize_schema(),
+        },
+    }
