@@ -38,6 +38,8 @@ class Report(Base):
     qa_warnings: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     # Structured data from field-based reporting templates (JSON key-value pairs)
     structured_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Orthanc URL of the archived DICOM SR object (set after successful STOW-RS store)
+    dicom_sr_orthanc_url: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class ReportRevision(Base):
@@ -170,6 +172,27 @@ class PromptTemplate(Base):
     modality: Mapped[str | None] = mapped_column(String, nullable=True)
     # Body region filter (e.g. "Thorax", "Abdomen", "Head")
     body_region: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class Guideline(Base):
+    """Institutional guidelines and imaging standards for radiologists.
+
+    Supports full-text search via PostgreSQL's ``tsvector`` trigram index or,
+    when running on SQLite (tests), via a simple LIKE query fallback.
+    """
+
+    __tablename__ = "guidelines"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False, default="general")
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    source: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Comma-separated tags/keywords for FTS boosting
+    keywords: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)
 
 
 class Annotation(Base):

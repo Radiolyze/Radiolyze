@@ -13,7 +13,14 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from .ai_schemas import SCHEMA_VERSION, ImpressionOutput, LocalizeOutput, SummaryOutput
+from .ai_schemas import (
+    SCHEMA_VERSION,
+    ImpressionOutput,
+    LocalizeOutput,
+    SummaryOutput,
+    get_impression_schema,
+    get_summary_schema,
+)
 from .mock_logic import generate_asr_transcript, generate_impression, generate_inference_summary
 from .prompts import render_prompt_with_metadata
 
@@ -360,6 +367,10 @@ def _vllm_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {api_key}"}
 
 
+def _guided_json_enabled() -> bool:
+    return _env_flag("VLLM_GUIDED_JSON", False)
+
+
 def _vllm_chat_completion(
     prompt: str,
     *,
@@ -367,6 +378,7 @@ def _vllm_chat_completion(
     system_prompt: str,
     image_urls: list[str] | None = None,
     image_paths: list[str] | None = None,
+    guided_json_schema: dict[str, Any] | None = None,
 ) -> str:
     url = f"{_vllm_base_url()}/chat/completions"
     # Rewrite frontend URLs to be accessible from Docker network
@@ -381,7 +393,7 @@ def _vllm_chat_completion(
         content = _build_multimodal_content(prompt, normalized_urls, normalized_paths)
     else:
         content = prompt
-    payload = {
+    payload: dict[str, Any] = {
         "model": model_name,
         "messages": [
             {"role": "system", "content": system_prompt},
@@ -391,6 +403,13 @@ def _vllm_chat_completion(
         "temperature": _env_float("VLLM_TEMPERATURE", 0.1),
         "top_p": _env_float("VLLM_TOP_P", 0.9),
     }
+    # Guided JSON decoding: enforce JSON schema at token-generation level
+    if guided_json_schema and _guided_json_enabled():
+        payload["response_format"] = {
+            "type": "json_object",
+            "schema": guided_json_schema,
+        }
+        logger.debug("Guided JSON enabled for this request")
     logger.info(
         "vLLM request to %s with model=%s, has_images=%s", _redact_url(url), model_name, has_images
     )
@@ -518,6 +537,7 @@ def generate_impression_text(
             system_prompt=system_prompt,
             image_urls=image_urls,
             image_paths=image_paths,
+            guided_json_schema=get_impression_schema(),
         )
         text, parse_metadata, evidence_indices, confidence_label = _parse_structured_output(
             raw_text,
@@ -582,6 +602,7 @@ def generate_inference_summary_text(
             system_prompt=system_prompt,
             image_urls=image_urls,
             image_paths=image_paths,
+            guided_json_schema=get_summary_schema(),
         )
         text, parse_metadata, evidence_indices, confidence_label = _parse_structured_output(
             raw_text,
@@ -724,6 +745,82 @@ def generate_localize_findings(
                 {"provider": "mock", "error": str(exc)},
             )
         raise RuntimeError("vLLM localize failed") from exc
+
+
+async def generate_impression_stream(
+    findings_text: str | None,
+    *,
+    image_urls: list[str] | None = None,
+    image_refs: list[dict[str, Any]] | None = None,
+) -> Any:
+    """Async generator that yields impression text tokens via SSE.
+
+    Each yielded value is a string token chunk. The generator falls back to
+    a single-chunk mock when VLLM_ENABLED is false or vLLM is unreachable.
+    Caller should use `async for token in generate_impression_stream(...)`.
+    """
+    findings_text = (findings_text or "").strip()
+    has_images = bool(_normalize_list(image_urls))
+
+    if not _env_flag("VLLM_ENABLED", False):
+        # Mock fallback: yield the whole mock impression as a single chunk
+        text, _ = generate_impression(findings_text)
+        yield text
+        return
+
+    image_manifest = _build_image_manifest(image_urls, None, image_refs)
+    model_name = _vllm_model_name()
+    url = f"{_vllm_base_url()}/chat/completions"
+    rewritten_urls = _rewrite_image_urls(image_urls)
+    normalized_urls = _normalize_list(rewritten_urls)
+
+    system_prompt, _ = render_prompt_with_metadata("system")
+    prompt_text, _ = _build_impression_prompt(findings_text, image_manifest)
+
+    if has_images:
+        content: str | list[dict[str, Any]] = _build_multimodal_content(
+            prompt_text, normalized_urls, []
+        )
+    else:
+        content = prompt_text
+
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": content},
+        ],
+        "max_tokens": _env_int("VLLM_MAX_TOKENS", 512),
+        "temperature": _env_float("VLLM_TEMPERATURE", 0.1),
+        "top_p": _env_float("VLLM_TOP_P", 0.9),
+        "stream": True,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=_vllm_timeout()) as client:
+            async with client.stream(
+                "POST", url, json=payload, headers=_vllm_headers()
+            ) as response:
+                response.raise_for_status()
+                async for raw_line in response.aiter_lines():
+                    line = raw_line.strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data_str = line[len("data:"):].strip()
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+                    delta = chunk.get("choices", [{}])[0].get("delta", {})
+                    token = delta.get("content")
+                    if token:
+                        yield token
+    except Exception as exc:
+        logger.warning("vLLM stream failed, falling back to mock: %s", exc)
+        text, _ = generate_impression(findings_text)
+        yield text
 
 
 async def transcribe_audio(

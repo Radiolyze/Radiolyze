@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..deps import get_db
+from ..deps import get_db, require_admin, require_radiologist_or_admin
 from ..mock_logic import utc_now
 from ..models import QARule
 
@@ -65,7 +65,9 @@ def list_qa_rules(
 
 
 @router.post("/api/v1/qa-rules", response_model=QARuleResponse, status_code=201)
-def create_qa_rule(payload: QARuleCreate, db: Session = Depends(get_db)) -> QARuleResponse:
+def create_qa_rule(
+    payload: QARuleCreate, _: None = require_admin, db: Session = Depends(get_db)
+) -> QARuleResponse:
     valid_types = {"required_keyword", "min_length", "max_length", "regex_match", "field_present"}
     if payload.rule_type not in valid_types:
         raise HTTPException(
@@ -91,7 +93,7 @@ def create_qa_rule(payload: QARuleCreate, db: Session = Depends(get_db)) -> QARu
 
 @router.patch("/api/v1/qa-rules/{rule_id}", response_model=QARuleResponse)
 def update_qa_rule(
-    rule_id: str, payload: QARuleUpdate, db: Session = Depends(get_db)
+    rule_id: str, payload: QARuleUpdate, _: None = require_admin, db: Session = Depends(get_db)
 ) -> QARuleResponse:
     rule = db.get(QARule, rule_id)
     if not rule:
@@ -115,7 +117,7 @@ def update_qa_rule(
 
 
 @router.delete("/api/v1/qa-rules/{rule_id}", status_code=204)
-def delete_qa_rule(rule_id: str, db: Session = Depends(get_db)) -> None:
+def delete_qa_rule(rule_id: str, _: None = require_admin, db: Session = Depends(get_db)) -> None:
     rule = db.get(QARule, rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="QA rule not found")

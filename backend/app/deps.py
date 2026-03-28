@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -54,3 +54,40 @@ def get_current_user(
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
     return user
+
+
+def require_role(*roles: str) -> Callable:
+    """Return a FastAPI dependency that enforces role-based access control.
+
+    When AUTH_REQUIRED=false (development), the check is skipped entirely.
+    In production (or when AUTH_REQUIRED=true) the current user must have
+    one of the specified roles, otherwise a 403 is raised.
+
+    Usage::
+
+        @router.delete("/api/v1/qa/rules/{rule_id}")
+        def delete_qa_rule(
+            rule_id: str,
+            _: None = Depends(require_role("admin")),
+            db: Session = Depends(get_db),
+        ) -> None:
+            ...
+    """
+    import os
+
+    def _check(user=Depends(get_current_user)) -> None:
+        auth_required = os.getenv("AUTH_REQUIRED", "true").lower() == "true"
+        if not auth_required or user is None:
+            return
+        if user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{user.role}' not permitted. Required: {list(roles)}",
+            )
+
+    return Depends(_check)
+
+
+# Convenience aliases
+require_admin = require_role("admin")
+require_radiologist_or_admin = require_role("radiologist", "admin")

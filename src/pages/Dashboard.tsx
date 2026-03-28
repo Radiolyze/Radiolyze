@@ -13,6 +13,7 @@ import {
   XCircle,
   AlertTriangle,
   RefreshCw,
+  TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -137,6 +138,12 @@ export default function Dashboard() {
                 Aktualisiert um {formatTime(lastRefreshed)}
               </span>
             )}
+            <Link to="/monitoring">
+              <Button variant="outline" size="sm">
+                <TrendingUp className="h-4 w-4 mr-1" />
+                Drift-Monitoring
+              </Button>
+            </Link>
             <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
               {t('actions.reload')}

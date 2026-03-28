@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from ..deps import get_db
+from ..deps import get_db, require_admin
 from ..models import Annotation
 from ..utils.time import now_iso
 
@@ -657,6 +657,7 @@ def get_training_stats(
 @router.post("/api/v1/training/export")
 def export_training_data(
     payload: ExportRequest,
+    _: None = require_admin,
     db: Session = Depends(get_db),
 ):
     """Export annotations in specified format."""
@@ -698,6 +699,7 @@ def export_training_data(
 @router.post("/api/v1/training/manifest")
 def export_manifest(
     payload: ManifestRequest,
+    _: None = require_admin,
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Preview manifest entries for data capture."""

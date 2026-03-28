@@ -90,6 +90,18 @@ def _get_model_version() -> str:
     )
 
 
+@router.get("/api/v1/inference/schemas")
+def get_inference_schemas() -> dict:
+    """Return the JSON Schemas for all AI output types.
+
+    Clients can use these schemas to validate AI responses and display the
+    current schema version for EU AI Act audit purposes.
+    """
+    from ..ai_schemas import get_all_schemas
+
+    return get_all_schemas()
+
+
 @router.post("/api/v1/inference/queue", response_model=InferenceQueueResponse)
 async def queue_inference(
     payload: InferenceQueueRequest,
