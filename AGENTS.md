@@ -64,3 +64,4 @@ npm run dev
 - `docs/architecture/frontend.md`
 - `docs/development/setup.md`
 - `docs/development/testing.md`
+- MkDocs: `mkdocs.yml`, `requirements-docs.txt`; Build: `python3 -m mkdocs build --strict`
