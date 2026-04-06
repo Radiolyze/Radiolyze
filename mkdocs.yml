@@ -1,8 +1,10 @@
 site_name: MedGemma Radiologie Reporting UI
 site_description: Offener Radiologie-Report-Stack mit MedGemma + MedASR
-site_url: https://example.com
+# Bei Veroeffentlichung auf GitHub Pages anpassen (Canonical-URL / Sitemap).
+site_url: https://lichtbaer.github.io/medgemma-insight/
 repo_url: https://github.com/lichtbaer/medgemma-insight
 repo_name: lichtbaer/medgemma-insight
+edit_uri: edit/main/docs/
 copyright: "Copyright (c) 2026"
 
 theme:
@@ -59,7 +61,11 @@ nav:
       - Contributing: development/contributing.md
       - Testing: development/testing.md
       - Styleguide: development/styleguide.md
+      - i18n: development/i18n.md
+      - Prompting: development/prompting.md
       - ADR-0001: decisions/adr-0001-open-stack.md
-  - Roadmap: roadmap.md
+  - Roadmap:
+      - Uebersicht: roadmap.md
+      - Validierung: roadmap-validation.md
   - Glossar: glossary.md
   - FAQ: faq.md
