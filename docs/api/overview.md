@@ -8,12 +8,12 @@ Die UI nutzt HTTP und WebSocket APIs:
 ## Ist-Stand (Repo)
 
 - FastAPI Orchestrator unter `/api/v1`
-- Endpunkte fuer Reports (create/get/update/list), ASR, Impression, QA, Audit implementiert
-- WebSocket Endpoint: `/api/v1/ws`
+- Kerndomains: Reports (inkl. Revisionen, PDF/SR-Export, kritische Befunde, Peer Review), ASR, Impression (inkl. Streaming), Inference-Queue, QA-Regeln, Prompts, Templates, Guidelines, Annotationen, Training-Export, Monitoring-Metriken, Audit
+- WebSocket: `/api/v1/ws` (optional JWT)
 - CORS konfigurierbar via `CORS_ORIGINS`
-- vLLM/MedASR Integration via `VLLM_ENABLED` / `MEDASR_ENABLED`
-- Multimodal Inputs: `image_urls` / `image_paths` in Impression und Inference
-- Audit Log liefert Benachrichtigungen (UI zieht Events + optionaler WS Refresh)
+- vLLM/MedASR optional; Health-Check prueft erreichbare Dienste
+- Multimodal: `image_urls` / `image_paths` in Impression und Inference
+- Vollstaendige Route-Liste: [API Endpunkte](endpoints.md); maschinenlesbar: OpenAPI unter `/docs` am laufenden Backend
 
 ## Versionierung
 
@@ -21,6 +21,7 @@ Alle Endpunkte sollten unter `/api/v1` gefuehrt werden.
 
 ## Auth
 
-- UI/API aktuell ohne Auth (lokale Entwicklung)
-- Orthanc DICOMweb via Basic Auth (Default: `orthanc/orthanc`)
-- Production: JWT + RBAC, optional mTLS fuer intra-cluster Kommunikation
+- API: JWT-Login unter `/api/v1/auth/login`; `AUTH_REQUIRED` steuert, ob geschuetzte Routen einen gueltigen Bearer-Token verlangen (Standard: an)
+- WebSocket: bei `AUTH_REQUIRED=true` JWT als Query-Parameter `token` erforderlich
+- Orthanc DICOMweb: Basic Auth (lokal typisch `orthanc/orthanc`)
+- Production: starke Passwoerter, `ADMIN_PASSWORD` setzen, optional mTLS fuer intra-cluster Kommunikation

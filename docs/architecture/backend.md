@@ -21,6 +21,8 @@ Der Orchestrator steuert:
 - `GET /api/v1/inference/status/{job_id}`
 - `GET /api/v1/audit-log`
 
+Vollstaendige aktuelle Liste: [API Endpunkte](../api/endpoints.md).
+
 ## Implementierung im Repo
 
 - Backend Code: `backend/`

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+from unittest.mock import patch
 
+import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
@@ -16,6 +18,11 @@ os.environ["VLLM_FALLBACK_TO_MOCK"] = "true"
 os.environ["MEDASR_FALLBACK_TO_MOCK"] = "true"
 os.environ["ENVIRONMENT"] = "development"
 
+# RQ/Redis: in-memory fake so CI and local pytest need no Redis daemon
+_fake_redis = fakeredis.FakeStrictRedis(decode_responses=False)
+_patch_redis = patch("app.queue.get_redis", lambda: _fake_redis)
+_patch_redis.start()
+
 from app.db import Base, engine  # noqa: E402
 from app.deps import get_db  # noqa: E402
 from app.main import app  # noqa: E402
@@ -27,9 +34,12 @@ TestSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 @pytest.fixture(autouse=True)
 def setup_db():
     """Create all tables before each test and drop after."""
+    _fake_redis.flushall()
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+    _fake_redis.flushall()
 
 
 def _override_get_db():
@@ -60,43 +70,51 @@ def db():
 
 
 @pytest.fixture()
-def seed_admin(db):
+def seed_admin():
     """Create a default admin user and return its ID."""
     from app.auth import hash_password
     from app.mock_logic import utc_now
     from app.models import User
 
-    admin = User(
-        id="admin-001",
-        username="testadmin",
-        password_hash=hash_password("adminpass"),
-        role="admin",
-        is_active=True,
-        created_at=utc_now(),
-    )
-    db.add(admin)
-    db.commit()
-    return admin.id
+    session = TestSession()
+    try:
+        admin = User(
+            id="admin-001",
+            username="testadmin",
+            password_hash=hash_password("adminpass"),
+            role="admin",
+            is_active=True,
+            created_at=utc_now(),
+        )
+        session.add(admin)
+        session.commit()
+        return admin.id
+    finally:
+        session.close()
 
 
 @pytest.fixture()
-def seed_radiologist(db):
+def seed_radiologist():
     """Create a radiologist user and return its ID."""
     from app.auth import hash_password
     from app.mock_logic import utc_now
     from app.models import User
 
-    user = User(
-        id="radio-001",
-        username="testradiologist",
-        password_hash=hash_password("radiopass"),
-        role="radiologist",
-        is_active=True,
-        created_at=utc_now(),
-    )
-    db.add(user)
-    db.commit()
-    return user.id
+    session = TestSession()
+    try:
+        user = User(
+            id="radio-001",
+            username="testradiologist",
+            password_hash=hash_password("radiopass"),
+            role="radiologist",
+            is_active=True,
+            created_at=utc_now(),
+        )
+        session.add(user)
+        session.commit()
+        return user.id
+    finally:
+        session.close()
 
 
 @pytest.fixture()

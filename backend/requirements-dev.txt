@@ -1,3 +1,4 @@
 pytest
 pytest-cov
 httpx
+fakeredis>=2.23.0

@@ -6,7 +6,11 @@ from __future__ import annotations
 def test_health(client):
     response = client.get("/api/v1/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    data = response.json()
+    assert data["status"] in ("ok", "degraded")
+    assert "services" in data
+    assert data["services"]["database"]["status"] == "ok"
+    assert data["services"]["redis"]["status"] == "ok"
 
 
 def test_create_report(client):

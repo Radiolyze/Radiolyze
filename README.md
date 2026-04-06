@@ -184,6 +184,15 @@ Details: `docs/compliance/`
 
 ## Dokumentation
 
+Die Markdown-Quellen liegen unter `docs/`. Statische Site mit [MkDocs](https://www.mkdocs.org/) bauen:
+
+```bash
+pip install -r requirements-docs.txt
+python3 -m mkdocs serve    # lokal mit Live-Reload
+# oder
+python3 -m mkdocs build --strict   # Ausgabe in site/
+```
+
 - [Architektur Übersicht](docs/architecture/overview.md)
 - [Backend Architektur](docs/architecture/backend.md)
 - [Frontend Architektur](docs/architecture/frontend.md)

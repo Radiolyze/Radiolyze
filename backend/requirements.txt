@@ -9,5 +9,5 @@ rq
 httpx
 pydicom
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt>=4.1.2,<5
 reportlab

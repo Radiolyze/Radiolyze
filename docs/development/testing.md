@@ -6,6 +6,15 @@
 npm run test
 ```
 
+## Dokumentation (MkDocs)
+
+```bash
+pip install -r requirements-docs.txt
+python3 -m mkdocs build --strict
+```
+
+`--strict` bricht bei Warnungen (z. B. tote interne Links) ab.
+
 ## Backend Smoke Check
 
 ```bash
