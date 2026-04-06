@@ -5,16 +5,14 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import bcrypt
 from jose import jwt
-from passlib.context import CryptContext
 
 _DEV_SECRET = "medgemma-dev-secret-change-in-production"
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", _DEV_SECRET)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "480"))
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 _logger = logging.getLogger(__name__)
 
@@ -53,11 +51,11 @@ def validate_jwt_config() -> None:
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
