@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 
 def test_health(client):
     response = client.get("/api/v1/health")
@@ -137,6 +139,49 @@ def test_qa_check_empty_findings(client):
     assert response.status_code == 200
     data = response.json()
     assert data["passes"] is False
+
+
+def test_asr_transcript_accepts_language_form_field(client):
+    """Optional language form field must not break ASR (mock path when MedASR disabled)."""
+    files = {"file": ("test.wav", b"fake-audio", "audio/wav")}
+    data = {"language": "de-DE"}
+    response = client.post("/api/v1/reports/asr-transcript", files=files, data=data)
+    assert response.status_code == 200
+    body = response.json()
+    assert "text" in body
+    assert isinstance(body["text"], str)
+    assert len(body["text"]) > 0
+
+
+def test_asr_transcript_sends_language_to_http_backend(client, monkeypatch):
+    """When MedASR is enabled, ISO language code is forwarded in multipart form data."""
+    monkeypatch.setenv("MEDASR_ENABLED", "true")
+    monkeypatch.setenv("MEDASR_FALLBACK_TO_MOCK", "false")
+
+    captured: dict[str, object] = {}
+
+    async def fake_post(self, url, **kwargs):
+        captured["url"] = url
+        captured["data"] = dict(kwargs.get("data") or {})
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json = MagicMock(return_value={"text": "Hallo Welt", "confidence": 0.91})
+        return mock_resp
+
+    create_resp = client.post(
+        "/api/v1/reports/create",
+        json={"study_id": "study-asr", "patient_id": "patient-asr"},
+    )
+    report_id = create_resp.json()["id"]
+
+    with patch("httpx.AsyncClient.post", new=fake_post):
+        files = {"file": ("dictation.webm", b"\x00\x01", "audio/webm")}
+        data = {"report_id": report_id, "language": "de-DE"}
+        response = client.post("/api/v1/reports/asr-transcript", files=files, data=data)
+
+    assert response.status_code == 200
+    assert response.json()["text"] == "Hallo Welt"
+    assert captured.get("data", {}).get("language") == "de"
 
 
 def test_export_sr_json(client):

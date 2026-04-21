@@ -15,14 +15,19 @@ interface ASRServiceResponse {
 interface TranscribeOptions {
   audio: Blob;
   reportId?: string;
+  /** BCP-47 locale passed to the ASR backend (e.g. de-DE, en-US). */
+  language?: string;
 }
 
 export const asrClient = {
-  async transcribeAudio({ audio, reportId }: TranscribeOptions): Promise<ASRResult> {
+  async transcribeAudio({ audio, reportId, language }: TranscribeOptions): Promise<ASRResult> {
     const formData = new FormData();
     formData.append('file', audio, 'dictation.webm');
     if (reportId) {
       formData.append('report_id', reportId);
+    }
+    if (language) {
+      formData.append('language', language);
     }
 
     const response = await fetch(buildUrl(ASR_ENDPOINT), {

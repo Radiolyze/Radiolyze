@@ -56,7 +56,7 @@ Auth-Verhalten: Umgebungsvariable `AUTH_REQUIRED` (Standard `true`). Bei `false`
 
 `POST /api/v1/reports/asr-transcript`
 
-- Audio-Upload (multipart: `file`, optional `report_id`); MedASR oder Mock
+- Audio-Upload (multipart: `file`, optional `report_id`, optional `language` als BCP-47/ISO-Hint z.B. `de-DE`); MedASR, konfigurierbarer OpenAI-Audio-kompatibler Dienst, oder Mock
 
 `POST /api/v1/reports/generate-impression`
 

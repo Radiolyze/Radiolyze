@@ -21,7 +21,8 @@ from .ai_schemas import (
     get_impression_schema,
     get_summary_schema,
 )
-from .mock_logic import generate_asr_transcript, generate_impression, generate_inference_summary
+from .asr_providers import transcribe_audio
+from .mock_logic import generate_impression, generate_inference_summary
 from .prompts import render_prompt_with_metadata
 
 logger = logging.getLogger(__name__)
@@ -821,57 +822,3 @@ async def generate_impression_stream(
         logger.warning("vLLM stream failed, falling back to mock: %s", exc)
         text, _ = generate_impression(findings_text)
         yield text
-
-
-async def transcribe_audio(
-    *,
-    content: bytes,
-    filename: str,
-    content_type: str | None,
-) -> tuple[str, float, str, dict[str, Any]]:
-    if not _env_flag("MEDASR_ENABLED", False):
-        text, confidence = generate_asr_transcript()
-        return text, confidence, "mock-medasr-0.1", {"provider": "mock"}
-
-    base_url = os.getenv("MEDASR_BASE_URL", "http://medasr:8001").rstrip("/")
-    path = os.getenv("MEDASR_TRANSCRIBE_PATH", "/v1/audio/transcriptions")
-    url = f"{base_url}{path}"
-    model_name = os.getenv("MEDASR_MODEL", "google/medasr")
-    timeout = float(_env_int("MEDASR_REQUEST_TIMEOUT", 60))
-    headers = {}
-    api_key = os.getenv("MEDASR_API_KEY")
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-
-    files = {"file": (filename, content, content_type or "application/octet-stream")}
-    data = {"model": model_name}
-    try:
-        start_time = time.monotonic()
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(url, data=data, files=files, headers=headers)
-            response.raise_for_status()
-            try:
-                payload = response.json()
-            except ValueError:
-                payload = {"text": response.text}
-        text = payload.get("text") or payload.get("transcript")
-        if not text and isinstance(payload.get("segments"), list):
-            text = " ".join(segment.get("text", "") for segment in payload["segments"]).strip()
-        if not text:
-            raise RuntimeError("MEDASR returned no transcript")
-        confidence = payload.get("confidence")
-        if confidence is None:
-            confidence = _env_float("MEDASR_DEFAULT_CONFIDENCE", 0.0)
-        latency_ms = int((time.monotonic() - start_time) * 1000)
-        return (
-            text,
-            float(confidence),
-            model_name,
-            _compact_metadata({"provider": "medasr", "latency_ms": latency_ms}),
-        )
-    except Exception as exc:
-        logger.warning("MEDASR transcription failed: %s", exc)
-        if _env_flag("MEDASR_FALLBACK_TO_MOCK", True):
-            text, confidence = generate_asr_transcript()
-            return text, confidence, "mock-medasr-0.1", {"provider": "mock", "error": str(exc)}
-        raise RuntimeError("MEDASR transcription failed") from exc

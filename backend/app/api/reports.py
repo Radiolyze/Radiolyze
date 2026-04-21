@@ -366,6 +366,10 @@ def export_structured_report(
 async def asr_transcript(
     file: UploadFile = File(...),
     report_id: str | None = Form(default=None),
+    language: str | None = Form(
+        default=None,
+        description="BCP-47 or ISO-639-1 hint for ASR (e.g. de-DE, en).",
+    ),
     db: Session = Depends(get_db),
 ) -> ASRResponse:
     max_audio_size = int(
@@ -384,6 +388,7 @@ async def asr_transcript(
             content=content,
             filename=file.filename or "audio.wav",
             content_type=file.content_type,
+            language=language,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -403,6 +408,7 @@ async def asr_transcript(
             "model_version": model_name,
             "input_hash": audio_hash,
             "output_summary": output_summary,
+            "asr_language_requested": language,
         }
         if metadata:
             metadata_payload.update(metadata)

@@ -7,6 +7,7 @@ import { useReport } from '@/hooks/useReport';
 import { useDicomWebQueue } from '@/hooks/useDicomWebQueue';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useReportStatusSync } from '@/hooks/useReportStatusSync';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { usePriorStudies } from '@/hooks/usePriorStudies';
 import { ReportWorkspaceView } from './ReportWorkspaceView';
 import { toast } from 'sonner';
@@ -71,6 +72,7 @@ export const ReportWorkspace = () => {
   const [useAllFrames, setUseAllFrames] = useState(false);
 
   // Report state
+  const { preferences } = useUserPreferences();
   const {
     report,
     setReport,
@@ -417,6 +419,7 @@ export const ReportWorkspace = () => {
         rightPanel={
           <RightPanel
             report={placeholderReport}
+            asrLanguage={preferences.asrLanguage}
             findings={findings}
             impression={impression}
             qaChecks={qaChecks}
@@ -473,6 +476,7 @@ export const ReportWorkspace = () => {
       rightPanel={
         <RightPanel
           report={report}
+          asrLanguage={preferences.asrLanguage}
           findings={findings}
           impression={impression}
           qaChecks={qaChecks}
