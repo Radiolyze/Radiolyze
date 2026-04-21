@@ -47,6 +47,17 @@ def _compact_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in metadata.items() if value is not None}
 
 
+def asr_inference_enabled() -> bool:
+    """True when ASR should call a real HTTP backend (not mock).
+
+    If ``ASR_ENABLED`` is set in the environment, it wins; otherwise ``MEDASR_ENABLED``
+    is used for backward compatibility.
+    """
+    if os.getenv("ASR_ENABLED") is not None:
+        return _env_flag("ASR_ENABLED", False)
+    return _env_flag("MEDASR_ENABLED", False)
+
+
 def normalize_asr_language(language: str | None) -> str | None:
     """Map BCP-47 tags (e.g. de-DE) to ISO-639-1 for OpenAI-style ASR APIs."""
     if not language:
@@ -150,7 +161,7 @@ async def transcribe_audio(
     language: str | None = None,
 ) -> tuple[str, float, str, ASRMetadata]:
     """Transcribe audio using configured ASR provider (mock, MedASR, or generic OpenAI-audio API)."""
-    if not _env_flag("MEDASR_ENABLED", False):
+    if not asr_inference_enabled():
         text, confidence = generate_asr_transcript()
         return text, confidence, "mock-medasr-0.1", {"provider": "mock"}
 

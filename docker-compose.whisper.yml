@@ -1,0 +1,61 @@
+# Optional overlay: self-hosted Whisper (OpenAI-compatible) via hwdsl2/whisper-server.
+# Merge only when you want multilingual STT without MedASR/vLLM.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.whisper.yml up --build
+#
+# First model download can take several minutes; healthcheck uses start_period.
+
+services:
+  whisper-asr:
+    image: hwdsl2/whisper-server:latest
+    ports:
+      - "9000:9000"
+    volumes:
+      - whisper-asr-data:/var/lib/whisper
+    environment:
+      WHISPER_PORT: "9000"
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-auto}
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/docs')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
+  backend:
+    environment:
+      ASR_ENABLED: "true"
+      ASR_PROVIDER: "whisper"
+      ASR_OPENAI_BASE_URL: http://whisper-asr:9000
+      ASR_OPENAI_MODEL: "whisper-1"
+      ASR_OPENAI_TRANSCRIBE_PATH: /v1/audio/transcriptions
+      ASR_OPENAI_REQUEST_TIMEOUT: "300"
+      MEDASR_ENABLED: "false"
+    depends_on:
+      whisper-asr:
+        condition: service_healthy
+
+  worker:
+    environment:
+      ASR_ENABLED: "true"
+      ASR_PROVIDER: "whisper"
+      ASR_OPENAI_BASE_URL: http://whisper-asr:9000
+      ASR_OPENAI_MODEL: "whisper-1"
+      ASR_OPENAI_TRANSCRIBE_PATH: /v1/audio/transcriptions
+      ASR_OPENAI_REQUEST_TIMEOUT: "300"
+      MEDASR_ENABLED: "false"
+    depends_on:
+      whisper-asr:
+        condition: service_healthy
+
+volumes:
+  whisper-asr-data:
