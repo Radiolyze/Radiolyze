@@ -253,6 +253,13 @@ def health() -> dict[str, Any]:
     _check_url("vllm", os.getenv("VLLM_BASE_URL", ""), "/health")
     _check_url("medasr", os.getenv("MEDASR_BASE_URL", ""), "/health")
 
+    # OpenAI-compatible ASR (e.g. hwdsl2/whisper-server: /docs for liveness)
+    asr_provider = os.getenv("ASR_PROVIDER", "medasr").strip().lower()
+    if asr_provider in {"openai", "openai_audio", "whisper", "whisper_http"}:
+        openai_asr_base = (os.getenv("ASR_OPENAI_BASE_URL") or "").rstrip("/")
+        if openai_asr_base:
+            _check_url("asr_openai", openai_asr_base, "/docs")
+
     orthanc_url = os.getenv("DICOM_WEB_BASE_URL", "")
     _check_url("orthanc", orthanc_url.replace("/dicom-web", "") if orthanc_url else "", "/system")
 

@@ -18,6 +18,8 @@ interface UseASRReturn {
 
 interface UseASROptions {
   reportId?: string;
+  /** BCP-47 locale for the transcription service (from user preferences). */
+  language?: string;
 }
 
 const buildMockResult = (durationMs: number): ASRResult => {
@@ -96,7 +98,11 @@ export function useASR(options: UseASROptions = {}): UseASRReturn {
 
       if (blob) {
         try {
-          result = await asrClient.transcribeAudio({ audio: blob, reportId: options.reportId });
+          result = await asrClient.transcribeAudio({
+            audio: blob,
+            reportId: options.reportId,
+            language: options.language,
+          });
         } catch (error) {
           console.warn('ASR service failed, falling back to mock transcript.', error);
         }
@@ -120,7 +126,7 @@ export function useASR(options: UseASROptions = {}): UseASRReturn {
     setConfidence(result.confidence);
 
     return result;
-  }, [audioInput, clearConfidenceInterval, options.reportId, status]);
+  }, [audioInput, clearConfidenceInterval, options.language, options.reportId, status]);
 
   return {
     status,

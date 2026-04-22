@@ -11,6 +11,8 @@ import type { ImageRef, Report, QACheck, ReportTemplate } from '@/types/radiolog
 
 interface RightPanelProps {
   report: Report;
+  /** ASR input language (BCP-47), e.g. from user preferences. */
+  asrLanguage?: string;
   findings: string;
   impression: string;
   qaChecks: QACheck[];
@@ -48,6 +50,7 @@ const AUTO_SAVE_COLORS: Record<AutoSaveStatus, string> = {
 
 export function RightPanel({
   report,
+  asrLanguage,
   findings,
   impression,
   qaChecks,
@@ -85,6 +88,7 @@ export function RightPanel({
       )}
       <FindingsPanel
         reportId={report.id}
+        asrLanguage={asrLanguage}
         findings={findings}
         onFindingsChange={onFindingsChange}
         onSave={onSaveFindings}

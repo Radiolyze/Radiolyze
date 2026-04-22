@@ -33,6 +33,12 @@ docker compose up --build
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile gpu up --build
 ```
 
+### Optional: Whisper ASR (CPU, mehrsprachig)
+```
+docker compose -f docker-compose.yml -f docker-compose.whisper.yml up --build
+```
+Siehe `docs/development/setup.md` und `docker-compose.whisper.yml`.
+
 ### Lokale Frontend-Entwicklung
 ```
 npm install

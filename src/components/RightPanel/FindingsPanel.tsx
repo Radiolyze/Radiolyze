@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 interface FindingsPanelProps {
   reportId?: string;
+  asrLanguage?: string;
   findings: string;
   onFindingsChange: (text: string) => void;
   onSave?: () => void;
@@ -20,6 +21,7 @@ interface FindingsPanelProps {
 
 export function FindingsPanel({
   reportId,
+  asrLanguage,
   findings,
   onFindingsChange,
   onSave,
@@ -32,7 +34,10 @@ export function FindingsPanel({
   const [isEditing, setIsEditing] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { status, isRecording, confidence, startRecording, stopRecording } = useASR({ reportId });
+  const { status, isRecording, confidence, startRecording, stopRecording } = useASR({
+    reportId,
+    language: asrLanguage,
+  });
 
   const handleMicClick = useCallback(async () => {
     if (isRecording) {

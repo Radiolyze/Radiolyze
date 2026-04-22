@@ -28,7 +28,9 @@ Vollstaendige aktuelle Liste: [API Endpunkte](../api/endpoints.md).
 - Backend Code: `backend/`
 - Docker Setup: `docker-compose.yml` (Frontend + Backend + Worker + Redis + Postgres + Orthanc)
 - GPU Overlay: `docker-compose.gpu.yml` (vLLM MedGemma + MedASR)
-- ASR/Impression/Inference nutzen vLLM/MedASR wenn aktiviert, sonst Mock-Fallback
+- Optional ASR Overlay: `docker-compose.whisper.yml` (lokaler OpenAI-kompatibler Whisper-STT)
+- ASR: `ASR_ENABLED` / `ASR_PROVIDER` (`medasr` oder `whisper` + `ASR_OPENAI_*`) oder Legacy `MEDASR_ENABLED`; sonst Mock-Fallback
+- Impression/Inference nutzen vLLM/MedGemma wenn aktiviert, sonst Mock-Fallback
 - Inference Queue via RQ Worker + Redis, Ergebnisse werden in Postgres persistiert
 - WebSocket Status-Events werden ueber Redis PubSub an den API-Server gebridged
 
@@ -40,7 +42,7 @@ Vollstaendige aktuelle Liste: [API Endpunkte](../api/endpoints.md).
 
 ## Inference Services
 
-- **MedASR** fuer Diktat
+- **MedASR** oder **Whisper** (OpenAI-kompatibler HTTP-Dienst) fuer Diktat
 - **MedGemma** fuer multimodale Bildanalyse
 - Optional: LLM fuer Impression (Mistral/Llama)
 
