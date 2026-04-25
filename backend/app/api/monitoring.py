@@ -23,39 +23,17 @@ from ..utils.time import now_iso
 router = APIRouter()
 
 
-@router.get("/api/v1/metrics")
-def get_metrics(db: Session = Depends(get_db)) -> dict[str, Any]:
-    reports_total = db.query(func.count(Report.id)).scalar() or 0
-    reports_by_status = counts_to_dict(
-        db.query(Report.status, func.count(Report.id)).group_by(Report.status).all()
-    )
-    qa_status_counts = counts_to_dict(
-        db.query(Report.qa_status, func.count(Report.id)).group_by(Report.qa_status).all()
-    )
-    inference_job_counts = counts_to_dict(
-        db.query(InferenceJob.status, func.count(InferenceJob.id))
-        .group_by(InferenceJob.status)
-        .all()
-    )
-    audit_events_total = db.query(func.count(AuditEvent.id)).scalar() or 0
-
-    return {
-        "timestamp": now_iso(),
-        "reports_total": reports_total,
-        "reports_by_status": reports_by_status,
-        "qa_status_counts": qa_status_counts,
-        "inference_job_status_counts": inference_job_counts,
-        "audit_events_total": audit_events_total,
-    }
-
-
-@router.get("/api/v1/monitoring/drift")
-def get_drift_report(
-    window_days: int = Query(7, ge=1, le=90),
-    baseline_days: int | None = Query(None, ge=1, le=365),
-    persist: bool = Query(False),
-    db: Session = Depends(get_db),
+def compute_drift_snapshot(
+    db: Session,
+    window_days: int = 7,
+    baseline_days: int | None = None,
+    persist: bool = True,
 ) -> dict[str, Any]:
+    """Compute a drift report and optionally persist a snapshot.
+
+    Extracted from the HTTP handler so it can be called by the scheduler
+    without an HTTP request context.
+    """
     now = datetime.now(UTC)
     baseline_days = baseline_days or window_days
     window_start = now - timedelta(days=window_days)
@@ -85,7 +63,8 @@ def get_drift_report(
     current_qa = (
         db.query(QACheckResult)
         .filter(
-            QACheckResult.created_at >= window_start_iso, QACheckResult.created_at < window_end_iso
+            QACheckResult.created_at >= window_start_iso,
+            QACheckResult.created_at < window_end_iso,
         )
         .all()
     )
@@ -190,7 +169,7 @@ def get_drift_report(
                 "window_days": window_days,
                 "baseline_days": baseline_days,
             },
-            source="api",
+            source="scheduler",
         )
         if alerts:
             add_audit_event(
@@ -198,11 +177,48 @@ def get_drift_report(
                 event_type="drift_alert_triggered",
                 actor_id="system",
                 metadata={"snapshot_id": snapshot_id, "alerts": alerts},
-                source="api",
+                source="scheduler",
             )
         db.commit()
 
     return response_payload
+
+
+@router.get("/api/v1/metrics")
+def get_metrics(db: Session = Depends(get_db)) -> dict[str, Any]:
+    reports_total = db.query(func.count(Report.id)).scalar() or 0
+    reports_by_status = counts_to_dict(
+        db.query(Report.status, func.count(Report.id)).group_by(Report.status).all()
+    )
+    qa_status_counts = counts_to_dict(
+        db.query(Report.qa_status, func.count(Report.id)).group_by(Report.qa_status).all()
+    )
+    inference_job_counts = counts_to_dict(
+        db.query(InferenceJob.status, func.count(InferenceJob.id))
+        .group_by(InferenceJob.status)
+        .all()
+    )
+    audit_events_total = db.query(func.count(AuditEvent.id)).scalar() or 0
+
+    return {
+        "timestamp": now_iso(),
+        "reports_total": reports_total,
+        "reports_by_status": reports_by_status,
+        "qa_status_counts": qa_status_counts,
+        "inference_job_status_counts": inference_job_counts,
+        "audit_events_total": audit_events_total,
+    }
+
+
+@router.get("/api/v1/monitoring/drift")
+def get_drift_report(
+    window_days: int = Query(7, ge=1, le=90),
+    baseline_days: int | None = Query(None, ge=1, le=365),
+    persist: bool = Query(False),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    return compute_drift_snapshot(db, window_days=window_days,
+                                  baseline_days=baseline_days, persist=persist)
 
 
 @router.get("/api/v1/monitoring/drift/snapshots")

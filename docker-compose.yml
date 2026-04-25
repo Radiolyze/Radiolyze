@@ -34,6 +34,9 @@ services:
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
       DICOM_WEB_USERNAME: orthanc
       DICOM_WEB_PASSWORD: orthanc
+      DRIFT_SCHEDULE_HOURS: "24"
+      DRIFT_WINDOW_DAYS: "7"
+      DRIFT_BASELINE_DAYS: "7"
     depends_on:
       - db
       - redis

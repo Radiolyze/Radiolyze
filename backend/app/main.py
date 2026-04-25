@@ -6,6 +6,7 @@ import os
 import uuid
 from typing import Any
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -152,6 +153,33 @@ app.include_router(guidelines.router)
 app.include_router(ws.router)
 
 
+def _get_drift_schedule_hours() -> int:
+    try:
+        return max(0, int(os.getenv("DRIFT_SCHEDULE_HOURS", "24")))
+    except ValueError:
+        return 24
+
+
+def _run_scheduled_drift() -> None:
+    """Periodic drift snapshot – runs in APScheduler background thread."""
+    from .api.monitoring import compute_drift_snapshot
+    from .db import SessionLocal
+
+    window_days = int(os.getenv("DRIFT_WINDOW_DAYS", "7"))
+    baseline_env = os.getenv("DRIFT_BASELINE_DAYS")
+    baseline_days = int(baseline_env) if baseline_env else None
+
+    db = SessionLocal()
+    try:
+        compute_drift_snapshot(db, window_days=window_days,
+                               baseline_days=baseline_days, persist=True)
+        logger.info("Scheduled drift snapshot created (window=%dd)", window_days)
+    except Exception:
+        logger.exception("Scheduled drift snapshot failed")
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 async def on_startup() -> None:
     # Validate JWT configuration before anything else
@@ -199,6 +227,23 @@ async def on_startup() -> None:
         db.close()
     app.state.ws_bridge_task = asyncio.create_task(run_ws_bridge(manager))
 
+    schedule_hours = _get_drift_schedule_hours()
+    if schedule_hours > 0:
+        scheduler = BackgroundScheduler(daemon=True)
+        scheduler.add_job(
+            _run_scheduled_drift,
+            trigger="interval",
+            hours=schedule_hours,
+            id="drift_monitoring",
+            max_instances=1,
+            coalesce=True,
+        )
+        scheduler.start()
+        app.state.drift_scheduler = scheduler
+        logger.info("Drift scheduler started: interval=%dh", schedule_hours)
+    else:
+        logger.info("Drift scheduler disabled (DRIFT_SCHEDULE_HOURS=0)")
+
 
 @app.on_event("shutdown")
 async def on_shutdown() -> None:
@@ -207,6 +252,10 @@ async def on_shutdown() -> None:
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
+
+    scheduler = getattr(app.state, "drift_scheduler", None)
+    if scheduler is not None:
+        scheduler.shutdown(wait=False)
 
 
 @app.get("/api/v1/health")

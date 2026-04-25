@@ -46,18 +46,34 @@
 
 - [~] Human Oversight Dialog + Audit Trail (Dialog vorhanden; Pflichtfelder fuer Inference/Impression/QA/ASR, Report-Events noch nicht durchgaengig)
 - [~] EU AI Act Dokumentation (Annex IV Entwurf vorhanden, offene TODOs)
-- [~] Drift Monitoring (API-Report + Snapshot-Persistenz, Scheduling/UI offen)
+  - [ ] Risikoanalyse nach FMEA/ISO 14971
+  - [ ] Daten-Governance-Dokumentation (Anonymisierung, Training)
+  - [ ] Model Cards mit Trainingsdatenquellen und Evaluationsmetriken
+  - [ ] KPI/Drift-Dashboard fuer Compliance-Nachweise
+- [x] Drift Monitoring Scheduler (APScheduler, DRIFT_SCHEDULE_HOURS, compute_drift_snapshot extrahiert)
 - [~] Security Hardening (Baseline Doku; AuthN/AuthZ, TLS, Rate Limits offen)
+  - [ ] TLS-Terminierung in nginx.conf + docker-compose.yml (Let's Encrypt / Cert-Manager)
+  - [ ] ENABLE_HSTS in Produktions-Compose aktivieren
 
 ## Phase 5: Production (14-22 Wochen)
 
 - [~] DICOM SR Export (JSON + Binary Export + UI, Archivierung/Persistenz offen)
 - [ ] Templates + Guidelines RAG
+  - [ ] pgvector-Extension + embedding-Kolumne im Guideline-Modell
+  - [ ] Embedding-Worker (Text -> Vektor -> DB bei Create/Update)
+  - [ ] Semantischer Such-Endpunkt /api/v1/guidelines/semantic-search
+  - [ ] Frontend: GuidelinesPanel auf semantische Suche umstellen
 - [x] vLLM GPU Worker (Compose + API Integration, Multimodal)
 - [ ] DICOM -> Image Pipeline fuer Multimodal Inference (WADO-RS/JPEG)
+  - [ ] retrieve_rendered_frame() in dicom_client.py (WADO-RS /rendered Endpunkt)
+  - [ ] Worker-Task nutzt retrieve_rendered_frame wenn keine image_urls vorhanden
+  - [ ] Redis-Caching fuer retrievte Frames (TTL 5 min)
 - [x] Batch Reporting Dashboard (Multi-Select, Bulk Actions, Analytics + API Anbindung)
 - [x] Report History / Audit Log UI
 - [~] Observability (Metrics-Endpoint + Drift-Report, Tracing offen)
+  - [ ] OpenTelemetry SDK + FastAPI-Instrumentierung
+  - [ ] Jaeger-Service in docker-compose.yml
+  - [ ] Span-Instrumentierung in Inference-Endpunkt und Worker-Tasks
 
 ## Phase 5.5: MedGemma Capability Expansion (16-24 Wochen)
 
@@ -67,9 +83,15 @@
 - [x] On-Demand Frame-Lokalisierung: API-Endpunkt POST /api/v1/inference/localize (einzelner Frame, schnelle Antwort via Job-Polling)
 - [x] "Frame analysieren"-Button in der DicomViewer-Toolbar (aktuellen Frame an Lokalisierungs-Endpoint senden)
 - [ ] 3D-Readiness: Slice-Order, Spacing, VOI/WL Persistenz
+  - [ ] Slice-Sortierung nach ImagePositionPatient[2] / SliceLocation (Fallback InstanceNumber)
+  - [ ] VOI/WL-Persistenz in useUserPreferences (localStorage + API)
 - [ ] Longitudinal Context: Current/Prior Paare + Time-Delta
+  - [ ] DB-Modell ReportComparison (current_report_id, prior_study_id, time_delta_days)
+  - [ ] API: POST /api/v1/reports/{id}/comparisons + GET
+  - [ ] Frontend: Prior-Auswahl persistiert Comparison-Record
 - [ ] Strukturierte Outputs (JSON Schema + Validation)
 - [ ] Evidence-Indices verpflichtend bei Bild-Inputs
+  - [ ] model_validator in ai_schemas.py: evidence_indices Pflicht wenn image_refs vorhanden
 - [ ] Optional: WSI/Patch Manifest + Tile Inputs
 - [ ] Data Capture Modus (Rendered PNG + Manifest)
 
