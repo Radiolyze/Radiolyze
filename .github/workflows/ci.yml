@@ -68,8 +68,8 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements-docs.txt
-      - run: pip install -r requirements-docs.txt
+          cache-dependency-path: docs/requirements.txt
+      - run: pip install -r docs/requirements.txt
       - run: python3 -m mkdocs build --strict
 
   docker-build:
@@ -77,5 +77,5 @@ jobs:
     needs: [backend-lint-test, frontend-lint-test, docs-mkdocs]
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t radiolyze-frontend .
+      - run: docker build -f docker/Dockerfile.frontend -t radiolyze-frontend .
       - run: docker build -t radiolyze-backend ./backend

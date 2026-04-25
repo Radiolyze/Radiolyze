@@ -1,53 +1,89 @@
-site_name: Radiolyze Radiologie Reporting UI
-site_description: Offener Radiologie-Report-Stack mit Radiolyze + MedASR
-# Bei Veroeffentlichung auf GitHub Pages anpassen (Canonical-URL / Sitemap).
-site_url: https://lichtbaer.github.io/medgemma-insight/
-repo_url: https://github.com/lichtbaer/medgemma-insight
-repo_name: lichtbaer/medgemma-insight
+site_name: Radiolyze
+site_description: Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer und EU-AI-Act-konformem Audit-Logging.
+site_url: https://radiolyze.github.io/radiolyze/
+repo_url: https://github.com/radiolyze/radiolyze
+repo_name: radiolyze/radiolyze
 edit_uri: edit/main/docs/
-copyright: "Copyright (c) 2026"
+copyright: "Copyright &copy; 2026 Radiolyze"
 
 theme:
-  name: readthedocs
-  locale: de
-  highlightjs: true
-  navigation_depth: 3
-  collapse_navigation: false
+  name: material
+  language: de
+  palette:
+    - scheme: default
+      primary: blue grey
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Dark Mode aktivieren
+    - scheme: slate
+      primary: blue grey
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Light Mode aktivieren
+  font:
+    text: Roboto
+    code: Roboto Mono
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
 
 markdown_extensions:
   - admonition
   - toc:
       permalink: true
+      toc_depth: 3
   - tables
   - fenced_code
+  - attr_list
+  - md_in_html
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 nav:
   - Home: index.md
   - Architektur:
-      - Uebersicht: architecture/overview.md
+      - Übersicht: architecture/overview.md
       - Systemkontext: architecture/system-context.md
       - Frontend: architecture/frontend.md
       - Backend: architecture/backend.md
       - Datenfluss: architecture/data-flow.md
-      - MedGemma 1.5 Nutzung: architecture/medgemma-1-5-nutzung.md
-      - Compliance: architecture/compliance.md
+      - MedGemma Nutzung: architecture/medgemma-1-5-nutzung.md
+      - Compliance-Architektur: architecture/compliance.md
       - Deployment: architecture/deployment.md
   - Komponenten:
-      - Viewer: components/viewer.md
+      - DICOM Viewer: components/viewer.md
       - Reporting: components/reporting.md
       - UI Library: components/ui.md
   - API:
-      - Uebersicht: api/overview.md
+      - Übersicht: api/overview.md
       - Endpunkte: api/endpoints.md
       - Schemas: api/schemas.md
       - WebSocket: api/websocket.md
   - Workflows:
-      - Uebersicht: workflows/overview.md
+      - Übersicht: workflows/overview.md
       - Fast Reporting: workflows/fast-report.md
       - Komplexer Fall: workflows/complex-case.md
       - Batch Reporting: workflows/batch-reporting.md
   - Compliance:
-      - Checklist: compliance/checklist.md
+      - Checkliste: compliance/checklist.md
       - Audit Logging: compliance/audit-logging.md
       - EU AI Act Mapping: compliance/eu-ai-act-mapping.md
       - Annex IV: compliance/annex-iv.md
@@ -63,9 +99,9 @@ nav:
       - Styleguide: development/styleguide.md
       - i18n: development/i18n.md
       - Prompting: development/prompting.md
-      - ADR-0001: decisions/adr-0001-open-stack.md
+      - ADR-0001 Open Stack: decisions/adr-0001-open-stack.md
   - Roadmap:
-      - Uebersicht: roadmap.md
+      - Übersicht: roadmap.md
       - Validierung: roadmap-validation.md
   - Glossar: glossary.md
   - FAQ: faq.md

@@ -1,12 +1,12 @@
 # Radiolyze
 
-Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer, Spracherkennung und EU-AI-Act konformem Audit-Logging.
+Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer, Spracherkennung und EU-AI-Act-konformem Audit-Logging.
 
 ## Features
 
 - **DICOM Viewer**: Cornerstone.js-basierter Stack-Viewer mit Tools (Zoom, Pan, Fensterung, Messungen), Seriennavigation und Prior-Studies-Vergleich
 - **KI-Befundung**: MedGemma multimodale Bildanalyse für automatisierte Findings und Impressions
-- **Spracheingabe (ASR)**: MedASR für medizinisches Diktat mit Live-Transkription
+- **Spracheingabe (ASR)**: MedASR oder Whisper für medizinisches Diktat mit Live-Transkription
 - **QA-Checks**: Automatische Qualitätsprüfungen und strukturierte Validierung
 - **Templates & Guidelines**: Institutions-Templates und Leitlinienhinweise im Workflow
 - **Audit-Logging**: Vollständige Nachvollziehbarkeit aller Aktionen (EU-AI-Act konform)
@@ -39,7 +39,7 @@ Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer, Sp
               ┌──────────┴──────────┐
               │    GPU Services     │
               │ vLLM + MedGemma     │
-              │ MedASR              │
+              │ MedASR / Whisper    │
               └─────────────────────┘
 ```
 
@@ -64,6 +64,7 @@ Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer, Sp
 **KI-Services (optional)**
 - vLLM mit MedGemma (multimodale Analyse)
 - MedASR (Spracherkennung)
+- Whisper (selbst-gehostete STT-Alternative)
 
 ## Quick Start
 
@@ -84,14 +85,20 @@ sudo ./scripts/setup-nvidia-docker.sh
 # .env Datei erstellen (siehe env.example)
 # HUGGINGFACE_HUB_TOKEN setzen
 
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile gpu up --build
+docker compose -f docker-compose.yml -f docker/compose/gpu.yml --profile gpu up --build
 ```
 
 ### Mit GPU (AMD ROCm)
 
 ```bash
 DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile.rocm -t vllm-rocm .
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.rocm.yml --profile rocm up --build
+docker compose -f docker-compose.yml -f docker/compose/gpu.yml -f docker/compose/rocm.yml --profile rocm up --build
+```
+
+### Mit Whisper ASR
+
+```bash
+docker compose -f docker-compose.yml -f docker/compose/whisper.yml up --build
 ```
 
 ## Lokale Entwicklung
@@ -164,12 +171,26 @@ npm run lint
 
 ## Seiten / Routen
 
-| Route      | Beschreibung                                |
-| ---------- | ------------------------------------------- |
-| `/`        | Haupt-Workspace (Viewer + Befundung)        |
-| `/batch`   | Batch-Dashboard mit Bulk-Aktionen           |
-| `/history` | Audit-Log und Report-Historie               |
-| `/settings`| Benutzereinstellungen                       |
+| Route       | Beschreibung                                |
+| ----------- | ------------------------------------------- |
+| `/`         | Haupt-Workspace (Viewer + Befundung)        |
+| `/batch`    | Batch-Dashboard mit Bulk-Aktionen           |
+| `/history`  | Audit-Log und Report-Historie               |
+| `/settings` | Benutzereinstellungen                       |
+
+## Docker-Verzeichnis
+
+```
+docker/
+├── Dockerfile.frontend     # Produktions-Build (nginx)
+├── Dockerfile.dev          # Dev-Container (Vite HMR)
+├── Dockerfile.rocm         # AMD ROCm vLLM-Build
+├── nginx.conf              # Nginx-Konfiguration
+└── compose/
+    ├── gpu.yml             # NVIDIA-GPU-Overlay
+    ├── rocm.yml            # AMD-ROCm-Overlay
+    └── whisper.yml         # Whisper-ASR-Overlay
+```
 
 ## Compliance (EU-AI-Act)
 
@@ -184,23 +205,22 @@ Details: `docs/compliance/`
 
 ## Dokumentation
 
-Die Markdown-Quellen liegen unter `docs/`. Statische Site mit [MkDocs](https://www.mkdocs.org/) bauen:
+Die Markdown-Quellen liegen unter `docs/`. Statische Site mit [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) bauen:
 
 ```bash
-pip install -r requirements-docs.txt
+pip install -r docs/requirements.txt
 python3 -m mkdocs serve    # lokal mit Live-Reload
-# oder
 python3 -m mkdocs build --strict   # Ausgabe in site/
 ```
 
 - [Architektur Übersicht](docs/architecture/overview.md)
 - [Backend Architektur](docs/architecture/backend.md)
 - [Frontend Architektur](docs/architecture/frontend.md)
-- [API Endpoints](docs/api/endpoints.md)
+- [API Endpunkte](docs/api/endpoints.md)
 - [WebSocket Events](docs/api/websocket.md)
 - [Development Setup](docs/development/setup.md)
 - [Workflows](docs/workflows/overview.md)
 
 ## Lizenz
 
-Proprietär - Alle Rechte vorbehalten.
+Proprietär – Alle Rechte vorbehalten.
