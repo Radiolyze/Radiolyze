@@ -1,19 +1,19 @@
 # Radiolyze
 
-Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer, Spracherkennung und EU-AI-Act-konformem Audit-Logging.
+Radiology workflow system with AI-assisted report generation, DICOM viewer, speech recognition, and EU AI Act-compliant audit logging.
 
 ## Features
 
-- **DICOM Viewer**: Cornerstone.js-basierter Stack-Viewer mit Tools (Zoom, Pan, Fensterung, Messungen), Seriennavigation und Prior-Studies-Vergleich
-- **KI-Befundung**: MedGemma multimodale Bildanalyse für automatisierte Findings und Impressions
-- **Spracheingabe (ASR)**: MedASR oder Whisper für medizinisches Diktat mit Live-Transkription
-- **QA-Checks**: Automatische Qualitätsprüfungen und strukturierte Validierung
-- **Templates & Guidelines**: Institutions-Templates und Leitlinienhinweise im Workflow
-- **Audit-Logging**: Vollständige Nachvollziehbarkeit aller Aktionen (EU-AI-Act konform)
-- **DICOM SR Export**: Strukturierte Berichte als JSON oder DICOM SR
-- **Batch-Verarbeitung**: Queue-basiertes Reporting für mehrere Studien
+- **DICOM Viewer**: Cornerstone.js-based stack viewer with tools (zoom, pan, windowing, measurements), series navigation, and prior studies comparison
+- **AI Reporting**: MedGemma multimodal image analysis for automated findings and impressions
+- **Speech Input (ASR)**: MedASR or Whisper for medical dictation with live transcription
+- **QA Checks**: Automatic quality checks and structured validation
+- **Templates & Guidelines**: Institutional templates and guideline hints in the workflow
+- **Audit Logging**: Complete traceability of all actions (EU AI Act compliant)
+- **DICOM SR Export**: Structured reports as JSON or DICOM SR
+- **Batch Processing**: Queue-based reporting for multiple studies
 
-## Architektur
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -50,7 +50,7 @@ Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer, Sp
 - Vite (Build & Dev Server)
 - shadcn/ui + Tailwind CSS
 - Cornerstone.js (DICOM Rendering)
-- i18next (Internationalisierung)
+- i18next (Internationalisation)
 
 **Backend**
 - FastAPI (REST API + WebSocket)
@@ -61,59 +61,59 @@ Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer, Sp
 **DICOM / PACS**
 - Orthanc (Mini-PACS, DICOMweb Provider)
 
-**KI-Services (optional)**
-- vLLM mit MedGemma (multimodale Analyse)
-- MedASR (Spracherkennung)
-- Whisper (selbst-gehostete STT-Alternative)
+**AI Services (optional)**
+- vLLM with MedGemma (multimodal analysis)
+- MedASR (speech recognition)
+- Whisper (self-hosted STT alternative)
 
 ## Quick Start
 
-### Docker (empfohlen)
+### Docker (recommended)
 
 ```bash
 docker compose up --build
 ```
 
-### Mit GPU (NVIDIA CUDA)
+### With GPU (NVIDIA CUDA)
 
-**Voraussetzung**: NVIDIA Container Toolkit muss installiert sein.
+**Prerequisite**: NVIDIA Container Toolkit must be installed.
 
 ```bash
-# NVIDIA Container Toolkit einrichten (einmalig):
+# Set up NVIDIA Container Toolkit (once):
 sudo ./scripts/setup-nvidia-docker.sh
 
-# .env Datei erstellen (siehe env.example)
-# HUGGINGFACE_HUB_TOKEN setzen
+# Create .env file (see env.example)
+# Set HUGGINGFACE_HUB_TOKEN
 
 docker compose -f docker-compose.yml -f docker/compose/gpu.yml --profile gpu up --build
 ```
 
-### Mit GPU (AMD ROCm)
+### With GPU (AMD ROCm)
 
 ```bash
 DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile.rocm -t vllm-rocm .
 docker compose -f docker-compose.yml -f docker/compose/gpu.yml -f docker/compose/rocm.yml --profile rocm up --build
 ```
 
-### Mit Whisper ASR
+### With Whisper ASR
 
 ```bash
 docker compose -f docker-compose.yml -f docker/compose/whisper.yml up --build
 ```
 
-## Lokale Entwicklung
+## Local Development
 
-**Voraussetzungen**: Node.js 18+, npm
+**Prerequisites**: Node.js 18+, npm
 
 ```bash
-# Dependencies installieren
+# Install dependencies
 npm install
 
-# Development Server starten
+# Start development server
 npm run dev
 ```
 
-Backend separat starten (benötigt Python 3.11+, Redis, PostgreSQL):
+Start the backend separately (requires Python 3.11+, Redis, PostgreSQL):
 
 ```bash
 cd backend
@@ -121,7 +121,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-## URLs (lokale Entwicklung)
+## URLs (local development)
 
 | Service      | URL                                    |
 | ------------ | -------------------------------------- |
@@ -130,28 +130,28 @@ uvicorn app.main:app --reload
 | Orthanc UI   | http://localhost:8042                  |
 | DICOMweb     | http://localhost:8042/dicom-web        |
 
-**Orthanc Login** (lokale Entwicklung): `orthanc` / `orthanc`
+**Orthanc Login** (local development): `orthanc` / `orthanc`
 
-Beim ersten Start werden automatisch DICOM-Beispieldaten geladen.
-Anpassbar über `ORTHANC_SEED_URLS` (kommasepariert).
+Sample DICOM data is loaded automatically on first start.
+Configurable via `ORTHANC_SEED_URLS` (comma-separated).
 
-## Konfiguration
+## Configuration
 
-Umgebungsvariablen in `.env` (Vorlage: `env.example`):
+Environment variables in `.env` (template: `env.example`):
 
 ```bash
-# Hugging Face Token für MedGemma
+# Hugging Face token for MedGemma
 HUGGINGFACE_HUB_TOKEN=hf_xxx
 
-# Proxy-Targets für lokale Entwicklung ohne Docker
+# Proxy targets for local development without Docker
 VITE_API_PROXY_TARGET=http://localhost:8000
 VITE_DICOM_WEB_PROXY_TARGET=http://localhost:8042
 
-# DICOMweb Authentifizierung
+# DICOMweb authentication
 VITE_DICOM_WEB_USERNAME=orthanc
 VITE_DICOM_WEB_PASSWORD=orthanc
 
-# Inference Frame Sampling
+# Inference frame sampling
 VITE_INFERENCE_MAX_FRAMES_CURRENT=16
 VITE_INFERENCE_MAX_FRAMES_PRIOR=8
 ```
@@ -159,68 +159,68 @@ VITE_INFERENCE_MAX_FRAMES_PRIOR=8
 ## Tests
 
 ```bash
-# Frontend Tests
+# Frontend tests
 npm run test
 
 # Lint
 npm run lint
 
-# Backend Smoke Test
+# Backend smoke test
 ./scripts/smoke-backend.sh
 ```
 
-## Seiten / Routen
+## Pages / Routes
 
-| Route       | Beschreibung                                |
-| ----------- | ------------------------------------------- |
-| `/`         | Haupt-Workspace (Viewer + Befundung)        |
-| `/batch`    | Batch-Dashboard mit Bulk-Aktionen           |
-| `/history`  | Audit-Log und Report-Historie               |
-| `/settings` | Benutzereinstellungen                       |
+| Route       | Description                                     |
+| ----------- | ----------------------------------------------- |
+| `/`         | Main workspace (viewer + reporting)             |
+| `/batch`    | Batch dashboard with bulk actions               |
+| `/history`  | Audit log and report history                    |
+| `/settings` | User settings                                   |
 
-## Docker-Verzeichnis
+## Docker Directory
 
 ```
 docker/
-├── Dockerfile.frontend     # Produktions-Build (nginx)
-├── Dockerfile.dev          # Dev-Container (Vite HMR)
-├── Dockerfile.rocm         # AMD ROCm vLLM-Build
-├── nginx.conf              # Nginx-Konfiguration
+├── Dockerfile.frontend     # Production build (nginx)
+├── Dockerfile.dev          # Dev container (Vite HMR)
+├── Dockerfile.rocm         # AMD ROCm vLLM build
+├── nginx.conf              # Nginx configuration
 └── compose/
-    ├── gpu.yml             # NVIDIA-GPU-Overlay
-    ├── rocm.yml            # AMD-ROCm-Overlay
-    └── whisper.yml         # Whisper-ASR-Overlay
+    ├── gpu.yml             # NVIDIA GPU overlay
+    ├── rocm.yml            # AMD ROCm overlay
+    └── whisper.yml         # Whisper ASR overlay
 ```
 
-## Compliance (EU-AI-Act)
+## Compliance (EU AI Act)
 
-Das System implementiert Anforderungen des EU AI Acts für Hochrisiko-KI:
+The system implements requirements of the EU AI Act for high-risk AI:
 
-- **Art. 12**: Vollständiges Audit-Logging aller KI-Interaktionen
-- **Art. 13**: Transparenz durch Status-Anzeigen und Erklärungen
-- **Art. 14**: Human Oversight durch Approval-Dialoge und Editierbarkeit
-- **Art. 15**: Robustheit durch Fallback-UI bei Inferenz-Fehlern
+- **Art. 12**: Complete audit logging of all AI interactions
+- **Art. 13**: Transparency through status indicators and explanations
+- **Art. 14**: Human oversight via approval dialogs and editability
+- **Art. 15**: Robustness through fallback UI on inference failures
 
 Details: `docs/compliance/`
 
-## Dokumentation
+## Documentation
 
-Die Markdown-Quellen liegen unter `docs/`. Statische Site mit [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) bauen:
+Markdown sources are in `docs/`. Build the static site with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/):
 
 ```bash
 pip install -r docs/requirements.txt
-python3 -m mkdocs serve    # lokal mit Live-Reload
-python3 -m mkdocs build --strict   # Ausgabe in site/
+python3 -m mkdocs serve    # local with live reload
+python3 -m mkdocs build --strict   # output to site/
 ```
 
-- [Architektur Übersicht](docs/architecture/overview.md)
-- [Backend Architektur](docs/architecture/backend.md)
-- [Frontend Architektur](docs/architecture/frontend.md)
-- [API Endpunkte](docs/api/endpoints.md)
-- [WebSocket Events](docs/api/websocket.md)
-- [Development Setup](docs/development/setup.md)
-- [Workflows](docs/workflows/overview.md)
+- [Architecture Overview](docs/en/architecture/overview.md)
+- [Backend Architecture](docs/en/architecture/backend.md)
+- [Frontend Architecture](docs/en/architecture/frontend.md)
+- [API Endpoints](docs/en/api/endpoints.md)
+- [WebSocket Events](docs/en/api/websocket.md)
+- [Development Setup](docs/en/development/setup.md)
+- [Workflows](docs/en/workflows/overview.md)
 
-## Lizenz
+## License
 
-Proprietär – Alle Rechte vorbehalten.
+Proprietary – All rights reserved.

@@ -1,0 +1,296 @@
+# API Schemas (Current State)
+
+These schemas reflect the currently implemented endpoints.
+The OpenAPI specification can be viewed at `/docs` on the running backend.
+
+## ReportCreateRequest
+
+```json
+{
+  "study_id": "st-123",
+  "patient_id": "p-001",
+  "status": "pending",
+  "findings_text": "",
+  "impression_text": "",
+  "report_id": "r-optional"
+}
+```
+
+## ReportResponse
+
+```json
+{
+  "id": "r-123",
+  "study_id": "st-123",
+  "patient_id": "p-001",
+  "status": "draft",
+  "findings_text": "",
+  "impression_text": "",
+  "created_at": "2026-01-20T10:05:00Z",
+  "updated_at": "2026-01-20T10:05:00Z",
+  "approved_at": null,
+  "approved_by": null,
+  "qa_status": "warn",
+  "qa_warnings": [
+    "Fleischner-Kriterien fuer Rundherd pruefen."
+  ],
+  "inference_status": "finished",
+  "inference_summary": "Automatische Bildanalyse: ...",
+  "inference_confidence": 0.84,
+  "inference_model_version": "medgemma-v2",
+  "inference_job_id": "job-123",
+  "inference_completed_at": "2026-01-20T10:12:00Z"
+}
+```
+
+## ReportFinalizeRequest
+
+```json
+{
+  "approvedBy": "Dr. Radiologe",
+  "signature": "Dr. Radiologe"
+}
+```
+
+## ReportUpdateRequest
+
+```json
+{
+  "findings_text": "Befund ...",
+  "impression_text": "Beurteilung ...",
+  "status": "draft",
+  "actorId": "dr-radiologe"
+}
+```
+
+## ReportListResponse
+
+```json
+[
+  {
+    "id": "r-123",
+    "study_id": "st-123",
+    "patient_id": "p-001",
+    "status": "draft",
+    "findings_text": "",
+    "impression_text": "",
+    "created_at": "2026-01-20T10:05:00Z",
+    "updated_at": "2026-01-20T10:05:00Z",
+    "approved_at": null,
+    "approved_by": null,
+    "qa_status": "warn",
+    "qa_warnings": [
+      "Fleischner-Kriterien fuer Rundherd pruefen."
+    ],
+    "inference_status": "finished",
+    "inference_summary": "Automatische Bildanalyse: ...",
+    "inference_confidence": 0.84,
+    "inference_model_version": "medgemma-v2",
+    "inference_job_id": "job-123",
+    "inference_completed_at": "2026-01-20T10:12:00Z"
+  }
+]
+```
+
+## ASRResponse
+
+```json
+{
+  "text": "Im CT Thorax mit Kontrastmittel ...",
+  "confidence": 0.92,
+  "timestamp": "2026-01-20T10:10:00Z"
+}
+```
+
+## ImpressionRequest
+
+```json
+{
+  "report_id": "r-123",
+  "findings_text": "Im CT Thorax ...",
+  "image_urls": ["https://example.local/images/series-1/frame-1.jpg"],
+  "image_paths": ["/data/images/series-1/frame-1.jpg"]
+}
+```
+
+## ImpressionResponse
+
+```json
+{
+  "text": "Automatische Beurteilung (Entwurf): ...",
+  "confidence": 0.88,
+  "model": "medgemma-v2",
+  "generated_at": "2026-01-20T10:11:00Z"
+}
+```
+
+## QAResponse
+
+```json
+{
+  "passes": true,
+  "failures": [],
+  "warnings": [
+    "Fleischner-Kriterien fuer Rundherd pruefen."
+  ],
+  "quality_score": 78,
+  "checks": [
+    {
+      "id": "qa-findings",
+      "name": "Findings vorhanden",
+      "status": "pass",
+      "message": null
+    }
+  ]
+}
+```
+
+## InferenceQueueRequest
+
+```json
+{
+  "report_id": "r-123",
+  "study_id": "st-123",
+  "findings_text": "Im CT Thorax ...",
+  "image_urls": ["https://example.local/images/series-1/frame-1.jpg"],
+  "image_paths": ["/data/images/series-1/frame-1.jpg"],
+  "image_refs": [
+    {
+      "study_id": "st-123",
+      "series_id": "se-456",
+      "instance_id": "1.2.3.4",
+      "frame_index": 12,
+      "stack_index": 120,
+      "wado_url": "https://example.local/dicom-web/.../frames/12/rendered",
+      "image_id": "wadors:https://example.local/dicom-web/.../frames/12",
+      "study_date": "2026-01-20",
+      "series_description": "CT Thorax",
+      "series_modality": "CT",
+      "role": "current"
+    }
+  ],
+  "requested_by": "system",
+  "model_version": "medgemma-v2"
+}
+```
+
+## InferenceQueueResponse
+
+```json
+{
+  "job_id": "job-123",
+  "status": "queued",
+  "queued_at": "2026-01-20T10:08:10Z",
+  "report_id": "r-123",
+  "study_id": "st-123",
+  "model_version": "medgemma-v2"
+}
+```
+
+## InferenceStatusResponse
+
+```json
+{
+  "job_id": "job-123",
+  "status": "finished",
+  "queued_at": "2026-01-20T10:08:10Z",
+  "started_at": "2026-01-20T10:08:15Z",
+  "ended_at": "2026-01-20T10:08:20Z",
+  "result": {
+    "summary": "Automatische Bildanalyse: ...",
+    "confidence": 0.84,
+    "model_version": "medgemma-v2",
+    "completed_at": "2026-01-20T10:08:20Z",
+    "image_refs": [
+      {
+        "study_id": "st-123",
+        "series_id": "se-456",
+        "instance_id": "1.2.3.4",
+        "frame_index": 12,
+        "stack_index": 120,
+        "wado_url": "https://example.local/dicom-web/.../frames/12/rendered",
+        "image_id": "wadors:https://example.local/dicom-web/.../frames/12",
+        "study_date": "2026-01-20",
+        "series_description": "CT Thorax",
+        "series_modality": "CT",
+        "role": "current"
+      }
+    ],
+    "evidence_indices": [1]
+  },
+  "error": null
+}
+```
+
+## AuditLogEntry (Response)
+
+```json
+{
+  "id": "a-123",
+  "event_type": "report_approved",
+  "actor_id": "u-001",
+  "study_id": "st-123",
+  "report_id": "r-123",
+  "timestamp": "2026-01-20T10:12:00Z",
+  "metadata": {
+    "qa_score": 85
+  }
+}
+```
+
+## WebSocket Event
+
+```json
+{
+  "type": "report_status",
+  "reportId": "r-123",
+  "payload": {
+    "asrStatus": "processing",
+    "aiStatus": "processing",
+    "qaStatus": "checking"
+  },
+  "timestamp": "2026-01-20T10:08:12Z"
+}
+```
+
+## PromptListResponse
+
+```json
+{
+  "editable": true,
+  "maxLength": 4000,
+  "allowedVariables": {
+    "system": [],
+    "summary": ["findings_text", "image_manifest"],
+    "impression": ["findings_text", "image_manifest"]
+  },
+  "prompts": [
+    {
+      "promptType": "summary",
+      "name": "summary-default",
+      "templateText": "Task: Summarize...",
+      "version": 1,
+      "isActive": true,
+      "variables": ["findings_text", "image_manifest"],
+      "createdBy": "system",
+      "createdAt": "2026-01-20T10:12:00Z",
+      "updatedAt": "2026-01-20T10:12:00Z",
+      "source": "db",
+      "defaultText": "Task: Summarize...",
+      "editable": true,
+      "maxLength": 4000,
+      "allowedVariables": ["findings_text", "image_manifest"]
+    }
+  ]
+}
+```
+
+## PromptUpdateRequest
+
+```json
+{
+  "templateText": "Task: Summarize ...",
+  "name": "summary-v2",
+  "actorId": "admin"
+}
+```

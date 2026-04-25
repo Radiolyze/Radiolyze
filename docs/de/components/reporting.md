@@ -1,0 +1,26 @@
+# Reporting Komponenten
+
+## FindingsPanel
+
+- ASR Diktat (Audio Upload + API Fallback)
+- Confidence Bar
+- Edit/Save Mode
+
+## ImpressionPanel
+
+- AI Draft Anzeige (Inference/Impression API, optionaler Mock-Fallback)
+- QA Status/Warnungen
+- Freigabe via Approval Dialog
+- DICOM SR Export (JSON Draft + Binary)
+
+## QAChecklist
+
+Collapsible Liste mit QA Checks inkl. Status und Message (API + Fallback).
+
+## TemplatesPanel
+
+Zeigt Templates und erlaubt das Einfuegen in den Befund.
+
+## GuidelinesPanel
+
+Zeigt Leitlinien und Warnstatus pro Guideline.
