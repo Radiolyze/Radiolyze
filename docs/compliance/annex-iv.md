@@ -6,7 +6,7 @@ Luecken, die vor einer Konformitaetsbewertung zu schliessen sind.
 
 ## 1. Systemidentifikation
 
-- Produktname: MedGemma Radiologie Reporting
+- Produktname: Radiolyze Radiologie Reporting
 - Anbieter: (TBD Organisation/Legal Entity)
 - Version: v0.1.x (Repo-Stand)
 - Deployment: On-Prem (Docker Compose), optional GPU Profil

@@ -1,6 +1,6 @@
-# MedGemma Radiologie Reporting UI
+# Radiolyze Radiologie Reporting UI
 
-Willkommen zur Dokumentation des MedGemma Radiologie Reporting UI. Dieses Projekt liefert
+Willkommen zur Dokumentation von Radiolyze Radiologie Reporting UI. Dieses Projekt liefert
 eine realistische, workflow-orientierte UI fuer radiologische Befunde mit Fokus auf
 Speed, Genauigkeit, Accessibility und EU-AI-Act-Konformitaet.
 

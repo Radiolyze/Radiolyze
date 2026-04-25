@@ -1,4 +1,4 @@
-# MedGemma Insight
+# Radiolyze
 
 Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer, Spracherkennung und EU-AI-Act konformem Audit-Logging.
 

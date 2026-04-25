@@ -1,6 +1,6 @@
 import { apiClient } from './apiClient';
 
-export type ExportFormat = 'coco' | 'huggingface' | 'medgemma';
+export type ExportFormat = 'coco' | 'huggingface' | 'radiolyze';
 
 export interface ExportRequest {
   format: ExportFormat;
@@ -129,6 +129,6 @@ export function downloadBlob(blob: Blob, filename: string): void {
 export async function exportAndDownload(request: ExportRequest): Promise<void> {
   const blob = await exportTrainingData(request);
   const timestamp = new Date().toISOString().slice(0, 10);
-  const filename = `medgemma-training-${request.format}-${timestamp}.zip`;
+  const filename = `radiolyze-training-${request.format}-${timestamp}.zip`;
   downloadBlob(blob, filename);
 }

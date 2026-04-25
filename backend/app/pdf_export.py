@@ -170,7 +170,7 @@ def build_pdf_export(report: Report) -> tuple[bytes, str]:
     elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor("#cccccc")))
     elements.append(
         Paragraph(
-            f"Generiert von MedGemma Insight | Report-ID: {report.id} | {now_str}",
+            f"Generiert von Radiolyze | Report-ID: {report.id} | {now_str}",
             ParagraphStyle(
                 "Footer",
                 parent=meta_style,

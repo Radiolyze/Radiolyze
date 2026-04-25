@@ -46,15 +46,15 @@ const FORMAT_INFO: Record<ExportFormat, { name: string; description: string; ico
     description: 'JSONL Dataset Format für 🤗 Transformers und datasets Library.',
     icon: Database,
   },
-  medgemma: {
-    name: 'MedGemma',
-    description: 'Optimiertes Format für MedGemma 1.5 Multimodal Fine-Tuning mit LoRA.',
+  radiolyze: {
+    name: 'Radiolyze',
+    description: 'Radiolyze Format für Multimodal Fine-Tuning mit LoRA.',
     icon: Sparkles,
   },
 };
 
 export default function Training() {
-  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('medgemma');
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('radiolyze');
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [splitRatio, setSplitRatio] = useState([0.8]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -137,7 +137,7 @@ export default function Training() {
       const data = await getTrainingManifest(buildManifestRequest(undefined, true));
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const timestamp = new Date().toISOString().slice(0, 10);
-      downloadBlob(blob, `medgemma-manifest-${timestamp}.json`);
+      downloadBlob(blob, `radiolyze-manifest-${timestamp}.json`);
       toast.success('Manifest heruntergeladen');
     } catch (error) {
       toast.error('Manifest Download fehlgeschlagen', {
@@ -184,7 +184,7 @@ export default function Training() {
         </Link>
         <h1 className="text-lg font-semibold">Training Data Export</h1>
         <Badge variant="outline" className="ml-2">
-          MedGemma Fine-Tuning
+          Radiolyze Fine-Tuning
         </Badge>
       </header>
 
@@ -192,7 +192,7 @@ export default function Training() {
       <main className="max-w-5xl mx-auto p-6 space-y-6">
         <div className="mb-4">
           <p className="text-muted-foreground">
-            Exportieren Sie Ihre Annotations für MedGemma 1.5 Fine-Tuning
+            Exportieren Sie Ihre Annotations für Radiolyze Fine-Tuning
           </p>
         </div>
 

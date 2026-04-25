@@ -1,5 +1,5 @@
-site_name: MedGemma Radiologie Reporting UI
-site_description: Offener Radiologie-Report-Stack mit MedGemma + MedASR
+site_name: Radiolyze Radiologie Reporting UI
+site_description: Offener Radiologie-Report-Stack mit Radiolyze + MedASR
 # Bei Veroeffentlichung auf GitHub Pages anpassen (Canonical-URL / Sitemap).
 site_url: https://lichtbaer.github.io/medgemma-insight/
 repo_url: https://github.com/lichtbaer/medgemma-insight

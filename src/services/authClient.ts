@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 
-const AUTH_TOKEN_KEY = 'medgemma-auth-token';
-const AUTH_USER_KEY = 'medgemma-auth-user';
+const AUTH_TOKEN_KEY = 'radiolyze-auth-token';
+const AUTH_USER_KEY = 'radiolyze-auth-user';
 
 export interface LoginPayload {
   username: string;

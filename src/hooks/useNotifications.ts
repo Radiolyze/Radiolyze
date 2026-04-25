@@ -19,8 +19,8 @@ interface UseNotificationsOptions {
 }
 
 const DEFAULT_LIMIT = 20;
-const STORAGE_READ_KEY = 'medgemma.notifications.read';
-const STORAGE_DISMISS_KEY = 'medgemma.notifications.dismissed';
+const STORAGE_READ_KEY = 'radiolyze.notifications.read';
+const STORAGE_DISMISS_KEY = 'radiolyze.notifications.dismissed';
 
 const loadIdSet = (key: string): Set<string> => {
   if (typeof window === 'undefined') return new Set();

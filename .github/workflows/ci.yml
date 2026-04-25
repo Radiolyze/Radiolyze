@@ -77,5 +77,5 @@ jobs:
     needs: [backend-lint-test, frontend-lint-test, docs-mkdocs]
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t medgemma-frontend .
-      - run: docker build -t medgemma-backend ./backend
+      - run: docker build -t radiolyze-frontend .
+      - run: docker build -t radiolyze-backend ./backend

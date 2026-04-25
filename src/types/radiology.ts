@@ -1,4 +1,4 @@
-// MedGemma Radiology Types
+// Radiolyze Radiology Types
 
 /**
  * A single AI-detected finding with a bounding box.

@@ -24,7 +24,7 @@ interface ConnectionResult {
   latencyMs?: number;
 }
 
-const STORAGE_KEY = 'medgemma.dicomweb.config';
+const STORAGE_KEY = 'radiolyze.dicomweb.config';
 
 const loadConfig = (): DicomWebConfig => {
   try {
