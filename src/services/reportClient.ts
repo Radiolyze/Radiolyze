@@ -9,7 +9,7 @@ const buildUrl = (path: string) => new URL(path, API_BASE_URL || window.location
 
 /** Build auth headers matching apiClient's pattern. */
 const authHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem('medgemma-auth-token');
+  const token = localStorage.getItem('radiolyze-auth-token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 

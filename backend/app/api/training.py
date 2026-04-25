@@ -1,4 +1,4 @@
-"""Training data export API for Fine-Tuning MedGemma."""
+"""Training data export API for Radiolyze Fine-Tuning."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from ..utils.time import now_iso
 
 router = APIRouter()
 
-ExportFormat = Literal["coco", "huggingface", "medgemma"]
+ExportFormat = Literal["coco", "huggingface", "radiolyze"]
 
 
 class ExportRequest(BaseModel):
@@ -226,7 +226,7 @@ def _build_coco_dataset(annotations: list[Annotation]) -> dict[str, Any]:
 
     return {
         "info": {
-            "description": "MedGemma Training Dataset",
+            "description": "Radiolyze Training Dataset",
             "version": "1.0",
             "year": datetime.utcnow().year,
             "date_created": now_iso(),
@@ -291,8 +291,8 @@ def _build_huggingface_dataset(annotations: list[Annotation]) -> list[dict[str, 
     return samples
 
 
-def _build_medgemma_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
-    """Build MedGemma multimodal fine-tuning format."""
+def _build_radiolyze_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
+    """Build Radiolyze multimodal fine-tuning format."""
     samples = []
 
     # Group by image
@@ -413,7 +413,7 @@ def _create_export_zip(
             )
 
             # Add README
-            readme = """# COCO Format Dataset for MedGemma Fine-Tuning
+            readme = """# COCO Format Dataset for Radiolyze Fine-Tuning
 
 ## Structure
 ```
@@ -428,8 +428,8 @@ def _create_export_zip(
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.data.datasets import register_coco_instances
 
-register_coco_instances("medgemma_train", {}, "annotations/train.json", "images/")
-register_coco_instances("medgemma_val", {}, "annotations/val.json", "images/")
+register_coco_instances("radiolyze_train", {}, "annotations/train.json", "images/")
+register_coco_instances("radiolyze_val", {}, "annotations/val.json", "images/")
 ```
 
 ## Image Acquisition
@@ -466,7 +466,7 @@ und ein `images/manifest.json` mit Metadaten/Hashes.
 
             # Dataset info
             dataset_info = {
-                "description": "MedGemma Medical Imaging Dataset",
+                "description": "Radiolyze Medical Imaging Dataset",
                 "features": {
                     "image_id": {"dtype": "string"},
                     "image_path": {"dtype": "string"},
@@ -481,7 +481,7 @@ und ein `images/manifest.json` mit Metadaten/Hashes.
             }
             zf.writestr("dataset_info.json", json.dumps(dataset_info, indent=2))
 
-            readme = """# HuggingFace Dataset for MedGemma Fine-Tuning
+            readme = """# HuggingFace Dataset for Radiolyze Fine-Tuning
 
 ## Loading
 ```python
@@ -510,10 +510,10 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
 """
             zf.writestr("README.md", readme)
 
-        elif export_format == "medgemma":
-            # MedGemma multimodal format
-            train_data = _build_medgemma_dataset(train_anns)
-            val_data = _build_medgemma_dataset(val_anns)
+        elif export_format == "radiolyze":
+            # Radiolyze multimodal format
+            train_data = _build_radiolyze_dataset(train_anns)
+            val_data = _build_radiolyze_dataset(val_anns)
             if anonymize:
                 train_data = [anonymize_annotation(s) for s in train_data]
                 val_data = [anonymize_annotation(s) for s in val_data]
@@ -538,7 +538,7 @@ Dieses Exportpaket enthaelt gerenderte PNGs in `images/` und ein
             }
             zf.writestr("lora_config.json", json.dumps(lora_config, indent=2))
 
-            readme = """# MedGemma 1.5 Fine-Tuning Dataset
+            readme = """# Radiolyze Fine-Tuning Dataset
 
 ## Format
 Each sample contains:

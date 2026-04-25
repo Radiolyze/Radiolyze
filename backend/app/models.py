@@ -196,7 +196,7 @@ class Guideline(Base):
 
 
 class Annotation(Base):
-    """Training annotations for Fine-Tuning MedGemma."""
+    """Training annotations for Radiolyze Fine-Tuning."""
 
     __tablename__ = "annotations"
 

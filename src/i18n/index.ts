@@ -41,7 +41,7 @@ export const resources = {
 // Get stored language preference or detect from browser
 const getInitialLanguage = (): string => {
   try {
-    const stored = localStorage.getItem('medgemma-user-preferences');
+    const stored = localStorage.getItem('radiolyze-user-preferences');
     if (stored) {
       const prefs = JSON.parse(stored);
       if (prefs.uiLanguage) {

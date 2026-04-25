@@ -44,7 +44,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const request = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
   const { query, body, headers, ...rest } = options;
-  const authToken = localStorage.getItem('medgemma-auth-token');
+  const authToken = localStorage.getItem('radiolyze-auth-token');
   const requestId = crypto.randomUUID();
 
   let response: Response | undefined;
@@ -83,7 +83,7 @@ const request = async <T>(path: string, options: RequestOptions = {}): Promise<T
   if (!response.ok) {
     // Handle 401: clear stale token and redirect to login
     if (response.status === 401) {
-      localStorage.removeItem('medgemma-auth-token');
+      localStorage.removeItem('radiolyze-auth-token');
       const loginPath = '/login';
       if (window.location.pathname !== loginPath) {
         window.location.href = loginPath;

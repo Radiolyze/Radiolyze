@@ -42,7 +42,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   defaultTemplate: null,
 };
 
-const STORAGE_KEY = 'medgemma-user-preferences';
+const STORAGE_KEY = 'radiolyze-user-preferences';
 
 export function useUserPreferences() {
   const [preferences, setPreferencesState] = useState<UserPreferences>(() => {
