@@ -177,8 +177,8 @@ class PromptTemplate(Base):
 class Guideline(Base):
     """Institutional guidelines and imaging standards for radiologists.
 
-    Supports full-text search via PostgreSQL's ``tsvector`` trigram index or,
-    when running on SQLite (tests), via a simple LIKE query fallback.
+    Supports semantic search via vector embeddings (when EMBEDDING_BASE_URL is
+    configured) and falls back to ILIKE search on both PostgreSQL and SQLite.
     """
 
     __tablename__ = "guidelines"
@@ -193,6 +193,10 @@ class Guideline(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
     updated_at: Mapped[str] = mapped_column(String, nullable=False)
+    # Semantic embedding stored as JSON list[float].  Populated by embed_guideline task.
+    embedding_vec: Mapped[list[float] | None] = mapped_column(JSON, nullable=True)
+    # pending | done | failed | skip  (skip = no EMBEDDING_BASE_URL configured)
+    embedding_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
 
 
 class Annotation(Base):

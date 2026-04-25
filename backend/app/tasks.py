@@ -307,3 +307,42 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
         raise
     finally:
         db.close()
+
+
+def embed_guideline(guideline_id: str) -> None:
+    """Compute and persist a vector embedding for *guideline_id*.
+
+    Called as an RQ background job whenever a guideline is created or updated.
+    Sets embedding_status to 'done', 'skip' (no service configured), or 'failed'.
+    """
+    from .models import Guideline
+    from .utils.embedding import embed_text
+
+    db = SessionLocal()
+    try:
+        guideline = db.get(Guideline, guideline_id)
+        if not guideline:
+            logger.warning("embed_guideline: guideline %s not found", guideline_id)
+            return
+
+        text = "\n".join(
+            part for part in [guideline.title, guideline.body, guideline.keywords] if part
+        )
+        vec = embed_text(text)
+        guideline.embedding_vec = vec
+        guideline.embedding_status = "done" if vec is not None else "skip"
+        db.commit()
+        logger.info(
+            "embed_guideline: %s → status=%s", guideline_id, guideline.embedding_status
+        )
+    except Exception:
+        logger.exception("embed_guideline failed for %s", guideline_id)
+        try:
+            g = db.get(Guideline, guideline_id)
+            if g:
+                g.embedding_status = "failed"
+                db.commit()
+        except Exception:
+            pass
+    finally:
+        db.close()

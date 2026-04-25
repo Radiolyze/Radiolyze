@@ -1,18 +1,20 @@
 # Gap-Analyse & Umsetzungsplan
 
 **Erstellt:** 2026-04-25  
-**Branch:** claude/audit-project-roadmap-SiT4l  
+**Aktualisiert:** 2026-04-25  
+**Branch:** claude/audit-roadmap-gaps-Zf7l7  
 **Methode:** Vollständiger Code-Abgleich gegen `docs/roadmap.md`
 
 ---
 
 ## Zusammenfassung
 
-Phase 1–3.5 sowie weite Teile von Phase 5.5 sind vollständig umgesetzt. Die
-wesentlichen Lücken konzentrieren sich auf vier Bereiche: operativer Betrieb
-des Drift-Monitorings (kein Scheduler), echtes RAG statt LIKE-Suche,
-Vervollständigung der Compliance-Dokumentation sowie kleinere 3D/Longitudinal-
-und Tracing-Features.
+Phase 1–3.5 sowie weite Teile von Phase 5.5 sind vollständig umgesetzt. GAP-01
+(Drift-Scheduler) wurde in Commit `45d7437` behoben. Die verbleibenden Lücken
+konzentrieren sich auf vier Bereiche: echtes RAG statt LIKE-Suche,
+Vervollständigung der Compliance-Dokumentation, fehlende Backend-Infrastruktur
+(DICOM-Frame-Retrieval, Tracing, Longitudinal-Context-Persistenz) sowie kleinere
+Schema-Validierungen und 3D-Features.
 
 | Phase | Roadmap-Status | Realer Stand |
 |-------|---------------|--------------|
@@ -20,30 +22,27 @@ und Tracing-Features.
 | 2 – Backend Orchestrator | ✅ | ✅ vollständig |
 | 3 – Vergleichsmodus | ✅ | ✅ vollständig |
 | 3.5 – Maintenance | ✅ | ✅ vollständig |
-| 4 – Compliance Ready | [~] | ⚠️ 3 Lücken |
-| 5 – Production | [~]/[ ] | ⚠️ 3 Lücken |
-| 5.5 – MedGemma | [x]/[ ] | ⚠️ 5 Lücken |
+| 4 – Compliance Ready | [~] | ⚠️ 2 Lücken (GAP-03, GAP-11) |
+| 5 – Production | [~]/[ ] | ⚠️ 3 Lücken (GAP-02, GAP-04, GAP-05) |
+| 5.5 – MedGemma | [x]/[ ] | ⚠️ 3 Lücken (GAP-06, GAP-07, GAP-08) |
 | 6 – Scale & Optimization | [ ] | ❌ nicht begonnen |
 
 ---
 
-## Identifizierte Gaps (priorisiert)
+## Gelöste Gaps
 
-### P1 – Kritisch (blockiert Compliance / Produktion)
+### ~~GAP-01: Drift-Monitoring Scheduler~~ ✅ Behoben (Commit `45d7437`)
 
-#### GAP-01: Drift-Monitoring Scheduler fehlt
-**Roadmap:** Phase 4 `[~]` – "Scheduling/UI offen"  
-**Befund:** `GET /api/v1/monitoring/drift` und UI (`src/pages/Monitoring.tsx`) sind
-vollständig implementiert. Es fehlt jedoch ein periodischer Aufruf. Kein
-APScheduler, kein RQ-scheduled-Job, kein Cron-Entry in `docker-compose.yml`.  
-**Auswirkung:** Drift-Alerts werden nie automatisch ausgelöst; Post-Market
-Monitoring (Art. 72 EU AI Act) ist nicht operativ.  
-**Betroffene Dateien:**
-- `backend/app/main.py` – kein `lifespan`-Scheduler-Start
-- `docker-compose.yml` – kein Worker-Eintrag für Scheduler
-- `backend/app/api/monitoring.py` – Drift-Endpunkt vorhanden, aber passiv
+APScheduler (`BackgroundScheduler`) läuft seit Commit `45d7437` im `on_startup`-
+Handler von `backend/app/main.py`. Intervall wird per `DRIFT_SCHEDULE_HOURS`
+(Default: 24 h) konfiguriert; `DRIFT_SCHEDULE_HOURS=0` deaktiviert den Scheduler
+explizit.
 
 ---
+
+## Offene Gaps (priorisiert)
+
+### P1 – Kritisch (blockiert Compliance / Produktion)
 
 #### GAP-02: Templates/Guidelines – kein echtes RAG
 **Roadmap:** Phase 5 `[ ]` – "Templates + Guidelines RAG"  
@@ -55,8 +54,8 @@ Generation-Flow. `backend/app/api/guidelines.py` enthält expliziten Kommentar:
 semantisch ähnliche Texte werden nicht gefunden.  
 **Betroffene Dateien:**
 - `backend/app/api/guidelines.py` (Zeile 6, 54–82)
-- `backend/app/models.py` (Guideline-Modell, Zeile 180)
-- `backend/app/api/templates.py` (`populate`-Endpunkt, Zeilen 169–188)
+- `backend/app/models.py` (`Guideline`-Modell, Zeile 180)
+- `backend/app/api/templates.py` (`populate`-Endpunkt)
 
 ---
 
@@ -67,6 +66,7 @@ semantisch ähnliche Texte werden nicht gefunden.
 - Daten-Governance-Dokumentation (Anonymisierung, Training) fehlt
 - Vollständige Model Cards inkl. Trainingsdatenquellen fehlen
 - KPI/Drift-Dashboards (Metriken-Persistenz für Compliance-Nachweis)
+- RBAC-Implementierung und Auth-Provider-Auswahl
 
 **Auswirkung:** Fehlt für Konformitätserklärung und Notified-Body-Audit.  
 **Betroffene Dateien:**
@@ -75,7 +75,7 @@ semantisch ähnliche Texte werden nicht gefunden.
 
 ---
 
-### P2 – Wichtig (Phase 5.5-Vollständigkeit)
+### P2 – Wichtig (Phase 5/5.5-Vollständigkeit)
 
 #### GAP-04: DICOM → JPEG Pipeline – kein serverseitiges Frame-Retrieval
 **Roadmap:** Phase 5 `[ ]` – "DICOM → Image Pipeline für Multimodal Inference (WADO-RS/JPEG)"  
@@ -98,7 +98,7 @@ vom Browser abrufen; Robustheit gegen Session-Timeouts fehlt.
 #### GAP-05: Observability – kein Distributed Tracing
 **Roadmap:** Phase 5 `[~]` – "Tracing offen"  
 **Befund:** `backend/app/main.py` enthält ein einfaches Request-ID-Middleware
-(Zeile 79). Kein OpenTelemetry-SDK, kein Jaeger/Zipkin-Export, keine
+(Zeile 82). Kein OpenTelemetry-SDK, kein Jaeger/Zipkin-Export, keine
 Span-Instrumentierung in API-Routen oder Worker-Tasks.  
 **Auswirkung:** Keine Request-übergreifende Korrelation zwischen API, Worker,
 DB und vLLM; Debugging in Produktion eingeschränkt.  
@@ -114,11 +114,11 @@ DB und vLLM; Debugging in Produktion eingeschränkt.
 **Befund:** In `backend/app/ai_schemas.py` ist `evidence_indices` als
 `list[int] | None = Field(default=None, ...)` definiert (Zeilen 48–50, 117–119).
 Es existiert keine Validierungslogik, die `evidence_indices` bei Bild-Inputs
-(`image_urls`/`image_paths` vorhanden) als Pflichtfeld erzwingt.  
+(`image_urls`/`image_refs` vorhanden) als Pflichtfeld erzwingt.  
 **Auswirkung:** Modell-Outputs ohne Bildnachweis-Referenz landen in der DB;
 Traceability-Anforderung aus EU AI Act Art. 12 potenziell verletzt.  
 **Betroffene Dateien:**
-- `backend/app/ai_schemas.py` (Zeilen 48–50, 117–119, Validatoren Zeilen 63+, 136+)
+- `backend/app/ai_schemas.py` (Zeilen 48–50, 117–119)
 - `backend/app/utils/inference.py`
 
 ---
@@ -129,29 +129,28 @@ Traceability-Anforderung aus EU AI Act Art. 12 potenziell verletzt.
 - **Slice-Order:** `useDicomSeriesInstances.ts` (Zeile 147) sortiert ausschließlich
   nach `InstanceNumber`. Für korrekte 3D-Rekonstruktion müsste nach
   `ImagePositionPatient[2]` (z-Koordinate) oder `SliceLocation` sortiert werden.
-- **Spacing:** `spacingBetweenSlices` wird korrekt aus Tag `00180088` gelesen
-  und an `image_refs` weitergegeben ✅
+- **Spacing:** `spacingBetweenSlices` wird korrekt aus Tag `00180088` gelesen ✅
 - **VOI/WL Persistenz:** `useViewportSync.ts` synchronisiert `windowLevel` im
   Arbeitsspeicher (in-memory). Keine Persistenz in DB oder localStorage zwischen
   Sessions.
 
 **Betroffene Dateien:**
-- `src/hooks/useDicomSeriesInstances.ts` (Zeilen 147–153) – kein SliceLocation-Fallback
-- `src/hooks/useViewportSync.ts` – kein Persist-Layer
-- `src/hooks/useUserPreferences.ts` – kein WL-Eintrag
+- `src/hooks/useDicomSeriesInstances.ts` (Zeilen 147–153)
+- `src/hooks/useViewportSync.ts`
+- `src/hooks/useUserPreferences.ts`
 
 ---
 
 #### GAP-08: Longitudinal Context – keine DB-Persistenz der Current/Prior-Paare
 **Roadmap:** Phase 5.5 `[ ]` – "Longitudinal Context: Current/Prior Paare + Time-Delta"  
-**Befund:** `time_delta_days` ist in `backend/app/schemas.py` (Zeile 142) und
-`inference_clients.py` (Zeile 153) als Feld in `image_refs` vorhanden und wird
-korrekt in den Prompt-Text eingebettet. Es gibt jedoch keine DB-Tabelle und
-keinen API-Endpunkt zur Persistenz von "Current-Study ↔ Prior-Study"-Paaren mit
+**Befund:** `time_delta_days` ist in `backend/app/schemas.py` und
+`inference_clients.py` als Feld in `image_refs` vorhanden und wird korrekt in
+den Prompt-Text eingebettet. Es gibt jedoch keine DB-Tabelle und keinen
+API-Endpunkt zur Persistenz von "Current-Study ↔ Prior-Study"-Paaren mit
 zugehörigem Time-Delta. Der Wert wird nur pro-Request übergeben, nicht dauerhaft
 gespeichert.  
 **Betroffene Dateien:**
-- `backend/app/models.py` – kein `LongitudinalPair`-Modell
+- `backend/app/models.py` – kein `ReportComparison`-Modell
 - `backend/app/api/inference.py` – kein Persistenz-Step nach Localize/Inference
 - `src/hooks/usePriorStudies.ts`, `src/hooks/usePriorReports.ts`
 
@@ -161,20 +160,22 @@ gespeichert.
 
 #### GAP-09: WSI/Patch Manifest – nicht begonnen
 **Roadmap:** Phase 5.5 `[ ]` – "Optional: WSI/Patch Manifest + Tile Inputs"  
-**Befund:** Kein Backend-Endpunkt, kein Frontend-Component.  
+**Befund:** Kein Backend-Endpunkt, kein Frontend-Component. Verschoben auf Phase 6.
 
 ---
 
 #### GAP-10: Data Capture Modus – nicht begonnen
 **Roadmap:** Phase 5.5 `[ ]` – "Data Capture Modus (Rendered PNG + Manifest)"  
-**Befund:** Kein Capture-Service, kein UI-Trigger.
+**Befund:** Kein Capture-Service, kein UI-Trigger. Verschoben auf Phase 6.
 
 ---
 
 #### GAP-11: TLS-Terminierung im Docker-Compose-Stack
 **Roadmap:** Phase 4 `[~]` – "Security Hardening (TLS offen)"  
-**Befund:** `docker/nginx.conf` und Dockerfile.frontend existieren. Kein
-Let's-Encrypt/cert-manager-Setup, keine TLS-Config in `docker-compose.yml`.  
+**Befund:** `docker/nginx.conf` und `Dockerfile.frontend` existieren. Kein
+Let's-Encrypt/cert-manager-Setup, keine TLS-Config in `docker-compose.yml`.
+`ENABLE_HSTS` ist zwar im Code referenziert (`main.py` Zeile 60), aber ohne
+aktives TLS wirkungslos.  
 **Betroffene Dateien:**
 - `docker/nginx.conf`
 - `docker-compose.yml`
@@ -183,17 +184,13 @@ Let's-Encrypt/cert-manager-Setup, keine TLS-Config in `docker-compose.yml`.
 
 ## Umsetzungsplan
 
-### Sprint A – Compliance & Monitoring (Woche 1–2)
+### Sprint A – Compliance-Dokumentation (Woche 1–2)
 
 | # | Aufgabe | Dateien | Aufwand |
 |---|---------|---------|---------|
-| A1 | Drift-Scheduler via APScheduler in FastAPI-`lifespan` | `backend/app/main.py`, `requirements.txt` | S |
-| A2 | Annex IV Section 15 ausfüllen: FMEA-Template, Data-Governance-Outline | `docs/compliance/annex-iv.md` | M |
-| A3 | Model Card Template erstellen (MedGemma 1.5 + vLLM) | `docs/compliance/model-card-medgemma.md` (neu) | S |
-
-**A1-Detail:** APScheduler (`BackgroundScheduler`) starten im `lifespan`-Context-Manager
-von `main.py`. Job ruft `GET /api/v1/monitoring/drift?persist=true` intern auf
-(oder direkt die Service-Funktion). Intervall per `DRIFT_SCHEDULE_HOURS` (Default: 24).
+| A1 | Annex IV Section 15 ausfüllen: FMEA-Template, Data-Governance-Outline | `docs/compliance/annex-iv.md` | M |
+| A2 | Model Card Template erstellen (MedGemma 1.5 + vLLM) | `docs/compliance/model-card-medgemma.md` (neu) | S |
+| A3 | eu-ai-act-mapping.md: verbleibende TODO-Zellen ausfüllen | `docs/compliance/eu-ai-act-mapping.md` | S |
 
 ---
 
@@ -202,13 +199,13 @@ von `main.py`. Job ruft `GET /api/v1/monitoring/drift?persist=true` intern auf
 | # | Aufgabe | Dateien | Aufwand |
 |---|---------|---------|---------|
 | B1 | pgvector-Extension + `embedding`-Kolumne in Guideline-Modell | `backend/app/models.py`, Alembic-Migration | M |
-| B2 | Embedding-Worker: Text → OpenAI/local-Embedding → DB | `backend/app/api/guidelines.py`, `backend/app/tasks.py` | M |
+| B2 | Embedding-Worker: Text → Embedding-API → DB | `backend/app/api/guidelines.py`, `backend/app/tasks.py` | M |
 | B3 | Semantic-Search-Endpunkt (`/api/v1/guidelines/semantic-search`) | `backend/app/api/guidelines.py` | S |
-| B4 | Frontend: GuidelinesPanel auf semantische Suche umstellen | `src/components/RightPanel/GuidelinesPanel.tsx`, `src/services/guidelinesClient.ts` | S |
+| B4 | Frontend: GuidelinesPanel auf semantische Suche umstellen | `src/components/RightPanel/GuidelinesPanel.tsx` | S |
 
 **B1-Detail:** `pgvector`-Extension per `CREATE EXTENSION IF NOT EXISTS vector` in
 Migration. `Guideline`-Modell bekommt `embedding: Vector(1536) | None`. LIKE-Suche
-bleibt als Fallback erhalten.
+bleibt als Fallback für SQLite/Tests erhalten.
 
 ---
 
@@ -218,7 +215,7 @@ bleibt als Fallback erhalten.
 |---|---------|---------|---------|
 | C1 | `retrieve_rendered_frame(study, series, instance, frame)` in `dicom_client.py` | `backend/app/dicom_client.py` | S |
 | C2 | Worker-Task `run_inference_job` nutzt `retrieve_rendered_frame` wenn keine `image_urls` | `backend/app/tasks.py` | S |
-| C3 | Caching (TTL 5 min) für retrievte Frames (Redis) | `backend/app/tasks.py`, `backend/app/queue.py` | S |
+| C3 | Redis-Caching (TTL 5 min) für retrievte Frames | `backend/app/tasks.py`, `backend/app/queue.py` | S |
 
 **C1-Detail:** WADO-RS Rendered-Endpunkt:
 `GET {base_url}/studies/{study}/series/{series}/instances/{sop}/frames/{n}/rendered`
@@ -230,7 +227,7 @@ mit `Accept: image/jpeg`. Rückgabe als `bytes`. Auth via `_orthanc_auth()`.
 
 | # | Aufgabe | Dateien | Aufwand |
 |---|---------|---------|---------|
-| D1 | Validator in `ai_schemas.py`: `evidence_indices` Pflicht wenn `image_refs` nicht leer | `backend/app/ai_schemas.py` | XS |
+| D1 | `model_validator` in `ai_schemas.py`: `evidence_indices` Pflicht wenn `image_refs` nicht leer | `backend/app/ai_schemas.py` | XS |
 | D2 | Slice-Sortierung nach `ImagePositionPatient[2]` / `SliceLocation` als primäres Kriterium | `src/hooks/useDicomSeriesInstances.ts` | S |
 | D3 | VOI/WL in `useUserPreferences.ts` persistieren (localStorage + API) | `src/hooks/useUserPreferences.ts`, `src/hooks/useViewportSync.ts` | S |
 
@@ -269,7 +266,7 @@ def require_evidence_when_images(self) -> "ImpressionOutput":
 
 | # | Aufgabe | Dateien | Aufwand |
 |---|---------|---------|---------|
-| G1 | Self-signed / Let's-Encrypt TLS in nginx.conf | `docker/nginx.conf`, `docker-compose.yml` | S |
+| G1 | Self-signed / Let's-Encrypt TLS in `nginx.conf` | `docker/nginx.conf`, `docker-compose.yml` | S |
 | G2 | `env.example` mit TLS-Vars ergänzen | `env.example` | XS |
 
 ---
@@ -277,15 +274,17 @@ def require_evidence_when_images(self) -> "ImpressionOutput":
 ## Priorisierte Reihenfolge
 
 ```
-Sprint A (Compliance) → parallel zu Sprint B (RAG)
+Sprint A (Compliance-Doku)    ← sofort startbar, kein Code-Risiko
+Sprint B (RAG)                ← parallel zu A, Prerequisite für semantische Suche
 Sprint C (DICOM Pipeline)
-Sprint D (Evidence + 3D)
+Sprint D (Evidence + 3D)      ← D1 ist XS, sofort umsetzbar
 Sprint E (Longitudinal)
-Sprint F (Tracing) → parallel zu Sprint G (TLS)
+Sprint F (Tracing) ──┐
+Sprint G (TLS)    ───┘  parallel in Woche 7–8
 ```
 
-GAP-09 (WSI) und GAP-10 (Data Capture) werden nach Sprint E bewertet und ggf.
-auf Phase 6 verschoben.
+GAP-09 (WSI) und GAP-10 (Data Capture) werden nach Sprint E bewertet und auf
+Phase 6 verschoben.
 
 ---
 
@@ -293,11 +292,12 @@ auf Phase 6 verschoben.
 
 | Size | Aufwand |
 |------|---------|
-| XS | < 1h |
-| S | 0.5–1 Tag |
+| XS | < 1 h |
+| S | 0,5–1 Tag |
 | M | 2–3 Tage |
 
-Gesamtaufwand Sprints A–G: **~18–22 Personentage**
+Gesamtaufwand Sprints A–G: **~16–20 Personentage**
+(Reduktion gegenüber ursprünglichem Plan durch Behebung von GAP-01)
 
 ---
 
