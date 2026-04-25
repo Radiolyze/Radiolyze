@@ -1,5 +1,5 @@
 site_name: Radiolyze
-site_description: Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer und EU-AI-Act-konformem Audit-Logging.
+site_description: Radiology workflow system with AI-assisted report generation, DICOM viewer, and EU AI Act-compliant audit logging.
 site_url: https://radiolyze.github.io/radiolyze/
 repo_url: https://github.com/radiolyze/radiolyze
 repo_name: radiolyze/radiolyze
@@ -8,20 +8,20 @@ copyright: "Copyright &copy; 2026 Radiolyze"
 
 theme:
   name: material
-  language: de
+  language: en
   palette:
     - scheme: default
       primary: blue grey
       accent: cyan
       toggle:
         icon: material/brightness-7
-        name: Dark Mode aktivieren
+        name: Switch to dark mode
     - scheme: slate
       primary: blue grey
       accent: cyan
       toggle:
         icon: material/brightness-4
-        name: Light Mode aktivieren
+        name: Switch to light mode
   font:
     text: Roboto
     code: Roboto Mono
@@ -37,6 +37,64 @@ theme:
     - search.suggest
     - content.code.copy
     - content.action.edit
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: de
+          name: Deutsch
+          build: true
+          nav_translations:
+            Home: Startseite
+            Architecture: Architektur
+            Overview: Übersicht
+            System Context: Systemkontext
+            Frontend: Frontend
+            Backend: Backend
+            Data Flow: Datenfluss
+            MedGemma Usage: MedGemma Nutzung
+            Compliance Architecture: Compliance-Architektur
+            Deployment: Deployment
+            Components: Komponenten
+            DICOM Viewer: DICOM Viewer
+            Reporting: Reporting
+            UI Library: UI-Bibliothek
+            API: API
+            Endpoints: Endpunkte
+            Schemas: Schemas
+            WebSocket: WebSocket
+            Workflows: Workflows
+            Fast Reporting: Fast Reporting
+            Complex Case: Komplexer Fall
+            Batch Reporting: Batch Reporting
+            Compliance: Compliance
+            Checklist: Checkliste
+            Audit Logging: Audit Logging
+            EU AI Act Mapping: EU AI Act Mapping
+            Annex IV: Annex IV
+            Operations: Betrieb
+            Runbook: Runbook
+            Security: Security
+            Internet Usage: Internetnutzung
+            Observability: Observability
+            Development: Entwicklung
+            Setup: Setup
+            Contributing: Contributing
+            Testing: Testing
+            Style Guide: Styleguide
+            i18n: i18n
+            Prompting: Prompting
+            ADR-0001 Open Stack: ADR-0001 Open Stack
+            Roadmap: Roadmap
+            Validation: Validierung
+            Glossary: Glossar
+            FAQ: FAQ
 
 markdown_extensions:
   - admonition
@@ -59,49 +117,49 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Architektur:
-      - Übersicht: architecture/overview.md
-      - Systemkontext: architecture/system-context.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - System Context: architecture/system-context.md
       - Frontend: architecture/frontend.md
       - Backend: architecture/backend.md
-      - Datenfluss: architecture/data-flow.md
-      - MedGemma Nutzung: architecture/medgemma-1-5-nutzung.md
-      - Compliance-Architektur: architecture/compliance.md
+      - Data Flow: architecture/data-flow.md
+      - MedGemma Usage: architecture/medgemma-usage.md
+      - Compliance Architecture: architecture/compliance.md
       - Deployment: architecture/deployment.md
-  - Komponenten:
+  - Components:
       - DICOM Viewer: components/viewer.md
       - Reporting: components/reporting.md
       - UI Library: components/ui.md
   - API:
-      - Übersicht: api/overview.md
-      - Endpunkte: api/endpoints.md
+      - Overview: api/overview.md
+      - Endpoints: api/endpoints.md
       - Schemas: api/schemas.md
       - WebSocket: api/websocket.md
   - Workflows:
-      - Übersicht: workflows/overview.md
+      - Overview: workflows/overview.md
       - Fast Reporting: workflows/fast-report.md
-      - Komplexer Fall: workflows/complex-case.md
+      - Complex Case: workflows/complex-case.md
       - Batch Reporting: workflows/batch-reporting.md
   - Compliance:
-      - Checkliste: compliance/checklist.md
+      - Checklist: compliance/checklist.md
       - Audit Logging: compliance/audit-logging.md
       - EU AI Act Mapping: compliance/eu-ai-act-mapping.md
       - Annex IV: compliance/annex-iv.md
-  - Betrieb:
+  - Operations:
       - Runbook: operations/runbook.md
       - Security: operations/security.md
-      - Internetnutzung: operations/internet-usage.md
+      - Internet Usage: operations/internet-usage.md
       - Observability: operations/observability.md
-  - Entwicklung:
+  - Development:
       - Setup: development/setup.md
       - Contributing: development/contributing.md
       - Testing: development/testing.md
-      - Styleguide: development/styleguide.md
+      - Style Guide: development/styleguide.md
       - i18n: development/i18n.md
       - Prompting: development/prompting.md
       - ADR-0001 Open Stack: decisions/adr-0001-open-stack.md
   - Roadmap:
-      - Übersicht: roadmap.md
-      - Validierung: roadmap-validation.md
-  - Glossar: glossary.md
+      - Overview: roadmap.md
+      - Validation: roadmap-validation.md
+  - Glossary: glossary.md
   - FAQ: faq.md

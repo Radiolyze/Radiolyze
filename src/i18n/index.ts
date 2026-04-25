@@ -51,7 +51,7 @@ const getInitialLanguage = (): string => {
   } catch (e) {
     console.warn('Failed to read language preference:', e);
   }
-  return 'de'; // Default to German
+  return 'en'; // Default to English
 };
 
 i18n
@@ -60,7 +60,7 @@ i18n
   .init({
     resources,
     lng: getInitialLanguage(),
-    fallbackLng: 'de',
+    fallbackLng: 'en',
     defaultNS,
     ns: ['common', 'report', 'viewer', 'batch', 'settings', 'errors'],
     

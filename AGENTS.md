@@ -1,73 +1,74 @@
 # AGENTS.md
 
-## Projektuebersicht
-- Radiologie-Workflow mit DICOM Viewer, Reporting, ASR, AI-Inferenz und QA.
+## Project Overview
+- Radiology workflow with DICOM viewer, reporting, ASR, AI inference, and QA.
 - Frontend: React + TypeScript (Vite, shadcn-ui, Tailwind CSS).
-- Backend: FastAPI Orchestrator mit Queue/Worker (RQ + Redis) und Postgres.
-- DICOM: Orthanc als Mini-PACS und DICOMweb Provider.
+- Backend: FastAPI orchestrator with queue/worker (RQ + Redis) and Postgres.
+- DICOM: Orthanc as mini-PACS and DICOMweb provider.
 
-## Repo-Struktur (wichtige Pfade)
+## Repo Structure (key paths)
 - `src/`: Frontend (Pages, Components, Hooks, Services)
-  - `src/components/Viewer`: DICOM Viewer UI
+  - `src/components/Viewer`: DICOM viewer UI
   - `src/components/RightPanel`: Findings/Impression/QA/Templates/Guidelines
   - `src/services`: API, Orthanc, WebSocket, Audit Logger
   - `src/hooks`: ASR, Shortcuts, Report Status Sync
-- `backend/`: FastAPI App, Worker, Queue, Modelle
-- `docs/`: Architektur, Setup, Workflows, Compliance
-- `scripts/`: Smoke Tests
+- `backend/`: FastAPI app, worker, queue, models
+- `docs/en/`: English documentation (default)
+- `docs/de/`: German documentation
+- `scripts/`: Smoke tests
 
-## Wichtige Endpunkte/Ports (lokal)
+## Key Endpoints/Ports (local)
 - Frontend: http://localhost:5173
 - Backend Health: http://localhost:8000/api/v1/health
 - Orthanc UI: http://localhost:8042 (Login: orthanc/orthanc)
 - DICOMweb: http://localhost:8042/dicom-web
 
-## Entwicklungs-Setup
-### Docker (empfohlen)
+## Development Setup
+### Docker (recommended)
 ```
 docker compose up --build
 ```
 
 ### GPU Stack (vLLM + MedASR)
 ```
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile gpu up --build
+docker compose -f docker-compose.yml -f docker/compose/gpu.yml --profile gpu up --build
 ```
 
-### Optional: Whisper ASR (CPU, mehrsprachig)
+### Optional: Whisper ASR (CPU, multilingual)
 ```
-docker compose -f docker-compose.yml -f docker-compose.whisper.yml up --build
+docker compose -f docker-compose.yml -f docker/compose/whisper.yml up --build
 ```
-Siehe `docs/development/setup.md` und `docker-compose.whisper.yml`.
+See `docs/en/development/setup.md` and `docker-compose.whisper.yml`.
 
-### Lokale Frontend-Entwicklung
+### Local Frontend Development
 ```
 npm install
 npm run dev
 ```
 
-## Tests und Checks
-- Frontend Tests: `npm run test`
+## Tests and Checks
+- Frontend tests: `npm run test`
 - Lint: `npm run lint`
-- Backend Smoke Test: `./scripts/smoke-backend.sh`
+- Backend smoke test: `./scripts/smoke-backend.sh`
   - Optional: `API_BASE_URL=http://localhost:8000 ./scripts/smoke-backend.sh`
 
-## Architektur-Notizen (kurz)
-- UI besteht aus Left Sidebar, Viewer, Right Panel.
-- Report State via `useReport`, Live-Updates via WebSocket.
-- Backend orchestriert Report-Versionierung, ASR, Inferenz, QA und Audit Logging.
-- Inferenz laeuft ueber RQ Worker + Redis; Ergebnisse in Postgres.
+## Architecture Notes (brief)
+- UI consists of Left Sidebar, Viewer, Right Panel.
+- Report state via `useReport`, live updates via WebSocket.
+- Backend orchestrates report versioning, ASR, inference, QA, and audit logging.
+- Inference runs via RQ worker + Redis; results stored in Postgres.
 
-## Projektkonventionen
-- TypeScript strikt.
-- Keine neuen Dependencies ohne Review.
-- UI muss Dark Mode kompatibel bleiben.
-- Keine PHI in Logs.
-- Kleine, klare Commits.
+## Project Conventions
+- TypeScript strict mode.
+- No new dependencies without review.
+- UI must remain dark mode compatible.
+- No PHI in logs.
+- Small, clear commits.
 
-## Relevante Doku
-- `docs/architecture/overview.md`
-- `docs/architecture/backend.md`
-- `docs/architecture/frontend.md`
-- `docs/development/setup.md`
-- `docs/development/testing.md`
-- MkDocs: `mkdocs.yml`, `requirements-docs.txt`; Build: `python3 -m mkdocs build --strict`
+## Relevant Docs
+- `docs/en/architecture/overview.md`
+- `docs/en/architecture/backend.md`
+- `docs/en/architecture/frontend.md`
+- `docs/en/development/setup.md`
+- `docs/en/development/testing.md`
+- MkDocs: `mkdocs.yml`, `docs/requirements.txt`; Build: `python3 -m mkdocs build --strict`
