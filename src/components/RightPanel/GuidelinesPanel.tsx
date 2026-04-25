@@ -86,7 +86,7 @@ export function GuidelinesPanel({
     setLoading(true);
     setError(null);
     try {
-      const data = await guidelinesClient.search(q);
+      const data = await guidelinesClient.semanticSearch(q);
       setResults(data);
       setHasLoaded(true);
     } catch {
