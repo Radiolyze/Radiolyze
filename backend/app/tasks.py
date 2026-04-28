@@ -309,6 +309,130 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
         db.close()
 
 
+def run_segmentation_job(payload: dict[str, Any]) -> dict[str, Any]:
+    """Drive a segmentation job: call the segmenter, poll, persist the manifest."""
+    import os
+    import time
+
+    from .segmentation_client import (
+        get_job_status as seg_get_status,
+        submit_segmentation,
+    )
+    from .models import SegmentationJob
+
+    job_id = payload["job_id"]
+    study_uid = payload["study_uid"]
+    series_uid = payload["series_uid"]
+    preset = payload.get("preset", "bone")
+    requested_by = payload.get("requested_by") or "system"
+
+    poll_interval = float(os.getenv("SEGMENTATION_POLL_INTERVAL", "3"))
+    timeout_s = float(os.getenv("SEGMENTATION_JOB_TIMEOUT", "900"))
+
+    db = SessionLocal()
+    try:
+        job = db.get(SegmentationJob, job_id)
+        if not job:
+            logger.warning("Segmentation row for %s missing; aborting", job_id)
+            return {"status": "missing"}
+
+        job.status = "started"
+        job.updated_at = utc_now()
+        db.commit()
+
+        add_audit_event(
+            db,
+            event_type="segmentation_started",
+            actor_id=requested_by,
+            study_id=study_uid,
+            metadata={"job_id": job_id, "preset": preset, "series_uid": series_uid},
+            source="worker",
+        )
+        db.commit()
+
+        submit_segmentation(
+            job_id=job_id,
+            study_uid=study_uid,
+            series_uid=series_uid,
+            preset=preset,
+        )
+
+        deadline = time.monotonic() + timeout_s
+        manifest: dict[str, Any] | None = None
+        last_progress: float | None = None
+        while time.monotonic() < deadline:
+            time.sleep(poll_interval)
+            status_payload = seg_get_status(job_id)
+            status = str(status_payload.get("status") or "running")
+            progress = float(status_payload.get("progress") or 0.0)
+            if last_progress != progress:
+                job.progress = progress
+                job.updated_at = utc_now()
+                db.commit()
+                last_progress = progress
+
+            if status == "done":
+                manifest = status_payload.get("manifest") or {}
+                break
+            if status == "failed":
+                error = status_payload.get("error") or "Segmenter reported failure"
+                raise RuntimeError(error)
+        else:
+            raise TimeoutError(f"Segmentation job {job_id} exceeded {timeout_s}s")
+
+        completed_at = utc_now()
+        job.status = "finished"
+        job.progress = 1.0
+        job.manifest_json = manifest
+        job.updated_at = completed_at
+        db.commit()
+
+        add_audit_event(
+            db,
+            event_type="segmentation_completed",
+            actor_id=requested_by,
+            study_id=study_uid,
+            metadata={
+                "job_id": job_id,
+                "preset": preset,
+                "series_uid": series_uid,
+                "label_count": len(manifest.get("labels", [])) if manifest else 0,
+            },
+            source="worker",
+        )
+        db.commit()
+
+        return {"status": "finished", "manifest": manifest}
+    except Exception as exc:
+        try:
+            failed = db.get(SegmentationJob, job_id)
+            if failed:
+                failed.status = "failed"
+                failed.error_message = str(exc)[:1000]
+                failed.updated_at = utc_now()
+                db.commit()
+        except Exception:
+            logger.exception("Failed to mark segmentation job %s as failed", job_id)
+
+        add_audit_event(
+            db,
+            event_type="segmentation_failed",
+            actor_id=requested_by,
+            study_id=study_uid,
+            metadata={
+                "job_id": job_id,
+                "preset": preset,
+                "series_uid": series_uid,
+                "error": str(exc),
+            },
+            source="worker",
+        )
+        db.commit()
+        raise
+    finally:
+        db.close()
+
+
 def embed_guideline(guideline_id: str) -> None:
     """Compute and persist a vector embedding for *guideline_id*.
 

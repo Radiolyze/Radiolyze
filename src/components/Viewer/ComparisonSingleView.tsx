@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Columns2, Box, View } from 'lucide-react';
+import { Columns2, Box, View, Boxes } from 'lucide-react';
 import type { FindingBox, ImageRef, Series } from '@/types/radiology';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,9 @@ import {
 import { DicomViewer, type ViewerProgress } from './DicomViewer';
 import { MPRViewer } from './MPRViewer';
 import { VRTViewer } from './VRTViewer';
+import { MeshViewer } from './MeshViewer';
 
-export type ViewerMode = 'stack' | 'mpr' | 'vrt';
+export type ViewerMode = 'stack' | 'mpr' | 'vrt' | 'mesh';
 
 interface ComparisonSingleViewProps {
   currentSeries: Series | null;
@@ -29,6 +30,8 @@ interface ComparisonSingleViewProps {
   onAnalyzeFrame?: (imageRef: ImageRef) => Promise<void>;
   /** Whether frame analysis is in progress */
   isAnalyzingFrame?: boolean;
+  /** StudyInstanceUID required by the segmentation backend */
+  studyUid?: string | null;
 }
 
 export function ComparisonSingleView({
@@ -42,6 +45,7 @@ export function ComparisonSingleView({
   findings = [],
   onAnalyzeFrame,
   isAnalyzingFrame = false,
+  studyUid,
 }: ComparisonSingleViewProps) {
   const { t } = useTranslation('viewer');
   const [viewerMode, setViewerMode] = useState<ViewerMode>('stack');
@@ -76,6 +80,9 @@ export function ComparisonSingleView({
       )}
       {viewerMode === 'vrt' && (
         <VRTViewer series={currentSeries} />
+      )}
+      {viewerMode === 'mesh' && (
+        <MeshViewer series={currentSeries} studyUid={studyUid ?? null} />
       )}
 
       {/* Mode Toggle Buttons */}
@@ -117,6 +124,24 @@ export function ComparisonSingleView({
             <TooltipContent>
               {viewerMode === 'vrt' ? 'Stack-Ansicht' : '3D Volume Rendering'}
             </TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Mesh Model Toggle */}
+        {supportsVolumeViewer && currentSeries?.modality === 'CT' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={viewerMode === 'mesh' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewerMode(viewerMode === 'mesh' ? 'stack' : 'mesh')}
+                className="bg-card/90 backdrop-blur-sm"
+              >
+                <Boxes className="h-4 w-4 mr-2" />
+                {t('mesh.title')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('mesh.tooltip')}</TooltipContent>
           </Tooltip>
         )}
 

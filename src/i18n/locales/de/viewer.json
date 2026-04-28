@@ -71,5 +71,28 @@
     "patientInfo": "Patienteninfo",
     "studyInfo": "Studieninfo",
     "annotations": "Annotationen"
+  },
+  "mesh": {
+    "title": "3D Modell",
+    "tooltip": "3D-Modell mit Gewebeauswahl",
+    "generate": "3D-Modell generieren",
+    "resetCamera": "Kamera zurücksetzen",
+    "labels": "Gewebe / Strukturen",
+    "opacity": "Deckkraft",
+    "color": "Farbe",
+    "search": "Label suchen…",
+    "unsupported": "3D-Modelle benötigen eine CT-Serie mit ≥30 Schichten.",
+    "noSeries": "Bitte eine CT-Serie auswählen.",
+    "disclaimer": "Research/Demo. Nicht zur Diagnose.",
+    "preset": {
+      "bone": "Knochen (HU-Threshold)",
+      "total": "Multi-Organ (TotalSegmentator) — Phase 2"
+    },
+    "status": {
+      "queued": "In Warteschlange",
+      "running": "Wird generiert ({{progress}}%)…",
+      "finished": "Fertig",
+      "failed": "Fehlgeschlagen"
+    }
   }
 }

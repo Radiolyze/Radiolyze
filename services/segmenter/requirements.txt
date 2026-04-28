@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+pydicom>=2.4
+numpy<2
+SimpleITK>=2.4
+scikit-image>=0.24
+trimesh>=4.4
+pygltflib>=1.16

@@ -71,5 +71,28 @@
     "patientInfo": "Patient info",
     "studyInfo": "Study info",
     "annotations": "Annotations"
+  },
+  "mesh": {
+    "title": "3D Model",
+    "tooltip": "3D model with tissue selection",
+    "generate": "Generate 3D model",
+    "resetCamera": "Reset camera",
+    "labels": "Tissues / structures",
+    "opacity": "Opacity",
+    "color": "Color",
+    "search": "Search label…",
+    "unsupported": "3D models require a CT series with at least 30 slices.",
+    "noSeries": "Please select a CT series.",
+    "disclaimer": "Research/Demo. Not for diagnostic use.",
+    "preset": {
+      "bone": "Bone (HU threshold)",
+      "total": "Multi-organ (TotalSegmentator) — Phase 2"
+    },
+    "status": {
+      "queued": "Queued",
+      "running": "Generating ({{progress}}%)…",
+      "finished": "Done",
+      "failed": "Failed"
+    }
   }
 }

@@ -111,6 +111,25 @@ class InferenceJob(Base):
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
 
 
+class SegmentationJob(Base):
+    """3D segmentation jobs that produce per-tissue masks + meshes."""
+
+    __tablename__ = "segmentation_jobs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    study_uid: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    series_uid: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    preset: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="queued")
+    progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    manifest_json: Mapped[dict | None] = mapped_column("manifest", JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    data_dir: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
 class CriticalFindingAlert(Base):
     """Tracks critical/urgent findings that require immediate communication."""
 
