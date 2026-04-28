@@ -69,6 +69,8 @@ plugins:
             Security Hardening: Security-Hardening
             Backup & Recovery: Backup und Recovery
             For Researchers: Für Forscher
+            MedGemma: MedGemma
+            Model Switching: Modell-Wechsel
             Architecture: Architektur
             Overview: Übersicht
             System Context: Systemkontext
@@ -92,6 +94,9 @@ plugins:
             Batch Reporting: Batch Reporting
             Compliance: Compliance
             Checklist: Checkliste
+            Evidence Overview: Nachweise-Übersicht
+            Risk Management: Risikomanagement
+            Data Protection: Datenschutz
             Audit Logging: Audit Logging
             EU AI Act Mapping: EU AI Act Mapping
             Annex IV: Annex IV
@@ -158,6 +163,9 @@ nav:
       - Internet Usage: operations/internet-usage.md
   - For Researchers:
       - Overview: research/index.md
+      - MedGemma: research/medgemma.md
+      - Model Switching: research/model-switching.md
+      - Validation: research/validation.md
       - MedGemma Usage: architecture/medgemma-usage.md
   - Architecture:
       - Overview: architecture/overview.md
@@ -181,6 +189,9 @@ nav:
       - Overview: workflows/overview.md
   - Compliance:
       - Checklist: compliance/checklist.md
+      - Evidence Overview: compliance/evidence-overview.md
+      - Risk Management: compliance/risk-management.md
+      - Data Protection: compliance/datenschutz.md
       - Audit Logging: compliance/audit-logging.md
       - EU AI Act Mapping: compliance/eu-ai-act-mapping.md
       - Annex IV: compliance/annex-iv.md
