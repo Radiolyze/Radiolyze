@@ -84,6 +84,7 @@ plugins:
             DICOM Viewer: DICOM Viewer
             Reporting: Reporting
             UI Library: UI-Bibliothek
+            3D Segmentation: 3D-Segmentierung
             API: API
             Endpoints: Endpunkte
             Schemas: Schemas
@@ -182,6 +183,7 @@ nav:
       - DICOM Viewer: components/viewer.md
       - Reporting: components/reporting.md
       - UI Library: components/ui.md
+      - 3D Segmentation: components/segmenter.md
   - API:
       - Overview: api/overview.md
       - Endpoints: api/endpoints.md

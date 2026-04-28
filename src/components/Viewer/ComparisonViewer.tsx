@@ -29,6 +29,7 @@ interface ComparisonViewerProps {
 
 export function ComparisonViewer({
   currentSeries,
+  currentStudy,
   priorStudies = [],
   progress,
   onFrameChange,
@@ -209,6 +210,7 @@ export function ComparisonViewer({
         findings={findings}
         onAnalyzeFrame={onAnalyzeFrame}
         isAnalyzingFrame={isAnalyzingFrame}
+        studyUid={currentStudy?.id ?? null}
       />
     );
   }

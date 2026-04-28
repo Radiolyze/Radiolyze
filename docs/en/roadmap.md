@@ -81,6 +81,13 @@
 - [ ] Advanced viewer tools (MPR, annotation suite)
 - [ ] Analytics dashboard
 
+## Phase 7: 3D Tissue Models (parallel to Phase 5/6)
+
+- [x] **M1**: Bone-HU end-to-end pipeline (segmenter microservice, backend orchestrator, vtk.js MeshViewer, GLB+VTP+NIfTI export, audit events) — see `components/segmenter.md`
+- [ ] **M2**: TotalSegmentator multi-organ (~104 classes, GPU build, lazy mesh loading, label search/sort)
+- [ ] **M3**: Polish (color editor, loading skeletons, cross-section clip plane, ROCm variant, mesh bundle budget)
+- [ ] **M4** (deferred): DICOM SEG export via `pydicom-seg` with STOW-RS push to Orthanc
+
 ## Next Steps (Next Sprint)
 
 ### MedGemma Overlay (Proposals 3-5, immediately actionable)
