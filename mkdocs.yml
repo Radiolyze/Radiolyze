@@ -52,6 +52,25 @@ plugins:
           build: true
           nav_translations:
             Home: Startseite
+            Getting Started: Erste Schritte
+            Overview: Übersicht
+            Quickstart (5 min): Schnellstart (5 Min.)
+            For Doctors: Für Ärzte
+            Reporting Workflow: Befundungs-Workflow
+            AI Guide: KI-Leitfaden
+            Keyboard Shortcuts: Tastenkürzel
+            Troubleshooting: Fehlerbehebung
+            Fast Reporting: Fast Reporting
+            Complex Cases: Komplexe Fälle
+            Batch Reporting: Batch Reporting
+            Administration: Administration
+            Deployment Guide: Deployment-Leitfaden
+            GPU Setup: GPU-Setup
+            Security Hardening: Security-Hardening
+            Backup & Recovery: Backup und Recovery
+            For Researchers: Für Forscher
+            MedGemma: MedGemma
+            Model Switching: Modell-Wechsel
             Architecture: Architektur
             Overview: Übersicht
             System Context: Systemkontext
@@ -75,6 +94,9 @@ plugins:
             Batch Reporting: Batch Reporting
             Compliance: Compliance
             Checklist: Checkliste
+            Evidence Overview: Nachweise-Übersicht
+            Risk Management: Risikomanagement
+            Data Protection: Datenschutz
             Audit Logging: Audit Logging
             EU AI Act Mapping: EU AI Act Mapping
             Annex IV: Annex IV
@@ -90,6 +112,8 @@ plugins:
             Style Guide: Styleguide
             i18n: i18n
             Prompting: Prompting
+            ASR Providers: ASR-Provider
+            QA Rules: QA-Regeln
             ADR-0001 Open Stack: ADR-0001 Open Stack
             Roadmap: Roadmap
             Validation: Validierung
@@ -117,6 +141,34 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Getting Started:
+      - Overview: getting-started/index.md
+      - Quickstart (5 min): getting-started/quickstart.md
+  - For Doctors:
+      - Overview: doctors/index.md
+      - Reporting Workflow: doctors/workflow-befundung.md
+      - AI Guide: doctors/ki-grundlagen.md
+      - Keyboard Shortcuts: doctors/tastenkuerzel.md
+      - Troubleshooting: doctors/troubleshooting.md
+      - Fast Reporting: workflows/fast-report.md
+      - Complex Cases: workflows/complex-case.md
+      - Batch Reporting: workflows/batch-reporting.md
+  - Administration:
+      - Overview: admin/index.md
+      - Deployment Guide: admin/deployment.md
+      - GPU Setup: admin/gpu-setup.md
+      - Security Hardening: admin/security-hardening.md
+      - Backup & Recovery: admin/backup-recovery.md
+      - Runbook: operations/runbook.md
+      - Security: operations/security.md
+      - Observability: operations/observability.md
+      - Internet Usage: operations/internet-usage.md
+  - For Researchers:
+      - Overview: research/index.md
+      - MedGemma: research/medgemma.md
+      - Model Switching: research/model-switching.md
+      - Validation: research/validation.md
+      - MedGemma Usage: architecture/medgemma-usage.md
   - Architecture:
       - Overview: architecture/overview.md
       - System Context: architecture/system-context.md
@@ -137,19 +189,19 @@ nav:
       - WebSocket: api/websocket.md
   - Workflows:
       - Overview: workflows/overview.md
-      - Fast Reporting: workflows/fast-report.md
-      - Complex Case: workflows/complex-case.md
-      - Batch Reporting: workflows/batch-reporting.md
   - Compliance:
       - Checklist: compliance/checklist.md
+      - Evidence Overview: compliance/evidence-overview.md
+      - Risk Management: compliance/risk-management.md
+      - Data Protection: compliance/datenschutz.md
       - Audit Logging: compliance/audit-logging.md
       - EU AI Act Mapping: compliance/eu-ai-act-mapping.md
       - Annex IV: compliance/annex-iv.md
   - Operations:
       - Runbook: operations/runbook.md
       - Security: operations/security.md
-      - Internet Usage: operations/internet-usage.md
       - Observability: operations/observability.md
+      - Internet Usage: operations/internet-usage.md
   - Development:
       - Setup: development/setup.md
       - Contributing: development/contributing.md
@@ -157,6 +209,8 @@ nav:
       - Style Guide: development/styleguide.md
       - i18n: development/i18n.md
       - Prompting: development/prompting.md
+      - ASR Providers: development/asr-providers.md
+      - QA Rules: development/qa-rules.md
       - ADR-0001 Open Stack: decisions/adr-0001-open-stack.md
   - Roadmap:
       - Overview: roadmap.md
