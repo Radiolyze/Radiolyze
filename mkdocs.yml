@@ -52,6 +52,14 @@ plugins:
           build: true
           nav_translations:
             Home: Startseite
+            Getting Started: Erste Schritte
+            Overview: Übersicht
+            Quickstart (5 min): Schnellstart (5 Min.)
+            For Doctors: Für Ärzte
+            Reporting Workflow: Befundungs-Workflow
+            Complex Cases: Komplexe Fälle
+            Administration: Administration
+            For Researchers: Für Forscher
             Architecture: Architektur
             Overview: Übersicht
             System Context: Systemkontext
@@ -117,6 +125,23 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Getting Started:
+      - Overview: getting-started/index.md
+      - Quickstart (5 min): getting-started/quickstart.md
+  - For Doctors:
+      - Overview: doctors/index.md
+      - Reporting Workflow: workflows/fast-report.md
+      - Complex Cases: workflows/complex-case.md
+      - Batch Reporting: workflows/batch-reporting.md
+  - Administration:
+      - Overview: admin/index.md
+      - Runbook: operations/runbook.md
+      - Security: operations/security.md
+      - Observability: operations/observability.md
+      - Internet Usage: operations/internet-usage.md
+  - For Researchers:
+      - Overview: research/index.md
+      - MedGemma Usage: architecture/medgemma-usage.md
   - Architecture:
       - Overview: architecture/overview.md
       - System Context: architecture/system-context.md
@@ -137,9 +162,6 @@ nav:
       - WebSocket: api/websocket.md
   - Workflows:
       - Overview: workflows/overview.md
-      - Fast Reporting: workflows/fast-report.md
-      - Complex Case: workflows/complex-case.md
-      - Batch Reporting: workflows/batch-reporting.md
   - Compliance:
       - Checklist: compliance/checklist.md
       - Audit Logging: compliance/audit-logging.md
@@ -148,8 +170,8 @@ nav:
   - Operations:
       - Runbook: operations/runbook.md
       - Security: operations/security.md
-      - Internet Usage: operations/internet-usage.md
       - Observability: operations/observability.md
+      - Internet Usage: operations/internet-usage.md
   - Development:
       - Setup: development/setup.md
       - Contributing: development/contributing.md

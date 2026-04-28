@@ -1,73 +1,101 @@
 # Radiolyze
 
-Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM Viewer, Spracherkennung und EU-AI-Act-konformem Audit-Logging.
+**Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM-Viewer, Spracherkennung und EU-AI-Act-konformem Audit-Logging.**
 
-## Was ist Radiolyze?
+Radiolyze ist eine Open-Source-Plattform, die Radiologen hilft, schneller und konsistenter zu befunden — mit vollständigem DICOM-Viewer, multimodaler KI-Analyse (MedGemma), Sprachdiktat (MedASR/Whisper), strukturierten QA-Checks und lückenlosem Audit-Logging.
 
-Radiolyze ist ein offener, workflow-orientierter Stack für radiologische Befunderstellung. Er kombiniert einen vollständigen DICOM-Viewer mit multimodaler KI-Analyse (MedGemma), medizinischer Spracheingabe (MedASR/Whisper), strukturierten Qualitätsprüfungen und lückenlosem Audit-Logging nach EU AI Act Anforderungen.
+---
+
+## Wo möchten Sie starten?
 
 <div class="grid cards" markdown>
 
--   :material-monitor: **DICOM Viewer**
+-   :material-stethoscope: **Ich bin Radiologin / Arzt**
 
-    Cornerstone.js-basierter Stack-Viewer mit Tools (Zoom, Pan, Fensterung, Messungen), Seriennavigation und Prior-Studies-Vergleich.
+    Lernen Sie, wie Sie Radiolyze für die tägliche Befundung nutzen: DICOM-Viewer, KI-gestützte Findings, Sprachdiktat und Freigabe-Workflow.
 
-    [:octicons-arrow-right-24: Viewer Dokumentation](components/viewer.md)
+    [:octicons-arrow-right-24: Arzt-Leitfaden](doctors/index.md)
 
--   :material-brain: **KI-Befundung**
+-   :material-rocket-launch: **Ich bin neu hier**
 
-    MedGemma multimodale Bildanalyse für automatisierte Findings und Impressions mit Human-Oversight-Dialogen.
+    In 5 Minuten startklar mit Docker und den integrierten Demo-Daten.
 
-    [:octicons-arrow-right-24: MedGemma Nutzung](architecture/medgemma-1-5-nutzung.md)
+    [:octicons-arrow-right-24: Schnellstart](getting-started/quickstart.md)
 
--   :material-microphone: **Spracheingabe (ASR)**
+-   :material-flask: **Ich bin Forscher / KI-Spezialist**
 
-    MedASR oder selbst-gehostetes Whisper für medizinisches Diktat mit Live-Transkription.
+    KI-Modell (MedGemma) verstehen, Inferenz-Backend austauschen, Outputs validieren und die Datenpipeline erkunden.
 
-    [:octicons-arrow-right-24: ASR Workflow](workflows/fast-report.md)
+    [:octicons-arrow-right-24: Forscher-Leitfaden](research/index.md)
 
--   :material-shield-check: **EU AI Act Compliance**
+-   :material-server: **Ich bin IT-Administrator**
 
-    Vollständiges Audit-Logging (Art. 12), Transparenz (Art. 13), Human Oversight (Art. 14) und Robustheit (Art. 15).
+    Radiolyze in einer Krankenhausumgebung oder Private Cloud deployen, konfigurieren, absichern und überwachen.
 
-    [:octicons-arrow-right-24: Compliance Checkliste](compliance/checklist.md)
+    [:octicons-arrow-right-24: Administrations-Leitfaden](admin/index.md)
+
+-   :material-code-braces: **Ich bin Entwickler**
+
+    Entwicklungsumgebung einrichten, Architektur verstehen und zum Projekt beitragen.
+
+    [:octicons-arrow-right-24: Entwicklungs-Setup](development/setup.md)
+
+-   :material-scale-balance: **Ich bin Compliance-Beauftragter**
+
+    Nachweis-Artefakte finden, EU-AI-Act-Mappings, Risikomanagement-Vorlagen und den Weg zur Konformitätsbewertung.
+
+    [:octicons-arrow-right-24: Compliance-Übersicht](compliance/checklist.md)
 
 </div>
 
-## Projektstatus
+---
 
-Der aktuelle Stand enthält:
+## Kernfunktionen
 
-- 3-Spalten-Layout mit Header, Sidebar, Viewer und Right Panel
-- Findings/Impression-Panels inkl. ASR- und QA-Status (API angebunden, Fallbacks)
-- Cornerstone Viewer (Stack, Tools, W/L Presets, Prefetch)
-- DICOMweb-Queue für Studien/Serien (Orthanc QIDO-RS)
-- Annotation-Export (JSON)
-- Prior-Studies-Timeline und Matching-Vorschläge in der Sidebar
-- Docker Compose Stack (Frontend + Backend + Orthanc + Postgres)
-- Orchestrator-API (FastAPI) inkl. Audit-Logging und QA/Impression-Endpoints
-- Inference-Queue (RQ + Redis) mit persistierten Jobs und Status-Events
-- DICOM SR Export (JSON + Binary Draft)
-- Annex IV Template und Security Baseline in der Compliance-Doku
+<div class="grid cards" markdown>
 
-Orthanc DICOMweb läuft lokal mit Basic Auth, Sample-DICOM wird automatisch geladen.  
-ASR/Impression/Inferenz nutzen MedASR/MedGemma wenn aktiviert, sonst Mock-Fallbacks.  
-QA verwendet derzeit regelbasierte Mock-Checks.
+-   :material-monitor: **DICOM-Viewer**
+
+    Cornerstone.js-basierter Stack-Viewer mit Tools (Zoom, Pan, Fensterung, Messungen), Seriennavigation und Prior-Studies-Vergleich.
+
+    [:octicons-arrow-right-24: Viewer-Dokumentation](components/viewer.md)
+
+-   :material-brain: **KI-gestützte Befundung**
+
+    MedGemma multimodale Bildanalyse für automatisierte Findings und Impressions mit obligatorischen Human-Oversight-Dialogen.
+
+    [:octicons-arrow-right-24: Workflows](workflows/overview.md)
+
+-   :material-microphone: **Sprachdiktat (ASR)**
+
+    MedASR oder selbst-gehostetes Whisper für medizinisches Diktat mit Live-Transkription direkt ins Findings-Panel.
+
+    [:octicons-arrow-right-24: Fast-Reporting-Workflow](workflows/fast-report.md)
+
+-   :material-shield-check: **EU-AI-Act-Konformität**
+
+    Vollständiges Audit-Logging (Art. 12), Transparenzindikatoren (Art. 13), Human-Oversight-Dialoge (Art. 14), Robustheit-Fallbacks (Art. 15).
+
+    [:octicons-arrow-right-24: Compliance-Dokumentation](compliance/checklist.md)
+
+</div>
+
+---
 
 ## Schnellstart
 
 ```bash
-# Standard (CPU)
+# Kompletten Stack starten (CPU-Modus, inkl. Demo-DICOM-Daten)
 docker compose up --build
-
-# Mit NVIDIA GPU
-docker compose -f docker-compose.yml -f docker/compose/gpu.yml --profile gpu up --build
-
-# Mit AMD ROCm
-docker compose -f docker-compose.yml -f docker/compose/gpu.yml -f docker/compose/rocm.yml --profile rocm up --build
-
-# Mit Whisper ASR
-docker compose -f docker-compose.yml -f docker/compose/whisper.yml up --build
 ```
 
-Weitere Details: [Development Setup](development/setup.md)
+Dann [http://localhost:5173](http://localhost:5173) im Browser öffnen.
+
+Für GPU-Beschleunigung, Produktions-Deployment und weitere Optionen → [Schnellstart-Leitfaden](getting-started/quickstart.md)
+
+---
+
+!!! warning "Nicht produktionsreif ohne weitere Konfiguration"
+    Radiolyze ist eine Referenzimplementierung. Ohne zusätzliche Konfiguration **nicht produktionsreif**:
+    Authentifizierung/RBAC, TLS, Security-Hardening und klinische Validierung sind erforderlich.
+    Siehe [Administrations-Leitfaden](admin/index.md) und [Compliance-Checkliste](compliance/checklist.md).
