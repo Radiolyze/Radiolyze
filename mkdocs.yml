@@ -112,6 +112,8 @@ plugins:
             Style Guide: Styleguide
             i18n: i18n
             Prompting: Prompting
+            ASR Providers: ASR-Provider
+            QA Rules: QA-Regeln
             ADR-0001 Open Stack: ADR-0001 Open Stack
             Roadmap: Roadmap
             Validation: Validierung
@@ -207,6 +209,8 @@ nav:
       - Style Guide: development/styleguide.md
       - i18n: development/i18n.md
       - Prompting: development/prompting.md
+      - ASR Providers: development/asr-providers.md
+      - QA Rules: development/qa-rules.md
       - ADR-0001 Open Stack: decisions/adr-0001-open-stack.md
   - Roadmap:
       - Overview: roadmap.md
