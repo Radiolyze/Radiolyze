@@ -57,8 +57,17 @@ plugins:
             Quickstart (5 min): Schnellstart (5 Min.)
             For Doctors: Für Ärzte
             Reporting Workflow: Befundungs-Workflow
+            AI Guide: KI-Leitfaden
+            Keyboard Shortcuts: Tastenkürzel
+            Troubleshooting: Fehlerbehebung
+            Fast Reporting: Fast Reporting
             Complex Cases: Komplexe Fälle
+            Batch Reporting: Batch Reporting
             Administration: Administration
+            Deployment Guide: Deployment-Leitfaden
+            GPU Setup: GPU-Setup
+            Security Hardening: Security-Hardening
+            Backup & Recovery: Backup und Recovery
             For Researchers: Für Forscher
             Architecture: Architektur
             Overview: Übersicht
@@ -130,11 +139,19 @@ nav:
       - Quickstart (5 min): getting-started/quickstart.md
   - For Doctors:
       - Overview: doctors/index.md
-      - Reporting Workflow: workflows/fast-report.md
+      - Reporting Workflow: doctors/workflow-befundung.md
+      - AI Guide: doctors/ki-grundlagen.md
+      - Keyboard Shortcuts: doctors/tastenkuerzel.md
+      - Troubleshooting: doctors/troubleshooting.md
+      - Fast Reporting: workflows/fast-report.md
       - Complex Cases: workflows/complex-case.md
       - Batch Reporting: workflows/batch-reporting.md
   - Administration:
       - Overview: admin/index.md
+      - Deployment Guide: admin/deployment.md
+      - GPU Setup: admin/gpu-setup.md
+      - Security Hardening: admin/security-hardening.md
+      - Backup & Recovery: admin/backup-recovery.md
       - Runbook: operations/runbook.md
       - Security: operations/security.md
       - Observability: operations/observability.md
