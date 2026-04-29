@@ -20,6 +20,10 @@ class LoadedVolume:
     image: sitk.Image
     modality: str
     instance_count: int
+    # The original DICOM datasets, sorted in slice order. Kept around so the
+    # DICOM-SEG writer can reference SOP Instance UIDs in PerFrameFunctional-
+    # GroupsSequence without re-fetching them.
+    source_datasets: list[pydicom.Dataset] | None = None
 
 
 def _instance_url(base_url: str, study_uid: str, series_uid: str, instance_uid: str) -> str:
@@ -99,12 +103,19 @@ async def fetch_series_volume(
 
         datasets = await asyncio.gather(*[_bound(uid) for uid in uids])
 
-    image = _datasets_to_sitk(datasets)
-    modality = str(getattr(datasets[0], "Modality", "")).upper() or "UNKNOWN"
-    return LoadedVolume(image=image, modality=modality, instance_count=len(datasets))
+    image, sorted_datasets = _datasets_to_sitk(datasets)
+    modality = str(getattr(sorted_datasets[0], "Modality", "")).upper() or "UNKNOWN"
+    return LoadedVolume(
+        image=image,
+        modality=modality,
+        instance_count=len(sorted_datasets),
+        source_datasets=sorted_datasets,
+    )
 
 
-def _datasets_to_sitk(datasets: list[pydicom.Dataset]) -> sitk.Image:
+def _datasets_to_sitk(
+    datasets: list[pydicom.Dataset],
+) -> tuple[sitk.Image, list[pydicom.Dataset]]:
     sortable: list[tuple[float, int, pydicom.Dataset]] = []
     for ds in datasets:
         z = _z_position(ds)
@@ -144,7 +155,7 @@ def _datasets_to_sitk(datasets: list[pydicom.Dataset]) -> sitk.Image:
             row_dir[2], col_dir[2], slice_dir[2],
         )
     )
-    return image
+    return image, sorted_ds
 
 
 def _z_position(ds: pydicom.Dataset) -> float | None:

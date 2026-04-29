@@ -128,6 +128,9 @@ class SegmentationJob(Base):
     created_at: Mapped[str] = mapped_column(String, nullable=False)
     updated_at: Mapped[str | None] = mapped_column(String, nullable=True)
     data_dir: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Orthanc URL of the archived DICOM SEG object (set after a successful
+    # POST /api/v1/segmentation/jobs/{id}/push-to-pacs).
+    dicom_seg_orthanc_url: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class CriticalFindingAlert(Base):

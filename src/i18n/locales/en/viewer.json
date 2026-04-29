@@ -103,6 +103,11 @@
       "axisZ": "Axial (Z)",
       "position": "Position {{axis}}"
     },
+    "pacs": {
+      "push": "Send to PACS",
+      "pushedAgain": "Re-send",
+      "failed": "Push failed"
+    },
     "unsupported": "3D models require a CT series with at least 30 slices.",
     "noSeries": "Please select a CT series.",
     "disclaimer": "Research/Demo. Not for diagnostic use.",

@@ -58,3 +58,10 @@ class SegmentationStatusResponse(BaseModel):
     updated_at: str | None = None
     manifest: SegmentationManifest | None = None
     error: str | None = None
+    dicom_seg_orthanc_url: str | None = None
+
+
+class PushToPacsResponse(BaseModel):
+    job_id: str
+    dicom_seg_orthanc_url: str
+    pushed_at: str

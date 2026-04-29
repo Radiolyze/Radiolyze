@@ -12,16 +12,19 @@ from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
 from ..deps import get_current_user, get_db
+from ..dicom_client import store_dicom_object
 from ..mock_logic import utc_now
 from ..models import SegmentationJob, User
 from ..queue import get_queue
 from ..schemas_segmentation import (
+    PushToPacsResponse,
     SegmentationCreateRequest,
     SegmentationCreateResponse,
     SegmentationManifest,
     SegmentationStatusResponse,
 )
 from ..segmentation_client import (
+    download_dicom_seg,
     get_job_status as segmenter_status,
     segmentation_data_dir,
     stream_mask,
@@ -215,6 +218,7 @@ def get_segmentation_job(
         updated_at=record.updated_at,
         manifest=manifest,
         error=record.error_message,
+        dicom_seg_orthanc_url=record.dicom_seg_orthanc_url,
     )
 
 
@@ -314,6 +318,113 @@ def download_mask(
 
         return StreamingResponse(_file_iter(), media_type="application/octet-stream")
     return StreamingResponse(stream_mask(job_id, label_id), media_type="application/octet-stream")
+
+
+@router.post("/jobs/{job_id}/push-to-pacs", response_model=PushToPacsResponse)
+def push_to_pacs(
+    job_id: str,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user),
+) -> PushToPacsResponse:
+    """Forward the job's DICOM SEG to Orthanc via STOW-RS.
+
+    Idempotent: on success the job's `dicom_seg_orthanc_url` column is
+    updated, and re-pushing returns the cached URL without re-uploading.
+    """
+    record = db.get(SegmentationJob, job_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Segmentation job not found")
+    if record.status != "finished":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Job status is {record.status!r}; needs to be 'finished'",
+        )
+
+    manifest = record.manifest_json if isinstance(record.manifest_json, dict) else {}
+    if "dicom_seg" not in manifest:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "DICOM SEG was not generated for this job (segmenter rebuild "
+                "with pydicom-seg required, or SEGMENTATION_GENERATE_DICOM_SEG=false)."
+            ),
+        )
+
+    pushed_at = utc_now()
+    actor_id = current_user.id if current_user is not None else None
+    seg_meta = manifest.get("dicom_seg") or {}
+
+    try:
+        seg_bytes = download_dicom_seg(job_id)
+    except Exception as exc:
+        logger.exception("Failed to fetch DICOM SEG from segmenter for %s", job_id)
+        add_audit_event(
+            db,
+            event_type="segmentation_push_failed",
+            actor_id=actor_id,
+            study_id=record.study_uid,
+            metadata={
+                "job_id": job_id,
+                "stage": "fetch",
+                "error": str(exc),
+            },
+            timestamp=pushed_at,
+            source="api",
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=502, detail=f"Could not fetch DICOM SEG: {exc}"
+        ) from exc
+
+    try:
+        orthanc_url = store_dicom_object(record.study_uid, seg_bytes)
+    except Exception as exc:
+        logger.exception("Failed to STOW-RS DICOM SEG for %s", job_id)
+        add_audit_event(
+            db,
+            event_type="segmentation_push_failed",
+            actor_id=actor_id,
+            study_id=record.study_uid,
+            metadata={
+                "job_id": job_id,
+                "stage": "stow_rs",
+                "error": str(exc),
+            },
+            timestamp=pushed_at,
+            source="api",
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=502, detail=f"STOW-RS push failed: {exc}"
+        ) from exc
+
+    record.dicom_seg_orthanc_url = orthanc_url
+    record.updated_at = pushed_at
+
+    add_audit_event(
+        db,
+        event_type="segmentation_pushed_to_pacs",
+        actor_id=actor_id,
+        study_id=record.study_uid,
+        metadata={
+            "job_id": job_id,
+            "preset": record.preset,
+            "orthanc_url": orthanc_url,
+            "sop_instance_uid": seg_meta.get("sop_instance_uid"),
+            "series_instance_uid": seg_meta.get("series_instance_uid"),
+            "label_count": seg_meta.get("label_count"),
+            "size_bytes": len(seg_bytes),
+        },
+        timestamp=pushed_at,
+        source="api",
+    )
+    db.commit()
+
+    return PushToPacsResponse(
+        job_id=job_id,
+        dicom_seg_orthanc_url=orthanc_url,
+        pushed_at=pushed_at,
+    )
 
 
 @router.delete("/jobs/{job_id}", status_code=204)

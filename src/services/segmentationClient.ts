@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import type {
+  PushToPacsResponse,
   SegmentationCreateInput,
   SegmentationJobResponse,
   SegmentationPreset,
@@ -59,5 +60,10 @@ export const segmentationClient = {
       throw new Error(`Failed to fetch mesh ${labelId} (${response.status})`);
     }
     return response.arrayBuffer();
+  },
+  async pushToPacs(jobId: string): Promise<PushToPacsResponse> {
+    return apiClient.post<PushToPacsResponse>(
+      `${SEGMENTATION_BASE}/jobs/${jobId}/push-to-pacs`,
+    );
   },
 };

@@ -109,7 +109,7 @@
   - Details: `docs/components/segmenter.md`
 - [ ] **M2**: TotalSegmentator Multi-Organ (~104 Klassen, GPU-Build, Lazy-Mesh-Loading, Label-Suche/Sort)
 - [ ] **M3**: Polish (Color-Editor, Loading-Skeletons, Cross-Section-Clip-Plane, ROCm-Variante, Mesh-Bundle-Budget)
-- [ ] **M4** (deferred): DICOM-SEG-Export via `pydicom-seg` mit STOW-RS-Push an Orthanc
+- [x] **M4**: DICOM-SEG-Export via `pydicom-seg` mit STOW-RS-Push an Orthanc (Push-Button im MeshViewer, Audit `segmentation_pushed_to_pacs`)
 
 ## Naechste Schritte (naechster Sprint)
 

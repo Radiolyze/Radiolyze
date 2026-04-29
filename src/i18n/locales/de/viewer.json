@@ -103,6 +103,11 @@
       "axisZ": "Axial (Z)",
       "position": "Position {{axis}}"
     },
+    "pacs": {
+      "push": "An PACS senden",
+      "pushedAgain": "Erneut senden",
+      "failed": "Fehlgeschlagen"
+    },
     "unsupported": "3D-Modelle benötigen eine CT-Serie mit ≥30 Schichten.",
     "noSeries": "Bitte eine CT-Serie auswählen.",
     "disclaimer": "Research/Demo. Nicht zur Diagnose.",

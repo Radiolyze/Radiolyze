@@ -39,9 +39,9 @@ FastAPI orchestrator   ──RQ enqueue──▶  Worker
 | Milestone | Status | Capability |
 |---|---|---|
 | **M1** | done | CT bone via HU thresholding (no ML, no GPU) |
-| **M2** | next | TotalSegmentator multi-organ (~104 classes) |
-| **M3** | planned | Polish, lazy loading, ROCm overlay, audit detail |
-| **M4** | deferred | DICOM SEG export back into Orthanc |
+| **M2** | done | TotalSegmentator multi-organ (~104 classes) |
+| **M3** | done | Polish, lazy loading, ROCm overlay, audit detail |
+| **M4** | done | DICOM SEG export back into Orthanc |
 
 ## Endpoints
 
@@ -52,6 +52,7 @@ FastAPI orchestrator   ──RQ enqueue──▶  Worker
 | `/api/v1/segmentation/jobs/{id}/manifest` | GET | Manifest only |
 | `/api/v1/segmentation/jobs/{id}/mesh/{label_id}?format=glb\|vtp` | GET | Binary mesh stream |
 | `/api/v1/segmentation/jobs/{id}/mask/{label_id}` | GET | NIfTI mask stream |
+| `/api/v1/segmentation/jobs/{id}/push-to-pacs` | POST | Upload the multi-class DICOM SEG to Orthanc; persists Orthanc URL on the job row |
 | `/api/v1/segmentation/jobs/{id}` | DELETE | Drop row + on-disk artifacts |
 
 The `total` preset returns 501 in M1; remove that gate when the M2
@@ -115,6 +116,8 @@ Segmentation jobs emit four audit-event types via the existing
 | `segmentation_completed` | worker | manifest written |
 | `segmentation_failed` | worker | timeout or segmenter error |
 | `segmentation_mesh_accessed` (optional) | api | every mesh / mask GET when `SEGMENTATION_AUDIT_MESH_DOWNLOADS=true` |
+| `segmentation_pushed_to_pacs` | api | `POST /jobs/{id}/push-to-pacs` succeeded |
+| `segmentation_push_failed` | api | DICOM SEG fetch from segmenter or STOW-RS upload failed |
 
 The `segmentation_mesh_accessed` event is **off by default** because a normal
 viewing session emits 5–50 toggle-driven mesh fetches, and a busy radiologist
@@ -153,16 +156,56 @@ The browser fetches GLBs lazily via `MeshViewer`'s top-N preload + on-toggle
 loading, so the *initial* bundle download is roughly 10 × `(ceiling × 0.5)`
 bytes in glTF-encoded form ≈ 1 MB for the default settings.
 
+## DICOM SEG export (M4)
+
+After the meshing pass the segmenter additionally writes a multi-class
+DICOM Segmentation IOD (`segmentation.dcm`) using `pydicom-seg`. The SEG
+references the original CT slices by SOP Instance UID, so any DICOM SEG-
+aware viewer (3D Slicer, OHIF, MITK, …) can overlay it on the source
+study without re-running the pipeline.
+
+The export is **opt-in at the user level**: the viewer's "An PACS senden" /
+"Send to PACS" button (visible only after a successful run with a manifest
+that carries `dicom_seg`) calls `POST /api/v1/segmentation/jobs/{id}/push-to-pacs`,
+which:
+
+1. fetches the SEG file from the segmenter via `GET /jobs/{id}/dicom-seg`,
+2. STOW-RS uploads it to Orthanc (re-using the same client used for SR
+   archiving — see `backend/app/dicom_client.py:store_dicom_object`),
+3. persists the resulting Orthanc study URL on `SegmentationJob.dicom_seg_orthanc_url`,
+4. emits a `segmentation_pushed_to_pacs` audit event with
+   `{job_id, preset, orthanc_url, sop_instance_uid, series_instance_uid,
+   label_count, size_bytes}`.
+
+A re-push is a no-op duplicate-friendly STOW-RS write (Orthanc deduplicates
+on SOPInstanceUID); the orchestrator simply overwrites the cached URL.
+
+To skip the SEG generation pass entirely (e.g. on a research deployment
+without a real PACS), set `SEGMENTATION_GENERATE_DICOM_SEG=false`. The job
+will still publish meshes; the manifest just won't contain a `dicom_seg`
+section and the push button stays hidden.
+
+### SCT codes
+
+The writer maps a small curated subset of label names to SNOMED CT type
+codes (`spleen` → T-C3000, `liver` → T-62000, `aorta` → T-42000, etc.) and
+falls back to `T-D000A "Anatomical structure"` for the long tail. This is
+sufficient for viewer rendering and round-tripping; full ICD-10 / RadLex
+mapping is out of scope for this milestone.
+
 ## Configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `SEGMENTER_URL` | `http://segmenter:8200` | Orchestrator → segmenter base URL |
 | `SEGMENTATION_DATA_DIR` | `/data/segmentations` | Shared volume mount |
-| `SEGMENTATION_JOB_TIMEOUT` | `900` | Worker poll timeout (s) |
+| `SEGMENTATION_JOB_TIMEOUT` | `1800` | Worker poll timeout (s) |
 | `SEGMENTATION_POLL_INTERVAL` | `3` | Worker poll cadence (s) |
 | `BONE_HU_THRESHOLD` | `300` | HU cutoff for the bone preset |
 | `SEGMENTER_MAX_PARALLEL_WADO` | `8` | Concurrent WADO instance fetches |
+| `MESH_MAX_FACES` | `20000` | Per-label decimation ceiling (M3) |
+| `SEGMENTATION_AUDIT_MESH_DOWNLOADS` | `false` | Audit every mesh/mask GET (M3) |
+| `SEGMENTATION_GENERATE_DICOM_SEG` | `true` | Write `segmentation.dcm` after meshing (M4) |
 
 ## Local validation
 

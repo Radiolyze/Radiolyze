@@ -86,7 +86,7 @@
 - [x] **M1**: Bone-HU end-to-end pipeline (segmenter microservice, backend orchestrator, vtk.js MeshViewer, GLB+VTP+NIfTI export, audit events) — see `components/segmenter.md`
 - [ ] **M2**: TotalSegmentator multi-organ (~104 classes, GPU build, lazy mesh loading, label search/sort)
 - [ ] **M3**: Polish (color editor, loading skeletons, cross-section clip plane, ROCm variant, mesh bundle budget)
-- [ ] **M4** (deferred): DICOM SEG export via `pydicom-seg` with STOW-RS push to Orthanc
+- [x] **M4**: DICOM SEG export via `pydicom-seg` with STOW-RS push to Orthanc (push button in MeshViewer, `segmentation_pushed_to_pacs` audit)
 
 ## Next Steps (Next Sprint)
 

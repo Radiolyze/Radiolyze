@@ -79,3 +79,17 @@ def stream_mask(job_id: str, label_id: int) -> Iterator[bytes]:
         with client.stream("GET", url) as response:
             response.raise_for_status()
             yield from response.iter_bytes()
+
+
+def download_dicom_seg(job_id: str) -> bytes:
+    """Pull the multi-class DICOM SEG object from the segmenter as bytes.
+
+    The segmenter writes ``segmentation.dcm`` next to the manifest after
+    meshing. Reading it back over HTTP keeps the orchestrator free from
+    pydicom-seg + ITK on its hot path.
+    """
+    url = f"{segmenter_base_url()}/jobs/{job_id}/dicom-seg"
+    with httpx.Client(timeout=segmenter_timeout()) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        return response.content

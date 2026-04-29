@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrowDownAZ,
   ArrowDownWideNarrow,
+  CheckCircle2,
   Loader2,
   RefreshCw,
   RotateCcw,
   Scissors,
+  UploadCloud,
 } from 'lucide-react';
 import type { Series } from '@/types/radiology';
 import type {
@@ -98,6 +100,9 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
   const [clipEnabled, setClipEnabled] = useState(false);
   const [clipAxis, setClipAxis] = useState<'x' | 'y' | 'z'>('z');
   const [clipPosition, setClipPosition] = useState<number | null>(null);
+  const [pushState, setPushState] = useState<
+    { phase: 'idle' } | { phase: 'pushing' } | { phase: 'pushed'; url: string } | { phase: 'failed'; error: string }
+  >({ phase: 'idle' });
   const loadedLabelsRef = useRef<Set<number>>(new Set());
   const hydratedManifestRef = useRef<string | null>(null);
 
@@ -185,6 +190,7 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
     setMinVolumeMl(0);
     setClipEnabled(false);
     setClipPosition(null);
+    setPushState({ phase: 'idle' });
     enableClipPlane(false);
     await start({
       studyUid,
@@ -232,6 +238,18 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
     },
     [setClipPlanePosition],
   );
+
+  const handlePushToPacs = useCallback(async () => {
+    if (!jobId) return;
+    setPushState({ phase: 'pushing' });
+    try {
+      const response = await segmentationClient.pushToPacs(jobId);
+      setPushState({ phase: 'pushed', url: response.dicom_seg_orthanc_url });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setPushState({ phase: 'failed', error: message });
+    }
+  }, [jobId]);
 
   const onToggle = useCallback(
     (label: SegmentationLabel, checked: boolean) => {
@@ -394,6 +412,48 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
           )}
         </div>
       </div>
+
+      {/* Push-to-PACS button: only available once the job is finished and the
+          segmenter has produced a DICOM SEG (manifest.dicom_seg present). */}
+      {isFinished && manifest?.dicom_seg && (() => {
+        const alreadyPushed =
+          pushState.phase === 'pushed' || Boolean(status?.dicom_seg_orthanc_url);
+        const url =
+          pushState.phase === 'pushed'
+            ? pushState.url
+            : status?.dicom_seg_orthanc_url ?? null;
+        return (
+          <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-1">
+            <Button
+              size="sm"
+              variant={alreadyPushed ? 'outline' : 'default'}
+              onClick={handlePushToPacs}
+              disabled={pushState.phase === 'pushing'}
+            >
+              {pushState.phase === 'pushing' ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : alreadyPushed ? (
+                <CheckCircle2 className="mr-1 h-4 w-4" />
+              ) : (
+                <UploadCloud className="mr-1 h-4 w-4" />
+              )}
+              {alreadyPushed
+                ? t('mesh.pacs.pushedAgain')
+                : t('mesh.pacs.push')}
+            </Button>
+            {alreadyPushed && url && (
+              <span className="max-w-xs truncate rounded bg-card/90 px-2 py-0.5 text-[10px] text-muted-foreground backdrop-blur" title={url}>
+                {url}
+              </span>
+            )}
+            {pushState.phase === 'failed' && (
+              <span className="max-w-xs truncate rounded bg-destructive/10 px-2 py-0.5 text-[10px] text-destructive">
+                {t('mesh.pacs.failed')}: {pushState.error}
+              </span>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Clip-plane position slider — only when active and we know the range. */}
       {clipEnabled && isFinished && (() => {

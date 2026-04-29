@@ -23,6 +23,11 @@ const mocks = vi.hoisted(() => ({
   resetCamera: vi.fn(),
   start: vi.fn(async () => undefined),
   fetchMesh: vi.fn(async () => new ArrayBuffer(8)),
+  pushToPacs: vi.fn(async () => ({
+    job_id: 'job-1',
+    dicom_seg_orthanc_url: 'http://orthanc/studies/X',
+    pushed_at: '2026-04-29T00:00:00Z',
+  })),
   enableClipPlane: vi.fn(),
   setClipPlanePosition: vi.fn(),
   getClipPlaneRange: vi.fn(() => [-50, 50] as [number, number]),
@@ -67,6 +72,7 @@ vi.mock('@/hooks/useSegmentation', () => ({
 vi.mock('@/services/segmentationClient', () => ({
   segmentationClient: {
     fetchMesh: mocks.fetchMesh,
+    pushToPacs: mocks.pushToPacs,
     createJob: vi.fn(),
     getStatus: vi.fn(),
     meshUrl: vi.fn(),
@@ -276,6 +282,77 @@ describe('MeshViewer', () => {
     expect(retry).toBeInTheDocument();
     fireEvent.click(retry);
     await waitFor(() => expect(mocks.fetchMesh).toHaveBeenCalledTimes(2));
+  });
+
+  it('shows the push-to-PACS button only when the manifest carries a dicom_seg', async () => {
+    mocks.segmentationState.status = {
+      job_id: 'job-1',
+      status: 'finished',
+      progress: 1,
+      preset: 'bone',
+      study_uid: 's',
+      series_uid: 's.1',
+      manifest: {
+        job_id: 'job-1',
+        preset: 'bone',
+        source: { study_uid: 's', series_uid: 's.1', modality: 'CT' },
+        volume: { spacing: [1, 1, 1], origin: [0, 0, 0], direction: [], shape: [] },
+        labels: [
+          {
+            id: 1, name: 'bone',
+            color: [0.93, 0.87, 0.74],
+            volume_ml: 100, voxel_count: 1,
+            mask_url: 'a', mesh_url: 'b',
+          },
+        ],
+        warnings: [],
+        dicom_seg: {
+          url: '/jobs/job-1/dicom-seg',
+          label_count: 1,
+          sop_instance_uid: '1.2.0',
+          series_instance_uid: '1.2.1',
+          study_instance_uid: '1.2.3',
+        },
+      },
+    };
+
+    renderWithQuery(<MeshViewer series={ctSeries} studyUid="1.2.3" />);
+
+    const button = await screen.findByRole('button', { name: 'mesh.pacs.push' });
+    fireEvent.click(button);
+    await waitFor(() => expect(mocks.pushToPacs).toHaveBeenCalledWith('job-1'));
+    // After success the button label flips to the "re-send" variant.
+    await screen.findByRole('button', { name: 'mesh.pacs.pushedAgain' });
+  });
+
+  it('hides the push-to-PACS button when the manifest has no dicom_seg', () => {
+    mocks.segmentationState.status = {
+      job_id: 'job-2',
+      status: 'finished',
+      progress: 1,
+      preset: 'bone',
+      study_uid: 's',
+      series_uid: 's.1',
+      manifest: {
+        job_id: 'job-2',
+        preset: 'bone',
+        source: { study_uid: 's', series_uid: 's.1', modality: 'CT' },
+        volume: { spacing: [1, 1, 1], origin: [0, 0, 0], direction: [], shape: [] },
+        labels: [
+          {
+            id: 1, name: 'bone',
+            color: [0.93, 0.87, 0.74],
+            volume_ml: 100, voxel_count: 1,
+            mask_url: 'a', mesh_url: 'b',
+          },
+        ],
+        warnings: [],
+      },
+    };
+
+    renderWithQuery(<MeshViewer series={ctSeries} studyUid="1.2.3" />);
+
+    expect(screen.queryByRole('button', { name: 'mesh.pacs.push' })).toBeNull();
   });
 
   it('toggling the clip plane shows the position slider and forwards changes', async () => {

@@ -20,6 +20,14 @@ export interface SegmentationLabel {
   vtp_url?: string;
 }
 
+export interface SegmentationDicomSeg {
+  url: string;
+  label_count: number;
+  sop_instance_uid: string;
+  series_instance_uid: string;
+  study_instance_uid: string;
+}
+
 export interface SegmentationManifest {
   job_id: string;
   preset: SegmentationPreset;
@@ -37,6 +45,7 @@ export interface SegmentationManifest {
   labels: SegmentationLabel[];
   created_at?: string;
   warnings?: string[];
+  dicom_seg?: SegmentationDicomSeg;
 }
 
 export interface SegmentationJobResponse {
@@ -50,6 +59,13 @@ export interface SegmentationJobResponse {
   updated_at?: string | null;
   manifest?: SegmentationManifest | null;
   error?: string | null;
+  dicom_seg_orthanc_url?: string | null;
+}
+
+export interface PushToPacsResponse {
+  job_id: string;
+  dicom_seg_orthanc_url: string;
+  pushed_at: string;
 }
 
 export interface SegmentationCreateInput {

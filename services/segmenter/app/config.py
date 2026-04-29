@@ -50,3 +50,11 @@ def gpu_available() -> bool:
         return bool(torch.cuda.is_available())
     except Exception:
         return False
+
+
+def dicom_seg_enabled() -> bool:
+    """Best-effort DICOM SEG export. Off only if explicitly disabled."""
+    value = os.getenv("SEGMENTATION_GENERATE_DICOM_SEG")
+    if value is None:
+        return True
+    return value.strip().lower() in {"1", "true", "yes", "on"}

@@ -9,9 +9,21 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
-from .config import data_root, dicom_web_base_url, gpu_available, job_dir
-from .dicom_loader import fetch_series_volume
+from .config import (
+    data_root,
+    dicom_seg_enabled,
+    dicom_web_base_url,
+    gpu_available,
+    job_dir,
+)
+from .dicom_loader import LoadedVolume, fetch_series_volume
+from .dicom_seg import (
+    DicomSegArtifact,
+    DicomSegUnavailable,
+    build_dicom_seg,
+)
 from .jobs import registry
+from .labels import LabeledMask
 from .manifest import build_manifest, write_manifest
 from .meshing import build_mesh
 from .segment_bone import segment_bone
@@ -56,6 +68,15 @@ def _totalseg_version() -> str | None:
         return None
 
 
+def _pydicom_seg_version() -> str | None:
+    try:
+        from importlib.metadata import version
+
+        return version("pydicom-seg")
+    except Exception:
+        return None
+
+
 @app.get("/health")
 def health() -> dict:
     version = _totalseg_version()
@@ -66,8 +87,44 @@ def health() -> dict:
         "status": "ok",
         "gpu": gpu_available(),
         "totalseg_version": version,
+        "pydicom_seg_version": _pydicom_seg_version(),
+        "dicom_seg_enabled": dicom_seg_enabled(),
         "presets": presets,
     }
+
+
+def _maybe_build_dicom_seg(
+    *,
+    job_id_value: str,
+    preset: str,
+    masks: list[LabeledMask],
+    loaded: LoadedVolume,
+    out_dir: Path,
+) -> DicomSegArtifact | None:
+    """Best-effort DICOM SEG export; never fails the parent job."""
+    if not dicom_seg_enabled():
+        return None
+    if not masks:
+        return None
+    if loaded.source_datasets is None:
+        logger.warning(
+            "Skipping DICOM SEG for %s: source datasets were not retained.", job_id_value
+        )
+        return None
+    try:
+        return build_dicom_seg(
+            masks=masks,
+            source_datasets=loaded.source_datasets,
+            reference=loaded.image,
+            output_path=out_dir / "segmentation.dcm",
+            series_description=f"Radiolyze {preset} segmentation",
+        )
+    except DicomSegUnavailable as exc:
+        logger.info("DICOM SEG export skipped: %s", exc)
+        return None
+    except Exception:
+        logger.exception("DICOM SEG export failed for %s; mesh export already done", job_id_value)
+        return None
 
 
 def _resolve_base_url(request: SegmentRequest) -> str:
@@ -107,6 +164,13 @@ async def _run_bone_pipeline(req: SegmentRequest) -> None:
         artifacts.append(artifact)
     registry.update(req.job_id, progress=0.85)
 
+    seg_artifact = _maybe_build_dicom_seg(
+        job_id_value=req.job_id,
+        preset="bone",
+        masks=masks,
+        loaded=loaded,
+        out_dir=out_dir,
+    )
     manifest = build_manifest(
         job_id=req.job_id,
         preset="bone",
@@ -116,6 +180,7 @@ async def _run_bone_pipeline(req: SegmentRequest) -> None:
         reference=loaded.image,
         artifacts=artifacts,
         warnings=warnings,
+        dicom_seg=seg_artifact,
     )
     write_manifest(out_dir, manifest)
     registry.update(req.job_id, status="done", progress=1.0, manifest=manifest)
@@ -180,6 +245,13 @@ async def _run_total_pipeline(req: SegmentRequest) -> None:
         )
     registry.update(req.job_id, progress=0.95)
 
+    seg_artifact = _maybe_build_dicom_seg(
+        job_id_value=req.job_id,
+        preset="total",
+        masks=masks,
+        loaded=loaded,
+        out_dir=out_dir,
+    )
     manifest = build_manifest(
         job_id=req.job_id,
         preset="total",
@@ -189,6 +261,7 @@ async def _run_total_pipeline(req: SegmentRequest) -> None:
         reference=loaded.image,
         artifacts=artifacts,
         warnings=warnings,
+        dicom_seg=seg_artifact,
     )
     write_manifest(out_dir, manifest)
     registry.update(req.job_id, status="done", progress=1.0, manifest=manifest)
@@ -303,3 +376,25 @@ def mesh_file(
 def mask_file(job_id: str, label_id: int) -> FileResponse:
     path = _safe_label_path(job_id, label_id, kind="mask", ext="nii.gz")
     return FileResponse(path, media_type="application/octet-stream", filename=path.name)
+
+
+@app.get("/jobs/{job_id}/dicom-seg")
+def dicom_seg_file(job_id: str) -> FileResponse:
+    """Return the multi-class DICOM SEG produced after the meshing pass."""
+    candidate = (data_root() / job_id / "segmentation.dcm").resolve()
+    base = (data_root() / job_id).resolve()
+    try:
+        candidate.relative_to(base)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Path traversal rejected") from exc
+    if not candidate.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="DICOM SEG not available (job still running, "
+            "pydicom-seg missing, or SEG export disabled)",
+        )
+    return FileResponse(
+        candidate,
+        media_type="application/dicom",
+        filename=f"{job_id}.dcm",
+    )

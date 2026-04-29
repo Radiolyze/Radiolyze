@@ -8,6 +8,7 @@ from typing import Any
 
 import SimpleITK as sitk
 
+from .dicom_seg import DicomSegArtifact
 from .meshing import MeshArtifact
 
 
@@ -25,8 +26,9 @@ def build_manifest(
     reference: sitk.Image,
     artifacts: list[MeshArtifact],
     warnings: list[str] | None = None,
+    dicom_seg: DicomSegArtifact | None = None,
 ) -> dict[str, Any]:
-    return {
+    manifest: dict[str, Any] = {
         "job_id": job_id,
         "preset": preset,
         "source": {
@@ -58,6 +60,15 @@ def build_manifest(
         "created_at": _now_iso(),
         "warnings": warnings or [],
     }
+    if dicom_seg is not None:
+        manifest["dicom_seg"] = {
+            "url": f"/jobs/{job_id}/dicom-seg",
+            "label_count": dicom_seg.label_count,
+            "sop_instance_uid": dicom_seg.sop_instance_uid,
+            "series_instance_uid": dicom_seg.series_instance_uid,
+            "study_instance_uid": dicom_seg.study_instance_uid,
+        }
+    return manifest
 
 
 def write_manifest(job_dir: Path, manifest: dict[str, Any]) -> Path:
