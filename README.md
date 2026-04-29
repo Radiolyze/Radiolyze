@@ -12,6 +12,7 @@ Radiology workflow system with AI-assisted report generation, DICOM viewer, spee
 - **Audit Logging**: Complete traceability of all actions (EU AI Act compliant)
 - **DICOM SR Export**: Structured reports as JSON or DICOM SR
 - **Batch Processing**: Queue-based reporting for multiple studies
+- **3D Tissue Segmentation** (M1): bone-mesh from CT volumes via dedicated `segmenter` microservice + interactive vtk.js mesh viewer with per-tissue toggles. Multi-organ via TotalSegmentator scheduled for M2 — see `docs/components/segmenter.md`.
 
 ## Architecture
 
@@ -65,6 +66,7 @@ Radiology workflow system with AI-assisted report generation, DICOM viewer, spee
 - vLLM with MedGemma (multimodal analysis)
 - MedASR (speech recognition)
 - Whisper (self-hosted STT alternative)
+- Segmenter (FastAPI + SimpleITK + trimesh, Apache 2.0 TotalSegmentator slated for M2)
 
 ## Quick Start
 

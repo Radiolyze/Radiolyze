@@ -1,0 +1,32 @@
+# GPU build for the Radiolyze segmenter (CUDA 12.1 + PyTorch 2.4 + TotalSegmentator).
+# Use this image via the docker/compose/gpu.yml overlay; the CPU baseline at
+# services/segmenter/Dockerfile is the default for `docker compose up`.
+
+FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    TOTALSEG_HOME=/models \
+    HF_HOME=/models/huggingface \
+    NNUNET_HOME=/models/nnunet
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgl1 libglib2.0-0 libxrender1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /service
+
+COPY requirements.txt /service/requirements.txt
+# torch is already provided by the base image; install the rest without
+# letting pip pull a CPU-only torch wheel on top of the CUDA build.
+RUN pip install --no-cache-dir --no-deps \
+        totalsegmentator>=2.4 \
+    && pip install --no-cache-dir \
+        $(grep -v '^torch' requirements.txt | grep -v '^totalsegmentator')
+
+COPY app /service/app
+
+EXPOSE 8200
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8200"]

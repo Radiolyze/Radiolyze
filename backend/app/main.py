@@ -20,6 +20,7 @@ from .api import (
     prompts,
     qa,
     reports,
+    segmentation,
     templates,
     training,
     ws,
@@ -104,6 +105,7 @@ _PATH_LIMITS: dict[str, int] = {
     "/api/v1/inference/queue": 10,
     "/api/v1/inference/localize": 10,
     "/api/v1/reports/asr-transcript": 20,
+    "/api/v1/segmentation/jobs": 5,
 }
 
 _rate_limiter = RateLimiter(window_seconds=60)
@@ -150,6 +152,7 @@ app.include_router(prompts.router)
 app.include_router(audit.router)
 app.include_router(monitoring.router)
 app.include_router(guidelines.router)
+app.include_router(segmentation.router)
 app.include_router(ws.router)
 
 
@@ -301,6 +304,7 @@ def health() -> dict[str, Any]:
 
     _check_url("vllm", os.getenv("VLLM_BASE_URL", ""), "/health")
     _check_url("medasr", os.getenv("MEDASR_BASE_URL", ""), "/health")
+    _check_url("segmenter", os.getenv("SEGMENTER_URL", ""), "/health")
 
     # OpenAI-compatible ASR (e.g. hwdsl2/whisper-server: /docs for liveness)
     asr_provider = os.getenv("ASR_PROVIDER", "medasr").strip().lower()

@@ -37,6 +37,11 @@ services:
       DRIFT_SCHEDULE_HOURS: "24"
       DRIFT_WINDOW_DAYS: "7"
       DRIFT_BASELINE_DAYS: "7"
+      SEGMENTER_URL: http://segmenter:8200
+      SEGMENTATION_DATA_DIR: /data/segmentations
+      SEGMENTATION_JOB_TIMEOUT: "1800"
+    volumes:
+      - seg-data:/data/segmentations
     depends_on:
       - db
       - redis
@@ -70,6 +75,11 @@ services:
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
       DICOM_WEB_USERNAME: orthanc
       DICOM_WEB_PASSWORD: orthanc
+      SEGMENTER_URL: http://segmenter:8200
+      SEGMENTATION_DATA_DIR: /data/segmentations
+      SEGMENTATION_JOB_TIMEOUT: "1800"
+    volumes:
+      - seg-data:/data/segmentations
     depends_on:
       - db
       - redis
@@ -233,7 +243,30 @@ services:
       timeout: 10s
       retries: 3
 
+  segmenter:
+    build:
+      context: ./services/segmenter
+    ports:
+      - "8200:8200"
+    environment:
+      SEGMENTATION_DATA_DIR: /data/segmentations
+      DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
+      DICOM_WEB_USERNAME: orthanc
+      DICOM_WEB_PASSWORD: orthanc
+      BONE_HU_THRESHOLD: "300"
+      SEGMENTER_MAX_PARALLEL_WADO: "8"
+    volumes:
+      - seg-data:/data/segmentations
+    depends_on:
+      - orthanc
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8200/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   orthanc-data:
   postgres-data:
   vllm-cache:
+  seg-data:

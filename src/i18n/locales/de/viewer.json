@@ -71,5 +71,65 @@
     "patientInfo": "Patienteninfo",
     "studyInfo": "Studieninfo",
     "annotations": "Annotationen"
+  },
+  "mesh": {
+    "title": "3D Modell",
+    "tooltip": "3D-Modell mit Gewebeauswahl",
+    "generate": "3D-Modell generieren",
+    "resetCamera": "Kamera zurücksetzen",
+    "labels": "Gewebe / Strukturen",
+    "opacity": "Deckkraft",
+    "color": "Farbe",
+    "colorReset": "Standard",
+    "colorPicker": {
+      "open": "Farbe für {{name}} ändern",
+      "r": "R",
+      "g": "G",
+      "b": "B"
+    },
+    "search": "Label suchen…",
+    "minVolume": "Mind. Volumen",
+    "noResults": "Keine Labels passen zum Filter.",
+    "retry": "Erneut versuchen",
+    "retryLabel": "{{name}} erneut laden",
+    "skeleton": {
+      "loading": "Modell wird vorbereitet…"
+    },
+    "clipPlane": {
+      "toggle": "Schnittebene",
+      "axis": "Achse",
+      "axisX": "Sagittal (X)",
+      "axisY": "Coronal (Y)",
+      "axisZ": "Axial (Z)",
+      "position": "Position {{axis}}"
+    },
+    "pacs": {
+      "push": "An PACS senden",
+      "pushedAgain": "Erneut senden",
+      "failed": "Fehlgeschlagen"
+    },
+    "unsupported": "3D-Modelle benötigen eine CT-Serie mit ≥30 Schichten.",
+    "noSeries": "Bitte eine CT-Serie auswählen.",
+    "disclaimer": "Research/Demo. Nicht zur Diagnose.",
+    "attribution": {
+      "aria": "Lizenz- und Modell-Quellen anzeigen",
+      "title": "Modelle & Lizenzen",
+      "body": "Die TotalSegmentator-Pipeline basiert auf öffentlich zugänglichen Modellen unter Apache-2.0-Lizenz. Quelle und Gewichte liegen außerhalb von Radiolyze."
+    },
+    "sort": {
+      "toggle": "Sortierung umschalten",
+      "byVolume": "Nach Volumen sortieren",
+      "byName": "Alphabetisch sortieren"
+    },
+    "preset": {
+      "bone": "Knochen (HU-Threshold)",
+      "total": "Multi-Organ (TotalSegmentator)"
+    },
+    "status": {
+      "queued": "In Warteschlange",
+      "running": "Wird generiert ({{progress}}%)…",
+      "finished": "Fertig",
+      "failed": "Fehlgeschlagen"
+    }
   }
 }

@@ -71,5 +71,65 @@
     "patientInfo": "Patient info",
     "studyInfo": "Study info",
     "annotations": "Annotations"
+  },
+  "mesh": {
+    "title": "3D Model",
+    "tooltip": "3D model with tissue selection",
+    "generate": "Generate 3D model",
+    "resetCamera": "Reset camera",
+    "labels": "Tissues / structures",
+    "opacity": "Opacity",
+    "color": "Color",
+    "colorReset": "Default",
+    "colorPicker": {
+      "open": "Edit color for {{name}}",
+      "r": "R",
+      "g": "G",
+      "b": "B"
+    },
+    "search": "Search label…",
+    "minVolume": "Min. volume",
+    "noResults": "No labels match the filter.",
+    "retry": "Retry",
+    "retryLabel": "Reload {{name}}",
+    "skeleton": {
+      "loading": "Preparing the model…"
+    },
+    "clipPlane": {
+      "toggle": "Clip plane",
+      "axis": "Axis",
+      "axisX": "Sagittal (X)",
+      "axisY": "Coronal (Y)",
+      "axisZ": "Axial (Z)",
+      "position": "Position {{axis}}"
+    },
+    "pacs": {
+      "push": "Send to PACS",
+      "pushedAgain": "Re-send",
+      "failed": "Push failed"
+    },
+    "unsupported": "3D models require a CT series with at least 30 slices.",
+    "noSeries": "Please select a CT series.",
+    "disclaimer": "Research/Demo. Not for diagnostic use.",
+    "attribution": {
+      "aria": "Show license and model sources",
+      "title": "Models & licenses",
+      "body": "The TotalSegmentator pipeline relies on publicly available models under the Apache-2.0 license. Sources and weights live outside Radiolyze."
+    },
+    "sort": {
+      "toggle": "Toggle sort order",
+      "byVolume": "Sort by volume",
+      "byName": "Sort alphabetically"
+    },
+    "preset": {
+      "bone": "Bone (HU threshold)",
+      "total": "Multi-organ (TotalSegmentator)"
+    },
+    "status": {
+      "queued": "Queued",
+      "running": "Generating ({{progress}}%)…",
+      "finished": "Done",
+      "failed": "Failed"
+    }
   }
 }

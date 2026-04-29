@@ -1,0 +1,18 @@
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+# pydicom-seg pulls SegmentationStorage from a pre-3.0 import path; pin
+# to the 2.x line until pydicom-seg ships a 3.0-compatible release.
+pydicom>=2.4,<3.0
+numpy<2
+SimpleITK>=2.4
+scikit-image>=0.24
+trimesh>=4.4
+pygltflib>=1.16
+pydicom-seg>=0.4
+# --- M2: TotalSegmentator (multi-organ) ---
+# torch is pulled transitively but pinned here so docker rebuilds do not
+# silently switch the CUDA build channel out from under us.
+torch>=2.4
+totalsegmentator>=2.4

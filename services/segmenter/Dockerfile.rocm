@@ -1,0 +1,32 @@
+# ROCm build for the Radiolyze segmenter (PyTorch ROCm + TotalSegmentator).
+# Use via docker/compose/rocm.yml. CPU baseline remains
+# services/segmenter/Dockerfile.
+
+FROM rocm/pytorch:rocm6.1.2_ubuntu22.04_py3.10_pytorch_release-2.4.0
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    TOTALSEG_HOME=/models \
+    HF_HOME=/models/huggingface \
+    NNUNET_HOME=/models/nnunet
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgl1 libglib2.0-0 libxrender1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /service
+
+COPY requirements.txt /service/requirements.txt
+# torch is already provided by the ROCm base image; do not let pip resolve
+# a CPU/CUDA wheel on top of it.
+RUN pip install --no-cache-dir --no-deps \
+        totalsegmentator>=2.4 \
+    && pip install --no-cache-dir \
+        $(grep -v '^torch' requirements.txt | grep -v '^totalsegmentator')
+
+COPY app /service/app
+
+EXPOSE 8200
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8200"]

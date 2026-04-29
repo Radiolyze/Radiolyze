@@ -33,11 +33,11 @@ def _request_timeout() -> float:
         return 30.0
 
 
-def store_sr(study_instance_uid: str, sr_bytes: bytes) -> str:
-    """Store a DICOM SR object in Orthanc via STOW-RS.
+def store_dicom_object(study_instance_uid: str, dicom_bytes: bytes) -> str:
+    """Store any DICOM object (SR, SEG, …) in Orthanc via STOW-RS.
 
     Sends a multipart/related POST request to the DICOMweb STOW-RS endpoint.
-    Returns the Orthanc instance URL for the stored object.
+    Returns the Orthanc study URL for the stored object.
 
     Raises ``RuntimeError`` if the store request fails.
     """
@@ -50,7 +50,7 @@ def store_sr(study_instance_uid: str, sr_bytes: bytes) -> str:
         f"--{boundary}\r\n"
         f"Content-Type: application/dicom\r\n"
         f"\r\n"
-    ).encode("utf-8") + sr_bytes + f"\r\n--{boundary}--\r\n".encode("utf-8")
+    ).encode("utf-8") + dicom_bytes + f"\r\n--{boundary}--\r\n".encode("utf-8")
 
     content_type = f'multipart/related; type="application/dicom"; boundary="{boundary}"'
 
@@ -67,7 +67,11 @@ def store_sr(study_instance_uid: str, sr_bytes: bytes) -> str:
     except httpx.HTTPError as exc:
         raise RuntimeError(f"STOW-RS store failed: {exc}") from exc
 
-    # Orthanc returns a DICOMweb response; extract the instance URL
     instance_url = f"{base_url}/studies/{study_instance_uid}"
-    logger.info("DICOM SR stored via STOW-RS: %s", instance_url)
+    logger.info("DICOM object stored via STOW-RS: %s", instance_url)
     return instance_url
+
+
+def store_sr(study_instance_uid: str, sr_bytes: bytes) -> str:
+    """Backwards-compatible alias. Prefer :func:`store_dicom_object`."""
+    return store_dicom_object(study_instance_uid, sr_bytes)
