@@ -34,6 +34,40 @@ def segmentation_data_dir() -> Path:
     return path
 
 
+def preprocess_for_medgemma(
+    *,
+    study_uid: str,
+    series_uid: str,
+    max_slices: int | None = None,
+    window_preset: str | None = None,
+    strategy: str | None = None,
+    resize: int | None = None,
+) -> dict[str, Any]:
+    """Render a DICOM CT/MR series into MedGemma-ready slices.
+
+    Synchronous segmenter call (typical <10s for a 200-slice CT). The response
+    contains one inline ``data:image/png;base64,...`` per slice plus volume
+    metadata (``modality``, ``window_preset``, ``slice_thickness``, ...).
+    """
+    url = f"{segmenter_base_url()}/preprocess/medgemma"
+    payload: dict[str, Any] = {"study_uid": study_uid, "series_uid": series_uid}
+    if max_slices is not None:
+        payload["max_slices"] = max_slices
+    if window_preset is not None:
+        payload["window_preset"] = window_preset
+    if strategy is not None:
+        payload["strategy"] = strategy
+    if resize is not None:
+        payload["resize"] = resize
+
+    timeout = float(os.getenv("SEGMENTER_PREPROCESS_TIMEOUT", "120"))
+    logger.info("Requesting MedGemma volume preprocess from %s", _redact_url(url))
+    with httpx.Client(timeout=timeout) as client:
+        response = client.post(url, json=payload)
+        response.raise_for_status()
+        return response.json()
+
+
 def submit_segmentation(
     *,
     job_id: str,

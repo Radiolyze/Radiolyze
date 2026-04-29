@@ -5,6 +5,10 @@ const INFERENCE_QUEUE_ENDPOINT =
   import.meta.env.VITE_INFERENCE_QUEUE_URL ?? '/api/v1/inference/queue';
 const INFERENCE_LOCALIZE_ENDPOINT =
   import.meta.env.VITE_INFERENCE_LOCALIZE_URL ?? '/api/v1/inference/localize';
+const INFERENCE_VOLUME_ENDPOINT =
+  import.meta.env.VITE_INFERENCE_VOLUME_URL ?? '/api/v1/inference/volume';
+const INFERENCE_COMPARISON_ENDPOINT =
+  import.meta.env.VITE_INFERENCE_COMPARISON_URL ?? '/api/v1/inference/comparison';
 const INFERENCE_STATUS_ENDPOINT =
   import.meta.env.VITE_INFERENCE_STATUS_URL ?? '/api/v1/inference/status';
 
@@ -22,6 +26,39 @@ export interface LocalizePayload {
   reportId?: string;
   studyId?: string;
   imageRef: ImageRef;
+  requestedBy?: string;
+  modelVersion?: string;
+  mode?: 'cxr_finding' | 'cxr_anatomy';
+}
+
+export type VolumeWindowPreset = 'auto' | 'lung' | 'mediastinum' | 'bone' | 'abdomen' | 'mr';
+export type VolumeStrategy = 'uniform' | 'central';
+
+export interface VolumeInferencePayload {
+  reportId?: string;
+  studyId?: string;
+  studyUid: string;
+  seriesUid: string;
+  findingsText?: string;
+  maxSlices?: number;
+  windowPreset?: VolumeWindowPreset;
+  strategy?: VolumeStrategy;
+  requestedBy?: string;
+  modelVersion?: string;
+}
+
+export interface ComparisonPayload {
+  reportId?: string;
+  studyId?: string;
+  studyUid: string;
+  seriesUid: string;
+  priorStudyUid: string;
+  priorSeriesUid: string;
+  timeDeltaDays?: number;
+  findingsText?: string;
+  modality?: string;
+  maxSlices?: number;
+  windowPreset?: VolumeWindowPreset;
   requestedBy?: string;
   modelVersion?: string;
 }
@@ -106,6 +143,38 @@ export const inferenceClient = {
       report_id: payload.reportId,
       study_id: payload.studyId,
       image_ref: imageRef,
+      mode: payload.mode,
+      requested_by: payload.requestedBy,
+      model_version: payload.modelVersion,
+    });
+  },
+  async queueVolumeInference(payload: VolumeInferencePayload): Promise<InferenceQueueResponse> {
+    return apiClient.post<InferenceQueueResponse>(INFERENCE_VOLUME_ENDPOINT, {
+      report_id: payload.reportId,
+      study_id: payload.studyId,
+      study_uid: payload.studyUid,
+      series_uid: payload.seriesUid,
+      findings_text: payload.findingsText,
+      max_slices: payload.maxSlices,
+      window_preset: payload.windowPreset,
+      strategy: payload.strategy,
+      requested_by: payload.requestedBy,
+      model_version: payload.modelVersion,
+    });
+  },
+  async queueComparison(payload: ComparisonPayload): Promise<InferenceQueueResponse> {
+    return apiClient.post<InferenceQueueResponse>(INFERENCE_COMPARISON_ENDPOINT, {
+      report_id: payload.reportId,
+      study_id: payload.studyId,
+      study_uid: payload.studyUid,
+      series_uid: payload.seriesUid,
+      prior_study_uid: payload.priorStudyUid,
+      prior_series_uid: payload.priorSeriesUid,
+      time_delta_days: payload.timeDeltaDays,
+      findings_text: payload.findingsText,
+      modality: payload.modality,
+      max_slices: payload.maxSlices,
+      window_preset: payload.windowPreset,
       requested_by: payload.requestedBy,
       model_version: payload.modelVersion,
     });

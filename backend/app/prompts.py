@@ -13,15 +13,16 @@ from .db import SessionLocal
 from .mock_logic import utc_now
 from .models import PromptTemplate
 
-PromptType = Literal["system", "summary", "impression"]
+PromptType = Literal["system", "summary", "impression", "comparison"]
 PromptSource = Literal["db", "env", "default"]
 
-PROMPT_TYPES: tuple[PromptType, ...] = ("system", "summary", "impression")
+PROMPT_TYPES: tuple[PromptType, ...] = ("system", "summary", "impression", "comparison")
 
 PROMPT_ENV_KEYS: dict[PromptType, str] = {
     "system": "VLLM_SYSTEM_PROMPT",
     "summary": "VLLM_IMAGE_SUMMARY_PROMPT",
     "impression": "VLLM_IMAGE_IMPRESSION_PROMPT",
+    "comparison": "VLLM_IMAGE_COMPARISON_PROMPT",
 }
 
 DEFAULT_PROMPTS: dict[PromptType, str] = {
@@ -64,12 +65,36 @@ DEFAULT_PROMPTS: dict[PromptType, str] = {
         "Findings (optional):\n"
         "{{findings_text}}"
     ),
+    "comparison": (
+        "Task: Compare the current imaging study against the prior study and\n"
+        "report longitudinal changes only.\n"
+        "Time delta between studies (days): {{time_delta_days}}\n"
+        "Each image is indexed; use the indices to cite evidence.\n"
+        "Status values: new | progressed | stable | regressed | resolved.\n"
+        "Overall trend: improved | worsened | mixed | stable.\n"
+        "Output: a JSON object with keys:\n"
+        "- summary_change (string, 1-2 sentences)\n"
+        "- changes (array of objects with finding, status, "
+        "evidence_indices_current, evidence_indices_prior, quantitative_change?)\n"
+        "- overall_trend (string)\n"
+        "- confidence (string, optional: low|medium|high)\n"
+        "Return only valid JSON. No markdown or code fences.\n\n"
+        "Current images:\n{{current_manifest}}\n\n"
+        "Prior images:\n{{prior_manifest}}\n\n"
+        "Findings (optional):\n{{findings_text}}"
+    ),
 }
 
 ALLOWED_VARIABLES: dict[PromptType, set[str]] = {
     "system": set(),
     "summary": {"findings_text", "image_manifest"},
     "impression": {"findings_text", "image_manifest"},
+    "comparison": {
+        "findings_text",
+        "current_manifest",
+        "prior_manifest",
+        "time_delta_days",
+    },
 }
 
 VARIABLE_PATTERN = re.compile(r"{{\s*([a-zA-Z0-9_]+)\s*}}")

@@ -6,7 +6,12 @@ from typing import Any
 
 from .audit import add_audit_event
 from .db import SessionLocal
-from .inference_clients import generate_inference_summary_text, generate_localize_findings
+from .inference_clients import (
+    generate_comparison_text,
+    generate_inference_summary_text,
+    generate_localize_findings,
+    generate_volume_inference_summary,
+)
 from .mock_logic import utc_now
 from .models import InferenceJob, Report
 from .utils.inference import build_image_metadata
@@ -177,6 +182,7 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
     report_id = payload.get("report_id")
     study_id = payload.get("study_id")
     image_ref = payload.get("image_ref") or {}
+    mode = payload.get("mode") or "cxr_finding"
     requested_by = payload.get("requested_by") or "system"
     requested_model_version = payload.get("model_version") or "mock-medgemma-0.1"
     input_hash = payload.get("input_hash")
@@ -228,6 +234,7 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
         findings, resolved_model, metadata = generate_localize_findings(
             image_ref,
             model_name=requested_model_version,
+            mode=mode,
         )
         completed_at = utc_now()
         summary = f"Localized {len(findings)} finding(s)" if findings else "No findings"
@@ -300,6 +307,331 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
                 "model_version": requested_model_version,
                 "error": str(exc),
                 "image_ref": image_ref,
+            },
+            source="worker",
+        )
+        db.commit()
+        raise
+    finally:
+        db.close()
+
+
+def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
+    """Drive a volume-based inference job (P0.B): segmenter preprocess + vLLM."""
+    report_id = payload.get("report_id")
+    study_id = payload.get("study_id")
+    study_uid = payload.get("study_uid")
+    series_uid = payload.get("series_uid")
+    findings_text = payload.get("findings_text")
+    max_slices = payload.get("max_slices")
+    window_preset = payload.get("window_preset")
+    strategy = payload.get("strategy")
+    requested_by = payload.get("requested_by") or "system"
+    requested_model_version = payload.get("model_version") or "mock-medgemma-volume-0.1"
+    input_hash = payload.get("input_hash")
+    job_id = payload.get("job_id")
+
+    db = SessionLocal()
+    try:
+        job = None
+        if job_id:
+            job = db.get(InferenceJob, job_id)
+        if not job:
+            job = InferenceJob(
+                id=job_id or str(uuid.uuid4()),
+                report_id=report_id,
+                study_id=study_id,
+                status="queued",
+                model_version=requested_model_version,
+                input_hash=input_hash,
+                queued_at=utc_now(),
+                metadata_json={
+                    "job_type": "volume_inference",
+                    "study_uid": study_uid,
+                    "series_uid": series_uid,
+                    "max_slices": max_slices,
+                    "window_preset": window_preset,
+                    "strategy": strategy,
+                },
+            )
+            db.add(job)
+            db.commit()
+
+        job.status = "started"
+        job.started_at = utc_now()
+        job.error_message = None
+        db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "processing"})
+
+        add_audit_event(
+            db,
+            event_type="inference_volume_started",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job.id,
+                "job_type": "volume_inference",
+                "study_uid": study_uid,
+                "series_uid": series_uid,
+                "max_slices": max_slices,
+                "window_preset": window_preset,
+                "strategy": strategy,
+            },
+            source="worker",
+        )
+        db.commit()
+
+        summary, confidence, resolved_model, metadata = generate_volume_inference_summary(
+            study_uid=study_uid,
+            series_uid=series_uid,
+            findings_text=findings_text,
+            max_slices=max_slices,
+            window_preset=window_preset,
+            strategy=strategy,
+            model_name=requested_model_version,
+        )
+        completed_at = utc_now()
+        output_summary = (summary or "")[:240]
+
+        job.status = "finished"
+        job.completed_at = completed_at
+        job.summary_text = summary
+        job.confidence = confidence
+        job.model_version = resolved_model
+        job.metadata_json = {
+            **(job.metadata_json or {}),
+            **(metadata or {}),
+            "requested_model": requested_model_version,
+            "resolved_model": resolved_model,
+        }
+        db.commit()
+
+        add_audit_event(
+            db,
+            event_type="inference_volume_completed",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job.id,
+                "job_type": "volume_inference",
+                "model_version": requested_model_version,
+                "resolved_model": resolved_model,
+                "study_uid": study_uid,
+                "series_uid": series_uid,
+                "output_summary": output_summary,
+                "confidence": confidence,
+                **(metadata or {}),
+            },
+            source="worker",
+        )
+        db.commit()
+
+        if report_id:
+            report = db.get(Report, report_id)
+            if report:
+                report.impression_text = summary
+                report.updated_at = completed_at
+                if report.status in {"pending", "in_progress"}:
+                    report.status = "draft"
+                db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "idle"})
+
+        return {
+            "summary": summary,
+            "confidence": confidence,
+            "model_version": resolved_model,
+            "completed_at": completed_at,
+        }
+    except Exception as exc:
+        try:
+            failed_job = db.get(InferenceJob, job_id) if job_id else None
+            if failed_job:
+                failed_job.status = "failed"
+                failed_job.completed_at = utc_now()
+                failed_job.error_message = str(exc)[:1000]
+                db.commit()
+        except Exception:
+            logger.exception("Failed to update volume job %s status to failed", job_id)
+
+        publish_report_status(report_id, {"aiStatus": "error"})
+
+        add_audit_event(
+            db,
+            event_type="inference_volume_failed",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job_id,
+                "job_type": "volume_inference",
+                "study_uid": study_uid,
+                "series_uid": series_uid,
+                "error": str(exc),
+            },
+            source="worker",
+        )
+        db.commit()
+        raise
+    finally:
+        db.close()
+
+
+def run_comparison_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
+    """Drive a longitudinal comparison job (P1.A)."""
+    report_id = payload.get("report_id")
+    study_id = payload.get("study_id")
+    study_uid = payload.get("study_uid")
+    series_uid = payload.get("series_uid")
+    prior_study_uid = payload.get("prior_study_uid")
+    prior_series_uid = payload.get("prior_series_uid")
+    time_delta_days = payload.get("time_delta_days")
+    findings_text = payload.get("findings_text")
+    max_slices = payload.get("max_slices")
+    window_preset = payload.get("window_preset")
+    requested_by = payload.get("requested_by") or "system"
+    requested_model_version = payload.get("model_version") or "mock-medgemma-comparison-0.1"
+    input_hash = payload.get("input_hash")
+    job_id = payload.get("job_id")
+
+    db = SessionLocal()
+    try:
+        job = None
+        if job_id:
+            job = db.get(InferenceJob, job_id)
+        if not job:
+            job = InferenceJob(
+                id=job_id or str(uuid.uuid4()),
+                report_id=report_id,
+                study_id=study_id,
+                status="queued",
+                model_version=requested_model_version,
+                input_hash=input_hash,
+                queued_at=utc_now(),
+                metadata_json={
+                    "job_type": "comparison_inference",
+                    "study_uid": study_uid,
+                    "series_uid": series_uid,
+                    "prior_study_uid": prior_study_uid,
+                    "prior_series_uid": prior_series_uid,
+                    "time_delta_days": time_delta_days,
+                },
+            )
+            db.add(job)
+            db.commit()
+
+        job.status = "started"
+        job.started_at = utc_now()
+        job.error_message = None
+        db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "processing"})
+
+        add_audit_event(
+            db,
+            event_type="inference_comparison_started",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job.id,
+                "job_type": "comparison_inference",
+                "study_uid": study_uid,
+                "series_uid": series_uid,
+                "prior_study_uid": prior_study_uid,
+                "prior_series_uid": prior_series_uid,
+                "time_delta_days": time_delta_days,
+            },
+            source="worker",
+        )
+        db.commit()
+
+        summary, confidence, resolved_model, metadata = generate_comparison_text(
+            current_study_uid=study_uid,
+            current_series_uid=series_uid,
+            prior_study_uid=prior_study_uid,
+            prior_series_uid=prior_series_uid,
+            time_delta_days=time_delta_days,
+            findings_text=findings_text,
+            max_slices=max_slices,
+            window_preset=window_preset,
+            model_name=requested_model_version,
+        )
+        completed_at = utc_now()
+
+        job.status = "finished"
+        job.completed_at = completed_at
+        job.summary_text = summary
+        job.confidence = confidence
+        job.model_version = resolved_model
+        job.metadata_json = {
+            **(job.metadata_json or {}),
+            **(metadata or {}),
+            "requested_model": requested_model_version,
+            "resolved_model": resolved_model,
+        }
+        db.commit()
+
+        add_audit_event(
+            db,
+            event_type="inference_comparison_completed",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job.id,
+                "job_type": "comparison_inference",
+                "model_version": requested_model_version,
+                "resolved_model": resolved_model,
+                "study_uid": study_uid,
+                "series_uid": series_uid,
+                "prior_study_uid": prior_study_uid,
+                "prior_series_uid": prior_series_uid,
+                "time_delta_days": time_delta_days,
+                **(metadata or {}),
+            },
+            source="worker",
+        )
+        db.commit()
+
+        publish_report_status(report_id, {"aiStatus": "idle"})
+
+        return {
+            "summary": summary,
+            "confidence": confidence,
+            "model_version": resolved_model,
+            "completed_at": completed_at,
+        }
+    except Exception as exc:
+        try:
+            failed_job = db.get(InferenceJob, job_id) if job_id else None
+            if failed_job:
+                failed_job.status = "failed"
+                failed_job.completed_at = utc_now()
+                failed_job.error_message = str(exc)[:1000]
+                db.commit()
+        except Exception:
+            logger.exception("Failed to update comparison job %s status to failed", job_id)
+
+        publish_report_status(report_id, {"aiStatus": "error"})
+
+        add_audit_event(
+            db,
+            event_type="inference_comparison_failed",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job_id,
+                "job_type": "comparison_inference",
+                "study_uid": study_uid,
+                "series_uid": series_uid,
+                "prior_study_uid": prior_study_uid,
+                "prior_series_uid": prior_series_uid,
+                "error": str(exc),
             },
             source="worker",
         )

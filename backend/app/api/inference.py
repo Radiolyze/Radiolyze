@@ -15,13 +15,25 @@ from ..mock_logic import utc_now
 from ..models import InferenceJob, Report
 from ..queue import get_queue, get_redis
 from ..schemas import (
+    ComparisonInferenceRequest,
     InferenceQueueRequest,
     InferenceQueueResponse,
     InferenceStatusResponse,
     LocalizeRequest,
+    VolumeInferenceRequest,
 )
-from ..tasks import run_inference_job, run_localize_job
-from ..utils.hashing import compute_input_hash, compute_localize_hash
+from ..tasks import (
+    run_comparison_inference_job,
+    run_inference_job,
+    run_localize_job,
+    run_volume_inference_job,
+)
+from ..utils.hashing import (
+    compute_input_hash,
+    compute_localize_hash,
+    compute_text_hash,
+    compute_volume_hash,
+)
 from ..utils.inference import build_image_metadata
 from ..utils.time import format_datetime
 from ..ws_manager import broadcast_status
@@ -230,8 +242,33 @@ async def queue_localize(
     requested_by = payload.requested_by or "system"
     study_id = payload.study_id or (report.study_id if report else None)
     image_ref = payload.image_ref.model_dump()
+    mode = payload.mode or "cxr_finding"
+    modality_value = payload.image_ref.series_modality or ""
+    if modality_value and modality_value.upper() not in {"CR", "DX", "CXR"}:
+        add_audit_event(
+            db,
+            event_type="inference_localize_rejected_modality",
+            actor_id=requested_by,
+            report_id=payload.report_id,
+            study_id=study_id,
+            metadata={
+                "modality": modality_value,
+                "mode": mode,
+                "image_ref": image_ref,
+            },
+            source="api",
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Localization is only validated for chest radiographs (CR/DX); "
+                f"got modality={modality_value!r}"
+            ),
+        )
+
     model_version = payload.model_version or _get_model_version()
-    input_hash = compute_localize_hash(study_id, image_ref)
+    input_hash = compute_localize_hash(study_id, {**image_ref, "mode": mode})
     queued_at = utc_now()
 
     job_id = str(uuid.uuid4())
@@ -240,6 +277,7 @@ async def queue_localize(
         "report_id": payload.report_id,
         "study_id": study_id,
         "image_ref": image_ref,
+        "mode": mode,
         "requested_by": requested_by,
         "model_version": model_version,
         "input_hash": input_hash,
@@ -284,6 +322,255 @@ async def queue_localize(
             "model_version": model_version,
             "input_hash": input_hash,
             "image_ref": image_ref,
+        },
+        timestamp=queued_at,
+        source="api",
+    )
+
+    if report:
+        if report.status == "pending":
+            report.status = "in_progress"
+        report.updated_at = queued_at
+
+    db.commit()
+
+    if payload.report_id:
+        await broadcast_status(
+            payload.report_id,
+            {
+                "aiStatus": "queued",
+                "qaStatus": report.qa_status if report else "pending",
+                "asrStatus": "idle",
+            },
+        )
+
+    return InferenceQueueResponse(
+        job_id=job.id,
+        status=job.get_status(),
+        queued_at=queued_at,
+        report_id=payload.report_id,
+        study_id=study_id,
+        model_version=model_version,
+    )
+
+
+@router.post("/api/v1/inference/volume", response_model=InferenceQueueResponse)
+async def queue_volume_inference(
+    payload: VolumeInferenceRequest,
+    db: Session = Depends(get_db),
+) -> InferenceQueueResponse:
+    """Queue a volume-based inference job (P0.B): segmenter preprocess + vLLM."""
+    report = None
+    if payload.report_id:
+        report = db.get(Report, payload.report_id)
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+
+    requested_by = payload.requested_by or "system"
+    study_id = payload.study_id or (report.study_id if report else None)
+    findings_text = payload.findings_text or (report.findings_text if report else None)
+    model_version = payload.model_version or _get_model_version()
+    input_hash = compute_volume_hash(
+        study_id,
+        study_uid=payload.study_uid,
+        series_uid=payload.series_uid,
+        findings_text=findings_text,
+        max_slices=payload.max_slices,
+        window_preset=payload.window_preset,
+        strategy=payload.strategy,
+    )
+    queued_at = utc_now()
+
+    job_id = str(uuid.uuid4())
+    job_payload = {
+        "job_id": job_id,
+        "report_id": payload.report_id,
+        "study_id": study_id,
+        "study_uid": payload.study_uid,
+        "series_uid": payload.series_uid,
+        "findings_text": findings_text,
+        "max_slices": payload.max_slices,
+        "window_preset": payload.window_preset,
+        "strategy": payload.strategy,
+        "requested_by": requested_by,
+        "model_version": model_version,
+        "input_hash": input_hash,
+    }
+
+    queue = get_queue()
+    job = queue.enqueue(
+        run_volume_inference_job,
+        job_payload,
+        job_id=job_id,
+        job_timeout=_get_inference_job_timeout(),
+        result_ttl=_get_inference_result_ttl(),
+        failure_ttl=_get_inference_result_ttl(),
+    )
+
+    db.add(
+        InferenceJob(
+            id=job_id,
+            report_id=payload.report_id,
+            study_id=study_id,
+            status="queued",
+            model_version=model_version,
+            input_hash=input_hash,
+            queued_at=queued_at,
+            metadata_json={
+                "requested_by": requested_by,
+                "job_type": "volume_inference",
+                "study_uid": payload.study_uid,
+                "series_uid": payload.series_uid,
+                "max_slices": payload.max_slices,
+                "window_preset": payload.window_preset,
+                "strategy": payload.strategy,
+            },
+        )
+    )
+
+    add_audit_event(
+        db,
+        event_type="inference_volume_queued",
+        actor_id=requested_by,
+        report_id=payload.report_id,
+        study_id=study_id,
+        metadata={
+            "job_id": job_id,
+            "job_type": "volume_inference",
+            "model_version": model_version,
+            "input_hash": input_hash,
+            "study_uid": payload.study_uid,
+            "series_uid": payload.series_uid,
+            "max_slices": payload.max_slices,
+            "window_preset": payload.window_preset,
+            "strategy": payload.strategy,
+        },
+        timestamp=queued_at,
+        source="api",
+    )
+
+    if report:
+        if report.status == "pending":
+            report.status = "in_progress"
+        report.updated_at = queued_at
+
+    db.commit()
+
+    if payload.report_id:
+        await broadcast_status(
+            payload.report_id,
+            {
+                "aiStatus": "queued",
+                "qaStatus": report.qa_status if report else "pending",
+                "asrStatus": "idle",
+            },
+        )
+
+    return InferenceQueueResponse(
+        job_id=job.id,
+        status=job.get_status(),
+        queued_at=queued_at,
+        report_id=payload.report_id,
+        study_id=study_id,
+        model_version=model_version,
+    )
+
+
+@router.post("/api/v1/inference/comparison", response_model=InferenceQueueResponse)
+async def queue_comparison_inference(
+    payload: ComparisonInferenceRequest,
+    db: Session = Depends(get_db),
+) -> InferenceQueueResponse:
+    """Queue a longitudinal comparison job (P1.A): current vs. prior series."""
+    report = None
+    if payload.report_id:
+        report = db.get(Report, payload.report_id)
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+
+    requested_by = payload.requested_by or "system"
+    study_id = payload.study_id or (report.study_id if report else None)
+    findings_text = payload.findings_text or (report.findings_text if report else None)
+    model_version = payload.model_version or _get_model_version()
+    input_hash = compute_text_hash(
+        "comparison",
+        study_id,
+        payload.study_uid,
+        payload.series_uid,
+        payload.prior_study_uid,
+        payload.prior_series_uid,
+        str(payload.time_delta_days or ""),
+        payload.window_preset,
+        str(payload.max_slices or ""),
+        findings_text,
+    )
+    queued_at = utc_now()
+
+    job_id = str(uuid.uuid4())
+    job_payload = {
+        "job_id": job_id,
+        "report_id": payload.report_id,
+        "study_id": study_id,
+        "study_uid": payload.study_uid,
+        "series_uid": payload.series_uid,
+        "prior_study_uid": payload.prior_study_uid,
+        "prior_series_uid": payload.prior_series_uid,
+        "time_delta_days": payload.time_delta_days,
+        "findings_text": findings_text,
+        "max_slices": payload.max_slices,
+        "window_preset": payload.window_preset,
+        "requested_by": requested_by,
+        "model_version": model_version,
+        "input_hash": input_hash,
+    }
+
+    queue = get_queue()
+    job = queue.enqueue(
+        run_comparison_inference_job,
+        job_payload,
+        job_id=job_id,
+        job_timeout=_get_inference_job_timeout(),
+        result_ttl=_get_inference_result_ttl(),
+        failure_ttl=_get_inference_result_ttl(),
+    )
+
+    db.add(
+        InferenceJob(
+            id=job_id,
+            report_id=payload.report_id,
+            study_id=study_id,
+            status="queued",
+            model_version=model_version,
+            input_hash=input_hash,
+            queued_at=queued_at,
+            metadata_json={
+                "requested_by": requested_by,
+                "job_type": "comparison_inference",
+                "study_uid": payload.study_uid,
+                "series_uid": payload.series_uid,
+                "prior_study_uid": payload.prior_study_uid,
+                "prior_series_uid": payload.prior_series_uid,
+                "time_delta_days": payload.time_delta_days,
+            },
+        )
+    )
+
+    add_audit_event(
+        db,
+        event_type="inference_comparison_queued",
+        actor_id=requested_by,
+        report_id=payload.report_id,
+        study_id=study_id,
+        metadata={
+            "job_id": job_id,
+            "job_type": "comparison_inference",
+            "model_version": model_version,
+            "input_hash": input_hash,
+            "study_uid": payload.study_uid,
+            "series_uid": payload.series_uid,
+            "prior_study_uid": payload.prior_study_uid,
+            "prior_series_uid": payload.prior_series_uid,
+            "time_delta_days": payload.time_delta_days,
         },
         timestamp=queued_at,
         source="api",
