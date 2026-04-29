@@ -80,9 +80,29 @@
     "labels": "Gewebe / Strukturen",
     "opacity": "Deckkraft",
     "color": "Farbe",
+    "colorReset": "Standard",
+    "colorPicker": {
+      "open": "Farbe für {{name}} ändern",
+      "r": "R",
+      "g": "G",
+      "b": "B"
+    },
     "search": "Label suchen…",
     "minVolume": "Mind. Volumen",
     "noResults": "Keine Labels passen zum Filter.",
+    "retry": "Erneut versuchen",
+    "retryLabel": "{{name}} erneut laden",
+    "skeleton": {
+      "loading": "Modell wird vorbereitet…"
+    },
+    "clipPlane": {
+      "toggle": "Schnittebene",
+      "axis": "Achse",
+      "axisX": "Sagittal (X)",
+      "axisY": "Coronal (Y)",
+      "axisZ": "Axial (Z)",
+      "position": "Position {{axis}}"
+    },
     "unsupported": "3D-Modelle benötigen eine CT-Serie mit ≥30 Schichten.",
     "noSeries": "Bitte eine CT-Serie auswählen.",
     "disclaimer": "Research/Demo. Nicht zur Diagnose.",

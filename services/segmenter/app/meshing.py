@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import math
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,8 +13,32 @@ from skimage.measure import marching_cubes
 
 logger = logging.getLogger(__name__)
 
-# Quadric decimation target so the browser receives a manageable mesh per label.
-MAX_FACES = 20_000
+
+def _max_faces() -> int:
+    """Quadric decimation ceiling per label (env-tunable)."""
+    try:
+        return max(2_000, int(os.getenv("MESH_MAX_FACES", "20000")))
+    except ValueError:
+        return 20_000
+
+
+def _target_faces_for(volume_ml: float) -> int:
+    """Volume-aware target face count.
+
+    Big organs get more polygons (the user zooms in on them); small fragments
+    like rib chips get fewer. The square-root profile reaches the ceiling at
+    ~100 ml and bottoms out at the floor for sub-ml fragments.
+    """
+    ceiling = _max_faces()
+    floor = max(2_000, ceiling // 10)
+    if volume_ml <= 0:
+        return floor
+    scaled = int(ceiling * math.sqrt(volume_ml / 100.0))
+    return max(floor, min(ceiling, scaled))
+
+
+# Backwards-compatible constant for callers that imported it directly.
+MAX_FACES = _max_faces()
 
 
 @dataclass
@@ -133,7 +159,8 @@ def build_mesh(
     world_verts = _voxels_to_world(verts, reference)
     mesh = trimesh.Trimesh(vertices=world_verts, faces=faces, process=True)
     mesh = _smooth(mesh)
-    mesh = _decimate(mesh, MAX_FACES)
+    target_faces = _target_faces_for(volume_ml)
+    mesh = _decimate(mesh, target_faces)
 
     rgba = _color_to_uint8(color)
     mesh.visual.face_colors = np.tile(np.array(rgba, dtype=np.uint8), (len(mesh.faces), 1))

@@ -186,6 +186,90 @@ def test_delete_job_removes_row(client, db):
     assert db.get(SegmentationJob, job_id) is None
 
 
+def test_mesh_access_audit_disabled_by_default(client, db, tmp_path, monkeypatch):
+    """SEGMENTATION_AUDIT_MESH_DOWNLOADS off (default) → no audit event per fetch."""
+    monkeypatch.setenv("SEGMENTATION_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("SEGMENTATION_AUDIT_MESH_DOWNLOADS", raising=False)
+
+    create = client.post(
+        "/api/v1/segmentation/jobs",
+        json={"study_uid": "audit-1", "series_uid": "audit-1.1", "preset": "bone"},
+    )
+    job_id = create.json()["job_id"]
+
+    fake_glb = b"\x67\x6c\x54\x46noaudit"
+
+    def _handler(request):
+        return httpx.Response(200, content=fake_glb)
+
+    transport = httpx.MockTransport(_handler)
+    real_client = httpx.Client
+
+    def _patched_client(*args, **kwargs):
+        kwargs["transport"] = transport
+        return real_client(*args, **kwargs)
+
+    with patch("app.segmentation_client.httpx.Client", _patched_client):
+        resp = client.get(f"/api/v1/segmentation/jobs/{job_id}/mesh/1")
+    assert resp.status_code == 200
+
+    from app.models import AuditEvent
+
+    rows = (
+        db.query(AuditEvent)
+        .filter(AuditEvent.event_type == "segmentation_mesh_accessed")
+        .all()
+    )
+    assert rows == []
+
+
+def test_mesh_access_audit_emitted_when_enabled(
+    client, db, tmp_path, monkeypatch
+):
+    """SEGMENTATION_AUDIT_MESH_DOWNLOADS=true → exactly one event per mesh GET."""
+    monkeypatch.setenv("SEGMENTATION_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("SEGMENTATION_AUDIT_MESH_DOWNLOADS", "true")
+
+    create = client.post(
+        "/api/v1/segmentation/jobs",
+        json={"study_uid": "audit-2", "series_uid": "audit-2.1", "preset": "total"},
+    )
+    job_id = create.json()["job_id"]
+
+    fake_glb = b"\x67\x6c\x54\x46audit-on"
+
+    def _handler(request):
+        return httpx.Response(200, content=fake_glb)
+
+    transport = httpx.MockTransport(_handler)
+    real_client = httpx.Client
+
+    def _patched_client(*args, **kwargs):
+        kwargs["transport"] = transport
+        return real_client(*args, **kwargs)
+
+    with patch("app.segmentation_client.httpx.Client", _patched_client):
+        client.get(f"/api/v1/segmentation/jobs/{job_id}/mesh/7")
+        client.get(f"/api/v1/segmentation/jobs/{job_id}/mesh/7?format=vtp")
+
+    from app.models import AuditEvent
+
+    rows = (
+        db.query(AuditEvent)
+        .filter(AuditEvent.event_type == "segmentation_mesh_accessed")
+        .order_by(AuditEvent.timestamp)
+        .all()
+    )
+    assert len(rows) == 2
+    metadata = [event.metadata_json for event in rows]
+    assert all(meta["job_id"] == job_id for meta in metadata)
+    assert all(meta["label_id"] == 7 for meta in metadata)
+    assert metadata[0]["format"] == "glb"
+    assert metadata[1]["format"] == "vtp"
+    assert all(meta["kind"] == "mesh" for meta in metadata)
+    assert all(meta["preset"] == "total" for meta in metadata)
+
+
 def test_segmentation_create_response_includes_required_fields(client):
     create = client.post(
         "/api/v1/segmentation/jobs",

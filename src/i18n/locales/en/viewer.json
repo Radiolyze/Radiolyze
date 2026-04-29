@@ -80,9 +80,29 @@
     "labels": "Tissues / structures",
     "opacity": "Opacity",
     "color": "Color",
+    "colorReset": "Default",
+    "colorPicker": {
+      "open": "Edit color for {{name}}",
+      "r": "R",
+      "g": "G",
+      "b": "B"
+    },
     "search": "Search label…",
     "minVolume": "Min. volume",
     "noResults": "No labels match the filter.",
+    "retry": "Retry",
+    "retryLabel": "Reload {{name}}",
+    "skeleton": {
+      "loading": "Preparing the model…"
+    },
+    "clipPlane": {
+      "toggle": "Clip plane",
+      "axis": "Axis",
+      "axisX": "Sagittal (X)",
+      "axisY": "Coronal (Y)",
+      "axisZ": "Axial (Z)",
+      "position": "Position {{axis}}"
+    },
     "unsupported": "3D models require a CT series with at least 30 slices.",
     "noSeries": "Please select a CT series.",
     "disclaimer": "Research/Demo. Not for diagnostic use.",

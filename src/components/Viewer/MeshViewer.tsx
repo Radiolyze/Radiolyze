@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, RotateCcw, ArrowDownAZ, ArrowDownWideNarrow } from 'lucide-react';
+import {
+  ArrowDownAZ,
+  ArrowDownWideNarrow,
+  Loader2,
+  RefreshCw,
+  RotateCcw,
+  Scissors,
+} from 'lucide-react';
 import type { Series } from '@/types/radiology';
 import type {
   LabelDisplayState,
@@ -12,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import {
   Select,
@@ -21,11 +29,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Toggle } from '@/components/ui/toggle';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { useSegmentation } from '@/hooks/useSegmentation';
 import { useMeshScene } from '@/hooks/useMeshScene';
+import { useLabelColors } from '@/hooks/useLabelColors';
 import { segmentationClient } from '@/services/segmentationClient';
 import { ViewerEmptyState } from './ViewerEmptyState';
 import { MeshNotForDiagnosticBanner } from './MeshNotForDiagnosticBanner';
+import { MeshColorPicker } from './MeshColorPicker';
 
 interface MeshViewerProps {
   series: Series | null;
@@ -68,13 +83,21 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
     setColor,
     resetCamera,
     isReady,
+    enableClipPlane,
+    setClipPlanePosition,
+    getClipPlaneRange,
   } = useMeshScene();
+  const labelColors = useLabelColors();
 
   const [preset, setPreset] = useState<SegmentationPreset>(DEFAULT_PRESET);
   const [labelStates, setLabelStates] = useState<Record<number, LabelDisplayState>>({});
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('volume');
   const [minVolumeMl, setMinVolumeMl] = useState(0);
+  const [labelErrors, setLabelErrors] = useState<Record<number, string>>({});
+  const [clipEnabled, setClipEnabled] = useState(false);
+  const [clipAxis, setClipAxis] = useState<'x' | 'y' | 'z'>('z');
+  const [clipPosition, setClipPosition] = useState<number | null>(null);
   const loadedLabelsRef = useRef<Set<number>>(new Set());
   const hydratedManifestRef = useRef<string | null>(null);
 
@@ -86,16 +109,37 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
     async (label: SegmentationLabel) => {
       if (!jobId || loadedLabelsRef.current.has(label.id)) return;
       loadedLabelsRef.current.add(label.id);
+      setLabelErrors((current) => {
+        if (!(label.id in current)) return current;
+        const { [label.id]: _, ...rest } = current;
+        return rest;
+      });
       try {
         const buffer = await segmentationClient.fetchMesh(jobId, label.id, 'vtp');
         loadVtp(label.id, buffer);
-        setColor(label.id, label.color);
+        const effective = labelColors.getOverride(label.name) ?? label.color;
+        setColor(label.id, effective);
       } catch (err) {
         loadedLabelsRef.current.delete(label.id);
+        const message = err instanceof Error ? err.message : String(err);
+        setLabelErrors((current) => ({ ...current, [label.id]: message }));
         console.error(`Failed to load mesh ${label.id}`, err);
       }
     },
-    [jobId, loadVtp, setColor],
+    [jobId, loadVtp, setColor, labelColors],
+  );
+
+  const retryLabel = useCallback(
+    (label: SegmentationLabel) => {
+      loadedLabelsRef.current.delete(label.id);
+      setLabelErrors((current) => {
+        if (!(label.id in current)) return current;
+        const { [label.id]: _, ...rest } = current;
+        return rest;
+      });
+      void fetchAndLoadLabel(label);
+    },
+    [fetchAndLoadLabel],
   );
 
   // Hydrate label state once per manifest (re-runs when a fresh job lands).
@@ -110,7 +154,11 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
 
     const next: Record<number, LabelDisplayState> = {};
     manifest.labels.forEach((label) => {
-      next[label.id] = defaultLabelState(label, { visible: initialVisible.has(label.id) });
+      const baseState = defaultLabelState(label, {
+        visible: initialVisible.has(label.id),
+      });
+      const persisted = labelColors.getOverride(label.name);
+      next[label.id] = persisted ? { ...baseState, color: persisted } : baseState;
     });
     setLabelStates(next);
 
@@ -121,21 +169,69 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
       .forEach((label) => {
         void fetchAndLoadLabel(label);
       });
+    // labelColors only feeds the initial hydration; subsequent overrides flow
+    // through onColorChange directly, so re-running this effect on color
+    // changes would rewrite labelStates and erase user toggles.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manifest, isReady, isLargeManifest, fetchAndLoadLabel]);
 
   const handleStart = useCallback(async () => {
     if (!series || !studyUid) return;
     loadedLabelsRef.current.clear();
     setLabelStates({});
+    setLabelErrors({});
     hydratedManifestRef.current = null;
     setSearch('');
     setMinVolumeMl(0);
+    setClipEnabled(false);
+    setClipPosition(null);
+    enableClipPlane(false);
     await start({
       studyUid,
       seriesUid: series.id,
       preset,
     });
-  }, [series, studyUid, preset, start]);
+  }, [series, studyUid, preset, start, enableClipPlane]);
+
+  const onClipToggle = useCallback(
+    (enabled: boolean) => {
+      setClipEnabled(enabled);
+      enableClipPlane(enabled, clipAxis);
+      if (enabled) {
+        const range = getClipPlaneRange(clipAxis);
+        if (range) {
+          const mid = (range[0] + range[1]) / 2;
+          setClipPosition(mid);
+        }
+      } else {
+        setClipPosition(null);
+      }
+    },
+    [enableClipPlane, getClipPlaneRange, clipAxis],
+  );
+
+  const onClipAxisChange = useCallback(
+    (axis: 'x' | 'y' | 'z') => {
+      setClipAxis(axis);
+      if (clipEnabled) {
+        enableClipPlane(true, axis);
+        const range = getClipPlaneRange(axis);
+        if (range) {
+          const mid = (range[0] + range[1]) / 2;
+          setClipPosition(mid);
+        }
+      }
+    },
+    [clipEnabled, enableClipPlane, getClipPlaneRange],
+  );
+
+  const onClipPositionChange = useCallback(
+    (value: number) => {
+      setClipPosition(value);
+      setClipPlanePosition(value);
+    },
+    [setClipPlanePosition],
+  );
 
   const onToggle = useCallback(
     (label: SegmentationLabel, checked: boolean) => {
@@ -168,6 +264,36 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
       setOpacity(label.id, value);
     },
     [setOpacity],
+  );
+
+  const onColorChange = useCallback(
+    (label: SegmentationLabel, rgb: [number, number, number]) => {
+      setLabelStates((current) => ({
+        ...current,
+        [label.id]: {
+          ...(current[label.id] ?? defaultLabelState(label, { visible: true })),
+          color: rgb,
+        },
+      }));
+      setColor(label.id, rgb);
+      labelColors.override(label.name, rgb);
+    },
+    [setColor, labelColors],
+  );
+
+  const onColorReset = useCallback(
+    (label: SegmentationLabel) => {
+      labelColors.reset(label.name);
+      setLabelStates((current) => ({
+        ...current,
+        [label.id]: {
+          ...(current[label.id] ?? defaultLabelState(label, { visible: true })),
+          color: label.color,
+        },
+      }));
+      setColor(label.id, label.color);
+    },
+    [setColor, labelColors],
   );
 
   const supports3d = useMemo(() => {
@@ -239,7 +365,61 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
           <RotateCcw className="h-4 w-4 mr-1" />
           {t('mesh.resetCamera')}
         </Button>
+        <div className="ml-1 flex items-center gap-1 border-l pl-2">
+          <Toggle
+            size="sm"
+            variant="outline"
+            pressed={clipEnabled}
+            onPressedChange={onClipToggle}
+            disabled={!isFinished}
+            aria-label={t('mesh.clipPlane.toggle')}
+            title={t('mesh.clipPlane.toggle')}
+          >
+            <Scissors className="h-4 w-4" />
+          </Toggle>
+          {clipEnabled && (
+            <Select
+              value={clipAxis}
+              onValueChange={(v) => onClipAxisChange(v as 'x' | 'y' | 'z')}
+            >
+              <SelectTrigger className="h-8 w-20" aria-label={t('mesh.clipPlane.axis')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="x">{t('mesh.clipPlane.axisX')}</SelectItem>
+                <SelectItem value="y">{t('mesh.clipPlane.axisY')}</SelectItem>
+                <SelectItem value="z">{t('mesh.clipPlane.axisZ')}</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
+
+      {/* Clip-plane position slider — only when active and we know the range. */}
+      {clipEnabled && isFinished && (() => {
+        const range = getClipPlaneRange(clipAxis);
+        if (!range) return null;
+        const value = clipPosition ?? (range[0] + range[1]) / 2;
+        return (
+          <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-md border bg-card/90 px-3 py-2 backdrop-blur">
+            <span className="text-xs text-muted-foreground">
+              {t('mesh.clipPlane.position', { axis: clipAxis.toUpperCase() })}
+            </span>
+            <Slider
+              value={[value]}
+              min={range[0]}
+              max={range[1]}
+              step={(range[1] - range[0]) / 200 || 1}
+              onValueChange={([v]) => onClipPositionChange(v)}
+              aria-label={t('mesh.clipPlane.position', { axis: clipAxis.toUpperCase() })}
+              className="w-72"
+            />
+            <span className="w-14 text-right text-xs tabular-nums">
+              {value.toFixed(1)} mm
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Status / progress */}
       {isRunning && (
@@ -251,8 +431,53 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
         </div>
       )}
       {status?.status === 'failed' && (
-        <div className="absolute top-28 left-4 z-20 w-80 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
-          {t('mesh.status.failed')}: {status.error || error?.message || '—'}
+        <div
+          className="absolute top-28 left-4 z-20 flex w-80 items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
+          role="alert"
+        >
+          <div className="flex-1">
+            <div className="font-semibold">{t('mesh.status.failed')}</div>
+            <div className="mt-0.5 break-words">
+              {status.error || error?.message || '—'}
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleStart}
+            disabled={isStarting || !studyUid}
+            aria-label={t('mesh.retry')}
+          >
+            <RefreshCw className="mr-1 h-3.5 w-3.5" />
+            {t('mesh.retry')}
+          </Button>
+        </div>
+      )}
+
+      {/* Loading-Panel: keep the right rail populated during the long
+          segmenter run so the radiologist sees the workspace is alive. */}
+      {isRunning && (
+        <div
+          className="absolute top-12 right-4 z-20 flex max-h-[85%] w-80 flex-col gap-2 rounded-md border bg-card/90 p-3 backdrop-blur"
+          role="status"
+          aria-live="polite"
+        >
+          <h3 className="text-xs font-semibold uppercase text-muted-foreground">
+            {t('mesh.skeleton.loading')}
+          </h3>
+          <ul className="space-y-3" aria-hidden>
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <li key={idx} className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-3 w-3 shrink-0 rounded-sm" />
+                  <Skeleton className="h-3.5 w-4 shrink-0" />
+                  <Skeleton className="h-3.5 flex-1" />
+                  <Skeleton className="h-3 w-10 shrink-0" />
+                </div>
+                <Skeleton className="h-2 w-full" />
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -319,14 +544,28 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
                 labelStates[label.id] ??
                 defaultLabelState(label, { visible: false });
               const swatch = `rgb(${state.color.map((c) => Math.round(c * 255)).join(',')})`;
+              const labelError = labelErrors[label.id];
               return (
                 <li key={label.id} className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span
-                      aria-hidden
-                      className="h-3 w-3 shrink-0 rounded-sm border"
-                      style={{ backgroundColor: swatch }}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={t('mesh.colorPicker.open', { name: label.name })}
+                          className="h-3 w-3 shrink-0 rounded-sm border ring-offset-background transition-shadow hover:ring-2 hover:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          style={{ backgroundColor: swatch }}
+                        />
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-60">
+                        <MeshColorPicker
+                          currentColor={state.color}
+                          defaultColor={label.color}
+                          onChange={(rgb) => onColorChange(label, rgb)}
+                          onReset={() => onColorReset(label)}
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <Checkbox
                       id={`mesh-toggle-${label.id}`}
                       checked={state.visible}
@@ -344,6 +583,17 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
                     <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
                       {label.volume_ml.toFixed(0)} ml
                     </span>
+                    {labelError && (
+                      <button
+                        type="button"
+                        onClick={() => retryLabel(label)}
+                        aria-label={t('mesh.retryLabel', { name: label.name })}
+                        title={labelError}
+                        className="shrink-0 rounded p-0.5 text-destructive hover:bg-destructive/10"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                   {state.visible && (
                     <Slider

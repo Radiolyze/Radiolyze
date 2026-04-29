@@ -23,6 +23,9 @@ const mocks = vi.hoisted(() => ({
   resetCamera: vi.fn(),
   start: vi.fn(async () => undefined),
   fetchMesh: vi.fn(async () => new ArrayBuffer(8)),
+  enableClipPlane: vi.fn(),
+  setClipPlanePosition: vi.fn(),
+  getClipPlaneRange: vi.fn(() => [-50, 50] as [number, number]),
   segmentationState: {
     jobId: 'job-1',
     status: undefined as SegmentationJobResponse | undefined,
@@ -44,6 +47,9 @@ vi.mock('@/hooks/useMeshScene', () => ({
     setColor: mocks.setColor,
     resetCamera: mocks.resetCamera,
     isReady: true,
+    enableClipPlane: mocks.enableClipPlane,
+    setClipPlanePosition: mocks.setClipPlanePosition,
+    getClipPlaneRange: mocks.getClipPlaneRange,
   }),
 }));
 
@@ -182,6 +188,131 @@ describe('MeshViewer', () => {
       .map((call) => call[1] as number)
       .sort((a, b) => a - b);
     expect(fetchedIds).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  it('shows skeletons while the segmentation job is running', () => {
+    mocks.segmentationState.status = {
+      job_id: 'busy-job',
+      status: 'running',
+      progress: 0.4,
+      preset: 'bone',
+      study_uid: 's',
+      series_uid: 's.1',
+      manifest: null,
+    };
+
+    renderWithQuery(<MeshViewer series={ctSeries} studyUid="1.2.3" />);
+
+    const loadingPanel = screen.getByRole('status');
+    expect(loadingPanel).toHaveTextContent('mesh.skeleton.loading');
+    // The label panel itself should not be in the DOM yet.
+    expect(screen.queryByText('mesh.labels')).toBeNull();
+  });
+
+  it('shows a retry button when the job has failed', () => {
+    mocks.segmentationState.status = {
+      job_id: 'failed-job',
+      status: 'failed',
+      progress: 0,
+      preset: 'bone',
+      study_uid: 's',
+      series_uid: 's.1',
+      manifest: null,
+      error: 'segmenter exploded',
+    };
+
+    renderWithQuery(<MeshViewer series={ctSeries} studyUid="1.2.3" />);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('segmenter exploded');
+    const retryButtons = screen.getAllByRole('button', { name: 'mesh.retry' });
+    expect(retryButtons.length).toBeGreaterThan(0);
+    fireEvent.click(retryButtons[0]);
+    expect(mocks.start).toHaveBeenCalledWith({
+      studyUid: '1.2.3',
+      seriesUid: 'series-1',
+      preset: 'bone',
+    });
+  });
+
+  it('shows a per-label retry button when a mesh fetch fails', async () => {
+    let callCount = 0;
+    mocks.fetchMesh.mockImplementation(async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        throw new Error('network blip');
+      }
+      return new ArrayBuffer(8);
+    });
+    mocks.segmentationState.status = {
+      job_id: 'lbl-fail-job',
+      status: 'finished',
+      progress: 1,
+      preset: 'bone',
+      study_uid: 's',
+      series_uid: 's.1',
+      manifest: {
+        job_id: 'lbl-fail-job',
+        preset: 'bone',
+        source: { study_uid: 's', series_uid: 's.1', modality: 'CT' },
+        volume: { spacing: [1, 1, 1], origin: [0, 0, 0], direction: [], shape: [] },
+        labels: [
+          {
+            id: 1, name: 'bone',
+            color: [0.93, 0.87, 0.74],
+            volume_ml: 100, voxel_count: 1,
+            mask_url: 'a', mesh_url: 'b',
+          },
+        ],
+        warnings: [],
+      },
+    };
+
+    renderWithQuery(<MeshViewer series={ctSeries} studyUid="1.2.3" />);
+
+    const retry = await screen.findByRole('button', {
+      name: /mesh\.retryLabel/,
+    });
+    expect(retry).toBeInTheDocument();
+    fireEvent.click(retry);
+    await waitFor(() => expect(mocks.fetchMesh).toHaveBeenCalledTimes(2));
+  });
+
+  it('toggling the clip plane shows the position slider and forwards changes', async () => {
+    mocks.segmentationState.status = {
+      job_id: 'clip-job',
+      status: 'finished',
+      progress: 1,
+      preset: 'bone',
+      study_uid: 's',
+      series_uid: 's.1',
+      manifest: {
+        job_id: 'clip-job',
+        preset: 'bone',
+        source: { study_uid: 's', series_uid: 's.1', modality: 'CT' },
+        volume: { spacing: [1, 1, 1], origin: [0, 0, 0], direction: [], shape: [] },
+        labels: [
+          {
+            id: 1, name: 'bone',
+            color: [0.93, 0.87, 0.74],
+            volume_ml: 100, voxel_count: 1,
+            mask_url: 'a', mesh_url: 'b',
+          },
+        ],
+        warnings: [],
+      },
+    };
+
+    renderWithQuery(<MeshViewer series={ctSeries} studyUid="1.2.3" />);
+
+    await waitFor(() => expect(mocks.fetchMesh).toHaveBeenCalled());
+    const toggle = screen.getByRole('button', { name: 'mesh.clipPlane.toggle' });
+    fireEvent.click(toggle);
+
+    expect(mocks.enableClipPlane).toHaveBeenCalledWith(true, 'z');
+    // Position slider appears once the plane is active.
+    const slider = await screen.findByLabelText(/mesh\.clipPlane\.position/i);
+    expect(slider).toBeInTheDocument();
   });
 
   it('filters labels via the search input', async () => {

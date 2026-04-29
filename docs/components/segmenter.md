@@ -114,10 +114,44 @@ Segmentation jobs emit four audit-event types via the existing
 | `segmentation_started` | worker | RQ task picked up |
 | `segmentation_completed` | worker | manifest written |
 | `segmentation_failed` | worker | timeout or segmenter error |
+| `segmentation_mesh_accessed` (optional) | api | every mesh / mask GET when `SEGMENTATION_AUDIT_MESH_DOWNLOADS=true` |
 
-Mesh downloads are **not** audited by default to avoid log spam (UIs typically
-re-fetch a mesh whenever the user toggles a label). A milestone-3 task adds
-an env-gated `segmentation_mesh_accessed` event for compliance reviews.
+The `segmentation_mesh_accessed` event is **off by default** because a normal
+viewing session emits 5–50 toggle-driven mesh fetches, and a busy radiologist
+would generate hundreds of audit rows per study. Switch it on for an MDR
+Class IIa pre-audit window or a forensic review; the event payload includes
+`{job_id, label_id, format, kind, preset}` so it's queryable without joining
+back to the job manifest.
+
+## Performance budget
+
+Default decimation parameters keep the per-study mesh bundle small enough
+for the browser:
+
+| Volume class | Example tissue | Target faces |
+|---|---|---|
+| < 5 ml | rib fragment, small lymph node | 2,000 (floor) |
+| 5–50 ml | gallbladder, kidney pole, vertebra | 4,000–14,000 |
+| 50–500 ml | spleen, single kidney, lung lobe | 14,000–20,000 (ceiling) |
+| > 500 ml | liver, full lung | 20,000 (ceiling) |
+
+The mapping is `target = ceiling × √(volume_ml / 100)` clamped to
+`[ceiling/10, ceiling]`. Tune via `MESH_MAX_FACES` (default `20000`):
+- Bump to `40000` if your GPUs idle and radiologists complain about staircase
+  artefacts on the liver edge.
+- Drop to `5000` if you target tablets / low-end browsers.
+
+Empirical bundle sizes (single chest CT, fast=True):
+
+| Preset | Labels | Total GLB on disk |
+|---|---|---|
+| `bone` | 1 | ~80 KB |
+| `total` | ~95 (chest CT) | ~3 MB |
+| `total` (with `MESH_MAX_FACES=40000`) | same | ~6 MB |
+
+The browser fetches GLBs lazily via `MeshViewer`'s top-N preload + on-toggle
+loading, so the *initial* bundle download is roughly 10 × `(ceiling × 0.5)`
+bytes in glTF-encoded form ≈ 1 MB for the default settings.
 
 ## Configuration
 

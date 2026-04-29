@@ -11,9 +11,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_db
+from ..deps import get_current_user, get_db
 from ..mock_logic import utc_now
-from ..models import SegmentationJob
+from ..models import SegmentationJob, User
 from ..queue import get_queue
 from ..schemas_segmentation import (
     SegmentationCreateRequest,
@@ -38,7 +38,7 @@ def _job_timeout() -> int:
     try:
         return int(os.getenv("SEGMENTATION_JOB_TIMEOUT", "1800"))
     except ValueError:
-        return 900
+        return 1800
 
 
 def _result_ttl() -> int:
@@ -46,6 +46,43 @@ def _result_ttl() -> int:
         return int(os.getenv("SEGMENTATION_RESULT_TTL", "3600"))
     except ValueError:
         return 3600
+
+
+def _audit_mesh_downloads_enabled() -> bool:
+    return os.getenv("SEGMENTATION_AUDIT_MESH_DOWNLOADS", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _audit_mesh_access(
+    *,
+    db: Session,
+    record: SegmentationJob,
+    label_id: int,
+    kind: str,
+    fmt: str,
+    user: User | None,
+) -> None:
+    if not _audit_mesh_downloads_enabled():
+        return
+    add_audit_event(
+        db,
+        event_type="segmentation_mesh_accessed",
+        actor_id=user.id if user is not None else None,
+        study_id=record.study_uid,
+        metadata={
+            "job_id": record.id,
+            "label_id": label_id,
+            "format": fmt,
+            "kind": kind,
+            "preset": record.preset,
+        },
+        source="api",
+    )
+    db.commit()
 
 
 @router.post("/jobs", response_model=SegmentationCreateResponse, status_code=202)
@@ -219,10 +256,20 @@ def download_mesh(
     label_id: int,
     format: Literal["glb", "vtp"] = Query("glb"),
     db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user),
 ) -> StreamingResponse:
     record = db.get(SegmentationJob, job_id)
     if not record:
         raise HTTPException(status_code=404, detail="Segmentation job not found")
+
+    _audit_mesh_access(
+        db=db,
+        record=record,
+        label_id=label_id,
+        kind="mesh",
+        fmt=format,
+        user=current_user,
+    )
 
     media = "model/gltf-binary" if format == "glb" else "application/vnd.kitware.vtp+xml"
     local = _safe_local_path(record, "meshes", f"{label_id}.{format}")
@@ -239,11 +286,24 @@ def download_mesh(
 
 @router.get("/jobs/{job_id}/mask/{label_id}")
 def download_mask(
-    job_id: str, label_id: int, db: Session = Depends(get_db)
+    job_id: str,
+    label_id: int,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user),
 ) -> StreamingResponse:
     record = db.get(SegmentationJob, job_id)
     if not record:
         raise HTTPException(status_code=404, detail="Segmentation job not found")
+
+    _audit_mesh_access(
+        db=db,
+        record=record,
+        label_id=label_id,
+        kind="mask",
+        fmt="nii.gz",
+        user=current_user,
+    )
+
     filename = _label_filename(record, label_id)
     local = _safe_local_path(record, "masks", filename) if filename else None
     if local is not None:

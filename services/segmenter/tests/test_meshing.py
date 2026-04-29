@@ -61,6 +61,28 @@ def test_build_mesh_returns_none_for_empty_mask(tmp_path: Path) -> None:
     assert build_mesh(1, "bone", (1, 1, 1), mask, reference, job_dir=job_dir) is None
 
 
+def test_target_faces_scales_with_volume() -> None:
+    from app.meshing import _max_faces, _target_faces_for
+
+    ceiling = _max_faces()
+    # Sub-ml fragments hit the floor.
+    assert _target_faces_for(0.1) == max(2_000, ceiling // 10)
+    # Mid-volume organs sit between floor and ceiling.
+    mid = _target_faces_for(50.0)
+    assert max(2_000, ceiling // 10) <= mid < ceiling
+    # Large organs saturate at the ceiling.
+    assert _target_faces_for(2_000.0) == ceiling
+
+
+def test_target_faces_respects_env_override(monkeypatch) -> None:
+    from app import meshing
+
+    monkeypatch.setenv("MESH_MAX_FACES", "5000")
+    # _max_faces is read fresh each call, no module reload needed.
+    assert meshing._max_faces() == 5_000
+    assert meshing._target_faces_for(2_000.0) == 5_000
+
+
 def test_manifest_atomic_write(tmp_path: Path) -> None:
     job_dir = tmp_path / "job-2"
     (job_dir / "meshes").mkdir(parents=True)
