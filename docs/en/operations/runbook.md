@@ -135,7 +135,7 @@ docker compose exec postgres pg_dump -U postgres radiolyze \
   > /backup/radiolyze_$(date +%Y%m%d_%H%M%S).sql
 ```
 
-See [Backup and Recovery](backup-recovery.md) for the full backup procedure.
+See [Backup and Recovery](../admin/backup-recovery.md) for the full backup procedure.
 
 ---
 
@@ -187,7 +187,7 @@ docker compose logs --tail=30 orthanc
 |---|---|---|
 | UI does not load | Frontend | `docker compose restart frontend` or check NGINX |
 | Worklist empty | Orthanc / Backend | Check Orthanc health; `docker compose restart backend` |
-| AI returns errors | vLLM | Check GPU; see [GPU Troubleshooting](gpu-setup.md#troubleshooting) |
+| AI returns errors | vLLM | Check GPU; see [GPU Troubleshooting](../admin/gpu-setup.md#troubleshooting) |
 | ASR not transcribing | Worker / Whisper | `docker compose restart worker` |
 | "Database connection error" | PostgreSQL | `docker compose restart postgres backend` |
 | "Redis connection error" | Redis | `docker compose restart redis worker` |
@@ -198,7 +198,7 @@ docker compose logs --tail=30 orthanc
 1. **First response:** Restart the failing service (`docker compose restart <service>`).
 2. **If restart does not help:** Check logs for root cause (`docker compose logs <service>`).
 3. **If data integrity may be affected:** Stop the service first, then investigate logs before restarting.
-4. **If database is corrupted:** Restore from most recent backup. See [Backup and Recovery](backup-recovery.md).
+4. **If database is corrupted:** Restore from most recent backup. See [Backup and Recovery](../admin/backup-recovery.md).
 5. **If GPU driver issue:** Reboot the server; check `nvidia-smi` after reboot before starting services.
 
 ### Step 4: After Incident Recovery

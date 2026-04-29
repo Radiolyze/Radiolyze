@@ -89,6 +89,22 @@ Full security baseline: [Security Documentation](../operations/security.md)
 
 ---
 
+## Quick Production Checklist (minimum)
+
+- [ ] **TLS / HTTPS** in front of UI + API (reverse proxy / ingress)
+- [ ] **Change all default credentials** (Orthanc, PostgreSQL, JWT secrets)
+- [ ] **Restrict network exposure** (DB/Redis/Orthanc internal only)
+- [ ] **Backups configured and restore tested** (Postgres + Orthanc volumes)
+- [ ] **Audit log retention defined** (per local policy)
+- [ ] **Monitoring + alerting** for API errors, inference failures, disk usage
+
+For a guided baseline, start with:
+- [Deployment Guide](deployment.md)
+- [Security Hardening](security-hardening.md)
+- [Backup & Recovery](backup-recovery.md)
+
+---
+
 ## Service Health Checks
 
 | Service | Check |

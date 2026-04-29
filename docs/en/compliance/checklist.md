@@ -38,7 +38,7 @@ Use this checklist to track compliance readiness before deploying Radiolyze in a
 - [x] **Annex IV template filled** — see [Annex IV](annex-iv.md)
 - [x] **Architecture documented** — see [Architecture Overview](../architecture/overview.md)
 - [x] **Data flow documented** — see [Data Flow](../architecture/data-flow.md)
-- [x] **MedGemma model card** — see [MedGemma](../research/medgemma.md)
+- [x] **MedGemma model card** — see [Model Card – MedGemma](model-card-medgemma.md)
 - [ ] **Site-specific validation results documented** — required before clinical use  
   *Action: Run validation study on local data; document in [Validation Guide](../research/validation.md).*
 - [ ] **Open items from Annex IV § 15 resolved** — FMEA, model cards, RBAC, monitoring  

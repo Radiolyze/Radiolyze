@@ -3,6 +3,8 @@
 Dieser Abschnitt behandelt alles, was Sie für die tägliche radiologische Befundung mit Radiolyze benötigen.
 Technische Vorkenntnisse sind nicht erforderlich.
 
+![Radiolyze UI (Screenshot)](../../assets/screenshot-radiolyze.png)
+
 ---
 
 ## Was Sie mit Radiolyze tun können
@@ -34,6 +36,19 @@ Wenn Sie neu bei Radiolyze sind, arbeiten Sie diese Themen der Reihe nach durch:
 1. **[Fast-Reporting-Workflow](../workflows/fast-report.md)** — der Standard-Workflow für einen Röntgen-Thorax von der Warteschlange bis zur Freigabe in unter 10 Minuten.
 2. **[Komplexer-Fall-Workflow](../workflows/complex-case.md)** — CT/MR-Studien mit Prior-Vergleichen und mehreren Serien.
 3. **[Batch-Reporting](../workflows/batch-reporting.md)** — effizientes Abarbeiten mehrerer Studien aus einer Warteschlange.
+
+---
+
+## Ihr erster Bericht (Schritt für Schritt)
+
+1. **Studie auswählen** (linke Arbeitsliste).
+2. **Bilder prüfen** im Viewer (Frames/Serien scrollen, Fensterungs-Presets nutzen).
+3. **Findings erfassen** (tippen oder diktieren, falls ASR aktiv).
+4. **(Optional) KI-Impression generieren** und als Entwurf behandeln (prüfen, bearbeiten, freigeben).
+5. **QA prüfen** (fehlende Abschnitte / Inkonsistenzen).
+6. **Freigeben** zur Finalisierung.
+
+Wenn KI nicht konfiguriert ist (kein GPU-Overlay), können Sie trotzdem normal befunden und freigeben.
 
 ---
 

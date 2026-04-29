@@ -134,7 +134,7 @@ docker compose exec postgres pg_dump -U postgres radiolyze \
   > /backup/radiolyze_$(date +%Y%m%d_%H%M%S).sql
 ```
 
-Vollständiges Verfahren: [Backup und Recovery](backup-recovery.md)
+Vollständiges Verfahren: [Backup und Recovery](../admin/backup-recovery.md)
 
 ---
 
@@ -181,7 +181,7 @@ docker compose logs --tail=30 orthanc
 |---|---|---|
 | UI lädt nicht | Frontend | `docker compose restart frontend` oder NGINX prüfen |
 | Arbeitsliste leer | Orthanc / Backend | Orthanc Health prüfen; `docker compose restart backend` |
-| KI liefert Fehler | vLLM | GPU prüfen; siehe [GPU-Fehlerbehebung](gpu-setup.md#fehlerbehebung) |
+| KI liefert Fehler | vLLM | GPU prüfen; siehe [GPU-Fehlerbehebung](../admin/gpu-setup.md#fehlerbehebung) |
 | ASR transkribiert nicht | Worker / Whisper | `docker compose restart worker` |
 | „Datenbank-Verbindungsfehler" | PostgreSQL | `docker compose restart postgres backend` |
 | „Redis-Verbindungsfehler" | Redis | `docker compose restart redis worker` |

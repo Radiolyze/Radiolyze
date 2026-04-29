@@ -249,3 +249,4 @@ The bone preset is pure HU thresholding and ships no third-party model
 weights. The (deferred) TotalSegmentator integration is Apache 2.0; the
 underlying nnU-Net weights are also Apache 2.0. Attribution renders inside
 the viewer alongside the disclaimer banner once M2 lands.
+

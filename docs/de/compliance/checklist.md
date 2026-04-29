@@ -38,7 +38,7 @@ Mit dieser Checkliste lässt sich die Compliance-Bereitschaft vor dem klinischen
 - [x] **Annex-IV-Vorlage ausgefüllt** — siehe [Annex IV](annex-iv.md)
 - [x] **Architektur dokumentiert** — siehe [Architektur-Übersicht](../architecture/overview.md)
 - [x] **Datenfluss dokumentiert** — siehe [Datenfluss](../architecture/data-flow.md)
-- [x] **MedGemma-Modellkarte** — siehe [MedGemma](../research/medgemma.md)
+- [x] **MedGemma-Modellkarte** — siehe [Model Card – MedGemma](model-card-medgemma.md)
 - [ ] **Standortspezifische Validierungsergebnisse dokumentiert** — erforderlich vor klinischem Einsatz  
   *Maßnahme: Validierungsstudie mit lokalen Daten durchführen; im [Validierungsleitfaden](../research/validation.md) dokumentieren.*
 - [ ] **Offene Punkte aus Annex IV § 15 gelöst** — FMEA, Modellkarten, RBAC, Monitoring  

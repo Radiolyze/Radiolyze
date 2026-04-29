@@ -89,6 +89,22 @@ Vollständige Security-Baseline: [Security-Dokumentation](../operations/security
 
 ---
 
+## Quick-Checkliste Produktion (Minimum)
+
+- [ ] **TLS / HTTPS** vor UI + API (Reverse Proxy / Ingress)
+- [ ] **Alle Default-Credentials ändern** (Orthanc, PostgreSQL, JWT-Secrets)
+- [ ] **Netzwerk-Exposition einschränken** (DB/Redis/Orthanc nur intern)
+- [ ] **Backups konfiguriert und Restore getestet** (Postgres + Orthanc-Volumes)
+- [ ] **Audit-Log-Aufbewahrung definiert** (gemäß lokaler Policy)
+- [ ] **Monitoring + Alerting** für API-Fehler, Inferenz-Fehler, Disk Usage
+
+Geführte Basis:
+- [Deployment-Leitfaden](deployment.md)
+- [Security Hardening](security-hardening.md)
+- [Backup & Recovery](backup-recovery.md)
+
+---
+
 ## Dienst-Health-Checks
 
 | Dienst | Prüfung |

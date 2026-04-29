@@ -4,6 +4,8 @@
 
 Radiolyze ist eine Open-Source-Plattform, die Radiologen hilft, schneller und konsistenter zu befunden — mit vollständigem DICOM-Viewer, multimodaler KI-Analyse (MedGemma), Sprachdiktat (MedASR/Whisper), strukturierten QA-Checks und lückenlosem Audit-Logging.
 
+![Radiolyze UI (Screenshot)](../assets/screenshot-radiolyze.png)
+
 ---
 
 ## Wo möchten Sie starten?

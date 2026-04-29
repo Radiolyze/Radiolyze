@@ -120,3 +120,4 @@ Jeder Inference-Aufruf erzeugt einen `InferenceJob`-Eintrag mit:
 - **Modell-Hersteller:** Google DeepMind (google/medgemma)
 - **Systembetreiber / Inverkehrbringer:** (TBD Organisation – Annex IV § 1)
 - **Technischer Ansprechpartner:** (TBD)
+

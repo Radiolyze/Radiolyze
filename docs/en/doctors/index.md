@@ -3,6 +3,8 @@
 This section covers everything you need to use Radiolyze for daily radiological reporting.
 No technical background is required.
 
+![Radiolyze UI (screenshot)](../../assets/screenshot-radiolyze.png)
+
 ---
 
 ## What you can do with Radiolyze
@@ -32,6 +34,19 @@ If you are new to Radiolyze, work through these topics in order:
 1. **[Fast Reporting Workflow](../workflows/fast-report.md)** — the standard workflow for a chest X-ray from queue to approval in under 10 minutes.
 2. **[Complex Case Workflow](../workflows/complex-case.md)** — CT/MR studies with prior comparisons and multiple series.
 3. **[Batch Reporting](../workflows/batch-reporting.md)** — processing multiple studies from a queue efficiently.
+
+---
+
+## Your First Report (step-by-step)
+
+1. **Pick a study** from the worklist (left sidebar).
+2. **Review the images** in the centre viewer (scroll frames/series, apply window presets).
+3. **Enter findings** (type or dictate if ASR is enabled).
+4. **(Optional) Generate an AI impression** and treat it as a draft you must edit/approve.
+5. **Check QA** for missing sections or inconsistencies.
+6. **Approve** to finalise the report.
+
+If AI is not configured (no GPU overlay), you can still report normally and approve.
 
 ---
 

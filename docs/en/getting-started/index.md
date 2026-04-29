@@ -12,6 +12,8 @@ Radiolyze is an open-source radiology workflow system that combines:
 
 The system runs entirely on-premises — patient data never leaves your infrastructure.
 
+![Radiolyze UI (screenshot)](../../assets/screenshot-radiolyze.png)
+
 ---
 
 ## Who is Radiolyze for?
@@ -31,6 +33,19 @@ The system runs entirely on-premises — patient data never leaves your infrastr
 - **Not a certified medical device.** Clinical validation and regulatory approval are the responsibility of the deploying institution.
 - **Not production-ready out of the box.** Authentication, TLS, and security hardening must be configured before clinical use.
 - **Not a replacement for radiologist judgment.** AI output is a draft that must be reviewed and approved by a qualified physician.
+
+---
+
+## Your First 10 Minutes (no AI required)
+
+If you just want to understand the workflow quickly, do this first:
+
+1. Start the stack with demo data: follow the [Quickstart Guide](quickstart.md).
+2. Open the UI at `http://localhost:5173` and select a study from the worklist.
+3. Scroll through frames, try a window preset, and add a short finding in the right panel.
+4. Approve the report (the system is fully usable without GPU/AI inference).
+
+Once you are comfortable, enable GPU inference and/or voice dictation overlays as needed.
 
 ---
 
