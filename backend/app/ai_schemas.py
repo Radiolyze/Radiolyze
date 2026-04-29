@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
 
 
 def _normalize_indices(value: Any) -> list[int] | None:
@@ -82,6 +82,10 @@ class FindingBoxOutput(BaseAIOutput):
     box_2d: list[float]
     label: str
     confidence: float | None = None
+    slice_index: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("slice_index", "sliceIndex"),
+    )
 
     @field_validator("box_2d")
     @classmethod
@@ -89,6 +93,61 @@ class FindingBoxOutput(BaseAIOutput):
         if not isinstance(value, list) or len(value) != 4:
             raise ValueError("box_2d must be a list of 4 numbers")
         return [float(v) for v in value]
+
+
+class ChangeItem(BaseAIOutput):
+    """One longitudinal finding with directional status."""
+
+    finding: str
+    status: Literal["new", "progressed", "stable", "regressed", "resolved"]
+    evidence_indices_current: list[int] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("evidence_indices_current", "evidenceIndicesCurrent"),
+    )
+    evidence_indices_prior: list[int] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("evidence_indices_prior", "evidenceIndicesPrior"),
+    )
+    quantitative_change: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("quantitative_change", "quantitativeChange"),
+    )
+
+    @field_validator("evidence_indices_current", "evidence_indices_prior", mode="before")
+    @classmethod
+    def _coerce_indices(cls, value: Any) -> list[int] | None:
+        return _normalize_indices(value)
+
+
+class ComparisonOutput(BaseAIOutput):
+    """Structured longitudinal comparison output (P1.A)."""
+
+    summary_change: str
+    changes: list[ChangeItem] = Field(default_factory=list)
+    overall_trend: Literal["improved", "worsened", "mixed", "stable"]
+    confidence: str | None = None
+
+    @field_validator("summary_change")
+    @classmethod
+    def _validate_summary_change(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("summary_change must be non-empty")
+        return normalized
+
+    @field_validator("changes", mode="before")
+    @classmethod
+    def _coerce_changes(cls, value: Any) -> list[ChangeItem]:
+        if not isinstance(value, list):
+            return []
+        result: list[ChangeItem] = []
+        for item in value:
+            if isinstance(item, dict):
+                try:
+                    result.append(ChangeItem.model_validate(item))
+                except Exception:
+                    continue
+        return result
 
 
 class LocalizeOutput(BaseAIOutput):
@@ -164,6 +223,11 @@ def get_localize_schema() -> dict[str, Any]:
     return LocalizeOutput.model_json_schema()
 
 
+def get_comparison_schema() -> dict[str, Any]:
+    """Return the JSON Schema for ComparisonOutput (P1.A)."""
+    return ComparisonOutput.model_json_schema()
+
+
 def get_all_schemas() -> dict[str, Any]:
     """Return all output schemas keyed by name, plus schema version."""
     return {
@@ -172,5 +236,6 @@ def get_all_schemas() -> dict[str, Any]:
             "summary_output": get_summary_schema(),
             "impression_output": get_impression_schema(),
             "localize_output": get_localize_schema(),
+            "comparison_output": get_comparison_schema(),
         },
     }

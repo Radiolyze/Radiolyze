@@ -189,6 +189,40 @@ class LocalizeRequest(ApiBaseModel):
     image_ref: ImageRef
     requested_by: str | None = None
     model_version: str | None = None
+    mode: Literal["cxr_finding", "cxr_anatomy"] | None = None
+
+
+class VolumeInferenceRequest(ApiBaseModel):
+    """Server-side 3D inference: segmenter renders a CT/MR series to MedGemma slices."""
+
+    report_id: str | None = None
+    study_id: str | None = None
+    study_uid: str = Field(min_length=1, max_length=128)
+    series_uid: str = Field(min_length=1, max_length=128)
+    findings_text: str | None = None
+    max_slices: int | None = Field(default=None, ge=1, le=85)
+    window_preset: Literal["auto", "lung", "mediastinum", "bone", "abdomen", "mr"] | None = None
+    strategy: Literal["uniform", "central"] | None = None
+    requested_by: str | None = None
+    model_version: str | None = None
+
+
+class ComparisonInferenceRequest(ApiBaseModel):
+    """Longitudinal comparison: current vs. prior series rendered via segmenter."""
+
+    report_id: str | None = None
+    study_id: str | None = None
+    study_uid: str = Field(min_length=1, max_length=128)
+    series_uid: str = Field(min_length=1, max_length=128)
+    prior_study_uid: str = Field(min_length=1, max_length=128)
+    prior_series_uid: str = Field(min_length=1, max_length=128)
+    time_delta_days: int | None = None
+    findings_text: str | None = None
+    modality: str | None = None
+    max_slices: int | None = Field(default=None, ge=1, le=85)
+    window_preset: Literal["auto", "lung", "mediastinum", "bone", "abdomen", "mr"] | None = None
+    requested_by: str | None = None
+    model_version: str | None = None
 
 
 PromptType = Literal["system", "summary", "impression"]

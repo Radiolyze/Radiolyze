@@ -30,6 +30,11 @@ Audit logs document all AI-assisted decisions and human interventions.
 2. Report Opened
 3. ASR Completed
 4. MedGemma Inference (queued/started/completed/failed)
+   - 2D `inference_*` (legacy frame-based pipeline)
+   - `inference_volume_*` (P0.B server-side 3D volume preprocess + vLLM)
+   - `inference_comparison_*` (P1.A longitudinal current-vs-prior comparison)
+   - `inference_localize_rejected_modality` (P1.B modality lock; emitted when
+     a non-CXR series tries the localization endpoint, before any vLLM call)
 5. QA Check
 6. Radiologist Edit/Save
 7. Report Finalized/Approved

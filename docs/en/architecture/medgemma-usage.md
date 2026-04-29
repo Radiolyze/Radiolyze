@@ -26,10 +26,10 @@ audit trails, but incomplete for 3D and longitudinal analyses.
 | Capability | Status | Implementation | Notes |
 | --- | --- | --- | --- |
 | Multimodal (text + images) | in use | vLLM chat completion with `image_url` content; prompts for summary/impression | `backend/app/inference_clients.py` |
-| Multi-frame/series input | partial | Frame selection per series (sampling/limit) | `src/hooks/reporting/inferenceHelpers.ts` |
-| Longitudinal (current + prior) | partial | Prior studies + `role=current|prior` in ImageRefs; comparison viewer | `src/hooks/usePriorStudies.ts`, `src/pages/ReportWorkspace.tsx` |
-| 3D volume analysis | partial (UI only) | MPR/VRT viewer present, but inference uses 2D frames | `docs/components/viewer.md`, `src/hooks/useDicomSeriesInstances.ts` |
-| Anatomical localization/detection | partial (data collection) | 2D bounding boxes + labels captured; not used in inference output | `backend/app/api/annotations.py`, `backend/app/api/training.py` |
+| Multi-frame/series input | in use | Frontend frame selection (legacy) + segmenter-side volume preprocessor | `src/hooks/reporting/inferenceHelpers.ts`, `services/segmenter/app/medgemma_preprocess.py` |
+| Longitudinal (current + prior) | in use | Dedicated `/api/v1/inference/comparison` endpoint with structured diff schema | `backend/app/inference_clients.py:generate_comparison_text`, `src/components/RightPanel/ComparisonPanel.tsx` |
+| 3D volume analysis | in use | Segmenter `/preprocess/medgemma` renders DICOM CT/MR to ≤85 windowed 896×896 axial slices | `services/segmenter/app/medgemma_preprocess.py`, `backend/app/inference_clients.py:generate_volume_inference_summary` |
+| Anatomical localization/detection | in use (CXR) | Modality-locked endpoint with `cxr_finding` and `cxr_anatomy` modes | `backend/app/inference_clients.py:generate_localize_findings`, `backend/app/api/inference.py` |
 | Evidence/provenance | in use | Evidence indices extracted from model response and referenced in UI | `backend/app/inference_clients.py`, `src/components/RightPanel/ImpressionPanel.tsx` |
 | WSI/pathology | not used | No WSI pipeline, no tile processing | - |
 | Clinical documents/EHR | not used | No EHR imports; only report text in the system | - |
@@ -49,11 +49,29 @@ audit trails, but incomplete for 3D and longitudinal analyses.
 - Number of slices is limited by the context budget; the selection strategy is critical.
 
 ### Current State and Implications
-- The pipeline follows the slice approach (WADO-RS rendered frames), but:
-  - Slice selection is heavily reduced (sampling/frame limits).
-  - Preprocessing details (window/level, HU scaling, resampling) are not persisted.
-  - vLLM context limit is currently set to `--max-model-len 4096`; `VLLM_MAX_TOKENS` defaults to 512.
-- References: `docker-compose.yml`, `src/hooks/reporting/inferenceHelpers.ts`.
+- Two pipelines coexist:
+  1. **Legacy 2D frames** (`/api/v1/inference/queue`): WADO-RS frames selected
+     by the frontend (16 current / 8 prior by default).
+  2. **Server-side 3D volumes** (`/api/v1/inference/volume`, P0.B): the
+     segmenter's `/preprocess/medgemma` endpoint loads the DICOM series with
+     `fetch_series_volume()`, applies modality-aware windowing (CT
+     lung/mediastinum/bone/abdomen, MR robust 1./99. percentile), resizes to
+     896×896 and returns up to 85 inline `data:image/png;base64` slices that
+     are forwarded directly to vLLM.
+- vLLM is now served with `--max-model-len 32768` (~21 760 vision tokens
+  budget for 3D + headroom for prompt + output) and `VLLM_MAX_TOKENS=4096`.
+- `VLLM_GUIDED_JSON=true` enforces the AI-output schemas at decode time.
+- References: `docker-compose.yml`, `services/segmenter/app/medgemma_preprocess.py`,
+  `backend/app/inference_clients.py:generate_volume_inference_summary`.
+
+### Window Presets (Volume Preprocessor)
+| Modality | Default Preset | Centre / Width | Notes |
+| --- | --- | --- | --- |
+| CT (auto) | `mediastinum` | 40 / 400 HU | Series-description hints (`lung`, `bone`, `abd`) override |
+| CT (lung) | `lung` | -600 / 1500 HU | Set explicitly via `window_preset=lung` |
+| CT (bone) | `bone` | 300 / 1500 HU | |
+| CT (abdomen) | `abdomen` | 40 / 400 HU | |
+| MR | `mr` | 1./99. percentile | Robust per-slice rescale, no fixed centre/width |
 
 ### Missing 3D Parameters in the Data Collection Setup
 - SliceThickness, PixelSpacing, ImageOrientation, SpacingBetweenSlices.

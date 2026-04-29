@@ -34,6 +34,32 @@ def compute_localize_hash(study_id: str | None, image_ref: dict[str, Any] | None
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def compute_volume_hash(
+    study_id: str | None,
+    *,
+    study_uid: str,
+    series_uid: str,
+    findings_text: str | None,
+    max_slices: int | None,
+    window_preset: str | None,
+    strategy: str | None,
+) -> str:
+    """Hash for volume-based inference input (P0.B)."""
+    raw = "|".join(
+        [
+            "volume",
+            study_id or "",
+            study_uid,
+            series_uid,
+            (findings_text or "").strip(),
+            str(max_slices or ""),
+            window_preset or "",
+            strategy or "",
+        ]
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def compute_text_hash(*values: str | None) -> str:
     normalized = [value.strip() for value in values if value and value.strip()]
     raw = "|".join(normalized)

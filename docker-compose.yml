@@ -24,6 +24,8 @@ services:
       VLLM_REQUEST_TIMEOUT: "120"
       VLLM_FALLBACK_TO_MOCK: "true"
       VLLM_DEFAULT_CONFIDENCE: "0.0"
+      VLLM_MAX_TOKENS: "4096"
+      VLLM_GUIDED_JSON: "true"
       MEDASR_ENABLED: "true"
       MEDASR_BASE_URL: http://medasr:8001
       MEDASR_TRANSCRIBE_PATH: /v1/audio/transcriptions
@@ -65,6 +67,8 @@ services:
       VLLM_REQUEST_TIMEOUT: "120"
       VLLM_FALLBACK_TO_MOCK: "true"
       VLLM_DEFAULT_CONFIDENCE: "0.0"
+      VLLM_MAX_TOKENS: "4096"
+      VLLM_GUIDED_JSON: "true"
       MEDASR_ENABLED: "true"
       MEDASR_BASE_URL: http://medasr:8001
       MEDASR_TRANSCRIBE_PATH: /v1/audio/transcriptions
@@ -193,15 +197,16 @@ services:
       - --dtype
       - bfloat16
       - --max-model-len
-      - "4096"
+      - "32768"
+      - --max-num-seqs
+      - "4"
       - --gpu-memory-utilization
-      - "0.85"
+      - "0.90"
       - --trust-remote-code
-      - --enforce-eager
       - --served-model-name
       - medgemma-radiology
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request,json; r=urllib.request.urlopen('http://localhost:8000/v1/models'); json.loads(r.read())"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -17,6 +17,14 @@ from .config import (
     job_dir,
 )
 from .dicom_loader import LoadedVolume, fetch_series_volume
+from .medgemma_preprocess import (
+    MAX_MODEL_SLICES,
+    env_default_preset,
+    env_default_resize,
+    env_default_strategy,
+    env_max_slices,
+    preprocess_volume,
+)
 from .dicom_seg import (
     DicomSegArtifact,
     DicomSegUnavailable,
@@ -376,6 +384,95 @@ def mesh_file(
 def mask_file(job_id: str, label_id: int) -> FileResponse:
     path = _safe_label_path(job_id, label_id, kind="mask", ext="nii.gz")
     return FileResponse(path, media_type="application/octet-stream", filename=path.name)
+
+
+class PreprocessRequest(BaseModel):
+    study_uid: str = Field(..., min_length=1)
+    series_uid: str = Field(..., min_length=1)
+    dicomweb_base_url: str | None = None
+    max_slices: int | None = Field(default=None, ge=1, le=MAX_MODEL_SLICES)
+    window_preset: Literal["auto", "lung", "mediastinum", "bone", "abdomen", "mr"] | None = None
+    strategy: Literal["uniform", "central"] | None = None
+    resize: int | None = Field(default=None, ge=64, le=2048)
+
+
+class PreprocessSlice(BaseModel):
+    index: int
+    source_index: int
+    z_position: float | None = None
+    instance_uid: str | None = None
+    instance_number: int | None = None
+    data_url: str
+
+
+class PreprocessResponse(BaseModel):
+    modality: str
+    window_preset: str
+    strategy: str
+    selected_count: int
+    total_count: int
+    resize: int
+    pixel_spacing: list[float] | None = None
+    slice_thickness: float | None = None
+    series_uid: str
+    study_uid: str
+    slices: list[PreprocessSlice]
+
+
+@app.post("/preprocess/medgemma", response_model=PreprocessResponse)
+async def preprocess_for_medgemma(payload: PreprocessRequest) -> PreprocessResponse:
+    """Render a DICOM CT/MR series into MedGemma-ready slice data URLs.
+
+    Synchronous: typical 200-slice CT preprocesses in <10 s and the response
+    is sized for an inline vLLM chat-completion call.
+    """
+    base_url = (payload.dicomweb_base_url or dicom_web_base_url()).rstrip("/")
+    try:
+        loaded = await fetch_series_volume(base_url, payload.study_uid, payload.series_uid)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Volume fetch failed for %s/%s", payload.study_uid, payload.series_uid)
+        raise HTTPException(status_code=502, detail=f"DICOMweb fetch failed: {exc}") from exc
+
+    if loaded.modality.upper() not in {"CT", "CTA", "MR", "MRI"}:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported modality for volume preprocessing: {loaded.modality}",
+        )
+
+    try:
+        result = preprocess_volume(
+            loaded,
+            max_slices=payload.max_slices or env_max_slices(),
+            window_preset=payload.window_preset or env_default_preset(),
+            strategy=payload.strategy or env_default_strategy(),
+            resize=payload.resize or env_default_resize(),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return PreprocessResponse(
+        modality=result.modality,
+        window_preset=result.window_preset,
+        strategy=result.strategy,
+        selected_count=result.selected_count,
+        total_count=result.total_count,
+        resize=result.resize,
+        pixel_spacing=list(result.pixel_spacing) if result.pixel_spacing else None,
+        slice_thickness=result.slice_thickness,
+        series_uid=payload.series_uid,
+        study_uid=payload.study_uid,
+        slices=[
+            PreprocessSlice(
+                index=s.index,
+                source_index=s.source_index,
+                z_position=s.z_position,
+                instance_uid=s.instance_uid,
+                instance_number=s.instance_number,
+                data_url=s.data_url,
+            )
+            for s in result.slices
+        ],
+    )
 
 
 @app.get("/jobs/{job_id}/dicom-seg")
