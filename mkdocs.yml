@@ -119,6 +119,7 @@ plugins:
             Validation: Validierung
             Glossary: Glossar
             FAQ: FAQ
+            Legal: Rechtliches
 
 markdown_extensions:
   - admonition
@@ -141,6 +142,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Legal: legal/disclaimer.md
   - Getting Started:
       - Overview: getting-started/index.md
       - Quickstart (5 min): getting-started/quickstart.md

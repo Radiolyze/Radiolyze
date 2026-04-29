@@ -4,6 +4,12 @@
 
 Radiolyze ist eine Open-Source-Plattform, die Radiologen hilft, schneller und konsistenter zu befunden — mit vollständigem DICOM-Viewer, multimodaler KI-Analyse (MedGemma), Sprachdiktat (MedASR/Whisper), strukturierten QA-Checks und lückenlosem Audit-Logging.
 
+!!! danger "Nur Forschung & Lehre — kein Medizinprodukt"
+    Radiolyze ist **KEIN zugelassenes Medizinprodukt** und **nicht für klinischen Einsatz oder diagnostische Zwecke** bestimmt.
+    Nutzung **ausschließlich für Forschung und Lehre** (nur anonymisierte oder synthetische Daten).
+
+    Vollständiger Disclaimer: [Disclaimer](legal/disclaimer.md)
+
 ![Radiolyze UI (Screenshot)](../assets/screenshot-radiolyze.png)
 
 ---
@@ -99,5 +105,5 @@ Für GPU-Beschleunigung, Produktions-Deployment und weitere Optionen → [Schnel
 
 !!! warning "Nicht produktionsreif ohne weitere Konfiguration"
     Radiolyze ist eine Referenzimplementierung. Ohne zusätzliche Konfiguration **nicht produktionsreif**:
-    Authentifizierung/RBAC, TLS, Security-Hardening und klinische Validierung sind erforderlich.
+    Authentifizierung/RBAC, TLS, Security-Hardening und Validierung sind erforderlich.
     Siehe [Administrations-Leitfaden](admin/index.md) und [Compliance-Checkliste](compliance/checklist.md).

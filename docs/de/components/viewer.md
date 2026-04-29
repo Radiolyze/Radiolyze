@@ -73,7 +73,7 @@ Implementierung:
 - `useMPRVolumeViewport`: Volume-Loading, Viewport-Setup, Slab-Kontrolle
 - `MPRViewport`: Einzelne Ansicht mit Orientierungs-Markern + Slab-Indikator
 - `MPRToolbar`: Tool-Auswahl, Layout-Kontrolle, Slab-Settings Popover
-- Aktivierung via MPR-Button (nur für CT/MR mit ≥10 Frames)
+- Aktivierung via **MPR**-Button (nur für CT/MR/PT, **≥10 Frames** erforderlich)
 
 Controls:
 
@@ -81,6 +81,9 @@ Controls:
 - **RMB**: Pan
 - **Scroll**: Zoom
 - **Shift+LMB**: Window/Level
+- **1 / 2 / 3**: Axial / Sagittal / Coronal maximieren (zurück ins Grid togglen)
+- **M**: MIP umschalten (setzt bei Bedarf eine Standard-Schichtdicke)
+- **Esc**: Reset (Tool, Preset, Slab-Settings)
 
 ## VRTViewer (3D Volume Rendering)
 
@@ -103,13 +106,44 @@ Implementierung:
 - `useVRTViewport`: VolumeViewport3D Setup mit Transfer Functions
 - `VRTToolbar`: Preset-Auswahl, Ansichtswinkel, Beleuchtungs-Popover
 - `src/types/vrt.ts`: VRT Presets und Transfer Function Definitionen
-- Aktivierung via 3D-Button (nur für CT/MR/PT mit ≥10 Frames)
+- Aktivierung via **3D**-Button (nur für CT/MR/PT, **≥10 Frames** erforderlich)
 
 Controls:
 
 - **LMB**: Trackball Rotation
 - **RMB**: Pan
 - **Scroll**: Zoom
+- **1–5**: Presets (Bone, Lung, Soft Tissue, Angiography, Muscle/Bone)
+- **A / P / L / R / S / I**: Ansichtswinkel (Anterior/Posterior/Left/Right/Superior/Inferior)
+- **Esc**: Reset (Kamera + Settings)
+
+## MeshViewer (Segmentierungs-Meshes)
+
+Rolle:
+
+- 3D-Mesh-Viewer für Segmentierungs-Outputs (vtk.js)
+- Mehrere anatomische Labels durchsuchen und ein-/ausblenden
+- Optionaler DICOM-SEG Export zurück nach Orthanc („An PACS senden“)
+
+Aktivierung:
+
+- Verfügbar via **Mesh**-Button nur für **CT** und typischerweise erst ab **≥30 Frames** (volumetrische CT-Serie).
+
+Features:
+
+- **Presets**: `bone` (schnell) und `total` (multi-organ)
+- **Lazy Loading**: initial Top-N Labels, weitere Meshes erst beim Aktivieren nachladen
+- **Label-Panel**: Suche, Sortierung (Volumen/Name), Minimum-Volumen-Filter, pro Label Sichtbarkeit/Opacity/Farbe
+- **Clip-Plane**: Szene entlang X/Y/Z schneiden, Positions-Slider in mm
+- **An PACS senden**: Button erscheint nur, wenn ein DICOM SEG erzeugt wurde (`manifest.dicom_seg`)
+
+Implementierung:
+
+- `MeshViewer`: UI + Job-Lifecycle (Polling) + Label-State
+- `useMeshScene`: vtk.js Szene, Mesh-Loading (VTP), Clip-Plane
+- `useSegmentation` / `segmentationClient`: Backend-Integration (`/api/v1/segmentation/...`)
+
+Siehe auch: [3D-Segmentierung & Mesh-Viewer](segmenter.md)
 
 ## ComparisonViewer
 

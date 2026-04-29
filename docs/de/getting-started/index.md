@@ -30,10 +30,11 @@ Das System läuft vollständig On-Premises — Patientendaten verlassen Ihre Inf
 
 ## Was Radiolyze NICHT ist
 
-- **Kein zugelassenes Medizinprodukt.** Klinische Validierung und regulatorische Zulassung liegen in der Verantwortung der betreibenden Einrichtung.
-- **Nicht produktionsreif ohne weitere Konfiguration.** Authentifizierung, TLS und Security-Hardening müssen vor dem klinischen Einsatz konfiguriert werden.
+- **Kein Medizinprodukt.** Radiolyze ist **nicht zugelassen** und trägt **keine** CE-Kennzeichnung.
+- **Nicht für klinischen Einsatz / diagnostische Zwecke.** Radiolyze wird **ausschließlich für Forschung und Lehre** bereitgestellt (nur anonymisierte oder synthetische Daten verwenden).
 - **Kein Ersatz für die ärztliche Beurteilung.** KI-Outputs sind Entwürfe, die von einem qualifizierten Arzt geprüft und freigegeben werden müssen.
 
+Siehe: [Disclaimer](../legal/disclaimer.md)
 ---
 
 ## Ihre ersten 10 Minuten (ohne KI)

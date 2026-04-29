@@ -111,8 +111,11 @@ Ask your administrator whether the study has been sent to the Orthanc PACS. Stud
 
 ---
 
-!!! warning "Not for clinical use without validation"
-    Radiolyze is a reference implementation. Clinical deployment requires authentication, TLS, and local clinical validation. Confirm with your institution's IT and compliance teams before use with real patient data.
+!!! warning "Research & teaching only"
+    Radiolyze is **not** a medical device and is **not intended for clinical use or diagnostic purposes**.
+    Use it **exclusively for research and education** (anonymised or synthetic data only).
+
+    See: [Disclaimer](../legal/disclaimer.md)
 
 ---
 

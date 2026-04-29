@@ -10,7 +10,7 @@ Questions are grouped by role. Use the search bar or jump to your section:
 
 ---
 
-## For Radiologists & Physicians
+## For Radiologists & Physicians {#for-radiologists--physicians}
 
 **Do I need technical knowledge to use Radiolyze?**
 
@@ -60,7 +60,7 @@ Yes. The Prior Studies panel in the left sidebar shows previous studies for the 
 
 ---
 
-## For Administrators
+## For Administrators {#for-administrators}
 
 **What are the minimum hardware requirements?**
 
@@ -98,7 +98,7 @@ For AMD GPUs use the ROCm overlay. See [Quickstart](getting-started/quickstart.m
 
 **Is Radiolyze production-ready out of the box?**
 
-No. The default setup is a reference implementation suitable for evaluation and development. Before clinical use you must configure:
+No. The default setup is a reference implementation suitable for evaluation and development. It is **not intended for clinical use**. For production-like deployments you must configure:
 
 - TLS termination (HTTPS)
 - Authentication and RBAC
@@ -143,7 +143,7 @@ Test restores regularly. Document retention periods to meet local regulatory req
 
 ---
 
-## For Researchers & AI Specialists
+## For Researchers & AI Specialists {#for-researchers--ai-specialists}
 
 **Which AI model does Radiolyze use?**
 
@@ -163,7 +163,7 @@ See [Switching the Inference Backend](research/index.md#switching-the-inference-
 
 **Where can I find the model's performance data?**
 
-The [MedGemma Model Card](compliance/model-card-medgemma.md) documents known capabilities, limitations, and bias considerations. For local clinical validation, see the [Validation Guide](research/index.md#validation--benchmarking).
+The [MedGemma Model Card](compliance/model-card-medgemma.md) documents known capabilities, limitations, and bias considerations. For validation guidance, see the [Validation Guide](research/validation.md).
 
 ---
 
@@ -179,7 +179,7 @@ Yes. Prompt templates are defined in `backend/app/prompts.py`. Edit them to adju
 
 ---
 
-## For Compliance Officers
+## For Compliance Officers {#for-compliance-officers}
 
 **How does Radiolyze comply with the EU AI Act?**
 
@@ -221,9 +221,10 @@ See [Audit Logging](compliance/audit-logging.md) for the full schema and retenti
 
 **Is Radiolyze a medical device under MDR?**
 
-This depends on the intended use defined by the deploying institution. If used to support diagnosis, it may qualify as a Class IIa or IIb device under EU MDR 2017/745. A formal conformity assessment with a Notified Body is required for clinical deployment. Radiolyze provides the technical documentation framework (Annex IV) but does not constitute CE marking.
+No. Radiolyze is **not** a certified / approved medical device and is **not intended for clinical use or diagnostic purposes**.
+It is provided **exclusively for research and education**.
 
-See [Annex IV Template](compliance/annex-iv.md) and the open items in [EU AI Act Mapping](compliance/eu-ai-act-mapping.md#open-items-until-conformity-assessment).
+See: [Disclaimer](legal/disclaimer.md)
 
 ---
 
@@ -237,7 +238,7 @@ See [Annex IV Template](compliance/annex-iv.md) and the open items in [EU AI Act
 
 ---
 
-## General
+## General {#general}
 
 **What languages does the documentation support?**
 

@@ -190,7 +190,10 @@ Zugriff auf Admin-/Compliance-Rollen beschränken. Siehe [Audit Logging](complia
 
 **Ist Radiolyze ein Medizinprodukt nach MDR?**
 
-Das hängt vom Intended Use der betreibenden Einrichtung ab. Bei Einsatz zur Diagnoseunterstützung kann eine Klassifizierung als Klasse IIa oder IIb unter EU MDR 2017/745 erforderlich sein. Eine formale Konformitätsbewertung mit einer Benannten Stelle ist für den klinischen Betrieb erforderlich.
+Nein. Radiolyze ist **kein zugelassenes Medizinprodukt** und **nicht für klinischen Einsatz oder diagnostische Zwecke** bestimmt.
+Es wird **ausschließlich für Forschung und Lehre** bereitgestellt.
+
+Siehe: [Disclaimer](legal/disclaimer.md)
 
 ---
 

@@ -30,9 +30,11 @@ The system runs entirely on-premises — patient data never leaves your infrastr
 
 ## What Radiolyze is NOT
 
-- **Not a certified medical device.** Clinical validation and regulatory approval are the responsibility of the deploying institution.
-- **Not production-ready out of the box.** Authentication, TLS, and security hardening must be configured before clinical use.
+- **Not a medical device.** Radiolyze is **NOT** certified / approved and carries **no** CE marking.
+- **Not for clinical use / diagnostic purposes.** Radiolyze is provided **exclusively for research and education** (use only anonymised or synthetic data).
 - **Not a replacement for radiologist judgment.** AI output is a draft that must be reviewed and approved by a qualified physician.
+
+See: [Disclaimer](../legal/disclaimer.md)
 
 ---
 

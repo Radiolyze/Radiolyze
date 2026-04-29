@@ -69,7 +69,7 @@ The sidebar on the left shows a worklist of loaded studies. Click any study to o
 
 ---
 
-## Optional: Enable GPU + AI (NVIDIA)
+## Optional: Enable GPU + AI (NVIDIA) {#optional-enable-gpu--ai-nvidia}
 
 To use MedGemma for real AI inference you need an NVIDIA GPU with ≥16 GB VRAM and the NVIDIA Container Toolkit installed.
 

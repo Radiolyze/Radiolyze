@@ -113,10 +113,11 @@ Fragen Sie Ihren Administrator, ob die Studie an das Orthanc PACS gesendet wurde
 
 ---
 
-!!! warning "Nicht für klinischen Einsatz ohne Validierung"
-    Radiolyze ist eine Referenzimplementierung. Für den klinischen Betrieb sind Authentifizierung,
-    TLS und lokale klinische Validierung erforderlich. Klären Sie dies mit Ihrer IT- und
-    Compliance-Abteilung, bevor echte Patientendaten verwendet werden.
+!!! warning "Nur Forschung & Lehre"
+    Radiolyze ist **kein Medizinprodukt** und **nicht für klinischen Einsatz oder diagnostische Zwecke** bestimmt.
+    Nutzung **ausschließlich für Forschung und Lehre** (nur anonymisierte oder synthetische Daten).
+
+    Siehe: [Disclaimer](../legal/disclaimer.md)
 
 ---
 

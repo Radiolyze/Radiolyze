@@ -4,6 +4,12 @@
 
 Radiolyze is an open-source platform that helps radiologists report faster and more consistently — combining a full DICOM viewer, multimodal AI analysis (MedGemma), voice dictation (MedASR/Whisper), structured QA checks, and complete audit logging.
 
+!!! danger "Research & teaching only — NOT a medical device"
+    Radiolyze is **NOT a certified / approved medical device** and is **NOT intended for clinical use or diagnostic purposes**.
+    Use it **exclusively for research and education** (anonymised or synthetic data only).
+
+    See the full disclaimer: [Disclaimer](legal/disclaimer.md)
+
 ![Radiolyze UI (screenshot)](../assets/screenshot-radiolyze.png)
 
 ---
@@ -99,5 +105,5 @@ For GPU acceleration, production deployment, and other options → [Quickstart G
 
 !!! warning "Not production-ready out of the box"
     Radiolyze is a reference implementation. It is **not production-ready** without additional configuration:
-    authentication/RBAC, TLS, security hardening, and clinical validation.
+    authentication/RBAC, TLS, security hardening, and validation.
     See the [Administration Guide](admin/index.md) and [Compliance Checklist](compliance/checklist.md).

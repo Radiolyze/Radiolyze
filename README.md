@@ -2,6 +2,13 @@
 
 Radiology workflow system with AI-assisted report generation, DICOM viewer, speech recognition, and EU AI Act-compliant audit logging.
 
+> **IMPORTANT — Research & teaching only (NOT a medical device)**
+>
+> Radiolyze is **NOT a certified / approved medical device** and is **NOT intended for clinical use or diagnostic purposes**.
+> It is provided **exclusively for research and education** (use only with anonymised or synthetic data).
+>
+> See the documentation disclaimer: `docs/en/legal/disclaimer.md` (EN) / `docs/de/legal/disclaimer.md` (DE).
+
 ## Features
 
 - **DICOM Viewer**: Cornerstone.js-based stack viewer with tools (zoom, pan, windowing, measurements), series navigation, and prior studies comparison

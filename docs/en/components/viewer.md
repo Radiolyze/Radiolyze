@@ -73,7 +73,7 @@ Implementation:
 - `useMPRVolumeViewport`: Volume loading, viewport setup, slab control
 - `MPRViewport`: Individual view with orientation markers + slab indicator
 - `MPRToolbar`: Tool selection, layout control, slab settings popover
-- Activated via MPR button (CT/MR only, ≥10 frames required)
+- Activated via the **MPR** button (CT/MR/PT only, **≥10 frames** required)
 
 Controls:
 
@@ -81,6 +81,9 @@ Controls:
 - **RMB**: Pan
 - **Scroll**: Zoom
 - **Shift+LMB**: Window/Level
+- **1 / 2 / 3**: Maximise axial / sagittal / coronal viewport (toggle back to grid)
+- **M**: Toggle MIP (sets a default slab thickness if needed)
+- **Esc**: Reset (tool, preset, slab settings)
 
 ## VRTViewer (3D Volume Rendering)
 
@@ -103,13 +106,44 @@ Implementation:
 - `useVRTViewport`: VolumeViewport3D setup with transfer functions
 - `VRTToolbar`: Preset selection, view angles, lighting popover
 - `src/types/vrt.ts`: VRT presets and transfer function definitions
-- Activated via 3D button (CT/MR/PT only, ≥10 frames required)
+- Activated via the **3D** button (CT/MR/PT only, **≥10 frames** required)
 
 Controls:
 
 - **LMB**: Trackball rotation
 - **RMB**: Pan
 - **Scroll**: Zoom
+- **1–5**: Presets (Bone, Lung, Soft Tissue, Angio, Muscle/Bone)
+- **A / P / L / R / S / I**: View angles (Anterior/Posterior/Left/Right/Superior/Inferior)
+- **Esc**: Reset (camera + settings)
+
+## MeshViewer (Segmentation Meshes)
+
+Role:
+
+- 3D mesh viewer for segmentation outputs (vtk.js)
+- Browse and toggle multiple anatomical labels
+- Optional DICOM SEG export back to Orthanc (\"Push to PACS\")
+
+Activation:
+
+- Available via the **Mesh** button for **CT only** and typically requires **≥30 frames** (volume-like CT series).
+
+Features:
+
+- **Presets**: `bone` (fast) and `total` (multi-organ) presets
+- **Lazy loading**: load top-N labels first; fetch more meshes when you toggle them on
+- **Label panel**: search, sort (volume/name), minimum-volume filter, per-label visibility/opacity/colour
+- **Clip plane**: slice the scene along X/Y/Z with a position slider (mm)
+- **Push to PACS**: appears only when the job produced a DICOM SEG (`manifest.dicom_seg`)
+
+Implementation:
+
+- `MeshViewer`: UI + job lifecycle (polling) + label state
+- `useMeshScene`: vtk.js scene, mesh loading (VTP), clipping plane
+- `useSegmentation` / `segmentationClient`: backend integration (`/api/v1/segmentation/...`)
+
+See also: [3D Segmentation & Mesh Viewer](segmenter.md)
 
 ## ComparisonViewer
 
