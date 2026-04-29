@@ -128,7 +128,14 @@ export const initCornerstone = async () => {
     // Create worker factory function that uses our bundled worker
     const workerFn = () => {
       log('[cornerstone] Creating worker from:', WORKER_BUNDLE_PATH);
-      return new Worker(WORKER_BUNDLE_PATH, { type: 'module' });
+      const worker = new Worker(WORKER_BUNDLE_PATH, { type: 'module' });
+      worker.addEventListener('error', (event) => {
+        console.error('[cornerstone] Worker runtime error:', event.message);
+      });
+      worker.addEventListener('messageerror', () => {
+        console.error('[cornerstone] Worker messageerror detected');
+      });
+      return worker;
     };
     
     workerManager.registerWorker('dicomImageLoader', workerFn, {
@@ -162,6 +169,44 @@ export const initCornerstone = async () => {
   log('[cornerstone] All tools registered (navigation + annotation + 3D)');
 
   initialized = true;
+};
+
+const decodeErrorMarkers = [
+  'WebAssembly',
+  'wasm',
+  'decodeTask',
+  'magic number',
+  'codec-openjpeg',
+  'codec-charls',
+  'codec-openjph',
+  'codec-libjpeg-turbo',
+];
+
+const stringifyError = (error: unknown): string => {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return `${error.name}: ${error.message}`;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
+
+export const isCodecDecodeError = (error: unknown): boolean => {
+  const value = stringifyError(error).toLowerCase();
+  return decodeErrorMarkers.some((marker) => value.includes(marker.toLowerCase()));
+};
+
+export const getCornerstoneInitErrorMessage = (
+  fallbackMessage: string,
+  error: unknown
+): string => {
+  if (!isCodecDecodeError(error)) {
+    return fallbackMessage;
+  }
+
+  return 'DICOM-Decodierung fehlgeschlagen (Codec/WASM). Bitte Browser-Cache leeren und Worker-Assets unter /workers prüfen.';
 };
 
 /**

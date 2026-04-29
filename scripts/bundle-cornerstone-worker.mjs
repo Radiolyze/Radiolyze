@@ -55,29 +55,65 @@ const wasmPathBanner = `
 // Fix WASM file loading in web worker context
 var __wasmBasePath__ = '/workers/';
 var __wasmFiles__ = ['libjpegturbowasm_decode.wasm', 'libjpegturbowasm.wasm', 'charlswasm_decode.wasm', 'charlswasm.wasm', 'openjpegwasm_decode.wasm', 'openjpegwasm.wasm', 'openjphjs.wasm'];
-var __originalFetch__ = self.fetch;
-self.fetch = function(input, init) {
-  if (typeof input === 'string') {
-    // Check for bare .wasm filenames
-    if (input.match(/^[a-zA-Z0-9_-]+\\.wasm$/)) {
-      console.log('[WASM loader] Fixing bare path:', input, '->', __wasmBasePath__ + input);
-      input = __wasmBasePath__ + input;
-    }
-    // Check for incorrect root path (e.g., http://localhost:5173/filename.wasm)
-    else {
-      for (var i = 0; i < __wasmFiles__.length; i++) {
-        var wasmFile = __wasmFiles__[i];
-        // Match URLs ending with /filename.wasm but not /workers/filename.wasm
-        if (input.endsWith('/' + wasmFile) && !input.includes('/workers/')) {
-          var fixedUrl = input.replace('/' + wasmFile, '/workers/' + wasmFile);
-          console.log('[WASM loader] Fixing URL:', input, '->', fixedUrl);
-          input = fixedUrl;
-          break;
-        }
-      }
+var __codecDecodeMap__ = {
+  '/@cornerstonejs/codec-openjpeg/decodewasm': 'openjpegwasm_decode.wasm',
+  '/@cornerstonejs/codec-openjpeg/wasm': 'openjpegwasm.wasm',
+  '/@cornerstonejs/codec-charls/decodewasm': 'charlswasm_decode.wasm',
+  '/@cornerstonejs/codec-charls/wasm': 'charlswasm.wasm',
+  '/@cornerstonejs/codec-openjph/decodewasm': 'openjphjs.wasm',
+  '/@cornerstonejs/codec-openjph/wasm': 'openjphjs.wasm',
+  '/@cornerstonejs/codec-libjpeg-turbo-8bit/decodewasm': 'libjpegturbowasm_decode.wasm',
+  '/@cornerstonejs/codec-libjpeg-turbo-8bit/wasm': 'libjpegturbowasm.wasm'
+};
+
+function __normalizeWasmUrl__(input) {
+  if (typeof input !== 'string') {
+    return input;
+  }
+
+  // 1) bare file names like "openjpegwasm_decode.wasm"
+  if (input.match(/^[a-zA-Z0-9_-]+\\.wasm$/)) {
+    return __wasmBasePath__ + input;
+  }
+
+  var parsed;
+  try {
+    parsed = new URL(input, self.location && self.location.origin ? self.location.origin : 'http://localhost');
+  } catch (_err) {
+    return input;
+  }
+
+  var pathName = parsed.pathname || '';
+
+  // 2) codec package runtime paths like /@cornerstonejs/codec-openjpeg/decodewasm
+  var codecPath = pathName;
+  if (codecPath.startsWith('/workers/')) {
+    codecPath = codecPath.slice('/workers'.length);
+  }
+  var mappedCodecFile = __codecDecodeMap__[codecPath];
+  if (mappedCodecFile) {
+    return __wasmBasePath__ + mappedCodecFile;
+  }
+
+  // 3) wrong-root wasm path like /openjpegwasm_decode.wasm -> /workers/openjpegwasm_decode.wasm
+  for (var i = 0; i < __wasmFiles__.length; i++) {
+    var wasmFile = __wasmFiles__[i];
+    if (pathName.endsWith('/' + wasmFile) && !pathName.includes('/workers/')) {
+      parsed.pathname = '/workers/' + wasmFile;
+      return parsed.toString();
     }
   }
-  return __originalFetch__.call(this, input, init);
+
+  return input;
+}
+
+var __originalFetch__ = self.fetch;
+self.fetch = function(input, init) {
+  var normalizedInput = __normalizeWasmUrl__(input);
+  if (normalizedInput !== input) {
+    console.log('[WASM loader] Rewrote URL:', input, '->', normalizedInput);
+  }
+  return __originalFetch__.call(this, normalizedInput, init);
 };
 `;
 
@@ -157,6 +193,60 @@ try {
     console.log(`Total WASM path fixes: ${replacements}`);
   } else {
     console.log('  No WASM paths found to fix (may already be correct)');
+  }
+
+  // Additional post-processing for codec runtime decodewasm path references.
+  // Some codec loaders request paths like "/@cornerstonejs/codec-openjpeg/decodewasm"
+  // without ".wasm" suffix. Rewrite these to concrete files in /workers.
+  console.log('\nFixing codec decodewasm path references...');
+  const decodePathRewrites = [
+    {
+      pattern: /(["'])\/@cornerstonejs\/codec-openjpeg\/decodewasm\1/g,
+      replacement: '$1/workers/openjpegwasm_decode.wasm$1',
+      label: 'codec-openjpeg/decodewasm',
+    },
+    {
+      pattern: /(["'])\/@cornerstonejs\/codec-openjpeg\/wasm\1/g,
+      replacement: '$1/workers/openjpegwasm.wasm$1',
+      label: 'codec-openjpeg/wasm',
+    },
+    {
+      pattern: /(["'])\/@cornerstonejs\/codec-charls\/decodewasm\1/g,
+      replacement: '$1/workers/charlswasm_decode.wasm$1',
+      label: 'codec-charls/decodewasm',
+    },
+    {
+      pattern: /(["'])\/@cornerstonejs\/codec-charls\/wasm\1/g,
+      replacement: '$1/workers/charlswasm.wasm$1',
+      label: 'codec-charls/wasm',
+    },
+    {
+      pattern: /(["'])\/@cornerstonejs\/codec-openjph\/decodewasm\1/g,
+      replacement: '$1/workers/openjphjs.wasm$1',
+      label: 'codec-openjph/decodewasm',
+    },
+    {
+      pattern: /(["'])\/@cornerstonejs\/codec-libjpeg-turbo-8bit\/decodewasm\1/g,
+      replacement: '$1/workers/libjpegturbowasm_decode.wasm$1',
+      label: 'codec-libjpeg-turbo-8bit/decodewasm',
+    },
+  ];
+
+  let decodeReplacements = 0;
+  for (const rewrite of decodePathRewrites) {
+    const matches = bundleContent.match(rewrite.pattern);
+    if (matches) {
+      bundleContent = bundleContent.replace(rewrite.pattern, rewrite.replacement);
+      decodeReplacements += matches.length;
+      console.log(`  Fixed: ${rewrite.label} (${matches.length} occurrences)`);
+    }
+  }
+
+  if (decodeReplacements > 0) {
+    writeFileSync(outputFile, bundleContent);
+    console.log(`Total decodewasm path fixes: ${decodeReplacements}`);
+  } else {
+    console.log('  No codec decodewasm references found to fix');
   }
 
   // Copy WASM files from codec packages

@@ -12,7 +12,7 @@ import {
   addTool,
   Enums as ToolEnums,
 } from '@cornerstonejs/tools';
-import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
+import { initCornerstone, cornerstoneToolNames, getCornerstoneInitErrorMessage } from '@/services/cornerstone';
 import type { MPROrientation, MPRViewportState, SlabBlendMode, SlabSettings } from '@/types/mpr';
 
 // Ensure CrosshairsTool is registered
@@ -312,7 +312,9 @@ export const useMPRVolumeViewport = ({
       } catch (error) {
         console.error('MPR initialization failed:', error);
         if (isActive) {
-          onInitErrorRef.current?.('MPR-Viewer konnte nicht initialisiert werden.');
+          onInitErrorRef.current?.(
+            getCornerstoneInitErrorMessage('MPR-Viewer konnte nicht initialisiert werden.', error)
+          );
         }
       } finally {
         if (isActive) {

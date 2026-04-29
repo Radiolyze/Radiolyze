@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Enums, RenderingEngine, type StackViewport } from '@cornerstonejs/core';
 import { ToolGroupManager } from '@cornerstonejs/tools';
-import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
+import { initCornerstone, cornerstoneToolNames, getCornerstoneInitErrorMessage } from '@/services/cornerstone';
 import type { ViewportState } from '@/types/viewerSync';
 
 interface UseCornerstoneStackViewportOptions {
@@ -158,7 +158,9 @@ export const useCornerstoneStackViewport = ({
       } catch (error) {
         console.warn('Cornerstone initialization failed', error);
         if (isActive) {
-          onInitErrorRef.current?.('Viewer konnte nicht initialisiert werden.');
+          onInitErrorRef.current?.(
+            getCornerstoneInitErrorMessage('Viewer konnte nicht initialisiert werden.', error)
+          );
         }
       } finally {
         if (isActive) {

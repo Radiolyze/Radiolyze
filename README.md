@@ -123,6 +123,35 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+## Troubleshooting: Cornerstone WASM codecs
+
+If only specific studies fail in the viewer (for example JPEG2000/JPEG-LS/HTJ2K encoded data), check for these console errors:
+
+- `WebAssembly: Response has unsupported MIME type 'text/html' expected 'application/wasm'`
+- `failed to match magic number`
+- `Error executing method 'decodeTask' on worker 'dicomImageLoader'`
+
+### Quick diagnosis
+
+1. Open browser DevTools > Network and filter by `wasm`.
+2. Reload the failing study.
+3. Verify all codec files under `/workers/*.wasm` return:
+   - `HTTP 200`
+   - `Content-Type: application/wasm`
+   - binary response body (not HTML fallback page)
+
+### Recovery steps
+
+```bash
+# Rebuild worker bundle and codec assets
+npm run bundle:worker
+
+# Restart dev server
+npm run dev
+```
+
+Then hard-reload in the browser (`Ctrl+Shift+R`) with cache disabled in DevTools.
+
 ## URLs (local development)
 
 | Service      | URL                                    |

@@ -10,7 +10,7 @@ import {
   ToolGroupManager, 
   TrackballRotateTool,
 } from '@cornerstonejs/tools';
-import { initCornerstone, cornerstoneToolNames } from '@/services/cornerstone';
+import { initCornerstone, cornerstoneToolNames, getCornerstoneInitErrorMessage } from '@/services/cornerstone';
 import { VRT_PRESETS, VRT_VIEW_ANGLES, DEFAULT_VRT_SETTINGS, type VRTSettings, type VRTViewAngle, type VRTPreset } from '@/types/vrt';
 
 /** Minimal VTK actor property interface (VTK.js types not shipped by Cornerstone). */
@@ -323,7 +323,9 @@ export const useVRTViewport = ({
       } catch (error) {
         console.error('VRT initialization failed:', error);
         if (isActive) {
-          onInitErrorRef.current?.('3D-Viewer konnte nicht initialisiert werden.');
+          onInitErrorRef.current?.(
+            getCornerstoneInitErrorMessage('3D-Viewer konnte nicht initialisiert werden.', error)
+          );
         }
       } finally {
         if (isActive) {
