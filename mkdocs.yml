@@ -13,13 +13,13 @@ theme:
   palette:
     - scheme: default
       primary: blue grey
-      accent: cyan
+      accent: indigo
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
       primary: blue grey
-      accent: cyan
+      accent: indigo
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -45,7 +45,6 @@ theme:
     - content.tooltips
     - toc.follow
     - header.autohide
-    - announce.dismiss
 
 plugins:
   - search
