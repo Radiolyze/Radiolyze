@@ -9,6 +9,7 @@ copyright: "Copyright &copy; 2026 Radiolyze"
 theme:
   name: material
   language: en
+  custom_dir: docs/overrides
   palette:
     - scheme: default
       primary: blue grey
@@ -23,19 +24,28 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   font:
-    text: Roboto
-    code: Roboto Mono
+    text: Inter
+    code: JetBrains Mono
   icon:
     repo: fontawesome/brands/github
+    logo: material/radiobox-marked
   features:
     - navigation.tabs
     - navigation.sections
     - navigation.top
     - navigation.indexes
+    - navigation.footer
+    - navigation.tracking
     - search.highlight
     - search.suggest
+    - search.share
     - content.code.copy
+    - content.code.annotate
     - content.action.edit
+    - content.tooltips
+    - toc.follow
+    - header.autohide
+    - announce.dismiss
 
 plugins:
   - search
@@ -71,7 +81,6 @@ plugins:
             MedGemma: MedGemma
             Model Switching: Modell-Wechsel
             Architecture: Architektur
-            Overview: Übersicht
             System Context: Systemkontext
             Frontend: Frontend
             Backend: Backend
@@ -89,9 +98,7 @@ plugins:
             Schemas: Schemas
             WebSocket: WebSocket
             Workflows: Workflows
-            Fast Reporting: Fast Reporting
             Complex Case: Komplexer Fall
-            Batch Reporting: Batch Reporting
             Compliance: Compliance
             Checklist: Checkliste
             Evidence Overview: Nachweise-Übersicht
@@ -120,6 +127,16 @@ plugins:
             Glossary: Glossar
             FAQ: FAQ
             Legal: Rechtliches
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/radiolyze/radiolyze
+      name: Radiolyze on GitHub
 
 markdown_extensions:
   - admonition

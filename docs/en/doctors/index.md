@@ -52,22 +52,21 @@ If AI is not configured (no GPU overlay), you can still report normally and appr
 
 ## The Reporting Screen at a Glance
 
-```
-┌───────────────┬──────────────────────────┬─────────────────────┐
-│  Left Sidebar │      DICOM Viewer         │    Right Panel      │
-│               │                          │                     │
-│  Worklist     │  Images / Series         │  Findings           │
-│  Patient Info │  Viewer Tools            │  Impression (AI)    │
-│  Prior Studies│  Windowing Presets       │  QA Status          │
-│               │                          │  Templates          │
-└───────────────┴──────────────────────────┴─────────────────────┘
-```
+<div class="grid cards" markdown>
 
-**Left Sidebar** — select studies, navigate series, view prior studies for comparison.
+-   :material-view-list: **Left Sidebar**
 
-**DICOM Viewer** — interactive image viewer with zoom, pan, windowing, and measurement tools.
+    Select studies from the worklist, navigate series, and open prior studies for side-by-side comparison with synchronised scrolling.
 
-**Right Panel** — the reporting workspace: dictate findings, review the AI impression, check QA, and approve.
+-   :material-monitor: **DICOM Viewer**
+
+    Interactive image viewer with zoom, pan, windowing, and measurement tools. Supports multi-series navigation and frame scrolling.
+
+-   :material-text-box-edit: **Right Panel**
+
+    The reporting workspace: dictate or type findings, review the AI-generated impression, check QA warnings, apply templates, and approve the final report.
+
+</div>
 
 ---
 
@@ -75,12 +74,12 @@ If AI is not configured (no GPU overlay), you can still report normally and appr
 
 | Action | How |
 |---|---|
-| Zoom | Scroll wheel or pinch |
-| Pan | Click and drag |
-| Window/Level | Right-click and drag |
-| Window Presets | Toolbar presets (Lung, Bone, Soft Tissue…) |
-| Next/Previous Series | Arrow buttons in the viewer header |
-| Scroll through frames | Scroll wheel (single click first to focus) |
+| :material-magnify: Zoom | Scroll wheel or pinch |
+| :material-cursor-move: Pan | Click and drag |
+| :material-brightness-6: Window/Level | Right-click and drag |
+| :material-tune: Window Presets | Toolbar presets (Lung, Bone, Soft Tissue…) |
+| :material-arrow-left-right: Next/Previous Series | Arrow buttons in the viewer header |
+| :material-layers-triple: Scroll through frames | Scroll wheel (single click first to focus) |
 
 ---
 
@@ -88,13 +87,13 @@ If AI is not configured (no GPU overlay), you can still report normally and appr
 
 | Step | What to do |
 |---|---|
-| 1. Select study | Click a study in the left worklist |
-| 2. Review images | Navigate series, apply windowing presets |
-| 3. Dictate or type findings | Click the microphone or type in the Findings panel |
-| 4. Request AI impression | Click "Generate Impression" |
-| 5. Review AI draft | Read, edit, or delete AI suggestion |
-| 6. QA check | Review warnings from the QA panel |
-| 7. Approve | Click "Approve" — the report is finalised |
+| :material-numeric-1-circle: Select study | Click a study in the left worklist |
+| :material-numeric-2-circle: Review images | Navigate series, apply windowing presets |
+| :material-numeric-3-circle: Dictate or type findings | Click the microphone or type in the Findings panel |
+| :material-numeric-4-circle: Request AI impression | Click "Generate Impression" |
+| :material-numeric-5-circle: Review AI draft | Read, edit, or delete AI suggestion |
+| :material-numeric-6-circle: QA check | Review warnings from the QA panel |
+| :material-numeric-7-circle: Approve | Click "Approve" — the report is finalised |
 
 ---
 

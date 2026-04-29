@@ -1,5 +1,10 @@
 # Getting Started with Radiolyze
 
+!!! tip "Your first 5 minutes"
+    Install Docker, run `docker compose up --build`, and open `http://localhost:5173`.
+    No GPU or configuration required — demo data is included automatically.
+    Full walk-through: [Quickstart Guide](quickstart.md)
+
 ## What is Radiolyze?
 
 Radiolyze is an open-source radiology workflow system that combines:
@@ -20,11 +25,11 @@ The system runs entirely on-premises — patient data never leaves your infrastr
 
 | Role | What Radiolyze helps with |
 |---|---|
-| **Radiologist / Physician** | Faster reporting: AI drafts findings, voice replaces typing, QA catches errors |
-| **IT Administrator** | Docker-based deployment, GPU support (NVIDIA/AMD), DICOM integration via Orthanc |
-| **Researcher / AI Specialist** | Pluggable inference backend, audit trail, prompt customisation |
-| **Compliance Officer** | EU AI Act Article 12–15 logging, human oversight, Annex IV documentation |
-| **Developer / Contributor** | TypeScript + React frontend, FastAPI backend, open and extensible |
+| :material-stethoscope: **Radiologist / Physician** | Faster reporting: AI drafts findings, voice replaces typing, QA catches errors |
+| :material-server: **IT Administrator** | Docker-based deployment, GPU support (NVIDIA/AMD), DICOM integration via Orthanc |
+| :material-flask: **Researcher / AI Specialist** | Pluggable inference backend, audit trail, prompt customisation |
+| :material-scale-balance: **Compliance Officer** | EU AI Act Article 12–15 logging, human oversight, Annex IV documentation |
+| :material-code-braces: **Developer / Contributor** | TypeScript + React frontend, FastAPI backend, open and extensible |
 
 ---
 
@@ -55,12 +60,12 @@ Once you are comfortable, enable GPU inference and/or voice dictation overlays a
 
 | Component | Minimum | Recommended |
 |---|---|---|
-| CPU | 4 cores | 8+ cores |
-| RAM | 8 GB | 16–32 GB |
-| GPU | None (CPU mode) | NVIDIA with 16 GB VRAM (for MedGemma) |
-| Storage | 20 GB (OS + stack) | 100+ GB (DICOM archive) |
-| OS | Linux (any modern) | Ubuntu 22.04 LTS |
-| Docker | 24.x + Compose v2 | Latest stable |
+| :material-cpu-64-bit: CPU | 4 cores | 8+ cores |
+| :material-memory: RAM | 8 GB | 16–32 GB |
+| :material-expansion-card: GPU | None (CPU mode) | NVIDIA with 16 GB VRAM (for MedGemma) |
+| :material-harddisk: Storage | 20 GB (OS + stack) | 100+ GB (DICOM archive) |
+| :material-linux: OS | Linux (any modern) | Ubuntu 22.04 LTS |
+| :material-docker: Docker | 24.x + Compose v2 | Latest stable |
 
 ---
 

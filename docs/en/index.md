@@ -1,8 +1,27 @@
+---
+hide:
+  - toc
+  - navigation
+---
+
+<div class="rl-hero" markdown>
+
 # Radiolyze
 
-**Radiology workflow system with AI-assisted report generation, DICOM viewer, speech recognition, and EU AI Act-compliant audit logging.**
+**Radiology workflow system with AI-assisted report generation, DICOM viewer,
+speech recognition, and EU AI Act-compliant audit logging.**
 
-Radiolyze is an open-source platform that helps radiologists report faster and more consistently — combining a full DICOM viewer, multimodal AI analysis (MedGemma), voice dictation (MedASR/Whisper), structured QA checks, and complete audit logging.
+<span class="rl-badge rl-badge--research">:material-flask: Research &amp; Teaching Only</span>
+&nbsp;
+<span class="rl-badge rl-badge--open-source">:material-open-source-initiative: Open Source</span>
+
+<div class="rl-hero-actions" markdown>
+[Get Started &nbsp; :material-rocket-launch:](getting-started/quickstart.md){ .md-button .md-button--primary }
+[Doctor's Guide &nbsp; :material-stethoscope:](doctors/index.md){ .md-button }
+[GitHub &nbsp; :fontawesome-brands-github:](https://github.com/radiolyze/radiolyze){ .md-button }
+</div>
+
+</div>
 
 !!! danger "Research & teaching only — NOT a medical device"
     Radiolyze is **NOT a certified / approved medical device** and is **NOT intended for clinical use or diagnostic purposes**.

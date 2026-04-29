@@ -1,8 +1,27 @@
+---
+hide:
+  - toc
+  - navigation
+---
+
+<div class="rl-hero" markdown>
+
 # Radiolyze
 
-**Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM-Viewer, Spracherkennung und EU-AI-Act-konformem Audit-Logging.**
+**Radiologie-Workflow-System mit KI-gestützter Befunderstellung, DICOM-Viewer,
+Spracherkennung und EU-AI-Act-konformem Audit-Logging.**
 
-Radiolyze ist eine Open-Source-Plattform, die Radiologen hilft, schneller und konsistenter zu befunden — mit vollständigem DICOM-Viewer, multimodaler KI-Analyse (MedGemma), Sprachdiktat (MedASR/Whisper), strukturierten QA-Checks und lückenlosem Audit-Logging.
+<span class="rl-badge rl-badge--research">:material-flask: Nur Forschung &amp; Lehre</span>
+&nbsp;
+<span class="rl-badge rl-badge--open-source">:material-open-source-initiative: Open Source</span>
+
+<div class="rl-hero-actions" markdown>
+[Schnellstart &nbsp; :material-rocket-launch:](getting-started/quickstart.md){ .md-button .md-button--primary }
+[Arzt-Leitfaden &nbsp; :material-stethoscope:](doctors/index.md){ .md-button }
+[GitHub &nbsp; :fontawesome-brands-github:](https://github.com/radiolyze/radiolyze){ .md-button }
+</div>
+
+</div>
 
 !!! danger "Nur Forschung & Lehre — kein Medizinprodukt"
     Radiolyze ist **KEIN zugelassenes Medizinprodukt** und **nicht für klinischen Einsatz oder diagnostische Zwecke** bestimmt.

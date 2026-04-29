@@ -54,22 +54,21 @@ Wenn KI nicht konfiguriert ist (kein GPU-Overlay), können Sie trotzdem normal b
 
 ## Der Befundungsbildschirm auf einen Blick
 
-```
-┌───────────────┬──────────────────────────┬─────────────────────┐
-│  Linke Sidebar│      DICOM-Viewer         │    Rechtes Panel    │
-│               │                          │                     │
-│  Arbeitsliste │  Bilder / Serien         │  Findings           │
-│  Patient-Info │  Viewer-Tools            │  Impression (KI)    │
-│  Vorstudien   │  Fensterungs-Presets     │  QA-Status          │
-│               │                          │  Vorlagen           │
-└───────────────┴──────────────────────────┴─────────────────────┘
-```
+<div class="grid cards" markdown>
 
-**Linke Sidebar** — Studien auswählen, Serien navigieren, Vorstudien zum Vergleich anzeigen.
+-   :material-view-list: **Linke Sidebar**
 
-**DICOM-Viewer** — interaktiver Bild-Viewer mit Zoom, Pan, Fensterung und Messwerkzeugen.
+    Studien aus der Arbeitsliste auswählen, Serien navigieren und Vorstudien für den Nebeneinander-Vergleich mit synchronem Scrolling öffnen.
 
-**Rechtes Panel** — der Befundungs-Arbeitsbereich: Findings diktieren, KI-Impression prüfen, QA prüfen, freigeben.
+-   :material-monitor: **DICOM-Viewer**
+
+    Interaktiver Bild-Viewer mit Zoom, Pan, Fensterung und Messwerkzeugen. Unterstützt Mehrserien-Navigation und Frame-Scrolling.
+
+-   :material-text-box-edit: **Rechtes Panel**
+
+    Der Befundungs-Arbeitsbereich: Findings diktieren oder tippen, KI-generierte Impression prüfen, QA-Warnungen überprüfen, Vorlagen anwenden und den finalen Bericht freigeben.
+
+</div>
 
 ---
 
@@ -77,12 +76,12 @@ Wenn KI nicht konfiguriert ist (kein GPU-Overlay), können Sie trotzdem normal b
 
 | Aktion | Bedienung |
 |---|---|
-| Zoomen | Mausrad oder Pinch |
-| Verschieben | Klicken und Ziehen |
-| Fensterung/Helligkeit | Rechtsklick und Ziehen |
-| Fensterungs-Presets | Toolbar-Presets (Lunge, Knochen, Weichteile…) |
-| Nächste/Vorherige Serie | Pfeiltasten in der Viewer-Kopfzeile |
-| Durch Frames scrollen | Mausrad (zuerst einmal klicken zum Fokussieren) |
+| :material-magnify: Zoomen | Mausrad oder Pinch |
+| :material-cursor-move: Verschieben | Klicken und Ziehen |
+| :material-brightness-6: Fensterung/Helligkeit | Rechtsklick und Ziehen |
+| :material-tune: Fensterungs-Presets | Toolbar-Presets (Lunge, Knochen, Weichteile…) |
+| :material-arrow-left-right: Nächste/Vorherige Serie | Pfeiltasten in der Viewer-Kopfzeile |
+| :material-layers-triple: Durch Frames scrollen | Mausrad (zuerst einmal klicken zum Fokussieren) |
 
 ---
 
@@ -90,13 +89,13 @@ Wenn KI nicht konfiguriert ist (kein GPU-Overlay), können Sie trotzdem normal b
 
 | Schritt | Was tun |
 |---|---|
-| 1. Studie wählen | Studie in der linken Arbeitsliste anklicken |
-| 2. Bilder prüfen | Serien navigieren, Fensterungs-Presets anwenden |
-| 3. Findings diktieren oder tippen | Mikrofon klicken oder in das Findings-Panel tippen |
-| 4. KI-Impression anfordern | „Impression generieren" klicken |
-| 5. KI-Entwurf prüfen | KI-Vorschlag lesen, bearbeiten oder löschen |
-| 6. QA-Check | Warnungen im QA-Panel prüfen |
-| 7. Freigeben | „Freigeben" klicken — der Bericht wird finalisiert |
+| :material-numeric-1-circle: Studie wählen | Studie in der linken Arbeitsliste anklicken |
+| :material-numeric-2-circle: Bilder prüfen | Serien navigieren, Fensterungs-Presets anwenden |
+| :material-numeric-3-circle: Findings diktieren oder tippen | Mikrofon klicken oder in das Findings-Panel tippen |
+| :material-numeric-4-circle: KI-Impression anfordern | „Impression generieren" klicken |
+| :material-numeric-5-circle: KI-Entwurf prüfen | KI-Vorschlag lesen, bearbeiten oder löschen |
+| :material-numeric-6-circle: QA-Check | Warnungen im QA-Panel prüfen |
+| :material-numeric-7-circle: Freigeben | „Freigeben" klicken — der Bericht wird finalisiert |
 
 ---
 
