@@ -1,21 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import numpy as np
 import SimpleITK as sitk
 from skimage.morphology import ball, opening
 
 from .config import bone_hu_threshold
-
-
-@dataclass
-class LabeledMask:
-    label_id: int
-    name: str
-    color: tuple[float, float, float]
-    array: np.ndarray  # shape (Z, Y, X), bool
-    image: sitk.Image  # uint8 mask carrying the source spacing/origin/direction
+from .labels import LabeledMask
 
 
 def segment_bone(volume: sitk.Image, *, threshold: float | None = None) -> list[LabeledMask]:

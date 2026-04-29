@@ -15,6 +15,10 @@ from .jobs import registry
 from .manifest import build_manifest, write_manifest
 from .meshing import build_mesh
 from .segment_bone import segment_bone
+from .segment_total import (
+    TotalSegmentatorUnavailable,
+    segment_total,
+)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -43,13 +47,26 @@ class JobStatusResponse(BaseModel):
     manifest: dict | None = None
 
 
+def _totalseg_version() -> str | None:
+    try:
+        from importlib.metadata import version
+
+        return version("totalsegmentator")
+    except Exception:
+        return None
+
+
 @app.get("/health")
 def health() -> dict:
+    version = _totalseg_version()
+    presets = ["bone"]
+    if version is not None:
+        presets.append("total")
     return {
         "status": "ok",
         "gpu": gpu_available(),
-        "totalseg_version": None,
-        "presets": ["bone"],
+        "totalseg_version": version,
+        "presets": presets,
     }
 
 
@@ -121,18 +138,91 @@ async def segment_bone_endpoint(
     return SegmentAck(job_id=payload.job_id, status="queued")
 
 
-@app.post("/segment/total", status_code=501)
-async def segment_total_endpoint(payload: SegmentRequest) -> JSONResponse:
-    return JSONResponse(
-        status_code=501,
-        content={
-            "detail": (
-                "TotalSegmentator preset is scheduled for milestone M2; "
-                "only the bone preset is wired for M1."
-            ),
-            "job_id": payload.job_id,
-        },
+async def _run_total_pipeline(req: SegmentRequest) -> None:
+    base_url = _resolve_base_url(req)
+    out_dir = job_dir(req.job_id)
+    registry.update(req.job_id, status="running", progress=0.05)
+
+    loaded = await fetch_series_volume(base_url, req.study_uid, req.series_uid)
+    registry.update(req.job_id, progress=0.20)
+
+    if loaded.modality not in {"CT", "CTA"}:
+        raise RuntimeError(
+            f"TotalSegmentator preset requires a CT series; got modality={loaded.modality}"
+        )
+
+    options = req.options or {}
+    fast = bool(options.get("fast", True))
+    task = str(options.get("task", "total"))
+
+    masks = segment_total(loaded.image, job_dir=out_dir, fast=fast, task=task)
+    registry.update(req.job_id, progress=0.65)
+
+    artifacts = []
+    warnings: list[str] = []
+    for index, labeled in enumerate(masks):
+        artifact = build_mesh(
+            label_id=labeled.label_id,
+            name=labeled.name,
+            color=labeled.color,
+            mask=labeled.array,
+            reference=loaded.image,
+            job_dir=out_dir,
+        )
+        if artifact is None:
+            warnings.append(f"Empty mask for label {labeled.name}; skipped mesh export.")
+            continue
+        artifacts.append(artifact)
+        # Per-label progress so the UI can show a slow ramp during meshing.
+        registry.update(
+            req.job_id,
+            progress=0.65 + 0.30 * ((index + 1) / max(len(masks), 1)),
+        )
+    registry.update(req.job_id, progress=0.95)
+
+    manifest = build_manifest(
+        job_id=req.job_id,
+        preset="total",
+        study_uid=req.study_uid,
+        series_uid=req.series_uid,
+        modality=loaded.modality,
+        reference=loaded.image,
+        artifacts=artifacts,
+        warnings=warnings,
     )
+    write_manifest(out_dir, manifest)
+    registry.update(req.job_id, status="done", progress=1.0, manifest=manifest)
+
+
+async def _run_total_and_record(req: SegmentRequest) -> None:
+    try:
+        await _run_total_pipeline(req)
+    except TotalSegmentatorUnavailable as exc:
+        logger.error("TotalSegmentator missing for job %s: %s", req.job_id, exc)
+        registry.update(req.job_id, status="failed", error=str(exc))
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Total job %s failed", req.job_id)
+        registry.update(req.job_id, status="failed", error=str(exc))
+
+
+@app.post("/segment/total", response_model=SegmentAck, status_code=202)
+async def segment_total_endpoint(
+    payload: SegmentRequest, background: BackgroundTasks
+) -> SegmentAck:
+    if _totalseg_version() is None:
+        return JSONResponse(  # type: ignore[return-value]
+            status_code=503,
+            content={
+                "detail": (
+                    "totalsegmentator is not installed in this image. "
+                    "Rebuild with the M2 requirements."
+                ),
+                "job_id": payload.job_id,
+            },
+        )
+    registry.create(payload.job_id, preset="total")
+    background.add_task(_run_total_and_record, payload)
+    return SegmentAck(job_id=payload.job_id, status="queued")
 
 
 def _load_manifest(job_id: str) -> dict | None:

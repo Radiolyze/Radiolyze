@@ -129,13 +129,64 @@ def test_bone_pipeline_rejects_non_ct(segmenter_app, monkeypatch):
         assert "CT" in (final["error"] or "")
 
 
-def test_total_preset_returns_501(segmenter_app):
+def test_total_preset_returns_503_when_totalsegmentator_missing(
+    segmenter_app, monkeypatch
+):
+    from app import main as segmenter_main
+
+    monkeypatch.setattr(segmenter_main, "_totalseg_version", lambda: None)
     with TestClient(segmenter_app) as client:
         response = client.post(
             "/segment/total",
             json={"job_id": "anything", "study_uid": "x", "series_uid": "y"},
         )
-        assert response.status_code == 501
+        assert response.status_code == 503
+
+
+def test_total_preset_runs_with_mocked_runner(segmenter_app, monkeypatch):
+    """Full /segment/total round-trip with a fake TotalSegmentator runner."""
+    from app import main as segmenter_main, segment_total
+
+    monkeypatch.setattr(segmenter_main, "_totalseg_version", lambda: "fake-2.0.0")
+
+    def _fake_runner(*, input, output, task, fast, device, ml=False, quiet=True):
+        out = Path(output)
+        out.mkdir(parents=True, exist_ok=True)
+        # Write two non-empty label masks shaped like the source CT.
+        ref = sitk.ReadImage(input)
+        shape = ref.GetSize()[::-1]
+        for name, center in (("spleen", (8, 16, 16)), ("liver", (8, 12, 12))):
+            arr = np.zeros(shape, dtype=np.uint8)
+            cz, cy, cx = center
+            zi, yi, xi = np.indices(shape)
+            arr[(zi - cz) ** 2 + (yi - cy) ** 2 + (xi - cx) ** 2 <= 9] = 1
+            label_image = sitk.GetImageFromArray(arr)
+            label_image.CopyInformation(ref)
+            sitk.WriteImage(
+                label_image, str(out / f"{name}.nii.gz"), useCompression=True
+            )
+
+    segment_total._set_runner_for_testing(_fake_runner)
+
+    with TestClient(segmenter_app) as client:
+        response = client.post(
+            "/segment/total",
+            json={
+                "job_id": "total-job-1",
+                "study_uid": "1.2.3",
+                "series_uid": "1.2.3.4",
+                "options": {"fast": True, "task": "total"},
+            },
+        )
+        assert response.status_code == 202
+        final = _wait_for_status(client, "total-job-1", target="done", timeout_s=10.0)
+        assert final["status"] == "done"
+        manifest = final["manifest"]
+        assert manifest["preset"] == "total"
+        names = sorted(label["name"] for label in manifest["labels"])
+        assert names == ["liver", "spleen"]
+
+    segment_total._set_runner_for_testing(None)
 
 
 def test_unknown_job_404(segmenter_app):

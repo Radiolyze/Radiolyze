@@ -81,12 +81,24 @@
     "opacity": "Deckkraft",
     "color": "Farbe",
     "search": "Label suchen…",
+    "minVolume": "Mind. Volumen",
+    "noResults": "Keine Labels passen zum Filter.",
     "unsupported": "3D-Modelle benötigen eine CT-Serie mit ≥30 Schichten.",
     "noSeries": "Bitte eine CT-Serie auswählen.",
     "disclaimer": "Research/Demo. Nicht zur Diagnose.",
+    "attribution": {
+      "aria": "Lizenz- und Modell-Quellen anzeigen",
+      "title": "Modelle & Lizenzen",
+      "body": "Die TotalSegmentator-Pipeline basiert auf öffentlich zugänglichen Modellen unter Apache-2.0-Lizenz. Quelle und Gewichte liegen außerhalb von Radiolyze."
+    },
+    "sort": {
+      "toggle": "Sortierung umschalten",
+      "byVolume": "Nach Volumen sortieren",
+      "byName": "Alphabetisch sortieren"
+    },
     "preset": {
       "bone": "Knochen (HU-Threshold)",
-      "total": "Multi-Organ (TotalSegmentator) — Phase 2"
+      "total": "Multi-Organ (TotalSegmentator)"
     },
     "status": {
       "queued": "In Warteschlange",

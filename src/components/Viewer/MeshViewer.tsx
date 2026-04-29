@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { Loader2, RotateCcw, ArrowDownAZ, ArrowDownWideNarrow } from 'lucide-react';
 import type { Series } from '@/types/radiology';
 import type {
   LabelDisplayState,
@@ -10,6 +10,7 @@ import type {
 } from '@/types/segmentation';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import {
@@ -19,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Toggle } from '@/components/ui/toggle';
 import { useSegmentation } from '@/hooks/useSegmentation';
 import { useMeshScene } from '@/hooks/useMeshScene';
 import { segmentationClient } from '@/services/segmentationClient';
@@ -32,13 +34,27 @@ interface MeshViewerProps {
 }
 
 const DEFAULT_PRESET: SegmentationPreset = 'bone';
+const PREFETCH_TOP_N = 10;
+type SortMode = 'volume' | 'name';
 
-function defaultLabelState(label: SegmentationLabel): LabelDisplayState {
+function defaultLabelState(
+  label: SegmentationLabel,
+  options: { visible: boolean },
+): LabelDisplayState {
   return {
-    visible: true,
+    visible: options.visible,
     opacity: 1,
     color: label.color,
   };
+}
+
+function topByVolume(labels: SegmentationLabel[], n: number): Set<number> {
+  return new Set(
+    [...labels]
+      .sort((a, b) => b.volume_ml - a.volume_ml)
+      .slice(0, n)
+      .map((label) => label.id),
+  );
 }
 
 export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
@@ -56,9 +72,15 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
 
   const [preset, setPreset] = useState<SegmentationPreset>(DEFAULT_PRESET);
   const [labelStates, setLabelStates] = useState<Record<number, LabelDisplayState>>({});
+  const [search, setSearch] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('volume');
+  const [minVolumeMl, setMinVolumeMl] = useState(0);
   const loadedLabelsRef = useRef<Set<number>>(new Set());
+  const hydratedManifestRef = useRef<string | null>(null);
 
   const manifest: SegmentationManifest | null = status?.manifest ?? null;
+  const totalLabelCount = manifest?.labels.length ?? 0;
+  const isLargeManifest = totalLabelCount > 20;
 
   const fetchAndLoadLabel = useCallback(
     async (label: SegmentationLabel) => {
@@ -76,30 +98,38 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
     [jobId, loadVtp, setColor],
   );
 
-  // Once the manifest arrives, hydrate label states + fetch meshes for visible labels.
+  // Hydrate label state once per manifest (re-runs when a fresh job lands).
   useEffect(() => {
     if (!manifest || !isReady) return;
-    setLabelStates((current) => {
-      if (Object.keys(current).length > 0) return current;
-      const next: Record<number, LabelDisplayState> = {};
-      manifest.labels.forEach((label) => {
-        next[label.id] = defaultLabelState(label);
-      });
-      return next;
-    });
+    if (hydratedManifestRef.current === manifest.job_id) return;
+    hydratedManifestRef.current = manifest.job_id;
+
+    const initialVisible = isLargeManifest
+      ? topByVolume(manifest.labels, PREFETCH_TOP_N)
+      : new Set(manifest.labels.map((label) => label.id));
+
+    const next: Record<number, LabelDisplayState> = {};
     manifest.labels.forEach((label) => {
-      if (labelStates[label.id]?.visible !== false) {
-        void fetchAndLoadLabel(label);
-      }
+      next[label.id] = defaultLabelState(label, { visible: initialVisible.has(label.id) });
     });
-    // labelStates intentionally not in deps to avoid loops; we only initialize once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manifest, isReady, fetchAndLoadLabel]);
+    setLabelStates(next);
+
+    // Prefetch only the initially visible labels. Everything else loads
+    // on-demand when the user toggles it on.
+    manifest.labels
+      .filter((label) => initialVisible.has(label.id))
+      .forEach((label) => {
+        void fetchAndLoadLabel(label);
+      });
+  }, [manifest, isReady, isLargeManifest, fetchAndLoadLabel]);
 
   const handleStart = useCallback(async () => {
     if (!series || !studyUid) return;
     loadedLabelsRef.current.clear();
     setLabelStates({});
+    hydratedManifestRef.current = null;
+    setSearch('');
+    setMinVolumeMl(0);
     await start({
       studyUid,
       seriesUid: series.id,
@@ -111,7 +141,10 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
     (label: SegmentationLabel, checked: boolean) => {
       setLabelStates((current) => ({
         ...current,
-        [label.id]: { ...(current[label.id] ?? defaultLabelState(label)), visible: checked },
+        [label.id]: {
+          ...(current[label.id] ?? defaultLabelState(label, { visible: checked })),
+          visible: checked,
+        },
       }));
       if (checked) {
         void fetchAndLoadLabel(label);
@@ -127,7 +160,10 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
     (label: SegmentationLabel, value: number) => {
       setLabelStates((current) => ({
         ...current,
-        [label.id]: { ...(current[label.id] ?? defaultLabelState(label)), opacity: value },
+        [label.id]: {
+          ...(current[label.id] ?? defaultLabelState(label, { visible: true })),
+          opacity: value,
+        },
       }));
       setOpacity(label.id, value);
     },
@@ -138,6 +174,20 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
     if (!series) return false;
     return series.modality === 'CT' && (series.frameCount ?? 0) >= 30;
   }, [series]);
+
+  const displayedLabels = useMemo(() => {
+    if (!manifest) return [];
+    const term = search.trim().toLowerCase();
+    const filtered = manifest.labels.filter((label) => {
+      if (label.volume_ml < minVolumeMl) return false;
+      if (term && !label.name.toLowerCase().includes(term)) return false;
+      return true;
+    });
+    if (sortMode === 'name') {
+      return filtered.slice().sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return filtered.slice().sort((a, b) => b.volume_ml - a.volume_ml);
+  }, [manifest, search, sortMode, minVolumeMl]);
 
   if (!series) {
     return <ViewerEmptyState title={t('mesh.noSeries')} />;
@@ -172,9 +222,7 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="bone">{t('mesh.preset.bone')}</SelectItem>
-            <SelectItem value="total" disabled>
-              {t('mesh.preset.total')}
-            </SelectItem>
+            <SelectItem value="total">{t('mesh.preset.total')}</SelectItem>
           </SelectContent>
         </Select>
         <Button
@@ -210,20 +258,73 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
 
       {/* Label panel */}
       {isFinished && manifest && manifest.labels.length > 0 && (
-        <div className="absolute top-12 right-4 z-20 max-h-[80%] w-72 overflow-y-auto rounded-md border bg-card/90 p-3 backdrop-blur">
-          <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-            {t('mesh.labels')}
-          </h3>
-          <ul className="space-y-3">
-            {manifest.labels.map((label) => {
-              const state = labelStates[label.id] ?? defaultLabelState(label);
+        <div className="absolute top-12 right-4 z-20 flex max-h-[85%] w-80 flex-col gap-2 rounded-md border bg-card/90 p-3 backdrop-blur">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground">
+              {t('mesh.labels')}{' '}
+              <span className="font-normal normal-case text-muted-foreground/70">
+                {displayedLabels.length}/{totalLabelCount}
+              </span>
+            </h3>
+            <Toggle
+              size="sm"
+              variant="outline"
+              pressed={sortMode === 'name'}
+              onPressedChange={(pressed) => setSortMode(pressed ? 'name' : 'volume')}
+              aria-label={t('mesh.sort.toggle')}
+              title={
+                sortMode === 'name'
+                  ? t('mesh.sort.byName')
+                  : t('mesh.sort.byVolume')
+              }
+            >
+              {sortMode === 'name' ? (
+                <ArrowDownAZ className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowDownWideNarrow className="h-3.5 w-3.5" />
+              )}
+            </Toggle>
+          </div>
+
+          {isLargeManifest && (
+            <>
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('mesh.search')}
+                className="h-7 text-xs"
+                aria-label={t('mesh.search')}
+              />
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <span className="shrink-0">{t('mesh.minVolume')}</span>
+                <Slider
+                  value={[minVolumeMl]}
+                  min={0}
+                  max={50}
+                  step={1}
+                  onValueChange={([v]) => setMinVolumeMl(v)}
+                  aria-label={t('mesh.minVolume')}
+                  className="flex-1"
+                />
+                <span className="w-10 text-right tabular-nums">
+                  {minVolumeMl} ml
+                </span>
+              </div>
+            </>
+          )}
+
+          <ul className="space-y-3 overflow-y-auto pr-1">
+            {displayedLabels.map((label) => {
+              const state =
+                labelStates[label.id] ??
+                defaultLabelState(label, { visible: false });
               const swatch = `rgb(${state.color.map((c) => Math.round(c * 255)).join(',')})`;
               return (
                 <li key={label.id} className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span
                       aria-hidden
-                      className="h-3 w-3 rounded-sm border"
+                      className="h-3 w-3 shrink-0 rounded-sm border"
                       style={{ backgroundColor: swatch }}
                     />
                     <Checkbox
@@ -235,11 +336,12 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
                     />
                     <label
                       htmlFor={`mesh-toggle-${label.id}`}
-                      className="text-sm leading-none flex-1 cursor-pointer"
+                      className="flex-1 cursor-pointer truncate text-sm leading-none"
+                      title={label.name}
                     >
-                      {label.name}
+                      {label.name.replace(/_/g, ' ')}
                     </label>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
                       {label.volume_ml.toFixed(0)} ml
                     </span>
                   </div>
@@ -256,6 +358,9 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
                 </li>
               );
             })}
+            {displayedLabels.length === 0 && (
+              <li className="text-xs text-muted-foreground">{t('mesh.noResults')}</li>
+            )}
           </ul>
         </div>
       )}

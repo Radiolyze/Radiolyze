@@ -51,12 +51,21 @@ def test_create_bone_job_persists_row_and_audit(client, db):
     )
 
 
-def test_total_preset_returns_501(client):
+def test_total_preset_is_accepted(client, db):
+    """M2: TotalSegmentator preset is now wired; jobs queue normally."""
     response = client.post(
         "/api/v1/segmentation/jobs",
         json={"study_uid": "x", "series_uid": "y", "preset": "total"},
     )
-    assert response.status_code == 501
+    assert response.status_code == 202
+    body = response.json()
+    assert body["preset"] == "total"
+
+    from app.models import SegmentationJob
+
+    record = db.get(SegmentationJob, body["job_id"])
+    assert record is not None
+    assert record.preset == "total"
 
 
 def test_get_job_returns_running_then_finished(client, db, monkeypatch):

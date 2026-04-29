@@ -327,7 +327,7 @@ def run_segmentation_job(payload: dict[str, Any]) -> dict[str, Any]:
     requested_by = payload.get("requested_by") or "system"
 
     poll_interval = float(os.getenv("SEGMENTATION_POLL_INTERVAL", "3"))
-    timeout_s = float(os.getenv("SEGMENTATION_JOB_TIMEOUT", "900"))
+    timeout_s = float(os.getenv("SEGMENTATION_JOB_TIMEOUT", "1800"))
 
     db = SessionLocal()
     try:

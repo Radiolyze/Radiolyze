@@ -17,3 +17,21 @@ services:
       - db
       - redis
       - vllm-medgemma
+
+  segmenter:
+    build:
+      context: ../../services/segmenter
+      dockerfile: Dockerfile.gpu
+    image: radiolyze-segmenter-gpu
+    gpus: all
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      TOTALSEG_DEVICE: gpu
+      # Cache the ~250 MB fast-mode + ~2 GB full-mode weights between runs.
+      TOTALSEG_HOME: /models
+    volumes:
+      - totalseg-models:/models
+
+volumes:
+  totalseg-models:

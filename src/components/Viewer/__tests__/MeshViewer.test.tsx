@@ -145,4 +145,85 @@ describe('MeshViewer', () => {
     fireEvent.click(checkbox);
     expect(mocks.setVisibility).toHaveBeenLastCalledWith(1, true);
   });
+
+  it('lazy-loads only the top-N labels for a large multi-organ manifest', async () => {
+    const labels = Array.from({ length: 25 }, (_, i) => ({
+      id: i + 1,
+      name: `organ_${i + 1}`,
+      color: [0.5, 0.5, 0.5] as [number, number, number],
+      volume_ml: 100 - i, // descending volume so id=1 is largest
+      voxel_count: 1000,
+      mask_url: `/m/${i + 1}`,
+      mesh_url: `/x/${i + 1}`,
+    }));
+    mocks.segmentationState.status = {
+      job_id: 'big-job',
+      status: 'finished',
+      progress: 1,
+      preset: 'total',
+      study_uid: 's',
+      series_uid: 's.1',
+      manifest: {
+        job_id: 'big-job',
+        preset: 'total',
+        source: { study_uid: 's', series_uid: 's.1', modality: 'CT' },
+        volume: { spacing: [1, 1, 1], origin: [0, 0, 0], direction: [], shape: [] },
+        labels,
+        warnings: [],
+      },
+    };
+
+    renderWithQuery(<MeshViewer series={ctSeries} studyUid="1.2.3" />);
+
+    // Only 10 (PREFETCH_TOP_N) labels should be pre-fetched, not all 25.
+    await waitFor(() => expect(mocks.fetchMesh).toHaveBeenCalled());
+    expect(mocks.fetchMesh).toHaveBeenCalledTimes(10);
+    const fetchedIds = (mocks.fetchMesh.mock.calls as unknown[][])
+      .map((call) => call[1] as number)
+      .sort((a, b) => a - b);
+    expect(fetchedIds).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  it('filters labels via the search input', async () => {
+    const labels = [
+      { id: 1, name: 'spleen', color: [1, 0, 0] as [number, number, number],
+        volume_ml: 80, voxel_count: 1, mask_url: 'a', mesh_url: 'b' },
+      { id: 2, name: 'liver', color: [1, 0, 0] as [number, number, number],
+        volume_ml: 1500, voxel_count: 1, mask_url: 'a', mesh_url: 'b' },
+      ...Array.from({ length: 20 }, (_, i) => ({
+        id: 3 + i, name: `rib_left_${i + 1}`,
+        color: [0.9, 0.9, 0.7] as [number, number, number],
+        volume_ml: 5, voxel_count: 1, mask_url: 'a', mesh_url: 'b',
+      })),
+    ];
+    mocks.segmentationState.status = {
+      job_id: 'search-job',
+      status: 'finished',
+      progress: 1,
+      preset: 'total',
+      study_uid: 's',
+      series_uid: 's.1',
+      manifest: {
+        job_id: 'search-job',
+        preset: 'total',
+        source: { study_uid: 's', series_uid: 's.1', modality: 'CT' },
+        volume: { spacing: [1, 1, 1], origin: [0, 0, 0], direction: [], shape: [] },
+        labels,
+        warnings: [],
+      },
+    };
+
+    renderWithQuery(<MeshViewer series={ctSeries} studyUid="1.2.3" />);
+
+    await waitFor(() => expect(mocks.fetchMesh).toHaveBeenCalled());
+    expect(screen.getByText(/spleen/i)).toBeInTheDocument();
+    expect(screen.getByText(/liver/i)).toBeInTheDocument();
+
+    const searchBox = screen.getByPlaceholderText('mesh.search');
+    fireEvent.change(searchBox, { target: { value: 'rib' } });
+
+    expect(screen.queryByText(/spleen/i)).toBeNull();
+    expect(screen.queryByText(/liver/i)).toBeNull();
+    expect(screen.getAllByText(/rib left/i).length).toBeGreaterThan(0);
+  });
 });

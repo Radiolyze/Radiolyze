@@ -36,7 +36,7 @@ router = APIRouter(prefix="/api/v1/segmentation", tags=["segmentation"])
 
 def _job_timeout() -> int:
     try:
-        return int(os.getenv("SEGMENTATION_JOB_TIMEOUT", "900"))
+        return int(os.getenv("SEGMENTATION_JOB_TIMEOUT", "1800"))
     except ValueError:
         return 900
 
@@ -53,12 +53,6 @@ def create_segmentation_job(
     payload: SegmentationCreateRequest,
     db: Session = Depends(get_db),
 ) -> SegmentationCreateResponse:
-    if payload.preset == "total":
-        raise HTTPException(
-            status_code=501,
-            detail="The TotalSegmentator preset is scheduled for milestone M2.",
-        )
-
     job_id = str(uuid.uuid4())
     queued_at = utc_now()
     requested_by = payload.requested_by or "system"
