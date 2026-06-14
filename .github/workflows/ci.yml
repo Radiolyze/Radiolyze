@@ -36,7 +36,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -56,7 +56,7 @@ jobs:
   frontend-lint-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -74,7 +74,7 @@ jobs:
   docs-mkdocs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -87,6 +87,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-lint-test, frontend-lint-test, docs-mkdocs]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: docker build -f docker/Dockerfile.frontend -t radiolyze-frontend .
       - run: docker build -t radiolyze-backend ./backend
