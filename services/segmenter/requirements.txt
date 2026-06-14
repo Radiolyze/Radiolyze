@@ -15,5 +15,5 @@ pydicom-seg>=0.4
 # --- M2: TotalSegmentator (multi-organ) ---
 # torch is pulled transitively but pinned here so docker rebuilds do not
 # silently switch the CUDA build channel out from under us.
-torch>=2.4
+torch>=2.12.0
 totalsegmentator>=2.4
