@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 SCHEMA_VERSION = "1.2"
 
@@ -51,6 +51,16 @@ class SummaryOutput(BaseAIOutput):
     )
     limitations: str | None = None
     confidence: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _require_evidence_when_images(cls, data: Any, info: ValidationInfo) -> Any:
+        context = info.context if info else None
+        if context and context.get("has_images") and not data.get("evidence_indices"):
+            raise ValueError(
+                "evidence_indices required when image_refs are present (EU AI Act Art. 12)"
+            )
+        return data
 
     @field_validator("summary")
     @classmethod
@@ -178,6 +188,16 @@ class ImpressionOutput(BaseAIOutput):
         validation_alias=AliasChoices("evidence_indices", "evidenceIndices"),
     )
     confidence: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _require_evidence_when_images(cls, data: Any, info: ValidationInfo) -> Any:
+        context = info.context if info else None
+        if context and context.get("has_images") and not data.get("evidence_indices"):
+            raise ValueError(
+                "evidence_indices required when image_refs are present (EU AI Act Art. 12)"
+            )
+        return data
 
     @field_validator("impression")
     @classmethod
