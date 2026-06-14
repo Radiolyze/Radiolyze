@@ -184,6 +184,67 @@ def _run_scheduled_drift() -> None:
         db.close()
 
 
+def _setup_pgvector() -> None:
+    """Enable pgvector extension and add native vector column on PostgreSQL.
+
+    No-op for SQLite. Errors are logged but do not prevent startup; the
+    semantic-search endpoint falls back to in-memory cosine similarity.
+    """
+    from sqlalchemy import text
+
+    from .db import DATABASE_URL
+
+    if not DATABASE_URL.startswith("postgresql"):
+        return
+
+    dim = int(os.getenv("EMBEDDING_DIM", "768"))
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            conn.execute(
+                text(
+                    f"ALTER TABLE guidelines"
+                    f" ADD COLUMN IF NOT EXISTS embedding vector({dim})"
+                )
+            )
+            conn.commit()
+    except Exception:
+        logger.exception("pgvector setup failed – semantic search will use in-memory cosine")
+        return
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS guidelines_embedding_hnsw_idx"
+                    " ON guidelines USING hnsw (embedding vector_cosine_ops)"
+                )
+            )
+            conn.commit()
+        logger.info("pgvector ready (dim=%d, HNSW index)", dim)
+    except Exception:
+        logger.warning("pgvector HNSW index skipped (requires pgvector >= 0.5)")
+
+    try:
+        from .queue import get_queue
+        from .tasks import embed_guideline
+
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT id FROM guidelines"
+                    " WHERE embedding IS NULL AND embedding_vec IS NOT NULL"
+                )
+            ).all()
+        if rows:
+            q = get_queue()
+            for (gid,) in rows:
+                q.enqueue(embed_guideline, gid)
+            logger.info("Enqueued %d guidelines for pgvector backfill", len(rows))
+    except Exception:
+        logger.warning("pgvector backfill enqueue failed (non-critical)")
+
+
 @app.on_event("startup")
 async def on_startup() -> None:
     # Validate JWT configuration before anything else
@@ -192,6 +253,7 @@ async def on_startup() -> None:
     validate_jwt_config()
 
     Base.metadata.create_all(bind=engine)
+    _setup_pgvector()
     # Seed default admin user if none exists
     from .auth import hash_password, is_production_env, verify_password
     from .db import SessionLocal

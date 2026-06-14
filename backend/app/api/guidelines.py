@@ -14,9 +14,10 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 
+from ..db import DATABASE_URL
 from ..deps import get_db, require_admin
 from ..mock_logic import utc_now
 from ..models import Guideline
@@ -79,6 +80,33 @@ def _like_search(
     ]
 
 
+def _pgvector_search(
+    db: Session, query_vec: list[float], category: str | None, limit: int
+) -> list[GuidelineResponse]:
+    """SQL-level ANN search using pgvector <=> (cosine distance) operator."""
+    cat_filter = "AND category = :cat " if category else ""
+    params: dict = {"vec": str(query_vec), "limit": limit}
+    if category:
+        params["cat"] = category
+    rows = db.execute(
+        text(
+            "SELECT id, 1 - (embedding <=> CAST(:vec AS vector)) AS score"
+            " FROM guidelines"
+            " WHERE is_active = true AND embedding IS NOT NULL "
+            + cat_filter
+            + "ORDER BY embedding <=> CAST(:vec AS vector) LIMIT :limit"
+        ),
+        params,
+    ).mappings().all()
+    ids = [r["id"] for r in rows]
+    scores = {r["id"]: float(r["score"]) for r in rows}
+    guidelines = db.query(Guideline).filter(Guideline.id.in_(ids)).all()
+    return [
+        GuidelineResponse.model_validate(g)
+        for g in sorted(guidelines, key=lambda g: scores.get(g.id, 0.0), reverse=True)
+    ]
+
+
 def _enqueue_embed(guideline_id: str) -> None:
     """Enqueue an embedding job; logs and ignores errors (non-critical path)."""
     try:
@@ -119,6 +147,16 @@ def semantic_search_guidelines(
     query_vec = embed_text(q.strip()) if q.strip() else None
 
     if query_vec is not None:
+        # PostgreSQL + pgvector: SQL-level ANN search with HNSW index
+        if DATABASE_URL.startswith("postgresql"):
+            try:
+                results = _pgvector_search(db, query_vec, category, limit)
+                if results:
+                    return results
+            except Exception:
+                logger.exception("pgvector search failed, falling back to in-memory cosine")
+
+        # SQLite / pgvector unavailable: in-memory cosine similarity
         base = db.query(Guideline).filter(
             Guideline.is_active.is_(True),
             Guideline.embedding_status == "done",
@@ -134,7 +172,6 @@ def semantic_search_guidelines(
                 reverse=True,
             )
             return [GuidelineResponse.model_validate(g) for g in scored[:limit]]
-        # No embeddings ready yet – fall through to ILIKE
 
     return _like_search(db, q, category, limit)
 
