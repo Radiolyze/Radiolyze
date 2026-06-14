@@ -760,7 +760,11 @@ def embed_guideline(guideline_id: str) -> None:
 
     Called as an RQ background job whenever a guideline is created or updated.
     Sets embedding_status to 'done', 'skip' (no service configured), or 'failed'.
+    Also populates the native pgvector column when running on PostgreSQL.
     """
+    from sqlalchemy import text as sa_text
+
+    from .db import DATABASE_URL
     from .models import Guideline
     from .utils.embedding import embed_text
 
@@ -771,13 +775,23 @@ def embed_guideline(guideline_id: str) -> None:
             logger.warning("embed_guideline: guideline %s not found", guideline_id)
             return
 
-        text = "\n".join(
+        content = "\n".join(
             part for part in [guideline.title, guideline.body, guideline.keywords] if part
         )
-        vec = embed_text(text)
+        vec = embed_text(content)
         guideline.embedding_vec = vec
         guideline.embedding_status = "done" if vec is not None else "skip"
         db.commit()
+
+        if vec is not None and DATABASE_URL.startswith("postgresql"):
+            db.execute(
+                sa_text(
+                    "UPDATE guidelines SET embedding = CAST(:vec AS vector) WHERE id = :id"
+                ),
+                {"vec": str(vec), "id": guideline_id},
+            )
+            db.commit()
+
         logger.info(
             "embed_guideline: %s → status=%s", guideline_id, guideline.embedding_status
         )

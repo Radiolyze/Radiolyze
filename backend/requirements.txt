@@ -12,3 +12,4 @@ python-jose[cryptography]
 bcrypt>=4.1.2,<5
 reportlab
 apscheduler>=3.10,<4
+pgvector>=0.3.0
