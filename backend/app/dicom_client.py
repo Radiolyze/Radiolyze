@@ -75,3 +75,41 @@ def store_dicom_object(study_instance_uid: str, dicom_bytes: bytes) -> str:
 def store_sr(study_instance_uid: str, sr_bytes: bytes) -> str:
     """Backwards-compatible alias. Prefer :func:`store_dicom_object`."""
     return store_dicom_object(study_instance_uid, sr_bytes)
+
+
+def retrieve_rendered_frame(
+    study_uid: str, series_uid: str, instance_uid: str, frame: int = 1
+) -> bytes:
+    """Retrieve a rendered JPEG frame from Orthanc via WADO-RS /rendered."""
+    base_url = _dicom_web_base_url()
+    url = (
+        f"{base_url}/studies/{study_uid}/series/{series_uid}"
+        f"/instances/{instance_uid}/frames/{frame}/rendered"
+    )
+    auth = _orthanc_auth()
+    with httpx.Client(timeout=_request_timeout()) as client:
+        response = client.get(url, headers={"Accept": "image/jpeg"}, auth=auth)
+        response.raise_for_status()
+    return response.content
+
+
+def retrieve_and_cache_frame(image_ref: dict) -> str:
+    """Fetch frame bytes from Orthanc, cache 5 min in Redis, return base64 data URL."""
+    import base64
+
+    from .queue import get_redis
+
+    study = image_ref["study_id"]
+    series = image_ref["series_id"]
+    instance = image_ref["instance_id"]
+    frame = image_ref.get("frame_index", 0) + 1  # frame_index is 0-based; WADO-RS is 1-based
+    cache_key = f"frame:{study}:{series}:{instance}:{frame}"
+
+    redis_client = get_redis()
+    cached = redis_client.get(cache_key)
+    if not cached:
+        cached = retrieve_rendered_frame(study, series, instance, frame)
+        redis_client.setex(cache_key, 300, cached)
+
+    encoded = base64.b64encode(cached).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"

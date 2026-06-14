@@ -75,6 +75,10 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     image_urls = payload.get("image_urls") or []
     image_paths = payload.get("image_paths") or []
     image_refs = payload.get("image_refs") or []
+    if not image_urls and image_refs:
+        from .dicom_client import retrieve_and_cache_frame
+
+        image_urls = [retrieve_and_cache_frame(ref) for ref in image_refs]
     requested_by = payload.get("requested_by") or "system"
     requested_model_version = payload.get("model_version") or "mock-medgemma-0.1"
     input_hash = payload.get("input_hash")
