@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_db
+from ..deps import get_db, require_radiologist_or_admin
 from ..models import Annotation
 from ..utils.time import now_iso
 
@@ -140,6 +140,7 @@ def _serialize_annotation(ann: Annotation) -> AnnotationResponse:
 @router.post("/api/v1/annotations", response_model=AnnotationResponse)
 def create_annotation(
     payload: AnnotationCreateRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> AnnotationResponse:
     now = now_iso()
@@ -189,6 +190,7 @@ def list_annotations(
     verified_only: bool = False,
     limit: int = 100,
     offset: int = 0,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[AnnotationResponse]:
     query = db.query(Annotation)
@@ -208,6 +210,7 @@ def list_annotations(
 @router.get("/api/v1/annotations/{annotation_id}", response_model=AnnotationResponse)
 def get_annotation(
     annotation_id: str,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> AnnotationResponse:
     ann = db.query(Annotation).filter(Annotation.id == annotation_id).first()
@@ -220,6 +223,7 @@ def get_annotation(
 def update_annotation(
     annotation_id: str,
     payload: AnnotationUpdateRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> AnnotationResponse:
     ann = db.query(Annotation).filter(Annotation.id == annotation_id).first()
@@ -265,6 +269,7 @@ def update_annotation(
 def delete_annotation(
     annotation_id: str,
     actor_id: str | None = None,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     ann = db.query(Annotation).filter(Annotation.id == annotation_id).first()
@@ -290,6 +295,7 @@ def delete_annotation(
 def verify_annotation(
     annotation_id: str,
     payload: AnnotationVerifyRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> AnnotationResponse:
     ann = db.query(Annotation).filter(Annotation.id == annotation_id).first()

@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_current_user, get_db
+from ..deps import get_current_user, get_db, require_radiologist_or_admin
 from ..dicom_client import store_dicom_object
 from ..mock_logic import utc_now
 from ..models import SegmentationJob, User
@@ -74,6 +74,7 @@ def _audit_mesh_access(
 @router.post("/jobs", response_model=SegmentationCreateResponse, status_code=202)
 def create_segmentation_job(
     payload: SegmentationCreateRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> SegmentationCreateResponse:
     service = SegmentationService(db)

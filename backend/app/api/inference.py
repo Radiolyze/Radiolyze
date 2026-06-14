@@ -10,7 +10,7 @@ from rq.job import Job
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_db
+from ..deps import get_db, require_radiologist_or_admin
 from ..mock_logic import utc_now
 from ..models import InferenceJob, Report
 from ..queue import get_redis
@@ -104,6 +104,7 @@ def get_inference_schemas() -> dict:
 @router.post("/api/v1/inference/queue", response_model=InferenceQueueResponse)
 async def queue_inference(
     payload: InferenceQueueRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> InferenceQueueResponse:
     report = None
@@ -192,6 +193,7 @@ async def queue_inference(
 @router.post("/api/v1/inference/localize", response_model=InferenceQueueResponse)
 async def queue_localize(
     payload: LocalizeRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> InferenceQueueResponse:
     """Queue on-demand single-frame localization (bounding-box findings)."""
@@ -294,6 +296,7 @@ async def queue_localize(
 @router.post("/api/v1/inference/volume", response_model=InferenceQueueResponse)
 async def queue_volume_inference(
     payload: VolumeInferenceRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> InferenceQueueResponse:
     """Queue a volume-based inference job (P0.B): segmenter preprocess + vLLM."""
@@ -391,6 +394,7 @@ async def queue_volume_inference(
 @router.post("/api/v1/inference/comparison", response_model=InferenceQueueResponse)
 async def queue_comparison_inference(
     payload: ComparisonInferenceRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> InferenceQueueResponse:
     """Queue a longitudinal comparison job (P1.A): current vs. prior series."""
