@@ -26,7 +26,9 @@ def _serialize_audit_event(event: AuditEvent) -> AuditEventResponse:
 
 @router.post("/api/v1/audit-log", response_model=AuditEventResponse)
 def create_audit_event(
-    payload: AuditEventRequest, db: Session = Depends(get_db)
+    payload: AuditEventRequest,
+    _: None = require_radiologist_or_admin,
+    db: Session = Depends(get_db),
 ) -> AuditEventResponse:
     timestamp = payload.timestamp or utc_now()
     event = add_audit_event(

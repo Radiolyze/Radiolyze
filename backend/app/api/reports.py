@@ -90,6 +90,7 @@ def list_reports(
     status: str | None = None,
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[ReportResponse]:
     service = ReportService(db)
@@ -102,6 +103,7 @@ def list_reports_by_patient(
     patient_id: str,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[ReportResponse]:
     """List all reports for a patient, sorted by creation date (newest first)."""
@@ -116,7 +118,11 @@ def _compute_etag(report: Report) -> str:
 
 
 @router.get("/api/v1/reports/{report_id}", response_model=ReportResponse)
-def get_report(report_id: str, db: Session = Depends(get_db)) -> Response:
+def get_report(
+    report_id: str,
+    _: None = require_radiologist_or_admin,
+    db: Session = Depends(get_db),
+) -> Response:
     service = ReportService(db)
     report = service.get(report_id)
     if not report:
@@ -135,6 +141,7 @@ async def update_report(
     report_id: str,
     payload: ReportUpdateRequest,
     request: Request = None,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> ReportResponse:
     report = db.get(Report, report_id)
