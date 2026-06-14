@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import uuid
 from pathlib import Path
 from typing import Iterator, Literal
 
@@ -15,7 +14,6 @@ from ..deps import get_current_user, get_db
 from ..dicom_client import store_dicom_object
 from ..mock_logic import utc_now
 from ..models import SegmentationJob, User
-from ..queue import get_queue
 from ..schemas_segmentation import (
     PushToPacsResponse,
     SegmentationCreateRequest,
@@ -25,30 +23,14 @@ from ..schemas_segmentation import (
 )
 from ..segmentation_client import (
     download_dicom_seg,
-    get_job_status as segmenter_status,
-    segmentation_data_dir,
     stream_mask,
     stream_mesh,
 )
-from ..tasks import run_segmentation_job
+from ..services import SegmentationService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/segmentation", tags=["segmentation"])
-
-
-def _job_timeout() -> int:
-    try:
-        return int(os.getenv("SEGMENTATION_JOB_TIMEOUT", "1800"))
-    except ValueError:
-        return 1800
-
-
-def _result_ttl() -> int:
-    try:
-        return int(os.getenv("SEGMENTATION_RESULT_TTL", "3600"))
-    except ValueError:
-        return 3600
 
 
 def _audit_mesh_downloads_enabled() -> bool:
@@ -93,58 +75,8 @@ def create_segmentation_job(
     payload: SegmentationCreateRequest,
     db: Session = Depends(get_db),
 ) -> SegmentationCreateResponse:
-    job_id = str(uuid.uuid4())
-    queued_at = utc_now()
-    requested_by = payload.requested_by or "system"
-    data_dir = str(segmentation_data_dir() / job_id)
-
-    db.add(
-        SegmentationJob(
-            id=job_id,
-            study_uid=payload.study_uid,
-            series_uid=payload.series_uid,
-            preset=payload.preset,
-            status="queued",
-            progress=0.0,
-            created_by=requested_by,
-            created_at=queued_at,
-            updated_at=queued_at,
-            data_dir=data_dir,
-        )
-    )
-
-    add_audit_event(
-        db,
-        event_type="segmentation_queued",
-        actor_id=requested_by,
-        study_id=payload.study_uid,
-        metadata={
-            "job_id": job_id,
-            "series_uid": payload.series_uid,
-            "preset": payload.preset,
-        },
-        timestamp=queued_at,
-        source="api",
-    )
-    db.commit()
-
-    job_payload = {
-        "job_id": job_id,
-        "study_uid": payload.study_uid,
-        "series_uid": payload.series_uid,
-        "preset": payload.preset,
-        "requested_by": requested_by,
-    }
-    queue = get_queue()
-    queue.enqueue(
-        run_segmentation_job,
-        job_payload,
-        job_id=job_id,
-        job_timeout=_job_timeout(),
-        result_ttl=_result_ttl(),
-        failure_ttl=_result_ttl(),
-    )
-
+    service = SegmentationService(db)
+    job_id, queued_at = service.create_job(payload)
     return SegmentationCreateResponse(
         job_id=job_id,
         status="queued",
@@ -155,45 +87,6 @@ def create_segmentation_job(
     )
 
 
-def _refresh_from_segmenter(record: SegmentationJob, db: Session) -> SegmentationJob:
-    """Refresh the DB row from the segmenter when the worker hasn't caught up."""
-    if record.status in {"finished", "failed"}:
-        return record
-    try:
-        payload = segmenter_status(record.id)
-    except Exception:
-        return record
-
-    status = str(payload.get("status") or record.status)
-    progress = payload.get("progress")
-    manifest = payload.get("manifest")
-
-    changed = False
-    if isinstance(progress, (int, float)) and float(progress) != record.progress:
-        record.progress = float(progress)
-        changed = True
-    if status == "done" and record.status != "finished":
-        record.status = "finished"
-        record.progress = 1.0
-        if manifest:
-            record.manifest_json = manifest
-        record.updated_at = utc_now()
-        changed = True
-    elif status == "failed" and record.status != "failed":
-        record.status = "failed"
-        record.error_message = payload.get("error") or "Segmenter reported failure"
-        record.updated_at = utc_now()
-        changed = True
-    elif record.status == "queued" and status not in {"queued"}:
-        record.status = "started" if status == "running" else status
-        record.updated_at = utc_now()
-        changed = True
-
-    if changed:
-        db.commit()
-    return record
-
-
 @router.get("/jobs/{job_id}", response_model=SegmentationStatusResponse)
 def get_segmentation_job(
     job_id: str, db: Session = Depends(get_db)
@@ -201,7 +94,7 @@ def get_segmentation_job(
     record = db.get(SegmentationJob, job_id)
     if not record:
         raise HTTPException(status_code=404, detail="Segmentation job not found")
-    record = _refresh_from_segmenter(record, db)
+    record = SegmentationService(db).refresh_from_segmenter(record)
     manifest = (
         SegmentationManifest.model_validate(record.manifest_json)
         if isinstance(record.manifest_json, dict)

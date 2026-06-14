@@ -2,5 +2,6 @@
 
 from .inference_service import InferenceService
 from .report_service import ReportService
+from .segmentation_service import SegmentationService
 
-__all__ = ["InferenceService", "ReportService"]
+__all__ = ["InferenceService", "ReportService", "SegmentationService"]
