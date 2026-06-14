@@ -65,8 +65,9 @@ async def security_headers_middleware(request: Request, call_next) -> Response:
 
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")
 origin_list = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
-if not origin_list:
-    origin_list = ["*"]
+# Never fall back to a wildcard: allow_origins=["*"] together with
+# allow_credentials=True is an insecure (and browser-rejected) configuration.
+# An empty CORS_ORIGINS therefore disables cross-origin requests entirely.
 
 app.add_middleware(
     CORSMiddleware,
@@ -192,7 +193,7 @@ async def on_startup() -> None:
 
     Base.metadata.create_all(bind=engine)
     # Seed default admin user if none exists
-    from .auth import hash_password, verify_password
+    from .auth import hash_password, is_production_env, verify_password
     from .db import SessionLocal
     from .mock_logic import utc_now
     from .models import User
@@ -202,6 +203,11 @@ async def on_startup() -> None:
         if db.query(User).count() == 0:
             admin_password = os.environ.get("ADMIN_PASSWORD", "admin")
             if admin_password == "admin":
+                if is_production_env():
+                    raise RuntimeError(
+                        "FATAL: ADMIN_PASSWORD is set to the default value 'admin'. "
+                        "Set a secure ADMIN_PASSWORD env var before deploying to production."
+                    )
                 logger.warning(
                     "Using default admin password. Set ADMIN_PASSWORD env var for production."
                 )
@@ -219,9 +225,14 @@ async def on_startup() -> None:
                 "Change the admin password before deploying to production."
             )
         else:
-            # Warn if default admin still has the default password
+            # Fail fast (or warn) if the default admin still has the default password
             admin = db.query(User).filter(User.username == "admin").first()
             if admin and verify_password("admin", admin.password_hash):
+                if is_production_env():
+                    raise RuntimeError(
+                        "FATAL: Admin user still has the default password 'admin'. "
+                        "Change it before deploying to production."
+                    )
                 logger.warning(
                     "Admin user still has the default password. "
                     "Change it before deploying to production."

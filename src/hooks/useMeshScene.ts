@@ -25,7 +25,7 @@ interface ActorEntry {
 export type ClipAxis = 'x' | 'y' | 'z';
 
 interface UseMeshSceneResult {
-  containerRef: React.RefObject<HTMLDivElement | null>;
+  containerRef: React.RefObject<HTMLDivElement>;
   loadVtp: (labelId: number, data: ArrayBuffer) => void;
   setVisibility: (labelId: number, visible: boolean) => void;
   setOpacity: (labelId: number, opacity: number) => void;

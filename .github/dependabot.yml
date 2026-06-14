@@ -1,0 +1,36 @@
+version: 2
+updates:
+  # Frontend (npm)
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  # Backend (pip)
+  - package-ecosystem: pip
+    directory: "/backend"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  # Segmenter microservice (pip)
+  - package-ecosystem: pip
+    directory: "/services/segmenter"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  # Documentation toolchain (pip)
+  - package-ecosystem: pip
+    directory: "/docs"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

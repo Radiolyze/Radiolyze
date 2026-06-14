@@ -41,7 +41,9 @@ export const useCornerstoneStackSetup = ({
       onError?.(null);
 
       try {
-        applyToolSelection(activeToolRef.current);
+        if (activeToolRef.current) {
+          applyToolSelection(activeToolRef.current);
+        }
         await viewport.setStack(imageIds, 0);
         viewport.render();
         applyWindowLevelPreset(selectedPresetId);
