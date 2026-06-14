@@ -16,7 +16,7 @@ import {
   extractInferenceMetadata,
   extractInferenceModel,
   extractInferenceSummary,
-  pollInferenceResult,
+  awaitInferenceResult,
   selectInferenceImageRefs,
 } from '@/hooks/reporting/inferenceHelpers';
 import { buildChecksFromService, getQaStatus, getWarningsFromChecks } from '@/hooks/reporting/qaHelpers';
@@ -177,7 +177,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         inferenceImageRefs: selectedImageRefs,
       } : null);
 
-      const result = await pollInferenceResult(jobId, onStatus);
+      const result = await awaitInferenceResult(jobId, reportId, onStatus);
       const summary = extractInferenceSummary(result);
       if (!summary) {
         throw new Error('Inference result missing summary');
@@ -323,7 +323,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         inferenceImageRefs: selectedImageRefs,
       } : null);
 
-      const result = await pollInferenceResult(jobId, onStatus);
+      const result = await awaitInferenceResult(jobId, reportId, onStatus);
       const summary = extractInferenceSummary(result);
       if (!summary) {
         throw new Error('Inference result missing summary');
