@@ -42,10 +42,16 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt -r requirements-dev.txt
-      - run: python -m pytest tests/ -v --tb=short
+      - run: python -m pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
         env:
           DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/test
           REDIS_URL: redis://localhost:6379/0
+      # Dependency vulnerability scan (reported, non-blocking for now)
+      - name: pip-audit
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt -r requirements-dev.txt
 
   frontend-lint-test:
     runs-on: ubuntu-latest
@@ -58,7 +64,12 @@ jobs:
       - run: npm ci
       - run: npm run bundle:worker
       - run: npm run lint
+      - run: npm run typecheck
       - run: npm run test
+      # Dependency vulnerability scan (reported, non-blocking for now)
+      - name: npm audit
+        continue-on-error: true
+        run: npm audit --audit-level=high
 
   docs-mkdocs:
     runs-on: ubuntu-latest

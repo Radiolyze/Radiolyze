@@ -21,6 +21,7 @@ interface VTKActorProperty {
   setDiffuse?: (v: number) => void;
   setSpecular?: (v: number) => void;
   setSpecularPower?: (v: number) => void;
+  setShade?: (v: boolean) => void;
 }
 interface VTKActor {
   getProperty: () => VTKActorProperty;
@@ -40,7 +41,7 @@ interface UseVRTViewportOptions {
 }
 
 interface UseVRTViewportResult {
-  viewportRef: React.RefObject<HTMLDivElement | null>;
+  viewportRef: React.RefObject<HTMLDivElement>;
   volumeViewport: VolumeViewport3D | null;
   isInitializing: boolean;
   isReady: boolean;
@@ -261,30 +262,31 @@ export const useVRTViewport = ({
         await viewport.setVolumes([
           {
             volumeId,
-            callback: ({ volumeActor }: { volumeActor: VTKVolumeActor }) => {
-              volumeActorRef.current = volumeActor;
-              
-              const property = volumeActor.getProperty();
-              const colorTF = property.getRGBTransferFunction(0);
-              const opacityTF = property.getScalarOpacity(0);
-              
+            callback: ({ volumeActor }) => {
+              const va = volumeActor as unknown as VTKVolumeActor;
+              volumeActorRef.current = va;
+
+              const property = va.getProperty();
+              const colorTF = property.getRGBTransferFunction?.(0);
+              const opacityTF = property.getScalarOpacity?.(0);
+
               if (colorTF && opacityTF) {
                 colorTF.removeAllPoints();
                 opacityTF.removeAllPoints();
-                
+
                 initialPreset.transferFunction.colorPoints.forEach((point) => {
                   colorTF.addRGBPoint(point.x, point.r, point.g, point.b);
                 });
-                
+
                 initialPreset.transferFunction.opacityPoints.forEach((point) => {
                   opacityTF.addPoint(point.x, point.y);
                 });
-                
-                property.setAmbient(initialPreset.ambient);
-                property.setDiffuse(initialPreset.diffuse);
-                property.setSpecular(initialPreset.specular);
-                property.setSpecularPower(initialPreset.specularPower);
-                property.setShade(true);
+
+                property.setAmbient?.(initialPreset.ambient);
+                property.setDiffuse?.(initialPreset.diffuse);
+                property.setSpecular?.(initialPreset.specular);
+                property.setSpecularPower?.(initialPreset.specularPower);
+                property.setShade?.(true);
               }
             },
           },

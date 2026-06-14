@@ -52,9 +52,9 @@ interface UseMPRVolumeViewportOptions {
 
 interface UseMPRVolumeViewportResult {
   viewportRefs: {
-    axial: React.RefObject<HTMLDivElement | null>;
-    sagittal: React.RefObject<HTMLDivElement | null>;
-    coronal: React.RefObject<HTMLDivElement | null>;
+    axial: React.RefObject<HTMLDivElement>;
+    sagittal: React.RefObject<HTMLDivElement>;
+    coronal: React.RefObject<HTMLDivElement>;
   };
   volumeViewports: {
     axial: VolumeViewport | null;

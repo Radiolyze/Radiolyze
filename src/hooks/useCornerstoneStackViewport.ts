@@ -20,7 +20,7 @@ interface UseCornerstoneStackViewportResult {
   stackViewportRef: React.RefObject<StackViewport | null>;
   toolGroupRef: React.RefObject<ReturnType<typeof ToolGroupManager.getToolGroup> | null>;
   initialParallelScaleRef: React.RefObject<number | null>;
-  syncingRef: React.RefObject<boolean>;
+  syncingRef: React.MutableRefObject<boolean>;
   isInitializing: boolean;
   isReady: boolean;
 }
@@ -134,6 +134,9 @@ export const useCornerstoneStackViewport = ({
         setIsReady(true);
 
         const toolGroup = ToolGroupManager.createToolGroup(toolGroupId);
+        if (!toolGroup) {
+          throw new Error('Failed to create Cornerstone tool group');
+        }
         toolGroupRef.current = toolGroup;
 
         // Navigation tools

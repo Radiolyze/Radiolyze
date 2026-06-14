@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import uuid
 
 from fastapi import (
     APIRouter,
@@ -47,6 +46,7 @@ from ..schemas import (
     ReportUpdateRequest,
 )
 from ..dicom_client import store_sr
+from ..services import ReportService
 from ..sr import build_sr_export
 from ..utils.hashing import compute_bytes_hash, compute_input_hash, compute_text_hash
 from ..utils.inference import build_image_metadata, build_output_summary
@@ -55,39 +55,19 @@ from ..ws_manager import broadcast_status
 router = APIRouter()
 
 
+# Thin module-level facades delegating to ReportService, kept so the many
+# call sites below (and any external references) stay stable. The canonical
+# logic lives in app.services.report_service.
 def _get_latest_inference_job(db: Session, report_id: str | None) -> InferenceJob | None:
-    if not report_id:
-        return None
-    return (
-        db.query(InferenceJob)
-        .filter(InferenceJob.report_id == report_id)
-        .order_by(InferenceJob.queued_at.desc())
-        .first()
-    )
+    return ReportService(db).get_latest_inference_job(report_id)
+
+
+def _get_latest_inference_jobs(db: Session, report_ids: list[str]) -> dict[str, InferenceJob]:
+    return ReportService(db).get_latest_inference_jobs(report_ids)
 
 
 def _serialize_report(report: Report, inference_job: InferenceJob | None = None) -> ReportResponse:
-    return ReportResponse(
-        id=report.id,
-        study_id=report.study_id,
-        patient_id=report.patient_id,
-        status=report.status,
-        findings_text=report.findings_text,
-        impression_text=report.impression_text,
-        created_at=report.created_at,
-        updated_at=report.updated_at,
-        approved_at=report.approved_at,
-        approved_by=report.approved_by,
-        qa_status=report.qa_status,
-        qa_warnings=report.qa_warnings or [],
-        structured_data=getattr(report, "structured_data", None),
-        inference_status=inference_job.status if inference_job else None,
-        inference_summary=inference_job.summary_text if inference_job else None,
-        inference_confidence=inference_job.confidence if inference_job else None,
-        inference_model_version=inference_job.model_version if inference_job else None,
-        inference_job_id=inference_job.id if inference_job else None,
-        inference_completed_at=inference_job.completed_at if inference_job else None,
-    )
+    return ReportService.serialize(report, inference_job)
 
 
 @router.post("/api/v1/reports/create", response_model=ReportResponse)
@@ -96,37 +76,9 @@ def create_report(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> ReportResponse:
-    report_id = payload.report_id or str(uuid.uuid4())
-    now = utc_now()
-
-    report = Report(
-        id=report_id,
-        study_id=payload.study_id,
-        patient_id=payload.patient_id,
-        status=payload.status or "pending",
-        findings_text=payload.findings_text or "",
-        impression_text=payload.impression_text or "",
-        created_at=now,
-        updated_at=now,
-        qa_status="pending",
-        qa_warnings=[],
-    )
-
-    db.add(report)
-    add_audit_event(
-        db,
-        event_type="report_created",
-        actor_id="system",
-        report_id=report_id,
-        study_id=payload.study_id,
-        metadata={"status": report.status},
-        timestamp=now,
-        source="api",
-    )
-    db.commit()
-    db.refresh(report)
-    inference_job = _get_latest_inference_job(db, report.id)
-    return _serialize_report(report, inference_job)
+    service = ReportService(db)
+    report = service.create(payload)
+    return service.serialize_one(report)
 
 
 @router.get("/api/v1/reports", response_model=list[ReportResponse])
@@ -136,13 +88,9 @@ def list_reports(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[ReportResponse]:
-    query = db.query(Report)
-    if status:
-        query = query.filter(Report.status == status)
-    reports = query.order_by(Report.created_at.desc()).offset(offset).limit(limit).all()
-    return [
-        _serialize_report(report, _get_latest_inference_job(db, report.id)) for report in reports
-    ]
+    service = ReportService(db)
+    reports = service.list(status=status, limit=limit, offset=offset)
+    return service.serialize_many(reports)
 
 
 @router.get("/api/v1/reports/by-patient/{patient_id}", response_model=list[ReportResponse])
@@ -153,35 +101,27 @@ def list_reports_by_patient(
     db: Session = Depends(get_db),
 ) -> list[ReportResponse]:
     """List all reports for a patient, sorted by creation date (newest first)."""
-    reports = (
-        db.query(Report)
-        .filter(Report.patient_id == patient_id)
-        .order_by(Report.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
-    return [_serialize_report(r, _get_latest_inference_job(db, r.id)) for r in reports]
+    service = ReportService(db)
+    reports = service.list_by_patient(patient_id, limit=limit, offset=offset)
+    return service.serialize_many(reports)
 
 
 def _compute_etag(report: Report) -> str:
-    """Compute ETag from report's updated_at timestamp."""
-    import hashlib
-
-    return hashlib.sha256(report.updated_at.encode()).hexdigest()[:16]
+    """Compute ETag from report's updated_at timestamp (delegates to ReportService)."""
+    return ReportService.compute_etag(report)
 
 
 @router.get("/api/v1/reports/{report_id}", response_model=ReportResponse)
 def get_report(report_id: str, db: Session = Depends(get_db)) -> Response:
-    report = db.get(Report, report_id)
+    service = ReportService(db)
+    report = service.get(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    inference_job = _get_latest_inference_job(db, report.id)
-    data = _serialize_report(report, inference_job)
+    data = service.serialize_one(report)
     response = Response(
         content=data.model_dump_json(),
         media_type="application/json",
-        headers={"ETag": f'"{_compute_etag(report)}"'},
+        headers={"ETag": f'"{ReportService.compute_etag(report)}"'},
     )
     return response
 

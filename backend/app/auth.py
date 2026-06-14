@@ -17,14 +17,21 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "480"))
 _logger = logging.getLogger(__name__)
 
 
+def is_production_env() -> bool:
+    """True when running in a production/staging environment.
+
+    Controlled by the ``ENVIRONMENT`` env var (defaults to ``development``).
+    """
+    return os.getenv("ENVIRONMENT", "development").lower() in ("production", "staging")
+
+
 def validate_jwt_config() -> None:
     """Validate JWT configuration at startup.
 
     Raises RuntimeError in production/staging if the secret is insecure.
     Logs a warning in development mode.
     """
-    env = os.getenv("ENVIRONMENT", "development").lower()
-    is_production = env in ("production", "staging")
+    is_production = is_production_env()
 
     if SECRET_KEY == _DEV_SECRET:
         if is_production:

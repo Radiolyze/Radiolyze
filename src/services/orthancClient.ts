@@ -3,7 +3,7 @@ const DICOM_WEB_INFERENCE_URL = import.meta.env.VITE_DICOM_WEB_INFERENCE_URL ?? 
 const DICOM_WEB_USERNAME = import.meta.env.VITE_DICOM_WEB_USERNAME;
 const DICOM_WEB_PASSWORD = import.meta.env.VITE_DICOM_WEB_PASSWORD;
 
-export const buildAuthHeaders = () => {
+export const buildAuthHeaders = (): Record<string, string> => {
   if (!DICOM_WEB_USERNAME || !DICOM_WEB_PASSWORD) {
     return {};
   }

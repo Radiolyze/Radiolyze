@@ -13,7 +13,7 @@ from ..audit import add_audit_event
 from ..deps import get_db
 from ..mock_logic import utc_now
 from ..models import InferenceJob, Report
-from ..queue import get_queue, get_redis
+from ..queue import get_redis
 from ..schemas import (
     ComparisonInferenceRequest,
     InferenceQueueRequest,
@@ -22,6 +22,7 @@ from ..schemas import (
     LocalizeRequest,
     VolumeInferenceRequest,
 )
+from ..services import InferenceService
 from ..tasks import (
     run_comparison_inference_job,
     run_inference_job,
@@ -88,20 +89,6 @@ def _filter_inference_metadata(metadata: dict | None) -> dict[str, object] | Non
     return filtered or None
 
 
-def _get_inference_job_timeout() -> int:
-    return int(os.getenv("INFERENCE_JOB_TIMEOUT", "600"))
-
-
-def _get_inference_result_ttl() -> int:
-    return int(os.getenv("INFERENCE_RESULT_TTL", "3600"))
-
-
-def _get_model_version() -> str:
-    return (
-        os.getenv("INFERENCE_MODEL_VERSION") or os.getenv("VLLM_MODEL_NAME") or "mock-medgemma-0.1"
-    )
-
-
 @router.get("/api/v1/inference/schemas")
 def get_inference_schemas() -> dict:
     """Return the JSON Schemas for all AI output types.
@@ -137,7 +124,7 @@ async def queue_inference(
             detail="At least one of findings_text, image_urls, image_paths, or image_refs is required",
         )
 
-    model_version = payload.model_version or _get_model_version()
+    model_version = payload.model_version or InferenceService.model_version()
     input_hash = compute_input_hash(study_id, findings_text, image_urls, image_paths, image_refs)
     queued_at = utc_now()
     image_metadata = build_image_metadata(image_urls, image_paths, image_refs)
@@ -156,56 +143,32 @@ async def queue_inference(
         "input_hash": input_hash,
     }
 
-    queue = get_queue()
-    job = queue.enqueue(
+    service = InferenceService(db)
+    job = service.enqueue(
         run_inference_job,
         job_payload,
         job_id=job_id,
-        job_timeout=_get_inference_job_timeout(),
-        result_ttl=_get_inference_result_ttl(),
-        failure_ttl=_get_inference_result_ttl(),
-    )
-
-    db.add(
-        InferenceJob(
-            id=job_id,
-            report_id=payload.report_id,
-            study_id=study_id,
-            status="queued",
-            model_version=model_version,
-            input_hash=input_hash,
-            queued_at=queued_at,
-            metadata_json={
-                "requested_by": requested_by,
-                "image_refs": image_refs,
-                **image_metadata,
-            },
-        )
-    )
-
-    add_audit_event(
-        db,
-        event_type="inference_queued",
-        actor_id=requested_by,
+        report=report,
         report_id=payload.report_id,
         study_id=study_id,
-        metadata={
+        requested_by=requested_by,
+        model_version=model_version,
+        input_hash=input_hash,
+        queued_at=queued_at,
+        job_metadata={
+            "requested_by": requested_by,
+            "image_refs": image_refs,
+            **image_metadata,
+        },
+        audit_event_type="inference_queued",
+        audit_metadata={
             "job_id": job_id,
             "model_version": model_version,
             "input_hash": input_hash,
             "image_refs": image_refs,
             **image_metadata,
         },
-        timestamp=queued_at,
-        source="api",
     )
-
-    if report:
-        if report.status == "pending":
-            report.status = "in_progress"
-        report.updated_at = queued_at
-
-    db.commit()
 
     if payload.report_id:
         await broadcast_status(
@@ -217,9 +180,8 @@ async def queue_inference(
             },
         )
 
-    return InferenceQueueResponse(
-        job_id=job.id,
-        status=job.get_status(),
+    return service.build_response(
+        job,
         queued_at=queued_at,
         report_id=payload.report_id,
         study_id=study_id,
@@ -267,7 +229,7 @@ async def queue_localize(
             ),
         )
 
-    model_version = payload.model_version or _get_model_version()
+    model_version = payload.model_version or InferenceService.model_version()
     input_hash = compute_localize_hash(study_id, {**image_ref, "mode": mode})
     queued_at = utc_now()
 
@@ -283,56 +245,32 @@ async def queue_localize(
         "input_hash": input_hash,
     }
 
-    queue = get_queue()
-    job = queue.enqueue(
+    service = InferenceService(db)
+    job = service.enqueue(
         run_localize_job,
         job_payload,
         job_id=job_id,
-        job_timeout=_get_inference_job_timeout(),
-        result_ttl=_get_inference_result_ttl(),
-        failure_ttl=_get_inference_result_ttl(),
-    )
-
-    db.add(
-        InferenceJob(
-            id=job_id,
-            report_id=payload.report_id,
-            study_id=study_id,
-            status="queued",
-            model_version=model_version,
-            input_hash=input_hash,
-            queued_at=queued_at,
-            metadata_json={
-                "requested_by": requested_by,
-                "image_ref": image_ref,
-                "job_type": "localize",
-            },
-        )
-    )
-
-    add_audit_event(
-        db,
-        event_type="inference_queued",
-        actor_id=requested_by,
+        report=report,
         report_id=payload.report_id,
         study_id=study_id,
-        metadata={
+        requested_by=requested_by,
+        model_version=model_version,
+        input_hash=input_hash,
+        queued_at=queued_at,
+        job_metadata={
+            "requested_by": requested_by,
+            "image_ref": image_ref,
+            "job_type": "localize",
+        },
+        audit_event_type="inference_queued",
+        audit_metadata={
             "job_id": job_id,
             "job_type": "localize",
             "model_version": model_version,
             "input_hash": input_hash,
             "image_ref": image_ref,
         },
-        timestamp=queued_at,
-        source="api",
     )
-
-    if report:
-        if report.status == "pending":
-            report.status = "in_progress"
-        report.updated_at = queued_at
-
-    db.commit()
 
     if payload.report_id:
         await broadcast_status(
@@ -344,9 +282,8 @@ async def queue_localize(
             },
         )
 
-    return InferenceQueueResponse(
-        job_id=job.id,
-        status=job.get_status(),
+    return service.build_response(
+        job,
         queued_at=queued_at,
         report_id=payload.report_id,
         study_id=study_id,
@@ -369,7 +306,7 @@ async def queue_volume_inference(
     requested_by = payload.requested_by or "system"
     study_id = payload.study_id or (report.study_id if report else None)
     findings_text = payload.findings_text or (report.findings_text if report else None)
-    model_version = payload.model_version or _get_model_version()
+    model_version = payload.model_version or InferenceService.model_version()
     input_hash = compute_volume_hash(
         study_id,
         study_uid=payload.study_uid,
@@ -397,44 +334,29 @@ async def queue_volume_inference(
         "input_hash": input_hash,
     }
 
-    queue = get_queue()
-    job = queue.enqueue(
+    service = InferenceService(db)
+    job = service.enqueue(
         run_volume_inference_job,
         job_payload,
         job_id=job_id,
-        job_timeout=_get_inference_job_timeout(),
-        result_ttl=_get_inference_result_ttl(),
-        failure_ttl=_get_inference_result_ttl(),
-    )
-
-    db.add(
-        InferenceJob(
-            id=job_id,
-            report_id=payload.report_id,
-            study_id=study_id,
-            status="queued",
-            model_version=model_version,
-            input_hash=input_hash,
-            queued_at=queued_at,
-            metadata_json={
-                "requested_by": requested_by,
-                "job_type": "volume_inference",
-                "study_uid": payload.study_uid,
-                "series_uid": payload.series_uid,
-                "max_slices": payload.max_slices,
-                "window_preset": payload.window_preset,
-                "strategy": payload.strategy,
-            },
-        )
-    )
-
-    add_audit_event(
-        db,
-        event_type="inference_volume_queued",
-        actor_id=requested_by,
+        report=report,
         report_id=payload.report_id,
         study_id=study_id,
-        metadata={
+        requested_by=requested_by,
+        model_version=model_version,
+        input_hash=input_hash,
+        queued_at=queued_at,
+        job_metadata={
+            "requested_by": requested_by,
+            "job_type": "volume_inference",
+            "study_uid": payload.study_uid,
+            "series_uid": payload.series_uid,
+            "max_slices": payload.max_slices,
+            "window_preset": payload.window_preset,
+            "strategy": payload.strategy,
+        },
+        audit_event_type="inference_volume_queued",
+        audit_metadata={
             "job_id": job_id,
             "job_type": "volume_inference",
             "model_version": model_version,
@@ -445,16 +367,7 @@ async def queue_volume_inference(
             "window_preset": payload.window_preset,
             "strategy": payload.strategy,
         },
-        timestamp=queued_at,
-        source="api",
     )
-
-    if report:
-        if report.status == "pending":
-            report.status = "in_progress"
-        report.updated_at = queued_at
-
-    db.commit()
 
     if payload.report_id:
         await broadcast_status(
@@ -466,9 +379,8 @@ async def queue_volume_inference(
             },
         )
 
-    return InferenceQueueResponse(
-        job_id=job.id,
-        status=job.get_status(),
+    return service.build_response(
+        job,
         queued_at=queued_at,
         report_id=payload.report_id,
         study_id=study_id,
@@ -491,7 +403,7 @@ async def queue_comparison_inference(
     requested_by = payload.requested_by or "system"
     study_id = payload.study_id or (report.study_id if report else None)
     findings_text = payload.findings_text or (report.findings_text if report else None)
-    model_version = payload.model_version or _get_model_version()
+    model_version = payload.model_version or InferenceService.model_version()
     input_hash = compute_text_hash(
         "comparison",
         study_id,
@@ -524,44 +436,29 @@ async def queue_comparison_inference(
         "input_hash": input_hash,
     }
 
-    queue = get_queue()
-    job = queue.enqueue(
+    service = InferenceService(db)
+    job = service.enqueue(
         run_comparison_inference_job,
         job_payload,
         job_id=job_id,
-        job_timeout=_get_inference_job_timeout(),
-        result_ttl=_get_inference_result_ttl(),
-        failure_ttl=_get_inference_result_ttl(),
-    )
-
-    db.add(
-        InferenceJob(
-            id=job_id,
-            report_id=payload.report_id,
-            study_id=study_id,
-            status="queued",
-            model_version=model_version,
-            input_hash=input_hash,
-            queued_at=queued_at,
-            metadata_json={
-                "requested_by": requested_by,
-                "job_type": "comparison_inference",
-                "study_uid": payload.study_uid,
-                "series_uid": payload.series_uid,
-                "prior_study_uid": payload.prior_study_uid,
-                "prior_series_uid": payload.prior_series_uid,
-                "time_delta_days": payload.time_delta_days,
-            },
-        )
-    )
-
-    add_audit_event(
-        db,
-        event_type="inference_comparison_queued",
-        actor_id=requested_by,
+        report=report,
         report_id=payload.report_id,
         study_id=study_id,
-        metadata={
+        requested_by=requested_by,
+        model_version=model_version,
+        input_hash=input_hash,
+        queued_at=queued_at,
+        job_metadata={
+            "requested_by": requested_by,
+            "job_type": "comparison_inference",
+            "study_uid": payload.study_uid,
+            "series_uid": payload.series_uid,
+            "prior_study_uid": payload.prior_study_uid,
+            "prior_series_uid": payload.prior_series_uid,
+            "time_delta_days": payload.time_delta_days,
+        },
+        audit_event_type="inference_comparison_queued",
+        audit_metadata={
             "job_id": job_id,
             "job_type": "comparison_inference",
             "model_version": model_version,
@@ -572,16 +469,7 @@ async def queue_comparison_inference(
             "prior_series_uid": payload.prior_series_uid,
             "time_delta_days": payload.time_delta_days,
         },
-        timestamp=queued_at,
-        source="api",
     )
-
-    if report:
-        if report.status == "pending":
-            report.status = "in_progress"
-        report.updated_at = queued_at
-
-    db.commit()
 
     if payload.report_id:
         await broadcast_status(
@@ -593,9 +481,8 @@ async def queue_comparison_inference(
             },
         )
 
-    return InferenceQueueResponse(
-        job_id=job.id,
-        status=job.get_status(),
+    return service.build_response(
+        job,
         queued_at=queued_at,
         report_id=payload.report_id,
         study_id=study_id,
@@ -611,7 +498,7 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
         if job_record.status in ("queued", "started") and job_record.queued_at:
             from datetime import datetime
 
-            timeout_seconds = _get_inference_job_timeout()
+            timeout_seconds = InferenceService.job_timeout()
             now = datetime.now(UTC)
             queued_at = (
                 job_record.queued_at

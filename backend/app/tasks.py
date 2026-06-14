@@ -20,6 +20,54 @@ from .ws_events import publish_report_status
 logger = logging.getLogger(__name__)
 
 
+def _get_or_create_inference_job(
+    db,
+    *,
+    job_id: str | None,
+    report_id: str | None,
+    study_id: str | None,
+    model_version: str,
+    input_hash: str | None,
+    metadata_json: dict[str, Any],
+) -> InferenceJob:
+    """Fetch an existing queued InferenceJob row or create one.
+
+    Shared by all inference task entry points to avoid duplicating the
+    get-or-create boilerplate.
+    """
+    job = db.get(InferenceJob, job_id) if job_id else None
+    if job:
+        return job
+    job = InferenceJob(
+        id=job_id or str(uuid.uuid4()),
+        report_id=report_id,
+        study_id=study_id,
+        status="queued",
+        model_version=model_version,
+        input_hash=input_hash,
+        queued_at=utc_now(),
+        metadata_json=metadata_json,
+    )
+    db.add(job)
+    db.commit()
+    return job
+
+
+def _mark_inference_job_failed(db, job_id: str | None, exc: Exception) -> None:
+    """Best-effort: mark an InferenceJob row as failed, swallowing secondary errors."""
+    if not job_id:
+        return
+    try:
+        failed_job = db.get(InferenceJob, job_id)
+        if failed_job:
+            failed_job.status = "failed"
+            failed_job.completed_at = utc_now()
+            failed_job.error_message = str(exc)[:1000]
+            db.commit()
+    except Exception:
+        logger.exception("Failed to update inference job %s status to failed", job_id)
+
+
 def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     report_id = payload.get("report_id")
     study_id = payload.get("study_id")
@@ -35,22 +83,15 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
 
     db = SessionLocal()
     try:
-        job = None
-        if job_id:
-            job = db.get(InferenceJob, job_id)
-        if not job:
-            job = InferenceJob(
-                id=job_id or str(uuid.uuid4()),
-                report_id=report_id,
-                study_id=study_id,
-                status="queued",
-                model_version=requested_model_version,
-                input_hash=input_hash,
-                queued_at=utc_now(),
-                metadata_json={"image_refs": image_refs},
-            )
-            db.add(job)
-            db.commit()
+        job = _get_or_create_inference_job(
+            db,
+            job_id=job_id,
+            report_id=report_id,
+            study_id=study_id,
+            model_version=requested_model_version,
+            input_hash=input_hash,
+            metadata_json={"image_refs": image_refs},
+        )
 
         started_at = utc_now()
         job.status = "started"
@@ -142,15 +183,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
-        try:
-            failed_job = db.get(InferenceJob, job_id) if job_id else None
-            if failed_job:
-                failed_job.status = "failed"
-                failed_job.completed_at = utc_now()
-                failed_job.error_message = str(exc)[:1000]
-                db.commit()
-        except Exception:
-            logger.exception("Failed to update job %s status to failed", job_id)
+        _mark_inference_job_failed(db, job_id, exc)
 
         publish_report_status(report_id, {"aiStatus": "error"})
 
@@ -189,23 +222,16 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
     job_id = payload.get("job_id")
 
     db = SessionLocal()
-    job = None
     try:
-        if job_id:
-            job = db.get(InferenceJob, job_id)
-        if not job:
-            job = InferenceJob(
-                id=job_id or str(uuid.uuid4()),
-                report_id=report_id,
-                study_id=study_id,
-                status="queued",
-                model_version=requested_model_version,
-                input_hash=input_hash,
-                queued_at=utc_now(),
-                metadata_json={"image_ref": image_ref, "job_type": "localize"},
-            )
-            db.add(job)
-            db.commit()
+        job = _get_or_create_inference_job(
+            db,
+            job_id=job_id,
+            report_id=report_id,
+            study_id=study_id,
+            model_version=requested_model_version,
+            input_hash=input_hash,
+            metadata_json={"image_ref": image_ref, "job_type": "localize"},
+        )
 
         started_at = utc_now()
         job.status = "started"
@@ -285,13 +311,7 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
-        if job_id:
-            loc_job = db.get(InferenceJob, job_id)
-            if loc_job:
-                loc_job.status = "failed"
-                loc_job.completed_at = utc_now()
-                loc_job.error_message = str(exc)
-                db.commit()
+        _mark_inference_job_failed(db, job_id, exc)
 
         publish_report_status(report_id, {"aiStatus": "error"})
 
@@ -333,29 +353,22 @@ def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
 
     db = SessionLocal()
     try:
-        job = None
-        if job_id:
-            job = db.get(InferenceJob, job_id)
-        if not job:
-            job = InferenceJob(
-                id=job_id or str(uuid.uuid4()),
-                report_id=report_id,
-                study_id=study_id,
-                status="queued",
-                model_version=requested_model_version,
-                input_hash=input_hash,
-                queued_at=utc_now(),
-                metadata_json={
-                    "job_type": "volume_inference",
-                    "study_uid": study_uid,
-                    "series_uid": series_uid,
-                    "max_slices": max_slices,
-                    "window_preset": window_preset,
-                    "strategy": strategy,
-                },
-            )
-            db.add(job)
-            db.commit()
+        job = _get_or_create_inference_job(
+            db,
+            job_id=job_id,
+            report_id=report_id,
+            study_id=study_id,
+            model_version=requested_model_version,
+            input_hash=input_hash,
+            metadata_json={
+                "job_type": "volume_inference",
+                "study_uid": study_uid,
+                "series_uid": series_uid,
+                "max_slices": max_slices,
+                "window_preset": window_preset,
+                "strategy": strategy,
+            },
+        )
 
         job.status = "started"
         job.started_at = utc_now()
@@ -447,15 +460,7 @@ def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
-        try:
-            failed_job = db.get(InferenceJob, job_id) if job_id else None
-            if failed_job:
-                failed_job.status = "failed"
-                failed_job.completed_at = utc_now()
-                failed_job.error_message = str(exc)[:1000]
-                db.commit()
-        except Exception:
-            logger.exception("Failed to update volume job %s status to failed", job_id)
+        _mark_inference_job_failed(db, job_id, exc)
 
         publish_report_status(report_id, {"aiStatus": "error"})
 
@@ -499,29 +504,22 @@ def run_comparison_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
 
     db = SessionLocal()
     try:
-        job = None
-        if job_id:
-            job = db.get(InferenceJob, job_id)
-        if not job:
-            job = InferenceJob(
-                id=job_id or str(uuid.uuid4()),
-                report_id=report_id,
-                study_id=study_id,
-                status="queued",
-                model_version=requested_model_version,
-                input_hash=input_hash,
-                queued_at=utc_now(),
-                metadata_json={
-                    "job_type": "comparison_inference",
-                    "study_uid": study_uid,
-                    "series_uid": series_uid,
-                    "prior_study_uid": prior_study_uid,
-                    "prior_series_uid": prior_series_uid,
-                    "time_delta_days": time_delta_days,
-                },
-            )
-            db.add(job)
-            db.commit()
+        job = _get_or_create_inference_job(
+            db,
+            job_id=job_id,
+            report_id=report_id,
+            study_id=study_id,
+            model_version=requested_model_version,
+            input_hash=input_hash,
+            metadata_json={
+                "job_type": "comparison_inference",
+                "study_uid": study_uid,
+                "series_uid": series_uid,
+                "prior_study_uid": prior_study_uid,
+                "prior_series_uid": prior_series_uid,
+                "time_delta_days": time_delta_days,
+            },
+        )
 
         job.status = "started"
         job.started_at = utc_now()
@@ -606,15 +604,7 @@ def run_comparison_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
-        try:
-            failed_job = db.get(InferenceJob, job_id) if job_id else None
-            if failed_job:
-                failed_job.status = "failed"
-                failed_job.completed_at = utc_now()
-                failed_job.error_message = str(exc)[:1000]
-                db.commit()
-        except Exception:
-            logger.exception("Failed to update comparison job %s status to failed", job_id)
+        _mark_inference_job_failed(db, job_id, exc)
 
         publish_report_status(report_id, {"aiStatus": "error"})
 
