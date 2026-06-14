@@ -66,6 +66,30 @@ def _get_latest_inference_job(db: Session, report_id: str | None) -> InferenceJo
     )
 
 
+def _get_latest_inference_jobs(
+    db: Session, report_ids: list[str]
+) -> dict[str, InferenceJob]:
+    """Return the most recent InferenceJob per report id in a single query.
+
+    Avoids the N+1 pattern of calling ``_get_latest_inference_job`` once per row
+    when serializing report lists.
+    """
+    if not report_ids:
+        return {}
+    jobs = (
+        db.query(InferenceJob)
+        .filter(InferenceJob.report_id.in_(report_ids))
+        .order_by(InferenceJob.queued_at.desc())
+        .all()
+    )
+    latest: dict[str, InferenceJob] = {}
+    for job in jobs:
+        # Rows arrive newest-first, so the first one seen per report wins.
+        if job.report_id and job.report_id not in latest:
+            latest[job.report_id] = job
+    return latest
+
+
 def _serialize_report(report: Report, inference_job: InferenceJob | None = None) -> ReportResponse:
     return ReportResponse(
         id=report.id,
@@ -140,9 +164,8 @@ def list_reports(
     if status:
         query = query.filter(Report.status == status)
     reports = query.order_by(Report.created_at.desc()).offset(offset).limit(limit).all()
-    return [
-        _serialize_report(report, _get_latest_inference_job(db, report.id)) for report in reports
-    ]
+    latest_jobs = _get_latest_inference_jobs(db, [r.id for r in reports])
+    return [_serialize_report(report, latest_jobs.get(report.id)) for report in reports]
 
 
 @router.get("/api/v1/reports/by-patient/{patient_id}", response_model=list[ReportResponse])
@@ -161,7 +184,8 @@ def list_reports_by_patient(
         .limit(limit)
         .all()
     )
-    return [_serialize_report(r, _get_latest_inference_job(db, r.id)) for r in reports]
+    latest_jobs = _get_latest_inference_jobs(db, [r.id for r in reports])
+    return [_serialize_report(r, latest_jobs.get(r.id)) for r in reports]
 
 
 def _compute_etag(report: Report) -> str:
