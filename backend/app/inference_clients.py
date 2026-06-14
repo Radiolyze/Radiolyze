@@ -122,6 +122,7 @@ def generate_impression_text(
             model_type=ImpressionOutput,
             text_key="impression",
             schema_name="impression_output",
+            has_images=has_images,
         )
         if _schema_strict() and not parse_metadata.get("json_schema_valid"):
             raise RuntimeError(
@@ -187,6 +188,7 @@ def generate_inference_summary_text(
             model_type=SummaryOutput,
             text_key="summary",
             schema_name="summary_output",
+            has_images=has_images,
         )
         if _schema_strict() and not parse_metadata.get("json_schema_valid"):
             raise RuntimeError(
@@ -477,6 +479,7 @@ def generate_volume_inference_summary(
             model_type=SummaryOutput,
             text_key="summary",
             schema_name="summary_output",
+            has_images=True,
         )
         if _schema_strict() and not parse_metadata.get("json_schema_valid"):
             raise RuntimeError(

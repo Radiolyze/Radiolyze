@@ -81,6 +81,7 @@ def _parse_structured_output(
     model_type: type[SummaryOutput] | type[ImpressionOutput],
     text_key: str,
     schema_name: str,
+    has_images: bool = False,
 ) -> tuple[str, dict[str, Any], list[int] | None, str | None]:
     parsed, parse_error = _parse_json_response(raw_text)
     metadata: dict[str, Any] = {"schema_name": schema_name, "schema_version": SCHEMA_VERSION}
@@ -94,7 +95,7 @@ def _parse_structured_output(
         return raw_text, metadata, None, None
 
     try:
-        output = model_type.model_validate(parsed)
+        output = model_type.model_validate(parsed, context={"has_images": has_images})
     except ValidationError:
         metadata["json_parsed"] = True
         metadata["json_schema_valid"] = False
