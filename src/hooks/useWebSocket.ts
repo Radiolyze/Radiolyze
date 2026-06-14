@@ -18,6 +18,41 @@ export interface ReportStatusEvent {
 
 type WsMessage = ReportStatusEvent;
 
+// Module-level subscriber registry shared across the app's single WS connection.
+type StatusListener = (payload: ReportStatusPayload) => void;
+const reportStatusListeners = new Map<string, Set<StatusListener>>();
+
+export function subscribeReportStatus(reportId: string, listener: StatusListener): () => void {
+  if (!reportStatusListeners.has(reportId)) {
+    reportStatusListeners.set(reportId, new Set());
+  }
+  reportStatusListeners.get(reportId)!.add(listener);
+  return () => {
+    reportStatusListeners.get(reportId)?.delete(listener);
+  };
+}
+
+export function waitForReportStatus(
+  reportId: string,
+  isTerminal: (payload: ReportStatusPayload) => boolean,
+  timeoutMs: number,
+): Promise<ReportStatusPayload> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      unsubscribe();
+      reject(new Error('WebSocket status wait timed out'));
+    }, timeoutMs);
+
+    const unsubscribe = subscribeReportStatus(reportId, (payload) => {
+      if (isTerminal(payload)) {
+        clearTimeout(timer);
+        unsubscribe();
+        resolve(payload);
+      }
+    });
+  });
+}
+
 interface UseWebSocketOptions {
   onReportStatus?: (event: ReportStatusEvent) => void;
   autoConnect?: boolean;
@@ -37,10 +72,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   const handleMessage = useCallback((data: unknown) => {
     const message = data as WsMessage;
-    
+
     if (message.type === 'report_status') {
       setLastEvent(message);
       callbackRef.current?.(message);
+      // Dispatch to module-level subscribers (used by waitForReportStatus)
+      reportStatusListeners.get(message.reportId)?.forEach(fn => fn(message.payload));
     }
   }, []);
 

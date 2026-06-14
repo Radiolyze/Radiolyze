@@ -17,8 +17,13 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_db, require_admin, require_radiologist_or_admin
-from ..inference_clients import generate_impression_stream, generate_impression_text, transcribe_audio
+from ..deps import get_db, require_radiologist_or_admin
+from ..dicom_client import store_sr
+from ..inference_clients import (
+    generate_impression_stream,
+    generate_impression_text,
+    transcribe_audio,
+)
 from ..mock_logic import run_qa_checks, utc_now
 from ..models import (
     CriticalFindingAlert,
@@ -45,7 +50,6 @@ from ..schemas import (
     ReportRevisionResponse,
     ReportUpdateRequest,
 )
-from ..dicom_client import store_sr
 from ..services import ReportService
 from ..sr import build_sr_export
 from ..utils.hashing import compute_bytes_hash, compute_input_hash, compute_text_hash

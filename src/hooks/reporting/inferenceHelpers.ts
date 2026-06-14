@@ -1,5 +1,6 @@
 import type { AIStatus, FindingBox, ImageRef } from '@/types/radiology';
 import { inferenceClient } from '@/services/inferenceClient';
+import { waitForReportStatus } from '@/hooks/useWebSocket';
 
 type InferenceImageRole = 'current' | 'prior';
 
@@ -327,4 +328,47 @@ export const pollInferenceResult = async (jobId: string, onStatus?: (status: AIS
   }
 
   throw new Error('Inference timeout');
+};
+
+// WS_FALLBACK_DELAY_MS: if the WebSocket delivers no terminal status within this window,
+// polling kicks in as a fallback. Covers the case where the socket is disconnected.
+const WS_FALLBACK_DELAY_MS = 4_000;
+
+export const awaitInferenceResult = async (
+  jobId: string,
+  reportId: string | undefined,
+  onStatus?: (status: AIStatus) => void,
+) => {
+  if (!reportId) {
+    return pollInferenceResult(jobId, onStatus);
+  }
+
+  let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const wsPath = waitForReportStatus(
+    reportId,
+    (p) => p.aiStatus === 'idle' || p.aiStatus === 'error',
+    120_000,
+  ).then(async (payload) => {
+    clearTimeout(fallbackTimer);
+    if (payload.aiStatus === 'error') {
+      throw new Error('Inference failed');
+    }
+    // Fetch the full result once after WS signals completion
+    const response = await inferenceClient.getStatus(jobId);
+    if (response.status === 'failed') {
+      throw new Error(response.error?.trim() || 'Inference job failed');
+    }
+    return response.result;
+  });
+
+  const fallbackPath = new Promise<Awaited<ReturnType<typeof pollInferenceResult>>>((resolve, reject) => {
+    fallbackTimer = setTimeout(() => {
+      pollInferenceResult(jobId, onStatus).then(resolve, reject);
+    }, WS_FALLBACK_DELAY_MS);
+    // Cancel the delayed fallback if WS succeeds first
+    wsPath.then(() => clearTimeout(fallbackTimer), () => clearTimeout(fallbackTimer));
+  });
+
+  return Promise.race([wsPath, fallbackPath]);
 };
