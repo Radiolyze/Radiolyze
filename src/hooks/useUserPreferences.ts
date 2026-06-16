@@ -19,6 +19,8 @@ export interface UserPreferences {
   defaultTool: 'zoom' | 'pan' | 'measure' | 'window';
   invertColors: boolean;
   showOverlays: boolean;
+  /** Persisted window/level per modality (e.g. "CT", "MR"). */
+  viewportWL: Record<string, { windowWidth: number; windowCenter: number }>;
   
   // Report
   autoGenerateImpression: boolean;
@@ -37,6 +39,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   defaultTool: 'window',
   invertColors: false,
   showOverlays: true,
+  viewportWL: {},
   autoGenerateImpression: true,
   showQAWarnings: true,
   defaultTemplate: null,

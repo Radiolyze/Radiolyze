@@ -75,7 +75,7 @@ export function DicomViewer({
   onAnalyzeFrame,
   isAnalyzingFrame = false,
 }: DicomViewerProps) {
-  const { preferences } = useUserPreferences();
+  const { preferences, setPreference } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<AllToolId>(preferences.defaultTool as Tool);
   const [zoom, setZoom] = useState(1);
@@ -91,6 +91,47 @@ export function DicomViewer({
   } = useDicomSeriesInstances(series);
 
   const activeToolRef = useRef<AllToolId>(activeTool);
+
+  // Persist window/level per modality so it is restored across sessions.
+  const modality = series?.modality;
+  const preferencesRef = useRef(preferences);
+  useEffect(() => {
+    preferencesRef.current = preferences;
+  }, [preferences]);
+  const wlPersistTimeoutRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (wlPersistTimeoutRef.current) {
+        window.clearTimeout(wlPersistTimeoutRef.current);
+      }
+    },
+    []
+  );
+
+  const handleViewportChange = useCallback(
+    (state: Partial<ViewportState>) => {
+      onViewportChange?.(state);
+      if (state.windowLevel && modality) {
+        const { width, center } = state.windowLevel;
+        // Skip persistence when the value is unchanged. Programmatic voiRange
+        // updates also emit VOI_MODIFIED, so this guard prevents a re-apply loop.
+        const existing = preferencesRef.current.viewportWL[modality];
+        if (existing && existing.windowWidth === width && existing.windowCenter === center) {
+          return;
+        }
+        if (wlPersistTimeoutRef.current) {
+          window.clearTimeout(wlPersistTimeoutRef.current);
+        }
+        wlPersistTimeoutRef.current = window.setTimeout(() => {
+          setPreference('viewportWL', {
+            ...preferencesRef.current.viewportWL,
+            [modality]: { windowWidth: width, windowCenter: center },
+          });
+        }, 500);
+      }
+    },
+    [modality, onViewportChange, setPreference]
+  );
 
   const viewerInstanceIdRef = useRef<string | null>(null);
   if (viewerInstanceIdRef.current === null) {
@@ -116,15 +157,28 @@ export function DicomViewer({
     toolGroupId,
     onFrameIndexChange: setCurrentFrame,
     onZoomChange: setZoom,
-    onViewportChange,
+    onViewportChange: handleViewportChange,
     onInitError: setViewerError,
   });
 
-  const { applyToolSelection, applyWindowLevelPreset } = useCornerstoneViewerTools({
+  const { applyToolSelection, applyWindowLevelPreset, applyWindowLevel } = useCornerstoneViewerTools({
     toolGroupRef,
     stackViewportRef,
     presets: windowLevelPresets,
   });
+
+  const persistedWL = modality ? preferences.viewportWL[modality] : undefined;
+  const isDefaultPreset = selectedPresetId === windowLevelPresets[0].id;
+
+  // Apply persisted (per-modality) window/level when the user has not explicitly
+  // picked a preset; otherwise fall back to the selected preset.
+  const applyInitialWindowLevel = useCallback(() => {
+    if (isDefaultPreset && persistedWL) {
+      applyWindowLevel(persistedWL.windowWidth, persistedWL.windowCenter);
+    } else {
+      applyWindowLevelPreset(selectedPresetId);
+    }
+  }, [applyWindowLevel, applyWindowLevelPreset, isDefaultPreset, persistedWL, selectedPresetId]);
 
   const { isInitializing: isInitializingStack } = useCornerstoneStackSetup({
     isReady: isViewportReady,
@@ -135,6 +189,7 @@ export function DicomViewer({
     selectedPresetId,
     applyToolSelection,
     applyWindowLevelPreset,
+    applyInitialWindowLevel,
     onError: setViewerError,
   });
 
@@ -219,8 +274,8 @@ export function DicomViewer({
     if (!hasStack) {
       return;
     }
-    applyWindowLevelPreset(selectedPresetId);
-  }, [applyWindowLevelPreset, hasStack, selectedPresetId]);
+    applyInitialWindowLevel();
+  }, [applyInitialWindowLevel, hasStack]);
 
   useApplyViewportSyncState({
     syncState,
