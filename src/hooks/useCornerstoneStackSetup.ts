@@ -12,6 +12,12 @@ interface UseCornerstoneStackSetupOptions {
   selectedPresetId: string;
   applyToolSelection: (tool: AllToolId) => void;
   applyWindowLevelPreset: (presetId: string) => void;
+  /**
+   * Optional override for the initial window/level applied after the stack is
+   * loaded. When provided it replaces the default preset application, allowing
+   * a persisted (per-modality) window/level to take precedence on load.
+   */
+  applyInitialWindowLevel?: () => void;
   onError?: (message: string | null) => void;
 }
 
@@ -24,6 +30,7 @@ export const useCornerstoneStackSetup = ({
   selectedPresetId,
   applyToolSelection,
   applyWindowLevelPreset,
+  applyInitialWindowLevel,
   onError,
 }: UseCornerstoneStackSetupOptions) => {
   const [isInitializing, setIsInitializing] = useState(false);
@@ -46,7 +53,11 @@ export const useCornerstoneStackSetup = ({
         }
         await viewport.setStack(imageIds, 0);
         viewport.render();
-        applyWindowLevelPreset(selectedPresetId);
+        if (applyInitialWindowLevel) {
+          applyInitialWindowLevel();
+        } else {
+          applyWindowLevelPreset(selectedPresetId);
+        }
 
         const camera = viewport.getCamera();
         if (isActive) {
@@ -73,6 +84,7 @@ export const useCornerstoneStackSetup = ({
     activeToolRef,
     applyToolSelection,
     applyWindowLevelPreset,
+    applyInitialWindowLevel,
     imageIds,
     isReady,
     initialParallelScaleRef,

@@ -119,5 +119,28 @@ export const useCornerstoneViewerTools = ({
     [presets, stackViewportRef]
   );
 
-  return { applyToolSelection, applyWindowLevelPreset };
+  const applyWindowLevel = useCallback(
+    (windowWidth: number, windowCenter: number) => {
+      const viewport = stackViewportRef.current;
+      if (!viewport || !viewport.getCurrentImageId?.()) {
+        return;
+      }
+
+      try {
+        const halfWidth = windowWidth / 2;
+        viewport.setProperties({
+          voiRange: {
+            lower: windowCenter - halfWidth,
+            upper: windowCenter + halfWidth,
+          },
+        });
+        viewport.render();
+      } catch {
+        // Image data not yet loaded - will be applied when image loads
+      }
+    },
+    [stackViewportRef]
+  );
+
+  return { applyToolSelection, applyWindowLevelPreset, applyWindowLevel };
 };

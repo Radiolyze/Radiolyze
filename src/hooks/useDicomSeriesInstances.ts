@@ -8,7 +8,7 @@ import {
 } from '@/services/orthancClient';
 import { prefetchWadorsMetadata } from '@/services/cornerstone';
 
-type InstanceInfo = {
+export type InstanceInfo = {
   instanceId: string;
   frames: number;
   instanceNumber?: number;
@@ -17,6 +17,7 @@ type InstanceInfo = {
   spacingBetweenSlices?: number;
   imageOrientation?: number[];
   imagePosition?: number[];
+  sliceLocation?: number;
 };
 
 const getTagValue = (entry: Record<string, unknown>, tag: string) => {
@@ -48,7 +49,7 @@ const readNumberArray = (values: unknown[] | undefined) => {
   return parsed.length > 0 ? parsed : undefined;
 };
 
-const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
+export const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
   if (typeof entry === 'string') {
     return { instanceId: entry, frames: 1 };
   }
@@ -86,6 +87,7 @@ const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
   const spacingBetweenSlices = readNumber(getTagValue(record, '00180088'));
   const imageOrientation = readNumberArray(getTagValues(record, '00200037'));
   const imagePosition = readNumberArray(getTagValues(record, '00200032'));
+  const sliceLocation = readNumber(getTagValue(record, '00201041'));
 
   return {
     instanceId,
@@ -96,7 +98,28 @@ const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
     spacingBetweenSlices,
     imageOrientation,
     imagePosition,
+    sliceLocation,
   };
+};
+
+/**
+ * Sortiert DICOM-Instanzen für räumlich korrekte 3D-Reihenfolge.
+ * Priorität: ImagePositionPatient z-Koordinate → SliceLocation → InstanceNumber.
+ */
+export const compareInstancesBySlice = (a: InstanceInfo, b: InstanceInfo): number => {
+  const az = a.imagePosition?.[2];
+  const bz = b.imagePosition?.[2];
+  if (az !== undefined && bz !== undefined && az !== bz) {
+    return az - bz;
+  }
+  if (
+    a.sliceLocation !== undefined &&
+    b.sliceLocation !== undefined &&
+    a.sliceLocation !== b.sliceLocation
+  ) {
+    return a.sliceLocation - b.sliceLocation;
+  }
+  return (a.instanceNumber ?? 0) - (b.instanceNumber ?? 0);
 };
 
 interface UseDicomSeriesInstancesResult {
@@ -144,12 +167,7 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
           throw new Error('Keine DICOM Instanzen gefunden');
         }
 
-        parsed.sort((a, b) => {
-          if (a.instanceNumber === undefined || b.instanceNumber === undefined) {
-            return 0;
-          }
-          return a.instanceNumber - b.instanceNumber;
-        });
+        parsed.sort(compareInstancesBySlice);
 
         // Pre-fetch metadata for all unique instances (required for WADORS decoding)
         await Promise.all(
