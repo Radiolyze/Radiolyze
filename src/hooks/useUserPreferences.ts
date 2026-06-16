@@ -19,7 +19,9 @@ export interface UserPreferences {
   defaultTool: 'zoom' | 'pan' | 'measure' | 'window';
   invertColors: boolean;
   showOverlays: boolean;
-  
+  /** Persisted VOI/window-level (width = window width, center = window center) */
+  viewportWL: { width: number; center: number } | null;
+
   // Report
   autoGenerateImpression: boolean;
   showQAWarnings: boolean;
@@ -37,6 +39,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   defaultTool: 'window',
   invertColors: false,
   showOverlays: true,
+  viewportWL: null,
   autoGenerateImpression: true,
   showQAWarnings: true,
   defaultTemplate: null,

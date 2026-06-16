@@ -8,7 +8,7 @@ import {
 } from '@/services/orthancClient';
 import { prefetchWadorsMetadata } from '@/services/cornerstone';
 
-type InstanceInfo = {
+export type InstanceInfo = {
   instanceId: string;
   frames: number;
   instanceNumber?: number;
@@ -17,6 +17,27 @@ type InstanceInfo = {
   spacingBetweenSlices?: number;
   imageOrientation?: number[];
   imagePosition?: number[];
+  sliceLocation?: number;
+};
+
+/**
+ * Spatial slice ordering for correct 3D reconstruction.
+ * Primary: ImagePositionPatient z-coordinate (00200032[2]).
+ * Secondary: SliceLocation (00201041).
+ * Fallback: InstanceNumber (00200013).
+ */
+export const compareInstancesBySlice = (a: InstanceInfo, b: InstanceInfo): number => {
+  const aZ = a.imagePosition?.[2];
+  const bZ = b.imagePosition?.[2];
+  if (aZ !== undefined && bZ !== undefined && aZ !== bZ) {
+    return aZ - bZ;
+  }
+
+  if (a.sliceLocation !== undefined && b.sliceLocation !== undefined && a.sliceLocation !== b.sliceLocation) {
+    return a.sliceLocation - b.sliceLocation;
+  }
+
+  return (a.instanceNumber ?? 0) - (b.instanceNumber ?? 0);
 };
 
 const getTagValue = (entry: Record<string, unknown>, tag: string) => {
@@ -86,6 +107,7 @@ const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
   const spacingBetweenSlices = readNumber(getTagValue(record, '00180088'));
   const imageOrientation = readNumberArray(getTagValues(record, '00200037'));
   const imagePosition = readNumberArray(getTagValues(record, '00200032'));
+  const sliceLocation = readNumber(getTagValue(record, '00201041'));
 
   return {
     instanceId,
@@ -96,6 +118,7 @@ const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
     spacingBetweenSlices,
     imageOrientation,
     imagePosition,
+    sliceLocation,
   };
 };
 
@@ -144,12 +167,7 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
           throw new Error('Keine DICOM Instanzen gefunden');
         }
 
-        parsed.sort((a, b) => {
-          if (a.instanceNumber === undefined || b.instanceNumber === undefined) {
-            return 0;
-          }
-          return a.instanceNumber - b.instanceNumber;
-        });
+        parsed.sort(compareInstancesBySlice);
 
         // Pre-fetch metadata for all unique instances (required for WADORS decoding)
         await Promise.all(

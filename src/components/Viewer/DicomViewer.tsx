@@ -10,6 +10,7 @@ import { useStackPrefetch } from '@/hooks/useStackPrefetch';
 import { useCornerstoneViewerTools } from '@/hooks/useCornerstoneViewerTools';
 import { useStackFrameNavigation } from '@/hooks/useStackFrameNavigation';
 import { useCornerstoneStackSetup } from '@/hooks/useCornerstoneStackSetup';
+import { useViewportWLPersistence } from '@/hooks/useViewportWLPersistence';
 import { useViewerReset } from '@/hooks/useViewerReset';
 import { useAnnotationMode } from '@/hooks/useAnnotationMode';
 import { ProgressOverlay } from './ProgressOverlay';
@@ -92,6 +93,19 @@ export function DicomViewer({
 
   const activeToolRef = useRef<AllToolId>(activeTool);
 
+  // Persist VOI/window-level changes; ref bridges the persistence hook (which
+  // needs the viewport refs created below) into the viewport-change wrapper.
+  const persistWLRef = useRef<((wl: NonNullable<ViewportState['windowLevel']>) => void) | null>(null);
+  const handleViewportChange = useCallback(
+    (state: Partial<ViewportState>) => {
+      if (state.windowLevel) {
+        persistWLRef.current?.(state.windowLevel);
+      }
+      onViewportChange?.(state);
+    },
+    [onViewportChange]
+  );
+
   const viewerInstanceIdRef = useRef<string | null>(null);
   if (viewerInstanceIdRef.current === null) {
     viewerInstanceIdRef.current = `dicom-viewer-${Math.random().toString(36).slice(2, 9)}`;
@@ -116,7 +130,7 @@ export function DicomViewer({
     toolGroupId,
     onFrameIndexChange: setCurrentFrame,
     onZoomChange: setZoom,
-    onViewportChange,
+    onViewportChange: handleViewportChange,
     onInitError: setViewerError,
   });
 
@@ -142,6 +156,16 @@ export function DicomViewer({
   const totalFrames = hasStack ? imageIds.length : series?.frameCount || 1;
   const isLoading = isFetchingInstances || isInitializingCornerstone || isInitializingStack;
   const effectiveError = viewerError ?? loadError;
+
+  const { persistWindowLevel } = useViewportWLPersistence({
+    stackViewportRef,
+    syncingRef,
+    ready: hasStack && !isLoading,
+    seriesId: series?.id ?? null,
+  });
+  useEffect(() => {
+    persistWLRef.current = persistWindowLevel;
+  }, [persistWindowLevel]);
 
   // Get current instance ID from imageRefs
   const currentInstanceId = imageRefs[currentFrame]?.instanceId;
