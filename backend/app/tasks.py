@@ -14,6 +14,7 @@ from .inference_clients import (
 )
 from .mock_logic import utc_now
 from .models import InferenceJob, Report
+from .tracing import get_tracer, traced_task
 from .utils.inference import build_image_metadata
 from .ws_events import publish_report_status
 
@@ -68,6 +69,7 @@ def _mark_inference_job_failed(db, job_id: str | None, exc: Exception) -> None:
         logger.exception("Failed to update inference job %s status to failed", job_id)
 
 
+@traced_task("task.inference")
 def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     report_id = payload.get("report_id")
     study_id = payload.get("study_id")
@@ -123,13 +125,14 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         )
         db.commit()
 
-        summary, confidence, resolved_model, metadata = generate_inference_summary_text(
-            findings_text,
-            model_name=requested_model_version,
-            image_urls=image_urls,
-            image_paths=image_paths,
-            image_refs=image_refs,
-        )
+        with get_tracer(__name__).start_as_current_span("inference.llm_call"):
+            summary, confidence, resolved_model, metadata = generate_inference_summary_text(
+                findings_text,
+                model_name=requested_model_version,
+                image_urls=image_urls,
+                image_paths=image_paths,
+                image_refs=image_refs,
+            )
         completed_at = utc_now()
         output_summary = summary[:240]
 
@@ -214,6 +217,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         db.close()
 
 
+@traced_task("task.localize")
 def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
     """Run single-frame localization; returns findings for overlay."""
     report_id = payload.get("report_id")
@@ -261,11 +265,12 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
         )
         db.commit()
 
-        findings, resolved_model, metadata = generate_localize_findings(
-            image_ref,
-            model_name=requested_model_version,
-            mode=mode,
-        )
+        with get_tracer(__name__).start_as_current_span("localize.llm_call"):
+            findings, resolved_model, metadata = generate_localize_findings(
+                image_ref,
+                model_name=requested_model_version,
+                mode=mode,
+            )
         completed_at = utc_now()
         summary = f"Localized {len(findings)} finding(s)" if findings else "No findings"
 
@@ -340,6 +345,7 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
         db.close()
 
 
+@traced_task("task.volume")
 def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     """Drive a volume-based inference job (P0.B): segmenter preprocess + vLLM."""
     report_id = payload.get("report_id")
@@ -489,6 +495,7 @@ def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         db.close()
 
 
+@traced_task("task.comparison")
 def run_comparison_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     """Drive a longitudinal comparison job (P1.A)."""
     report_id = payload.get("report_id")
@@ -640,11 +647,13 @@ def run_segmentation_job(payload: dict[str, Any]) -> dict[str, Any]:
     import os
     import time
 
+    from .models import SegmentationJob
     from .segmentation_client import (
         get_job_status as seg_get_status,
+    )
+    from .segmentation_client import (
         submit_segmentation,
     )
-    from .models import SegmentationJob
 
     job_id = payload["job_id"]
     study_uid = payload["study_uid"]

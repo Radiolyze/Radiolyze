@@ -27,6 +27,7 @@ from .api import (
 )
 from .db import Base, engine
 from .rate_limiter import RateLimiter
+from .tracing import instrument_fastapi, set_current_span_attribute, setup_tracing
 from .ws_events import run_ws_bridge
 from .ws_manager import manager
 
@@ -40,6 +41,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Orchestrator API", version="0.1.0")
+
+# Distributed tracing (GAP-05): opt-in via ENABLE_TRACING, no-op otherwise.
+setup_tracing("radiolyze-backend")
+instrument_fastapi(app)
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +94,8 @@ async def request_id_middleware(request: Request, call_next) -> Response:
     rid = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     request_id_ctx.set(rid)
     request.state.request_id = rid
+    # Link the request id to the active trace span for cross-referencing.
+    set_current_span_attribute("request.id", rid)
     response = await call_next(request)
     response.headers["X-Request-ID"] = rid
     return response
