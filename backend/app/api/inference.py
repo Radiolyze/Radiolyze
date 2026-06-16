@@ -29,6 +29,7 @@ from ..tasks import (
     run_localize_job,
     run_volume_inference_job,
 )
+from ..tracing import get_tracer
 from ..utils.hashing import (
     compute_input_hash,
     compute_localize_hash,
@@ -145,31 +146,36 @@ async def queue_inference(
     }
 
     service = InferenceService(db)
-    job = service.enqueue(
-        run_inference_job,
-        job_payload,
-        job_id=job_id,
-        report=report,
-        report_id=payload.report_id,
-        study_id=study_id,
-        requested_by=requested_by,
-        model_version=model_version,
-        input_hash=input_hash,
-        queued_at=queued_at,
-        job_metadata={
-            "requested_by": requested_by,
-            "image_refs": image_refs,
-            **image_metadata,
-        },
-        audit_event_type="inference_queued",
-        audit_metadata={
-            "job_id": job_id,
-            "model_version": model_version,
-            "input_hash": input_hash,
-            "image_refs": image_refs,
-            **image_metadata,
-        },
-    )
+    with get_tracer(__name__).start_as_current_span("inference.queue") as span:
+        span.set_attribute("radiolyze.job_id", job_id)
+        span.set_attribute("radiolyze.report_id", str(payload.report_id))
+        span.set_attribute("radiolyze.study_id", str(study_id))
+        span.set_attribute("radiolyze.model", model_version)
+        job = service.enqueue(
+            run_inference_job,
+            job_payload,
+            job_id=job_id,
+            report=report,
+            report_id=payload.report_id,
+            study_id=study_id,
+            requested_by=requested_by,
+            model_version=model_version,
+            input_hash=input_hash,
+            queued_at=queued_at,
+            job_metadata={
+                "requested_by": requested_by,
+                "image_refs": image_refs,
+                **image_metadata,
+            },
+            audit_event_type="inference_queued",
+            audit_metadata={
+                "job_id": job_id,
+                "model_version": model_version,
+                "input_hash": input_hash,
+                "image_refs": image_refs,
+                **image_metadata,
+            },
+        )
 
     if payload.report_id:
         await broadcast_status(
@@ -248,31 +254,36 @@ async def queue_localize(
     }
 
     service = InferenceService(db)
-    job = service.enqueue(
-        run_localize_job,
-        job_payload,
-        job_id=job_id,
-        report=report,
-        report_id=payload.report_id,
-        study_id=study_id,
-        requested_by=requested_by,
-        model_version=model_version,
-        input_hash=input_hash,
-        queued_at=queued_at,
-        job_metadata={
-            "requested_by": requested_by,
-            "image_ref": image_ref,
-            "job_type": "localize",
-        },
-        audit_event_type="inference_queued",
-        audit_metadata={
-            "job_id": job_id,
-            "job_type": "localize",
-            "model_version": model_version,
-            "input_hash": input_hash,
-            "image_ref": image_ref,
-        },
-    )
+    with get_tracer(__name__).start_as_current_span("inference.localize") as span:
+        span.set_attribute("radiolyze.job_id", job_id)
+        span.set_attribute("radiolyze.report_id", str(payload.report_id))
+        span.set_attribute("radiolyze.study_id", str(study_id))
+        span.set_attribute("radiolyze.model", model_version)
+        job = service.enqueue(
+            run_localize_job,
+            job_payload,
+            job_id=job_id,
+            report=report,
+            report_id=payload.report_id,
+            study_id=study_id,
+            requested_by=requested_by,
+            model_version=model_version,
+            input_hash=input_hash,
+            queued_at=queued_at,
+            job_metadata={
+                "requested_by": requested_by,
+                "image_ref": image_ref,
+                "job_type": "localize",
+            },
+            audit_event_type="inference_queued",
+            audit_metadata={
+                "job_id": job_id,
+                "job_type": "localize",
+                "model_version": model_version,
+                "input_hash": input_hash,
+                "image_ref": image_ref,
+            },
+        )
 
     if payload.report_id:
         await broadcast_status(
@@ -338,39 +349,44 @@ async def queue_volume_inference(
     }
 
     service = InferenceService(db)
-    job = service.enqueue(
-        run_volume_inference_job,
-        job_payload,
-        job_id=job_id,
-        report=report,
-        report_id=payload.report_id,
-        study_id=study_id,
-        requested_by=requested_by,
-        model_version=model_version,
-        input_hash=input_hash,
-        queued_at=queued_at,
-        job_metadata={
-            "requested_by": requested_by,
-            "job_type": "volume_inference",
-            "study_uid": payload.study_uid,
-            "series_uid": payload.series_uid,
-            "max_slices": payload.max_slices,
-            "window_preset": payload.window_preset,
-            "strategy": payload.strategy,
-        },
-        audit_event_type="inference_volume_queued",
-        audit_metadata={
-            "job_id": job_id,
-            "job_type": "volume_inference",
-            "model_version": model_version,
-            "input_hash": input_hash,
-            "study_uid": payload.study_uid,
-            "series_uid": payload.series_uid,
-            "max_slices": payload.max_slices,
-            "window_preset": payload.window_preset,
-            "strategy": payload.strategy,
-        },
-    )
+    with get_tracer(__name__).start_as_current_span("inference.volume") as span:
+        span.set_attribute("radiolyze.job_id", job_id)
+        span.set_attribute("radiolyze.report_id", str(payload.report_id))
+        span.set_attribute("radiolyze.study_id", str(study_id))
+        span.set_attribute("radiolyze.model", model_version)
+        job = service.enqueue(
+            run_volume_inference_job,
+            job_payload,
+            job_id=job_id,
+            report=report,
+            report_id=payload.report_id,
+            study_id=study_id,
+            requested_by=requested_by,
+            model_version=model_version,
+            input_hash=input_hash,
+            queued_at=queued_at,
+            job_metadata={
+                "requested_by": requested_by,
+                "job_type": "volume_inference",
+                "study_uid": payload.study_uid,
+                "series_uid": payload.series_uid,
+                "max_slices": payload.max_slices,
+                "window_preset": payload.window_preset,
+                "strategy": payload.strategy,
+            },
+            audit_event_type="inference_volume_queued",
+            audit_metadata={
+                "job_id": job_id,
+                "job_type": "volume_inference",
+                "model_version": model_version,
+                "input_hash": input_hash,
+                "study_uid": payload.study_uid,
+                "series_uid": payload.series_uid,
+                "max_slices": payload.max_slices,
+                "window_preset": payload.window_preset,
+                "strategy": payload.strategy,
+            },
+        )
 
     if payload.report_id:
         await broadcast_status(
@@ -441,39 +457,44 @@ async def queue_comparison_inference(
     }
 
     service = InferenceService(db)
-    job = service.enqueue(
-        run_comparison_inference_job,
-        job_payload,
-        job_id=job_id,
-        report=report,
-        report_id=payload.report_id,
-        study_id=study_id,
-        requested_by=requested_by,
-        model_version=model_version,
-        input_hash=input_hash,
-        queued_at=queued_at,
-        job_metadata={
-            "requested_by": requested_by,
-            "job_type": "comparison_inference",
-            "study_uid": payload.study_uid,
-            "series_uid": payload.series_uid,
-            "prior_study_uid": payload.prior_study_uid,
-            "prior_series_uid": payload.prior_series_uid,
-            "time_delta_days": payload.time_delta_days,
-        },
-        audit_event_type="inference_comparison_queued",
-        audit_metadata={
-            "job_id": job_id,
-            "job_type": "comparison_inference",
-            "model_version": model_version,
-            "input_hash": input_hash,
-            "study_uid": payload.study_uid,
-            "series_uid": payload.series_uid,
-            "prior_study_uid": payload.prior_study_uid,
-            "prior_series_uid": payload.prior_series_uid,
-            "time_delta_days": payload.time_delta_days,
-        },
-    )
+    with get_tracer(__name__).start_as_current_span("inference.comparison") as span:
+        span.set_attribute("radiolyze.job_id", job_id)
+        span.set_attribute("radiolyze.report_id", str(payload.report_id))
+        span.set_attribute("radiolyze.study_id", str(study_id))
+        span.set_attribute("radiolyze.model", model_version)
+        job = service.enqueue(
+            run_comparison_inference_job,
+            job_payload,
+            job_id=job_id,
+            report=report,
+            report_id=payload.report_id,
+            study_id=study_id,
+            requested_by=requested_by,
+            model_version=model_version,
+            input_hash=input_hash,
+            queued_at=queued_at,
+            job_metadata={
+                "requested_by": requested_by,
+                "job_type": "comparison_inference",
+                "study_uid": payload.study_uid,
+                "series_uid": payload.series_uid,
+                "prior_study_uid": payload.prior_study_uid,
+                "prior_series_uid": payload.prior_series_uid,
+                "time_delta_days": payload.time_delta_days,
+            },
+            audit_event_type="inference_comparison_queued",
+            audit_metadata={
+                "job_id": job_id,
+                "job_type": "comparison_inference",
+                "model_version": model_version,
+                "input_hash": input_hash,
+                "study_uid": payload.study_uid,
+                "series_uid": payload.series_uid,
+                "prior_study_uid": payload.prior_study_uid,
+                "prior_series_uid": payload.prior_series_uid,
+                "time_delta_days": payload.time_delta_days,
+            },
+        )
 
     if payload.report_id:
         await broadcast_status(
