@@ -11,7 +11,7 @@ pydicom
 python-jose[cryptography]
 bcrypt>=4.1.2,<5
 reportlab
-apscheduler>=3.10,<4
+apscheduler>=3.11.2,<4
 pgvector>=0.3.0
 opentelemetry-sdk>=1.24
 opentelemetry-exporter-otlp-proto-http>=1.24
