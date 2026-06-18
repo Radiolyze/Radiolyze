@@ -6,7 +6,7 @@ pydantic
 # to the 2.x line until pydicom-seg ships a 3.0-compatible release.
 pydicom>=2.4,<3.0
 numpy<2
-SimpleITK>=2.4
+SimpleITK>=2.5.5
 scikit-image>=0.24
 Pillow>=10.0
 trimesh>=4.4
