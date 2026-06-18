@@ -4,7 +4,7 @@ httpx
 pydantic
 # pydicom-seg pulls SegmentationStorage from a pre-3.0 import path; pin
 # to the 2.x line until pydicom-seg ships a 3.0-compatible release.
-pydicom>=2.4,<3.0
+pydicom>=3.0.2,<4.0
 numpy<2
 SimpleITK>=2.4
 scikit-image>=0.24
