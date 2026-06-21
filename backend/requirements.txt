@@ -12,7 +12,7 @@ python-jose[cryptography]
 bcrypt>=4.1.2,<5
 reportlab
 apscheduler>=3.10,<4
-pgvector>=0.3.0
+pgvector>=0.4.2
 opentelemetry-sdk>=1.24
 opentelemetry-exporter-otlp-proto-http>=1.24
 opentelemetry-instrumentation-fastapi>=0.45b0
