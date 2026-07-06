@@ -48,10 +48,26 @@ services:
     volumes:
       - seg-data:/data/segmentations
     depends_on:
-      - db
-      - redis
-      - orthanc
-      - jaeger
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      orthanc:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: ./backend
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://app:app@db:5432/app
+    depends_on:
+      db:
+        condition: service_healthy
 
   worker:
     build:
@@ -93,9 +109,14 @@ services:
     volumes:
       - seg-data:/data/segmentations
     depends_on:
-      - db
-      - redis
-      - jaeger
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
 
   frontend:
     build:
