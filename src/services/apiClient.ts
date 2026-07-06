@@ -1,3 +1,5 @@
+import { AUTH_USER_KEY } from '@/lib/authStorage';
+
 export class ApiError extends Error {
   status: number;
   payload?: unknown;
@@ -44,7 +46,6 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const request = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
   const { query, body, headers, ...rest } = options;
-  const authToken = localStorage.getItem('radiolyze-auth-token');
   const requestId = crypto.randomUUID();
 
   let response: Response | undefined;
@@ -54,10 +55,13 @@ const request = async <T>(path: string, options: RequestOptions = {}): Promise<T
     try {
       response = await fetch(buildUrl(path, query), {
         ...rest,
+        // The JWT lives in an HttpOnly cookie (see issue #100), never in JS-
+        // readable storage, so auth is carried by the cookie jar rather than
+        // a manually-attached Authorization header.
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'X-Request-ID': requestId,
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           ...(headers || {}),
         },
         body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -81,9 +85,12 @@ const request = async <T>(path: string, options: RequestOptions = {}): Promise<T
   const payload = contentType.includes('application/json') ? await response.json() : await response.text();
 
   if (!response.ok) {
-    // Handle 401: clear stale token and redirect to login
+    // Handle 401: clear stale client-side session state and redirect to login.
+    // The auth cookie itself is invalid/expired at this point (it's what the
+    // 401 means); dropping the locally-cached user display info here just
+    // keeps the UI from showing a stale "logged in as ..." state.
     if (response.status === 401) {
-      localStorage.removeItem('radiolyze-auth-token');
+      localStorage.removeItem(AUTH_USER_KEY);
       const loginPath = '/login';
       if (window.location.pathname !== loginPath) {
         window.location.href = loginPath;

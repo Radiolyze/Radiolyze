@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Bell, Settings, User, Activity, Sun, Moon, Monitor, History, LayoutGrid, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import { authClient } from '@/services/authClient';
 export function Header() {
   const { t } = useTranslation('common');
   const location = useLocation();
+  const navigate = useNavigate();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [badgeBounce, setBadgeBounce] = useState(false);
@@ -44,6 +45,10 @@ export function Header() {
   } = useNotifications();
 
   const currentUser = authClient.getUser();
+
+  const handleLogout = () => {
+    void authClient.logout().finally(() => navigate('/login'));
+  };
   const displayName = currentUser?.username
     ? `Dr. ${currentUser.username.charAt(0).toUpperCase()}${currentUser.username.slice(1)}`
     : 'Dr. Radiologe';
@@ -209,7 +214,9 @@ export function Header() {
                   {t('header.keyboardShortcuts')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">{t('header.logout')}</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
+                  {t('header.logout')}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

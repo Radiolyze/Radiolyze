@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from .auth import AUTH_COOKIE_NAME
 from .db import SessionLocal
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -21,9 +22,15 @@ def get_db() -> Iterator[Session]:
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+    auth_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
     db: Session = Depends(get_db),
 ):
-    """Extract and validate JWT token, return the User object.
+    """Extract and validate the JWT, return the User object.
+
+    The browser frontend authenticates via the HttpOnly ``radiolyze_token``
+    cookie (see issue #100); the ``Authorization: Bearer`` header remains
+    supported for non-browser API clients. The cookie takes precedence when
+    both are present.
 
     If AUTH_REQUIRED is not set to 'true', returns None to allow
     unauthenticated access during development.
@@ -35,7 +42,9 @@ def get_current_user(
 
     auth_required = os.getenv("AUTH_REQUIRED", "true").lower() == "true"
 
-    if not credentials:
+    token = auth_cookie or (credentials.credentials if credentials else None)
+
+    if not token:
         if auth_required:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
@@ -43,7 +52,7 @@ def get_current_user(
         return None
 
     try:
-        payload = decode_access_token(credentials.credentials)
+        payload = decode_access_token(token)
         user_id: str = payload.get("sub", "")
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
