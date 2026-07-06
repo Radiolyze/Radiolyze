@@ -11,7 +11,7 @@ scikit-image>=0.24
 Pillow>=10.0
 trimesh>=4.4
 pygltflib>=1.16
-pydicom-seg>=0.4
+pydicom-seg>=0.4.1
 # --- M2: TotalSegmentator (multi-organ) ---
 # torch is pulled transitively but pinned here so docker rebuilds do not
 # silently switch the CUDA build channel out from under us.
