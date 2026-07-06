@@ -10,7 +10,7 @@ services:
       timeout: 10s
       retries: 3
     environment:
-      DATABASE_URL: postgresql+psycopg://app:app@db:5432/app
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
       CORS_ORIGINS: http://localhost:5173
       REDIS_URL: redis://redis:6379/0
       INFERENCE_QUEUE_NAME: inference
@@ -34,13 +34,13 @@ services:
       MEDASR_FALLBACK_TO_MOCK: "false"
       MEDASR_DEFAULT_CONFIDENCE: "0.0"
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
-      DICOM_WEB_USERNAME: orthanc
-      DICOM_WEB_PASSWORD: orthanc
+      DICOM_WEB_USERNAME: ${ORTHANC_USERNAME:-orthanc}
+      DICOM_WEB_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
       DRIFT_SCHEDULE_HOURS: "24"
       DRIFT_WINDOW_DAYS: "7"
       DRIFT_BASELINE_DAYS: "7"
       SEGMENTER_URL: http://segmenter:8200
-      SEGMENTER_API_KEY: dev-segmenter-key-change-in-production
+      SEGMENTER_API_KEY: ${SEGMENTER_API_KEY:-dev-segmenter-key-change-in-production}
       SEGMENTATION_DATA_DIR: /data/segmentations
       SEGMENTATION_JOB_TIMEOUT: "1800"
       ENABLE_TRACING: "true"
@@ -64,7 +64,7 @@ services:
       context: ./backend
     command: ["alembic", "upgrade", "head"]
     environment:
-      DATABASE_URL: postgresql+psycopg://app:app@db:5432/app
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
     depends_on:
       db:
         condition: service_healthy
@@ -74,7 +74,7 @@ services:
       context: ./backend
     command: ["python", "-m", "app.worker"]
     environment:
-      DATABASE_URL: postgresql+psycopg://app:app@db:5432/app
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
       REDIS_URL: redis://redis:6379/0
       INFERENCE_QUEUE_NAME: inference
       INFERENCE_MODEL_VERSION: medgemma-radiology
@@ -97,10 +97,10 @@ services:
       MEDASR_FALLBACK_TO_MOCK: "false"
       MEDASR_DEFAULT_CONFIDENCE: "0.0"
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
-      DICOM_WEB_USERNAME: orthanc
-      DICOM_WEB_PASSWORD: orthanc
+      DICOM_WEB_USERNAME: ${ORTHANC_USERNAME:-orthanc}
+      DICOM_WEB_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
       SEGMENTER_URL: http://segmenter:8200
-      SEGMENTER_API_KEY: dev-segmenter-key-change-in-production
+      SEGMENTER_API_KEY: ${SEGMENTER_API_KEY:-dev-segmenter-key-change-in-production}
       SEGMENTATION_DATA_DIR: /data/segmentations
       SEGMENTATION_JOB_TIMEOUT: "1800"
       ENABLE_TRACING: "true"
@@ -131,13 +131,18 @@ services:
       # Vite proxy targets (accessed from within Docker network)
       VITE_API_PROXY_TARGET: http://backend:8000
       VITE_DICOM_WEB_PROXY_TARGET: http://orthanc:8042
+      # DICOMweb Basic Auth for the dev-server proxy only. Intentionally NOT
+      # VITE_-prefixed: Vite embeds every VITE_* var into the client bundle,
+      # which would ship these credentials to the browser. The proxy (see
+      # vite.config.ts) reads these Node-side and injects the Authorization
+      # header itself, so the browser never needs to know them.
+      DICOM_WEB_PROXY_USERNAME: ${ORTHANC_USERNAME:-orthanc}
+      DICOM_WEB_PROXY_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
       # API endpoints (relative, go through proxy)
       VITE_ASR_ENDPOINT: /api/v1/reports/asr-transcript
       VITE_QA_CHECK_URL: /api/v1/reports/qa-check
       VITE_AUDIT_LOG_URL: /api/v1/audit-log
       VITE_DICOM_WEB_URL: /dicom-web
-      VITE_DICOM_WEB_USERNAME: orthanc
-      VITE_DICOM_WEB_PASSWORD: orthanc
       VITE_USE_MOCK_QUEUE: "false"
     depends_on:
       - backend
@@ -150,10 +155,13 @@ services:
       - "4242:4242"
     volumes:
       - orthanc-data:/var/lib/orthanc/db
+      # NOTE: Access-Control-Allow-Origin in orthanc.json is a static value
+      # (Orthanc doesn't support env-var templating of this file) — update it
+      # to match your real frontend origin for any non-default deployment.
       - ./orthanc/orthanc.json:/etc/orthanc/orthanc.json:ro
     environment:
-      ORTHANC_USERNAME: orthanc
-      ORTHANC_PASSWORD: orthanc
+      ORTHANC_USERNAME: ${ORTHANC_USERNAME:-orthanc}
+      ORTHANC_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8042/system"]
       interval: 30s
@@ -168,8 +176,8 @@ services:
       - ./orthanc/seed.sh:/seed/seed.sh:ro
     environment:
       ORTHANC_URL: http://orthanc:8042
-      ORTHANC_USERNAME: orthanc
-      ORTHANC_PASSWORD: orthanc
+      ORTHANC_USERNAME: ${ORTHANC_USERNAME:-orthanc}
+      ORTHANC_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
       ORTHANC_SEED_ENABLED: "true"
       # Seed modes: minimal, mri, ct, multiframe, us, rg, compression, color, full
       ORTHANC_SEED_MODE: "full"
@@ -178,15 +186,15 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_DB: app
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
     ports:
       - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app}"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -295,11 +303,11 @@ services:
     environment:
       SEGMENTATION_DATA_DIR: /data/segmentations
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
-      DICOM_WEB_USERNAME: orthanc
-      DICOM_WEB_PASSWORD: orthanc
+      DICOM_WEB_USERNAME: ${ORTHANC_USERNAME:-orthanc}
+      DICOM_WEB_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
       BONE_HU_THRESHOLD: "300"
       SEGMENTER_MAX_PARALLEL_WADO: "8"
-      SEGMENTER_API_KEY: dev-segmenter-key-change-in-production
+      SEGMENTER_API_KEY: ${SEGMENTER_API_KEY:-dev-segmenter-key-change-in-production}
     volumes:
       - seg-data:/data/segmentations
     depends_on:

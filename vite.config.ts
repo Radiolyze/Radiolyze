@@ -31,8 +31,13 @@ export default defineConfig(({ mode }) => {
           // Add auth headers for Orthanc DICOMweb requests and CORP headers for COEP compatibility
           configure: (proxy) => {
             proxy.on('proxyReq', (proxyReq) => {
-              const username = env.VITE_DICOM_WEB_USERNAME || 'orthanc';
-              const password = env.VITE_DICOM_WEB_PASSWORD || 'orthanc';
+              // Deliberately NOT read from VITE_-prefixed vars: Vite exposes any
+              // VITE_* env var to client bundles via import.meta.env, which would
+              // ship the DICOMweb credentials to every browser. These vars are
+              // Node-only and only ever used here, server-side, to inject the
+              // Basic Auth header on the dev-server proxy.
+              const username = env.DICOM_WEB_PROXY_USERNAME || 'orthanc';
+              const password = env.DICOM_WEB_PROXY_PASSWORD || 'orthanc';
               const auth = Buffer.from(`${username}:${password}`).toString('base64');
               proxyReq.setHeader('Authorization', `Basic ${auth}`);
             });
