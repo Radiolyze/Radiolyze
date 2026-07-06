@@ -82,15 +82,25 @@ class QARule(Base):
 
 
 class AuditEvent(Base):
+    """Append-only log entry, tamper-evident via a SHA-256 hash chain.
+
+    ``seq``/``prev_hash``/``event_hash`` link each row to its predecessor
+    (see ``app.audit.add_audit_event`` / ``verify_audit_chain``): editing or
+    deleting a row after the fact breaks the chain for every row after it.
+    """
+
     __tablename__ = "audit_events"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    seq: Mapped[int] = mapped_column(Integer, nullable=False, unique=True, index=True)
     event_type: Mapped[str] = mapped_column(String, nullable=False)
     actor_id: Mapped[str | None] = mapped_column(String, nullable=True)
     report_id: Mapped[str | None] = mapped_column(String, nullable=True)
     study_id: Mapped[str | None] = mapped_column(String, nullable=True)
     timestamp: Mapped[str] = mapped_column(String, nullable=False)
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+    prev_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    event_hash: Mapped[str] = mapped_column(String, nullable=False)
 
 
 class InferenceJob(Base):

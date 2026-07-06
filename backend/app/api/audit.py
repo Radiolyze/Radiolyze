@@ -3,11 +3,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from ..audit import add_audit_event
-from ..deps import get_db, require_admin, require_radiologist_or_admin
+from ..audit import add_audit_event, verify_audit_chain
+from ..deps import get_current_user, get_db, require_admin, require_radiologist_or_admin
 from ..mock_logic import utc_now
 from ..models import AuditEvent
-from ..schemas import AuditEventRequest, AuditEventResponse
+from ..schemas import AuditChainVerificationResponse, AuditEventRequest, AuditEventResponse
 
 router = APIRouter()
 
@@ -15,18 +15,22 @@ router = APIRouter()
 def _serialize_audit_event(event: AuditEvent) -> AuditEventResponse:
     return AuditEventResponse(
         id=event.id,
+        seq=event.seq,
         event_type=event.event_type,
         actor_id=event.actor_id,
         report_id=event.report_id,
         study_id=event.study_id,
         timestamp=event.timestamp,
         metadata=event.metadata_json,
+        prev_hash=event.prev_hash,
+        event_hash=event.event_hash,
     )
 
 
 @router.post("/api/v1/audit-log", response_model=AuditEventResponse)
 def create_audit_event(
     payload: AuditEventRequest,
+    user=Depends(get_current_user),
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> AuditEventResponse:
@@ -34,7 +38,9 @@ def create_audit_event(
     event = add_audit_event(
         db,
         event_type=payload.event_type,
-        actor_id=payload.actor_id,
+        # actor is the authenticated caller, never the client-supplied
+        # payload.actor_id - see AuditEventRequest.actor_id docstring.
+        actor_id=user.id if user is not None else None,
         report_id=payload.report_id,
         study_id=payload.study_id,
         metadata=payload.metadata,
@@ -62,3 +68,16 @@ def list_audit_events(
         query = query.filter(AuditEvent.report_id == report_id)
     events = query.order_by(AuditEvent.timestamp.desc()).offset(offset).limit(limit).all()
     return [_serialize_audit_event(event) for event in events]
+
+
+@router.get("/api/v1/audit-log/verify", response_model=AuditChainVerificationResponse)
+def verify_audit_log(
+    _: None = require_admin,
+    db: Session = Depends(get_db),
+) -> AuditChainVerificationResponse:
+    """Recompute the audit event hash chain and report any tampering."""
+    valid, broken_seqs = verify_audit_chain(db)
+    events_checked = db.query(AuditEvent).count()
+    return AuditChainVerificationResponse(
+        valid=valid, broken_seqs=broken_seqs, events_checked=events_checked
+    )
