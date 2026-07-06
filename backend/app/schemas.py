@@ -333,6 +333,10 @@ class PeerReviewResponse(ApiBaseModel):
 
 class AuditEventRequest(ApiBaseModel):
     event_type: str = Field(alias="eventType")
+    # Ignored server-side: the actor is always taken from the authenticated
+    # principal (see api/audit.py) so a caller cannot log events under
+    # another user's identity. Kept accepted (not rejected) for backward
+    # compatibility with existing clients that still send it.
     actor_id: str | None = Field(default=None, alias="actorId")
     report_id: str | None = Field(default=None, alias="reportId")
     study_id: str | None = Field(default=None, alias="studyId")
@@ -342,9 +346,18 @@ class AuditEventRequest(ApiBaseModel):
 
 class AuditEventResponse(ApiBaseModel):
     id: str
+    seq: int
     event_type: str
     actor_id: str | None = None
     report_id: str | None = None
     study_id: str | None = None
     timestamp: str
     metadata: dict[str, Any] | None = None
+    prev_hash: str | None = None
+    event_hash: str
+
+
+class AuditChainVerificationResponse(ApiBaseModel):
+    valid: bool
+    broken_seqs: list[int] = Field(default_factory=list, alias="brokenSeqs")
+    events_checked: int = Field(alias="eventsChecked")

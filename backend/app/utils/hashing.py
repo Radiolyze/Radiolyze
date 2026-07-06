@@ -68,3 +68,37 @@ def compute_text_hash(*values: str | None) -> str:
 
 def compute_bytes_hash(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def compute_audit_event_hash(
+    *,
+    seq: int,
+    prev_hash: str | None,
+    event_type: str,
+    actor_id: str | None,
+    report_id: str | None,
+    study_id: str | None,
+    timestamp: str,
+    metadata: dict[str, Any] | None,
+) -> str:
+    """Hash-chain link for one audit event, binding it to its predecessor.
+
+    Any later change to a stored row (including its ``prev_hash``/``event_hash``
+    themselves) makes this no longer reproduce the stored ``event_hash``, which
+    is how ``app.audit.verify_audit_chain`` detects tampering.
+    """
+    canonical = json.dumps(
+        {
+            "seq": seq,
+            "prev_hash": prev_hash,
+            "event_type": event_type,
+            "actor_id": actor_id,
+            "report_id": report_id,
+            "study_id": study_id,
+            "timestamp": timestamp,
+            "metadata": metadata or {},
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()

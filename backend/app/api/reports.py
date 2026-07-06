@@ -17,7 +17,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_db, require_radiologist_or_admin
+from ..deps import get_current_user, get_db, require_radiologist_or_admin
 from ..dicom_client import store_sr
 from ..inference_clients import (
     generate_impression_stream,
@@ -32,6 +32,7 @@ from ..models import (
     QACheckResult,
     Report,
     ReportRevision,
+    User,
 )
 from ..schemas import (
     ASRResponse,
@@ -143,10 +144,16 @@ async def update_report(
     request: Request = None,
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user),
 ) -> ReportResponse:
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
+    # Actor is the authenticated caller when available; the client-supplied
+    # payload.actor_id is only a dev-mode fallback (AUTH_REQUIRED=false),
+    # since it cannot otherwise be trusted to identify who made the change.
+    actor_id = current_user.id if current_user is not None else payload.actor_id
 
     # ETag-based conflict detection (If-Match header)
     if request:
@@ -185,7 +192,7 @@ async def update_report(
             report_id=report_id,
             findings_text=old_findings,
             impression_text=old_impression,
-            changed_by=payload.actor_id,
+            changed_by=actor_id,
             changed_at=now,
         )
         db.add(revision)
@@ -203,7 +210,7 @@ async def update_report(
         add_audit_event(
             db,
             event_type=event_type,
-            actor_id=payload.actor_id,
+            actor_id=actor_id,
             report_id=report_id,
             study_id=report.study_id,
             metadata={"updated_fields": updated_fields},
@@ -271,10 +278,17 @@ def export_structured_report(
     export_format: str = Query("json", alias="format"),
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user),
 ) -> Response:
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
+    # Authenticated caller wins over the (client-controlled) actor_id query
+    # param, which remains only as a dev-mode/back-compat fallback.
+    audit_actor_id = (
+        current_user.id if current_user is not None else (actor_id or report.approved_by)
+    )
 
     normalized = export_format.lower()
     if normalized not in {"json", "dicom"}:
@@ -290,12 +304,13 @@ def export_structured_report(
             report.dicom_sr_orthanc_url = orthanc_url
         except RuntimeError as exc:
             import logging as _log
+
             _log.getLogger(__name__).warning("STOW-RS archival failed (non-fatal): %s", exc)
 
     add_audit_event(
         db,
         event_type="report_exported",
-        actor_id=actor_id or report.approved_by,
+        actor_id=audit_actor_id,
         report_id=report.id,
         study_id=report.study_id,
         metadata={
@@ -499,6 +514,7 @@ async def stream_impression_endpoint(
             yield "data: [DONE]\n\n"
 
     import logging as _logging
+
     logger = _logging.getLogger(__name__)
 
     return StreamingResponse(
@@ -633,10 +649,17 @@ def export_pdf(
     actor_id: str | None = None,
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user),
 ) -> Response:
     report = db.get(Report, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
+    # Authenticated caller wins over the (client-controlled) actor_id query
+    # param, which remains only as a dev-mode/back-compat fallback.
+    audit_actor_id = (
+        current_user.id if current_user is not None else (actor_id or report.approved_by)
+    )
 
     from ..pdf_export import build_pdf_export
 
@@ -648,7 +671,7 @@ def export_pdf(
     add_audit_event(
         db,
         event_type="report_exported",
-        actor_id=actor_id or report.approved_by,
+        actor_id=audit_actor_id,
         report_id=report.id,
         study_id=report.study_id,
         metadata={"format": "pdf", "file_name": filename},
@@ -777,6 +800,7 @@ def acknowledge_critical_alert(
     payload: CriticalFindingAcknowledgeRequest,
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user),
 ) -> CriticalFindingAlertResponse:
     alert = db.get(CriticalFindingAlert, alert_id)
     if not alert or alert.report_id != report_id:
@@ -791,7 +815,10 @@ def acknowledge_critical_alert(
     add_audit_event(
         db,
         event_type="critical_finding_acknowledged",
-        actor_id=payload.acknowledged_by,
+        # Audit actor is the authenticated caller; payload.acknowledged_by
+        # (stored above on the alert itself) is a separate, client-supplied
+        # display name and isn't trusted as the audit identity.
+        actor_id=current_user.id if current_user is not None else payload.acknowledged_by,
         report_id=report_id,
         metadata={"alert_id": alert_id, "finding_type": alert.finding_type},
         timestamp=now,
