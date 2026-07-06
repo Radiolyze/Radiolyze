@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from ..audit import add_audit_event
 from ..deps import get_db, require_radiologist_or_admin
@@ -108,92 +109,100 @@ async def queue_inference(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> InferenceQueueResponse:
-    report = None
-    if payload.report_id:
-        report = db.get(Report, payload.report_id)
-        if not report:
-            raise HTTPException(status_code=404, detail="Report not found")
+    def _queue_sync() -> tuple[InferenceQueueResponse, str]:
+        report = None
+        if payload.report_id:
+            report = db.get(Report, payload.report_id)
+            if not report:
+                raise HTTPException(status_code=404, detail="Report not found")
 
-    requested_by = payload.requested_by or "system"
-    study_id = payload.study_id or (report.study_id if report else None)
-    findings_text = payload.findings_text or (report.findings_text if report else None)
-    image_urls = payload.image_urls or []
-    image_paths = _validate_image_paths(payload.image_paths or [])
-    image_refs = [ref.model_dump() for ref in (payload.image_refs or [])]
-    if not findings_text and not image_urls and not image_paths and not image_refs:
-        raise HTTPException(
-            status_code=422,
-            detail="At least one of findings_text, image_urls, image_paths, or image_refs is required",
+        requested_by = payload.requested_by or "system"
+        study_id = payload.study_id or (report.study_id if report else None)
+        findings_text = payload.findings_text or (report.findings_text if report else None)
+        image_urls = payload.image_urls or []
+        image_paths = _validate_image_paths(payload.image_paths or [])
+        image_refs = [ref.model_dump() for ref in (payload.image_refs or [])]
+        if not findings_text and not image_urls and not image_paths and not image_refs:
+            raise HTTPException(
+                status_code=422,
+                detail="At least one of findings_text, image_urls, image_paths, or image_refs is required",
+            )
+
+        model_version = payload.model_version or InferenceService.model_version()
+        input_hash = compute_input_hash(
+            study_id, findings_text, image_urls, image_paths, image_refs
         )
+        queued_at = utc_now()
+        image_metadata = build_image_metadata(image_urls, image_paths, image_refs)
 
-    model_version = payload.model_version or InferenceService.model_version()
-    input_hash = compute_input_hash(study_id, findings_text, image_urls, image_paths, image_refs)
-    queued_at = utc_now()
-    image_metadata = build_image_metadata(image_urls, image_paths, image_refs)
+        job_id = str(uuid.uuid4())
+        job_payload = {
+            "job_id": job_id,
+            "report_id": payload.report_id,
+            "study_id": study_id,
+            "findings_text": findings_text,
+            "image_urls": image_urls,
+            "image_paths": image_paths,
+            "image_refs": image_refs,
+            "requested_by": requested_by,
+            "model_version": model_version,
+            "input_hash": input_hash,
+        }
 
-    job_id = str(uuid.uuid4())
-    job_payload = {
-        "job_id": job_id,
-        "report_id": payload.report_id,
-        "study_id": study_id,
-        "findings_text": findings_text,
-        "image_urls": image_urls,
-        "image_paths": image_paths,
-        "image_refs": image_refs,
-        "requested_by": requested_by,
-        "model_version": model_version,
-        "input_hash": input_hash,
-    }
+        service = InferenceService(db)
+        with get_tracer(__name__).start_as_current_span("inference.queue") as span:
+            span.set_attribute("radiolyze.job_id", job_id)
+            span.set_attribute("radiolyze.report_id", str(payload.report_id))
+            span.set_attribute("radiolyze.study_id", str(study_id))
+            span.set_attribute("radiolyze.model", model_version)
+            job = service.enqueue(
+                run_inference_job,
+                job_payload,
+                job_id=job_id,
+                report=report,
+                report_id=payload.report_id,
+                study_id=study_id,
+                requested_by=requested_by,
+                model_version=model_version,
+                input_hash=input_hash,
+                queued_at=queued_at,
+                job_metadata={
+                    "requested_by": requested_by,
+                    "image_refs": image_refs,
+                    **image_metadata,
+                },
+                audit_event_type="inference_queued",
+                audit_metadata={
+                    "job_id": job_id,
+                    "model_version": model_version,
+                    "input_hash": input_hash,
+                    "image_refs": image_refs,
+                    **image_metadata,
+                },
+            )
 
-    service = InferenceService(db)
-    with get_tracer(__name__).start_as_current_span("inference.queue") as span:
-        span.set_attribute("radiolyze.job_id", job_id)
-        span.set_attribute("radiolyze.report_id", str(payload.report_id))
-        span.set_attribute("radiolyze.study_id", str(study_id))
-        span.set_attribute("radiolyze.model", model_version)
-        job = service.enqueue(
-            run_inference_job,
-            job_payload,
-            job_id=job_id,
-            report=report,
+        response = service.build_response(
+            job,
+            queued_at=queued_at,
             report_id=payload.report_id,
             study_id=study_id,
-            requested_by=requested_by,
             model_version=model_version,
-            input_hash=input_hash,
-            queued_at=queued_at,
-            job_metadata={
-                "requested_by": requested_by,
-                "image_refs": image_refs,
-                **image_metadata,
-            },
-            audit_event_type="inference_queued",
-            audit_metadata={
-                "job_id": job_id,
-                "model_version": model_version,
-                "input_hash": input_hash,
-                "image_refs": image_refs,
-                **image_metadata,
-            },
         )
+        return response, (report.qa_status if report else "pending")
+
+    response, qa_status = await run_in_threadpool(_queue_sync)
 
     if payload.report_id:
         await broadcast_status(
             payload.report_id,
             {
                 "aiStatus": "queued",
-                "qaStatus": report.qa_status if report else "pending",
+                "qaStatus": qa_status,
                 "asrStatus": "idle",
             },
         )
 
-    return service.build_response(
-        job,
-        queued_at=queued_at,
-        report_id=payload.report_id,
-        study_id=study_id,
-        model_version=model_version,
-    )
+    return response
 
 
 @router.post("/api/v1/inference/localize", response_model=InferenceQueueResponse)
@@ -203,105 +212,112 @@ async def queue_localize(
     db: Session = Depends(get_db),
 ) -> InferenceQueueResponse:
     """Queue on-demand single-frame localization (bounding-box findings)."""
-    report = None
-    if payload.report_id:
-        report = db.get(Report, payload.report_id)
-        if not report:
-            raise HTTPException(status_code=404, detail="Report not found")
 
-    requested_by = payload.requested_by or "system"
-    study_id = payload.study_id or (report.study_id if report else None)
-    image_ref = payload.image_ref.model_dump()
-    mode = payload.mode or "cxr_finding"
-    modality_value = payload.image_ref.series_modality or ""
-    if modality_value and modality_value.upper() not in {"CR", "DX", "CXR"}:
-        add_audit_event(
-            db,
-            event_type="inference_localize_rejected_modality",
-            actor_id=requested_by,
-            report_id=payload.report_id,
-            study_id=study_id,
-            metadata={
-                "modality": modality_value,
-                "mode": mode,
-                "image_ref": image_ref,
-            },
-            source="api",
-        )
-        db.commit()
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                "Localization is only validated for chest radiographs (CR/DX); "
-                f"got modality={modality_value!r}"
-            ),
-        )
+    def _queue_sync() -> tuple[InferenceQueueResponse, str]:
+        report = None
+        if payload.report_id:
+            report = db.get(Report, payload.report_id)
+            if not report:
+                raise HTTPException(status_code=404, detail="Report not found")
 
-    model_version = payload.model_version or InferenceService.model_version()
-    input_hash = compute_localize_hash(study_id, {**image_ref, "mode": mode})
-    queued_at = utc_now()
+        requested_by = payload.requested_by or "system"
+        study_id = payload.study_id or (report.study_id if report else None)
+        image_ref = payload.image_ref.model_dump()
+        mode = payload.mode or "cxr_finding"
+        modality_value = payload.image_ref.series_modality or ""
+        if modality_value and modality_value.upper() not in {"CR", "DX", "CXR"}:
+            add_audit_event(
+                db,
+                event_type="inference_localize_rejected_modality",
+                actor_id=requested_by,
+                report_id=payload.report_id,
+                study_id=study_id,
+                metadata={
+                    "modality": modality_value,
+                    "mode": mode,
+                    "image_ref": image_ref,
+                },
+                source="api",
+            )
+            db.commit()
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Localization is only validated for chest radiographs (CR/DX); "
+                    f"got modality={modality_value!r}"
+                ),
+            )
 
-    job_id = str(uuid.uuid4())
-    job_payload = {
-        "job_id": job_id,
-        "report_id": payload.report_id,
-        "study_id": study_id,
-        "image_ref": image_ref,
-        "mode": mode,
-        "requested_by": requested_by,
-        "model_version": model_version,
-        "input_hash": input_hash,
-    }
+        model_version = payload.model_version or InferenceService.model_version()
+        input_hash = compute_localize_hash(study_id, {**image_ref, "mode": mode})
+        queued_at = utc_now()
 
-    service = InferenceService(db)
-    with get_tracer(__name__).start_as_current_span("inference.localize") as span:
-        span.set_attribute("radiolyze.job_id", job_id)
-        span.set_attribute("radiolyze.report_id", str(payload.report_id))
-        span.set_attribute("radiolyze.study_id", str(study_id))
-        span.set_attribute("radiolyze.model", model_version)
-        job = service.enqueue(
-            run_localize_job,
-            job_payload,
-            job_id=job_id,
-            report=report,
-            report_id=payload.report_id,
-            study_id=study_id,
-            requested_by=requested_by,
-            model_version=model_version,
-            input_hash=input_hash,
+        job_id = str(uuid.uuid4())
+        job_payload = {
+            "job_id": job_id,
+            "report_id": payload.report_id,
+            "study_id": study_id,
+            "image_ref": image_ref,
+            "mode": mode,
+            "requested_by": requested_by,
+            "model_version": model_version,
+            "input_hash": input_hash,
+        }
+
+        service = InferenceService(db)
+        with get_tracer(__name__).start_as_current_span("inference.localize") as span:
+            span.set_attribute("radiolyze.job_id", job_id)
+            span.set_attribute("radiolyze.report_id", str(payload.report_id))
+            span.set_attribute("radiolyze.study_id", str(study_id))
+            span.set_attribute("radiolyze.model", model_version)
+            job = service.enqueue(
+                run_localize_job,
+                job_payload,
+                job_id=job_id,
+                report=report,
+                report_id=payload.report_id,
+                study_id=study_id,
+                requested_by=requested_by,
+                model_version=model_version,
+                input_hash=input_hash,
+                queued_at=queued_at,
+                job_metadata={
+                    "requested_by": requested_by,
+                    "image_ref": image_ref,
+                    "job_type": "localize",
+                },
+                audit_event_type="inference_queued",
+                audit_metadata={
+                    "job_id": job_id,
+                    "job_type": "localize",
+                    "model_version": model_version,
+                    "input_hash": input_hash,
+                    "image_ref": image_ref,
+                },
+            )
+
+        response = service.build_response(
+            job,
             queued_at=queued_at,
-            job_metadata={
-                "requested_by": requested_by,
-                "image_ref": image_ref,
-                "job_type": "localize",
-            },
-            audit_event_type="inference_queued",
-            audit_metadata={
-                "job_id": job_id,
-                "job_type": "localize",
-                "model_version": model_version,
-                "input_hash": input_hash,
-                "image_ref": image_ref,
-            },
+            report_id=payload.report_id,
+            study_id=study_id,
+            model_version=model_version,
         )
+        return response, (report.qa_status if report else "pending")
+
+    response, qa_status = await run_in_threadpool(_queue_sync)
 
     if payload.report_id:
         await broadcast_status(
             payload.report_id,
             {
                 "aiStatus": "queued",
-                "qaStatus": report.qa_status if report else "pending",
+                "qaStatus": qa_status,
                 "asrStatus": "idle",
             },
         )
 
-    return service.build_response(
-        job,
-        queued_at=queued_at,
-        report_id=payload.report_id,
-        study_id=study_id,
-        model_version=model_version,
-    )
+    return response
 
 
 @router.post("/api/v1/inference/volume", response_model=InferenceQueueResponse)
@@ -311,100 +327,107 @@ async def queue_volume_inference(
     db: Session = Depends(get_db),
 ) -> InferenceQueueResponse:
     """Queue a volume-based inference job (P0.B): segmenter preprocess + vLLM."""
-    report = None
-    if payload.report_id:
-        report = db.get(Report, payload.report_id)
-        if not report:
-            raise HTTPException(status_code=404, detail="Report not found")
 
-    requested_by = payload.requested_by or "system"
-    study_id = payload.study_id or (report.study_id if report else None)
-    findings_text = payload.findings_text or (report.findings_text if report else None)
-    model_version = payload.model_version or InferenceService.model_version()
-    input_hash = compute_volume_hash(
-        study_id,
-        study_uid=payload.study_uid,
-        series_uid=payload.series_uid,
-        findings_text=findings_text,
-        max_slices=payload.max_slices,
-        window_preset=payload.window_preset,
-        strategy=payload.strategy,
-    )
-    queued_at = utc_now()
+    def _queue_sync() -> tuple[InferenceQueueResponse, str]:
+        report = None
+        if payload.report_id:
+            report = db.get(Report, payload.report_id)
+            if not report:
+                raise HTTPException(status_code=404, detail="Report not found")
 
-    job_id = str(uuid.uuid4())
-    job_payload = {
-        "job_id": job_id,
-        "report_id": payload.report_id,
-        "study_id": study_id,
-        "study_uid": payload.study_uid,
-        "series_uid": payload.series_uid,
-        "findings_text": findings_text,
-        "max_slices": payload.max_slices,
-        "window_preset": payload.window_preset,
-        "strategy": payload.strategy,
-        "requested_by": requested_by,
-        "model_version": model_version,
-        "input_hash": input_hash,
-    }
+        requested_by = payload.requested_by or "system"
+        study_id = payload.study_id or (report.study_id if report else None)
+        findings_text = payload.findings_text or (report.findings_text if report else None)
+        model_version = payload.model_version or InferenceService.model_version()
+        input_hash = compute_volume_hash(
+            study_id,
+            study_uid=payload.study_uid,
+            series_uid=payload.series_uid,
+            findings_text=findings_text,
+            max_slices=payload.max_slices,
+            window_preset=payload.window_preset,
+            strategy=payload.strategy,
+        )
+        queued_at = utc_now()
 
-    service = InferenceService(db)
-    with get_tracer(__name__).start_as_current_span("inference.volume") as span:
-        span.set_attribute("radiolyze.job_id", job_id)
-        span.set_attribute("radiolyze.report_id", str(payload.report_id))
-        span.set_attribute("radiolyze.study_id", str(study_id))
-        span.set_attribute("radiolyze.model", model_version)
-        job = service.enqueue(
-            run_volume_inference_job,
-            job_payload,
-            job_id=job_id,
-            report=report,
+        job_id = str(uuid.uuid4())
+        job_payload = {
+            "job_id": job_id,
+            "report_id": payload.report_id,
+            "study_id": study_id,
+            "study_uid": payload.study_uid,
+            "series_uid": payload.series_uid,
+            "findings_text": findings_text,
+            "max_slices": payload.max_slices,
+            "window_preset": payload.window_preset,
+            "strategy": payload.strategy,
+            "requested_by": requested_by,
+            "model_version": model_version,
+            "input_hash": input_hash,
+        }
+
+        service = InferenceService(db)
+        with get_tracer(__name__).start_as_current_span("inference.volume") as span:
+            span.set_attribute("radiolyze.job_id", job_id)
+            span.set_attribute("radiolyze.report_id", str(payload.report_id))
+            span.set_attribute("radiolyze.study_id", str(study_id))
+            span.set_attribute("radiolyze.model", model_version)
+            job = service.enqueue(
+                run_volume_inference_job,
+                job_payload,
+                job_id=job_id,
+                report=report,
+                report_id=payload.report_id,
+                study_id=study_id,
+                requested_by=requested_by,
+                model_version=model_version,
+                input_hash=input_hash,
+                queued_at=queued_at,
+                job_metadata={
+                    "requested_by": requested_by,
+                    "job_type": "volume_inference",
+                    "study_uid": payload.study_uid,
+                    "series_uid": payload.series_uid,
+                    "max_slices": payload.max_slices,
+                    "window_preset": payload.window_preset,
+                    "strategy": payload.strategy,
+                },
+                audit_event_type="inference_volume_queued",
+                audit_metadata={
+                    "job_id": job_id,
+                    "job_type": "volume_inference",
+                    "model_version": model_version,
+                    "input_hash": input_hash,
+                    "study_uid": payload.study_uid,
+                    "series_uid": payload.series_uid,
+                    "max_slices": payload.max_slices,
+                    "window_preset": payload.window_preset,
+                    "strategy": payload.strategy,
+                },
+            )
+
+        response = service.build_response(
+            job,
+            queued_at=queued_at,
             report_id=payload.report_id,
             study_id=study_id,
-            requested_by=requested_by,
             model_version=model_version,
-            input_hash=input_hash,
-            queued_at=queued_at,
-            job_metadata={
-                "requested_by": requested_by,
-                "job_type": "volume_inference",
-                "study_uid": payload.study_uid,
-                "series_uid": payload.series_uid,
-                "max_slices": payload.max_slices,
-                "window_preset": payload.window_preset,
-                "strategy": payload.strategy,
-            },
-            audit_event_type="inference_volume_queued",
-            audit_metadata={
-                "job_id": job_id,
-                "job_type": "volume_inference",
-                "model_version": model_version,
-                "input_hash": input_hash,
-                "study_uid": payload.study_uid,
-                "series_uid": payload.series_uid,
-                "max_slices": payload.max_slices,
-                "window_preset": payload.window_preset,
-                "strategy": payload.strategy,
-            },
         )
+        return response, (report.qa_status if report else "pending")
+
+    response, qa_status = await run_in_threadpool(_queue_sync)
 
     if payload.report_id:
         await broadcast_status(
             payload.report_id,
             {
                 "aiStatus": "queued",
-                "qaStatus": report.qa_status if report else "pending",
+                "qaStatus": qa_status,
                 "asrStatus": "idle",
             },
         )
 
-    return service.build_response(
-        job,
-        queued_at=queued_at,
-        report_id=payload.report_id,
-        study_id=study_id,
-        model_version=model_version,
-    )
+    return response
 
 
 @router.post("/api/v1/inference/comparison", response_model=InferenceQueueResponse)
@@ -414,105 +437,112 @@ async def queue_comparison_inference(
     db: Session = Depends(get_db),
 ) -> InferenceQueueResponse:
     """Queue a longitudinal comparison job (P1.A): current vs. prior series."""
-    report = None
-    if payload.report_id:
-        report = db.get(Report, payload.report_id)
-        if not report:
-            raise HTTPException(status_code=404, detail="Report not found")
 
-    requested_by = payload.requested_by or "system"
-    study_id = payload.study_id or (report.study_id if report else None)
-    findings_text = payload.findings_text or (report.findings_text if report else None)
-    model_version = payload.model_version or InferenceService.model_version()
-    input_hash = compute_text_hash(
-        "comparison",
-        study_id,
-        payload.study_uid,
-        payload.series_uid,
-        payload.prior_study_uid,
-        payload.prior_series_uid,
-        str(payload.time_delta_days or ""),
-        payload.window_preset,
-        str(payload.max_slices or ""),
-        findings_text,
-    )
-    queued_at = utc_now()
+    def _queue_sync() -> tuple[InferenceQueueResponse, str]:
+        report = None
+        if payload.report_id:
+            report = db.get(Report, payload.report_id)
+            if not report:
+                raise HTTPException(status_code=404, detail="Report not found")
 
-    job_id = str(uuid.uuid4())
-    job_payload = {
-        "job_id": job_id,
-        "report_id": payload.report_id,
-        "study_id": study_id,
-        "study_uid": payload.study_uid,
-        "series_uid": payload.series_uid,
-        "prior_study_uid": payload.prior_study_uid,
-        "prior_series_uid": payload.prior_series_uid,
-        "time_delta_days": payload.time_delta_days,
-        "findings_text": findings_text,
-        "max_slices": payload.max_slices,
-        "window_preset": payload.window_preset,
-        "requested_by": requested_by,
-        "model_version": model_version,
-        "input_hash": input_hash,
-    }
+        requested_by = payload.requested_by or "system"
+        study_id = payload.study_id or (report.study_id if report else None)
+        findings_text = payload.findings_text or (report.findings_text if report else None)
+        model_version = payload.model_version or InferenceService.model_version()
+        input_hash = compute_text_hash(
+            "comparison",
+            study_id,
+            payload.study_uid,
+            payload.series_uid,
+            payload.prior_study_uid,
+            payload.prior_series_uid,
+            str(payload.time_delta_days or ""),
+            payload.window_preset,
+            str(payload.max_slices or ""),
+            findings_text,
+        )
+        queued_at = utc_now()
 
-    service = InferenceService(db)
-    with get_tracer(__name__).start_as_current_span("inference.comparison") as span:
-        span.set_attribute("radiolyze.job_id", job_id)
-        span.set_attribute("radiolyze.report_id", str(payload.report_id))
-        span.set_attribute("radiolyze.study_id", str(study_id))
-        span.set_attribute("radiolyze.model", model_version)
-        job = service.enqueue(
-            run_comparison_inference_job,
-            job_payload,
-            job_id=job_id,
-            report=report,
+        job_id = str(uuid.uuid4())
+        job_payload = {
+            "job_id": job_id,
+            "report_id": payload.report_id,
+            "study_id": study_id,
+            "study_uid": payload.study_uid,
+            "series_uid": payload.series_uid,
+            "prior_study_uid": payload.prior_study_uid,
+            "prior_series_uid": payload.prior_series_uid,
+            "time_delta_days": payload.time_delta_days,
+            "findings_text": findings_text,
+            "max_slices": payload.max_slices,
+            "window_preset": payload.window_preset,
+            "requested_by": requested_by,
+            "model_version": model_version,
+            "input_hash": input_hash,
+        }
+
+        service = InferenceService(db)
+        with get_tracer(__name__).start_as_current_span("inference.comparison") as span:
+            span.set_attribute("radiolyze.job_id", job_id)
+            span.set_attribute("radiolyze.report_id", str(payload.report_id))
+            span.set_attribute("radiolyze.study_id", str(study_id))
+            span.set_attribute("radiolyze.model", model_version)
+            job = service.enqueue(
+                run_comparison_inference_job,
+                job_payload,
+                job_id=job_id,
+                report=report,
+                report_id=payload.report_id,
+                study_id=study_id,
+                requested_by=requested_by,
+                model_version=model_version,
+                input_hash=input_hash,
+                queued_at=queued_at,
+                job_metadata={
+                    "requested_by": requested_by,
+                    "job_type": "comparison_inference",
+                    "study_uid": payload.study_uid,
+                    "series_uid": payload.series_uid,
+                    "prior_study_uid": payload.prior_study_uid,
+                    "prior_series_uid": payload.prior_series_uid,
+                    "time_delta_days": payload.time_delta_days,
+                },
+                audit_event_type="inference_comparison_queued",
+                audit_metadata={
+                    "job_id": job_id,
+                    "job_type": "comparison_inference",
+                    "model_version": model_version,
+                    "input_hash": input_hash,
+                    "study_uid": payload.study_uid,
+                    "series_uid": payload.series_uid,
+                    "prior_study_uid": payload.prior_study_uid,
+                    "prior_series_uid": payload.prior_series_uid,
+                    "time_delta_days": payload.time_delta_days,
+                },
+            )
+
+        response = service.build_response(
+            job,
+            queued_at=queued_at,
             report_id=payload.report_id,
             study_id=study_id,
-            requested_by=requested_by,
             model_version=model_version,
-            input_hash=input_hash,
-            queued_at=queued_at,
-            job_metadata={
-                "requested_by": requested_by,
-                "job_type": "comparison_inference",
-                "study_uid": payload.study_uid,
-                "series_uid": payload.series_uid,
-                "prior_study_uid": payload.prior_study_uid,
-                "prior_series_uid": payload.prior_series_uid,
-                "time_delta_days": payload.time_delta_days,
-            },
-            audit_event_type="inference_comparison_queued",
-            audit_metadata={
-                "job_id": job_id,
-                "job_type": "comparison_inference",
-                "model_version": model_version,
-                "input_hash": input_hash,
-                "study_uid": payload.study_uid,
-                "series_uid": payload.series_uid,
-                "prior_study_uid": payload.prior_study_uid,
-                "prior_series_uid": payload.prior_series_uid,
-                "time_delta_days": payload.time_delta_days,
-            },
         )
+        return response, (report.qa_status if report else "pending")
+
+    response, qa_status = await run_in_threadpool(_queue_sync)
 
     if payload.report_id:
         await broadcast_status(
             payload.report_id,
             {
                 "aiStatus": "queued",
-                "qaStatus": report.qa_status if report else "pending",
+                "qaStatus": qa_status,
                 "asrStatus": "idle",
             },
         )
 
-    return service.build_response(
-        job,
-        queued_at=queued_at,
-        report_id=payload.report_id,
-        study_id=study_id,
-        model_version=model_version,
-    )
+    return response
 
 
 @router.get("/api/v1/inference/status/{job_id}", response_model=InferenceStatusResponse)
