@@ -84,6 +84,7 @@ export function DicomViewerToolbar({
                 size="sm"
                 className={cn('h-8 px-2 gap-1.5', annotationMode && 'bg-primary text-primary-foreground')}
                 onClick={onAnnotationModeToggle}
+                aria-label={annotationMode ? 'Annotation-Modus aktiv' : 'Annotation-Modus aktivieren'}
               >
                 <Tag className="h-4 w-4" />
                 {annotationMode ? (
@@ -113,6 +114,7 @@ export function DicomViewerToolbar({
                       )}
                       onClick={() => onToolSelect(tool.id)}
                       disabled={!hasStack}
+                      aria-label={tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label}
                     >
                       <tool.icon className="h-4 w-4" />
                     </Button>
@@ -177,6 +179,11 @@ export function DicomViewerToolbar({
                   showFindingsOverlay && 'bg-amber-600 hover:bg-amber-700 text-white border-amber-600'
                 )}
                 onClick={onFindingsOverlayToggle}
+                aria-label={
+                  showFindingsOverlay
+                    ? `KI-Befunde ausblenden (${findingsCount})`
+                    : `KI-Befunde einblenden (${findingsCount})`
+                }
               >
                 {showFindingsOverlay ? (
                   <Eye className="h-4 w-4" />

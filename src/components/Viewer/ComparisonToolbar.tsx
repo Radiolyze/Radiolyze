@@ -153,6 +153,7 @@ export function ComparisonToolbar({
               size="icon"
               className="h-8 w-8"
               onClick={onSwap}
+              aria-label={t('comparison.swap')}
             >
               <ArrowLeftRight className="h-4 w-4" />
             </Button>
@@ -170,6 +171,7 @@ export function ComparisonToolbar({
               size="icon"
               className="h-8 w-8"
               onClick={onDisable}
+              aria-label={t('comparison.disable')}
             >
               <X className="h-4 w-4" />
             </Button>

@@ -302,6 +302,7 @@ function AnnotationItem({
   }
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- pre-existing click-only selection pattern, keyboard support tracked separately
     <div
       className={cn(
         'p-2 bg-card rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors group',
