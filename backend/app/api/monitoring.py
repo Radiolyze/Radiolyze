@@ -9,7 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..deps import get_db
+from ..deps import get_db, require_radiologist_or_admin
 from ..models import AuditEvent, DriftSnapshot, InferenceJob, QACheckResult, Report
 from ..utils.metrics import (
     compute_deltas,
@@ -185,7 +185,10 @@ def compute_drift_snapshot(
 
 
 @router.get("/api/v1/metrics")
-def get_metrics(db: Session = Depends(get_db)) -> dict[str, Any]:
+def get_metrics(
+    _: None = require_radiologist_or_admin,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
     reports_total = db.query(func.count(Report.id)).scalar() or 0
     reports_by_status = counts_to_dict(
         db.query(Report.status, func.count(Report.id)).group_by(Report.status).all()
@@ -215,6 +218,7 @@ def get_drift_report(
     window_days: int = Query(7, ge=1, le=90),
     baseline_days: int | None = Query(None, ge=1, le=365),
     persist: bool = Query(False),
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     return compute_drift_snapshot(db, window_days=window_days,
@@ -225,6 +229,7 @@ def get_drift_report(
 def list_drift_snapshots(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     snapshots = (
