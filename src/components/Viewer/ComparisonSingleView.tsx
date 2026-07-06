@@ -13,6 +13,7 @@ import { DicomViewer, type ViewerProgress } from './DicomViewer';
 import { MPRViewer } from './MPRViewer';
 import { VRTViewer } from './VRTViewer';
 import { MeshViewer } from './MeshViewer';
+import { ViewerErrorBoundary } from './ViewerErrorBoundary';
 
 export type ViewerMode = 'stack' | 'mpr' | 'vrt' | 'mesh';
 
@@ -64,25 +65,33 @@ export function ComparisonSingleView({
   return (
     <div className="h-full relative">
       {viewerMode === 'stack' && (
-        <DicomViewer
-          series={currentSeries}
-          progress={progress}
-          onFrameChange={onFrameChange}
-          onImageRefsChange={onImageRefsChange}
-          requestedFrameIndex={requestedFrameIndex}
-          findings={findings}
-          onAnalyzeFrame={onAnalyzeFrame}
-          isAnalyzingFrame={isAnalyzingFrame}
-        />
+        <ViewerErrorBoundary label="Stack">
+          <DicomViewer
+            series={currentSeries}
+            progress={progress}
+            onFrameChange={onFrameChange}
+            onImageRefsChange={onImageRefsChange}
+            requestedFrameIndex={requestedFrameIndex}
+            findings={findings}
+            onAnalyzeFrame={onAnalyzeFrame}
+            isAnalyzingFrame={isAnalyzingFrame}
+          />
+        </ViewerErrorBoundary>
       )}
       {viewerMode === 'mpr' && (
-        <MPRViewer series={currentSeries} />
+        <ViewerErrorBoundary label="MPR">
+          <MPRViewer series={currentSeries} />
+        </ViewerErrorBoundary>
       )}
       {viewerMode === 'vrt' && (
-        <VRTViewer series={currentSeries} />
+        <ViewerErrorBoundary label="3D">
+          <VRTViewer series={currentSeries} />
+        </ViewerErrorBoundary>
       )}
       {viewerMode === 'mesh' && (
-        <MeshViewer series={currentSeries} studyUid={studyUid ?? null} />
+        <ViewerErrorBoundary label={t('mesh.title')}>
+          <MeshViewer series={currentSeries} studyUid={studyUid ?? null} />
+        </ViewerErrorBoundary>
       )}
 
       {/* Mode Toggle Buttons */}
