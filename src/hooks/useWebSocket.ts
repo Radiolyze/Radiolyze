@@ -105,7 +105,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       onError: (event) => {
         console.error('[WS] Error:', event);
       },
-      reconnectIntervalMs: 3000,
+      onAuthFailure: () => {
+        console.error('[WS] Authentication rejected, logging out');
+        localStorage.removeItem('radiolyze-auth-token');
+        setIsConnected(false);
+        const loginPath = '/login';
+        if (window.location.pathname !== loginPath) {
+          window.location.href = loginPath;
+        }
+      },
     });
 
     clientRef.current.connect();
