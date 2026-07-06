@@ -19,6 +19,39 @@ def _seg_app_factory(handler):
     return httpx.MockTransport(handler)
 
 
+def test_auth_headers_include_configured_segmenter_api_key(monkeypatch):
+    from app import segmentation_client
+
+    monkeypatch.setenv("SEGMENTER_API_KEY", "s3cret")
+    assert segmentation_client._auth_headers() == {"X-Segmenter-Api-Key": "s3cret"}
+
+    monkeypatch.delenv("SEGMENTER_API_KEY", raising=False)
+    assert segmentation_client._auth_headers() == {}
+
+
+def test_get_job_status_forwards_segmenter_api_key(monkeypatch):
+    from app import segmentation_client
+
+    monkeypatch.setenv("SEGMENTER_API_KEY", "s3cret")
+    seen_headers: dict[str, str] = {}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        seen_headers.update(request.headers)
+        return httpx.Response(200, json={"job_id": "x", "status": "done"})
+
+    transport = _seg_app_factory(_handler)
+    real_client = httpx.Client
+
+    def _patched_client(*args, **kwargs):
+        kwargs["transport"] = transport
+        return real_client(*args, **kwargs)
+
+    with patch("app.segmentation_client.httpx.Client", _patched_client):
+        segmentation_client.get_job_status("x")
+
+    assert seen_headers.get("x-segmenter-api-key") == "s3cret"
+
+
 def test_create_bone_job_persists_row_and_audit(client, db):
     payload = {
         "study_uid": "1.2.3",

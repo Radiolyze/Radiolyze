@@ -198,6 +198,7 @@ mapping is out of scope for this milestone.
 | Variable | Default | Purpose |
 |---|---|---|
 | `SEGMENTER_URL` | `http://segmenter:8200` | Orchestrator → segmenter base URL |
+| `SEGMENTER_API_KEY` | *(unset)* | Shared secret required on every segmenter route but `/health`; set the same value on the backend/worker and the segmenter service |
 | `SEGMENTATION_DATA_DIR` | `/data/segmentations` | Shared volume mount |
 | `SEGMENTATION_JOB_TIMEOUT` | `1800` | Worker poll timeout (s) |
 | `SEGMENTATION_POLL_INTERVAL` | `3` | Worker poll cadence (s) |

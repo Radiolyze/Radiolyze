@@ -58,3 +58,13 @@ def dicom_seg_enabled() -> bool:
     if value is None:
         return True
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def segmenter_api_key() -> str | None:
+    """Shared secret expected from callers (backend/worker) on every request.
+
+    No hardcoded default: unset means the operator hasn't configured auth yet,
+    in which case ``require_api_key`` falls back to open access with a warning
+    rather than locking out an unconfigured deployment.
+    """
+    return os.getenv("SEGMENTER_API_KEY") or None
