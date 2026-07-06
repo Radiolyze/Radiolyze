@@ -77,6 +77,16 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           format: "es",
+          manualChunks: {
+            cornerstone: [
+              "@cornerstonejs/core",
+              "@cornerstonejs/tools",
+              "@cornerstonejs/dicom-image-loader",
+              "dicom-parser",
+            ],
+            vtk: ["@kitware/vtk.js"],
+            recharts: ["recharts"],
+          },
         },
       },
     },

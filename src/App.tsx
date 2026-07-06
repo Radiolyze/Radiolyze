@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, Suspense, lazy } from "react";
+import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,17 +8,26 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { toast } from "sonner";
 import ErrorBoundary from "@/components/Common/ErrorBoundary";
 import { setApiErrorHandler } from "@/services/apiClient";
-import Index from "./pages/Index";
-import Settings from "./pages/Settings";
-import History from "./pages/History";
-import Batch from "./pages/Batch";
-import Training from "./pages/Training";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Monitoring from "./pages/Monitoring";
-import NotFound from "./pages/NotFound";
+
+const Index = lazy(() => import("./pages/Index"));
+const Settings = lazy(() => import("./pages/Settings"));
+const History = lazy(() => import("./pages/History"));
+const Batch = lazy(() => import("./pages/Batch"));
+const Training = lazy(() => import("./pages/Training"));
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Monitoring = lazy(() => import("./pages/Monitoring"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+
+function RouteFallback() {
+  return (
+    <div className="flex h-screen w-full items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 const App = () => {
   useEffect(() => {
@@ -43,18 +53,20 @@ const App = () => {
       <Sonner />
       <BrowserRouter>
         <ErrorBoundary>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Index />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/batch" element={<Batch />} />
-            <Route path="/training" element={<Training />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/monitoring" element={<Monitoring />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/batch" element={<Batch />} />
+              <Route path="/training" element={<Training />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/monitoring" element={<Monitoring />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </ErrorBoundary>
       </BrowserRouter>
     </TooltipProvider>
