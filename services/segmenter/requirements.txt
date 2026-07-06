@@ -7,7 +7,7 @@ pydantic
 pydicom>=2.4,<3.0
 numpy<2
 SimpleITK>=2.4
-scikit-image>=0.24
+scikit-image>=0.26.0
 Pillow>=10.0
 trimesh>=4.4
 pygltflib>=1.16
