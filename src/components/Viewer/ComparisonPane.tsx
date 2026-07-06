@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { DicomViewer } from './DicomViewer';
 import { ViewerEmptyState } from './ViewerEmptyState';
+import { ViewerErrorBoundary } from './ViewerErrorBoundary';
 
 type BadgeVariant = 'primary' | 'secondary';
 
@@ -60,18 +61,20 @@ export function ComparisonPane({
         </Badge>
       </div>
       {series ? (
-        <DicomViewer
-          series={series}
-          progress={progress}
-          onFrameChange={onFrameChange}
-          onViewportChange={onViewportChange}
-          syncState={syncState}
-          onImageRefsChange={onImageRefsChange}
-          requestedFrameIndex={requestedFrameIndex}
-          findings={findings}
-          onAnalyzeFrame={onAnalyzeFrame}
-          isAnalyzingFrame={isAnalyzingFrame}
-        />
+        <ViewerErrorBoundary label={label}>
+          <DicomViewer
+            series={series}
+            progress={progress}
+            onFrameChange={onFrameChange}
+            onViewportChange={onViewportChange}
+            syncState={syncState}
+            onImageRefsChange={onImageRefsChange}
+            requestedFrameIndex={requestedFrameIndex}
+            findings={findings}
+            onAnalyzeFrame={onAnalyzeFrame}
+            isAnalyzingFrame={isAnalyzingFrame}
+          />
+        </ViewerErrorBoundary>
       ) : (
         <ViewerEmptyState title={emptyMessage} />
       )}
