@@ -67,7 +67,9 @@ def test_validate_jwt_config_production_accepts_strong_secret():
 
 
 def test_login_returns_token(client, seed_admin):
-    """Verify login endpoint returns a JWT token."""
+    """Verify login sets the JWT as an HttpOnly cookie rather than in the body."""
+    from app.auth import AUTH_COOKIE_NAME
+
     resp = client.post(
         "/api/v1/auth/login",
         json={
@@ -77,8 +79,37 @@ def test_login_returns_token(client, seed_admin):
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
+    assert "access_token" not in data
+    assert data["username"] == "testadmin"
+    assert AUTH_COOKIE_NAME in resp.cookies
+    set_cookie_header = resp.headers.get("set-cookie", "")
+    assert "HttpOnly" in set_cookie_header
+    assert "samesite=strict" in set_cookie_header.lower()
+
+
+def test_login_sets_cookie_that_authenticates_requests(client, seed_admin):
+    """The cookie set on login is sufficient to authenticate a follow-up request."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        resp = client.post(
+            "/api/v1/auth/login", json={"username": "testadmin", "password": "adminpass"}
+        )
+        assert resp.status_code == 200
+        # `client` retains the cookie jar across requests; no explicit header needed.
+        me = client.get("/api/v1/auth/me")
+        assert me.status_code == 200
+        assert me.json()["username"] == "testadmin"
+
+
+def test_logout_clears_cookie(client, seed_admin):
+    """Logout deletes the auth cookie so subsequent requests are unauthenticated."""
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        client.post("/api/v1/auth/login", json={"username": "testadmin", "password": "adminpass"})
+        assert client.get("/api/v1/auth/me").status_code == 200
+
+        logout_resp = client.post("/api/v1/auth/logout")
+        assert logout_resp.status_code == 200
+
+        assert client.get("/api/v1/auth/me").status_code == 401
 
 
 def test_login_wrong_password(client, seed_admin):
@@ -113,10 +144,17 @@ from unittest.mock import patch  # noqa: E402
 
 
 def _login_as(client, username: str, password: str) -> str:
-    """Helper: log in and return bearer token."""
+    """Helper: log in and return the JWT the backend set as an HttpOnly cookie.
+
+    Callers pass it back explicitly via the ``Authorization: Bearer`` header
+    to exercise that fallback path (see ``deps.get_current_user``); the
+    browser frontend instead relies on the cookie being sent automatically.
+    """
+    from app.auth import AUTH_COOKIE_NAME
+
     resp = client.post("/api/v1/auth/login", json={"username": username, "password": password})
     assert resp.status_code == 200, f"Login failed: {resp.json()}"
-    return resp.json()["access_token"]
+    return resp.cookies[AUTH_COOKIE_NAME]
 
 
 def _auth_header(token: str) -> dict[str, str]:
@@ -178,9 +216,7 @@ def test_rbac_radiologist_cannot_update_prompt(client, seed_radiologist):
 
 def test_rbac_admin_can_update_prompt(client, seed_admin):
     """Admin users may update prompt templates when PROMPT_CONFIG_ENABLED=true."""
-    with patch.dict(
-        os.environ, {"AUTH_REQUIRED": "true", "PROMPT_CONFIG_ENABLED": "true"}
-    ):
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true", "PROMPT_CONFIG_ENABLED": "true"}):
         token = _login_as(client, "testadmin", "adminpass")
         resp = client.put(
             "/api/v1/prompts/impression",
