@@ -116,17 +116,34 @@ _PATH_LIMITS: dict[str, int] = {
     "/api/v1/segmentation/jobs": 5,
 }
 
-_rate_limiter = RateLimiter(window_seconds=60)
+_rate_limiter = RateLimiter(window_seconds=60, cleanup_interval=RATE_LIMIT_CLEANUP_INTERVAL)
+
+
+def _get_client_ip(request: Request) -> str:
+    """Resolve the client IP, optionally trusting proxy headers.
+
+    Only honored when RATE_LIMIT_TRUST_PROXY_HEADERS is enabled, since
+    trusting X-Forwarded-For/X-Real-IP from an untrusted source lets a
+    client spoof its rate-limit bucket. Enable this only when the app sits
+    behind a proxy that overwrites (rather than appends to) these headers.
+    """
+    trust_proxy = os.getenv("RATE_LIMIT_TRUST_PROXY_HEADERS", "").lower() in {"1", "true", "yes"}
+    if trust_proxy:
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip.strip()
+    return request.client.host if request.client else "unknown"
 
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next) -> Response:
-    global _rate_limit_last_cleanup
-
     if request.url.path.startswith("/api/v1/health") or request.url.path.startswith("/api/v1/ws"):
         return await call_next(request)
 
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_client_ip(request)
     path = request.url.path
     key = f"{client_ip}:{path}"
 
