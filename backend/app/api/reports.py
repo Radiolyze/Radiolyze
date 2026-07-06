@@ -15,6 +15,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from ..audit import add_audit_event
 from ..deps import get_current_user, get_db, require_radiologist_or_admin
@@ -146,88 +147,99 @@ async def update_report(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user),
 ) -> ReportResponse:
-    report = db.get(Report, report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+    def _update_sync() -> tuple[ReportResponse, bool, str | None]:
+        report = db.get(Report, report_id)
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
 
-    # Actor is the authenticated caller when available; the client-supplied
-    # payload.actor_id is only a dev-mode fallback (AUTH_REQUIRED=false),
-    # since it cannot otherwise be trusted to identify who made the change.
-    actor_id = current_user.id if current_user is not None else payload.actor_id
+        # Actor is the authenticated caller when available; the client-supplied
+        # payload.actor_id is only a dev-mode fallback (AUTH_REQUIRED=false),
+        # since it cannot otherwise be trusted to identify who made the change.
+        actor_id = current_user.id if current_user is not None else payload.actor_id
 
-    # ETag-based conflict detection (If-Match header)
-    if request:
-        if_match = request.headers.get("If-Match")
-        if if_match:
-            current_etag = f'"{_compute_etag(report)}"'
-            if if_match.strip('" ') != current_etag.strip('" '):
-                raise HTTPException(
-                    status_code=409,
-                    detail="Conflict: report was modified by another user",
-                )
+        # ETag-based conflict detection (If-Match header)
+        if request:
+            if_match = request.headers.get("If-Match")
+            if if_match:
+                current_etag = f'"{_compute_etag(report)}"'
+                if if_match.strip('" ') != current_etag.strip('" '):
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Conflict: report was modified by another user",
+                    )
 
-    # Capture old state for revision
-    old_findings = report.findings_text
-    old_impression = report.impression_text
+        # Capture old state for revision
+        old_findings = report.findings_text
+        old_impression = report.impression_text
 
-    updated_fields: list[str] = []
-    if payload.findings_text is not None:
-        report.findings_text = payload.findings_text
-        updated_fields.append("findings_text")
-    if payload.impression_text is not None:
-        report.impression_text = payload.impression_text
-        updated_fields.append("impression_text")
-    if payload.status is not None:
-        report.status = payload.status
-        updated_fields.append("status")
-    if payload.structured_data is not None:
-        report.structured_data = payload.structured_data
-        updated_fields.append("structured_data")
+        updated_fields: list[str] = []
+        if payload.findings_text is not None:
+            report.findings_text = payload.findings_text
+            updated_fields.append("findings_text")
+        if payload.impression_text is not None:
+            report.impression_text = payload.impression_text
+            updated_fields.append("impression_text")
+        if payload.status is not None:
+            report.status = payload.status
+            updated_fields.append("status")
+        if payload.structured_data is not None:
+            report.structured_data = payload.structured_data
+            updated_fields.append("structured_data")
 
-    if updated_fields:
-        now = utc_now()
+        should_broadcast = False
+        qa_status: str | None = None
+        if updated_fields:
+            now = utc_now()
 
-        # Create revision snapshot of previous state
-        revision = ReportRevision(
-            report_id=report_id,
-            findings_text=old_findings,
-            impression_text=old_impression,
-            changed_by=actor_id,
-            changed_at=now,
-        )
-        db.add(revision)
-
-        report.updated_at = now
-        if payload.status is None and report.status in {"pending", "in_progress"}:
-            report.status = "draft"
-
-        event_type = "report_updated"
-        if "findings_text" in updated_fields:
-            event_type = "findings_saved"
-        elif "impression_text" in updated_fields:
-            event_type = "report_amended"
-
-        add_audit_event(
-            db,
-            event_type=event_type,
-            actor_id=actor_id,
-            report_id=report_id,
-            study_id=report.study_id,
-            metadata={"updated_fields": updated_fields},
-            timestamp=now,
-            source="api",
-        )
-        db.commit()
-        db.refresh(report)
-
-        if payload.status is None and report.status in {"draft", "pending", "in_progress"}:
-            await broadcast_status(
-                report_id,
-                {"qaStatus": report.qa_status, "aiStatus": "idle", "asrStatus": "idle"},
+            # Create revision snapshot of previous state
+            revision = ReportRevision(
+                report_id=report_id,
+                findings_text=old_findings,
+                impression_text=old_impression,
+                changed_by=actor_id,
+                changed_at=now,
             )
+            db.add(revision)
 
-    inference_job = _get_latest_inference_job(db, report.id)
-    return _serialize_report(report, inference_job)
+            report.updated_at = now
+            if payload.status is None and report.status in {"pending", "in_progress"}:
+                report.status = "draft"
+
+            event_type = "report_updated"
+            if "findings_text" in updated_fields:
+                event_type = "findings_saved"
+            elif "impression_text" in updated_fields:
+                event_type = "report_amended"
+
+            add_audit_event(
+                db,
+                event_type=event_type,
+                actor_id=actor_id,
+                report_id=report_id,
+                study_id=report.study_id,
+                metadata={"updated_fields": updated_fields},
+                timestamp=now,
+                source="api",
+            )
+            db.commit()
+            db.refresh(report)
+
+            if payload.status is None and report.status in {"draft", "pending", "in_progress"}:
+                should_broadcast = True
+                qa_status = report.qa_status
+
+        inference_job = _get_latest_inference_job(db, report.id)
+        return _serialize_report(report, inference_job), should_broadcast, qa_status
+
+    response, should_broadcast, qa_status = await run_in_threadpool(_update_sync)
+
+    if should_broadcast:
+        await broadcast_status(
+            report_id,
+            {"qaStatus": qa_status, "aiStatus": "idle", "asrStatus": "idle"},
+        )
+
+    return response
 
 
 @router.post("/api/v1/reports/{report_id}/finalize", response_model=ReportResponse)
