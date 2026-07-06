@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
+import secrets
 from pathlib import Path
 from typing import Literal
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
@@ -15,6 +16,7 @@ from .config import (
     dicom_web_base_url,
     gpu_available,
     job_dir,
+    segmenter_api_key,
 )
 from .dicom_loader import LoadedVolume, fetch_series_volume
 from .medgemma_preprocess import (
@@ -44,6 +46,28 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Radiolyze Segmenter", version="0.1.0")
+
+_API_KEY_HEADER = "X-Segmenter-Api-Key"
+
+
+def require_api_key(
+    x_segmenter_api_key: str | None = Header(default=None, alias=_API_KEY_HEADER),
+) -> None:
+    """Shared-secret auth between the backend/worker and this microservice.
+
+    Anyone who can reach ``SEGMENTER_URL`` on the network can otherwise submit
+    segmentation jobs and download masks/meshes derived from patient DICOM
+    data. Gated on every route below except ``/health``, which the compose
+    healthcheck calls unauthenticated from inside the container.
+    """
+    expected = segmenter_api_key()
+    if not expected:
+        logger.warning(
+            "SEGMENTER_API_KEY is not set; accepting unauthenticated segmenter request."
+        )
+        return
+    if not x_segmenter_api_key or not secrets.compare_digest(x_segmenter_api_key, expected):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 class SegmentRequest(BaseModel):
@@ -204,7 +228,9 @@ async def _run_and_record(req: SegmentRequest) -> None:
 
 @app.post("/segment/bone", response_model=SegmentAck, status_code=202)
 async def segment_bone_endpoint(
-    payload: SegmentRequest, background: BackgroundTasks
+    payload: SegmentRequest,
+    background: BackgroundTasks,
+    _: None = Depends(require_api_key),
 ) -> SegmentAck:
     registry.create(payload.job_id, preset="bone")
     background.add_task(_run_and_record, payload)
@@ -288,7 +314,9 @@ async def _run_total_and_record(req: SegmentRequest) -> None:
 
 @app.post("/segment/total", response_model=SegmentAck, status_code=202)
 async def segment_total_endpoint(
-    payload: SegmentRequest, background: BackgroundTasks
+    payload: SegmentRequest,
+    background: BackgroundTasks,
+    _: None = Depends(require_api_key),
 ) -> SegmentAck:
     if _totalseg_version() is None:
         return JSONResponse(  # type: ignore[return-value]
@@ -317,7 +345,7 @@ def _load_manifest(job_id: str) -> dict | None:
 
 
 @app.get("/jobs/{job_id}", response_model=JobStatusResponse)
-def job_status(job_id: str) -> JobStatusResponse:
+def job_status(job_id: str, _: None = Depends(require_api_key)) -> JobStatusResponse:
     state = registry.get(job_id)
     manifest = state.manifest if state else None
     if manifest is None:
@@ -334,7 +362,7 @@ def job_status(job_id: str) -> JobStatusResponse:
 
 
 @app.get("/jobs/{job_id}/manifest")
-def job_manifest(job_id: str) -> dict:
+def job_manifest(job_id: str, _: None = Depends(require_api_key)) -> dict:
     manifest = _load_manifest(job_id)
     if manifest is None:
         raise HTTPException(status_code=404, detail="Manifest not yet available")
@@ -373,6 +401,7 @@ def mesh_file(
     job_id: str,
     label_id: int,
     format: Literal["glb", "vtp"] = Query("glb"),
+    _: None = Depends(require_api_key),
 ) -> FileResponse:
     ext = "glb" if format == "glb" else "vtp"
     media = "model/gltf-binary" if format == "glb" else "application/vnd.kitware.vtp+xml"
@@ -381,7 +410,9 @@ def mesh_file(
 
 
 @app.get("/jobs/{job_id}/mask/{label_id}")
-def mask_file(job_id: str, label_id: int) -> FileResponse:
+def mask_file(
+    job_id: str, label_id: int, _: None = Depends(require_api_key)
+) -> FileResponse:
     path = _safe_label_path(job_id, label_id, kind="mask", ext="nii.gz")
     return FileResponse(path, media_type="application/octet-stream", filename=path.name)
 
@@ -420,7 +451,9 @@ class PreprocessResponse(BaseModel):
 
 
 @app.post("/preprocess/medgemma", response_model=PreprocessResponse)
-async def preprocess_for_medgemma(payload: PreprocessRequest) -> PreprocessResponse:
+async def preprocess_for_medgemma(
+    payload: PreprocessRequest, _: None = Depends(require_api_key)
+) -> PreprocessResponse:
     """Render a DICOM CT/MR series into MedGemma-ready slice data URLs.
 
     Synchronous: typical 200-slice CT preprocesses in <10 s and the response
@@ -476,7 +509,7 @@ async def preprocess_for_medgemma(payload: PreprocessRequest) -> PreprocessRespo
 
 
 @app.get("/jobs/{job_id}/dicom-seg")
-def dicom_seg_file(job_id: str) -> FileResponse:
+def dicom_seg_file(job_id: str, _: None = Depends(require_api_key)) -> FileResponse:
     """Return the multi-class DICOM SEG produced after the meshing pass."""
     candidate = (data_root() / job_id / "segmentation.dcm").resolve()
     base = (data_root() / job_id).resolve()
