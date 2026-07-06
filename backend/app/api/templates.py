@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..deps import get_db
+from ..deps import get_db, require_radiologist_or_admin
 from ..mock_logic import utc_now
 from ..models import PromptTemplate as ReportTemplateModel
 
@@ -86,6 +86,7 @@ def _populate_template(template_text: str, variables: dict[str, str]) -> str:
 def list_templates(
     modality: str | None = None,
     active_only: bool = Query(default=True, alias="activeOnly"),
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[TemplateResponse]:
     query = db.query(ReportTemplateModel).filter(
@@ -129,7 +130,9 @@ def list_templates(
 
 @router.post("/api/v1/report-templates", response_model=TemplateResponse, status_code=201)
 def create_template(
-    payload: TemplateCreateRequest, db: Session = Depends(get_db)
+    payload: TemplateCreateRequest,
+    _: None = require_radiologist_or_admin,
+    db: Session = Depends(get_db),
 ) -> TemplateResponse:
     now = utc_now()
     variables = [
@@ -169,6 +172,7 @@ def create_template(
 @router.post("/api/v1/report-templates/populate")
 def populate_template(
     payload: PopulateRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Auto-populate a template with DICOM metadata variables."""
@@ -191,6 +195,7 @@ def populate_template(
 @router.get("/api/v1/report-templates/{template_id}/schema")
 def get_template_schema(
     template_id: str,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Return the JSON Schema for structured reporting fields of a template."""

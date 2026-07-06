@@ -269,6 +269,7 @@ def export_structured_report(
     report_id: str,
     actor_id: str | None = None,
     export_format: str = Query("json", alias="format"),
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> Response:
     report = db.get(Report, report_id)
@@ -321,6 +322,7 @@ async def asr_transcript(
         default=None,
         description="BCP-47 or ISO-639-1 hint for ASR (e.g. de-DE, en).",
     ),
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> ASRResponse:
     max_audio_size = int(
@@ -390,6 +392,7 @@ async def asr_transcript(
 @router.post("/api/v1/reports/generate-impression", response_model=ImpressionResponse)
 async def generate_impression_endpoint(
     payload: ImpressionRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
     import asyncio
@@ -509,7 +512,11 @@ async def stream_impression_endpoint(
 
 
 @router.post("/api/v1/reports/qa-check", response_model=QAResponse)
-async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QAResponse:
+async def qa_check(
+    payload: QACheckRequest,
+    _: None = require_radiologist_or_admin,
+    db: Session = Depends(get_db),
+) -> QAResponse:
     # Use configurable rules if any exist, otherwise fall back to hardcoded logic
     from ..models import QARule
     from ..qa_engine import evaluate_rules
@@ -593,6 +600,7 @@ async def qa_check(payload: QACheckRequest, db: Session = Depends(get_db)) -> QA
 def list_revisions(
     report_id: str,
     limit: int = Query(50, ge=1, le=200),
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[ReportRevisionResponse]:
     report = db.get(Report, report_id)
@@ -623,6 +631,7 @@ def list_revisions(
 def export_pdf(
     report_id: str,
     actor_id: str | None = None,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> Response:
     report = db.get(Report, report_id)
@@ -665,6 +674,7 @@ def export_pdf(
 )
 async def check_critical_findings(
     report_id: str,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[CriticalFindingAlertResponse]:
     """Scan a report for critical findings and create alerts."""
@@ -733,6 +743,7 @@ async def check_critical_findings(
 )
 def list_critical_alerts(
     report_id: str,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[CriticalFindingAlertResponse]:
     alerts = (
@@ -764,6 +775,7 @@ def acknowledge_critical_alert(
     report_id: str,
     alert_id: str,
     payload: CriticalFindingAcknowledgeRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> CriticalFindingAlertResponse:
     alert = db.get(CriticalFindingAlert, alert_id)
@@ -811,6 +823,7 @@ def acknowledge_critical_alert(
 async def request_peer_review(
     report_id: str,
     payload: PeerReviewRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> PeerReviewResponse:
     report = db.get(Report, report_id)
@@ -862,6 +875,7 @@ async def request_peer_review(
 )
 def list_peer_reviews(
     report_id: str,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[PeerReviewResponse]:
     reviews = (
@@ -895,6 +909,7 @@ async def submit_peer_review(
     report_id: str,
     review_id: str,
     payload: PeerReviewSubmitRequest,
+    _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> PeerReviewResponse:
     review = db.get(PeerReview, review_id)
