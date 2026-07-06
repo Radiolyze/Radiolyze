@@ -42,6 +42,12 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Verify Alembic migrations apply cleanly and match the models
+        run: |
+          alembic upgrade head
+          alembic check
+        env:
+          DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/test
       - run: python -m pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
         env:
           DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/test

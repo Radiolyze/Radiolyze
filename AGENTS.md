@@ -57,6 +57,10 @@ npm run dev
 - Report state via `useReport`, live updates via WebSocket.
 - Backend orchestrates report versioning, ASR, inference, QA, and audit logging.
 - Inference runs via RQ worker + Redis; results stored in Postgres.
+- DB schema is Alembic-managed (`backend/migrations/`). After changing `backend/app/models.py`, run
+  `cd backend && alembic revision --autogenerate -m "..."` and commit the generated migration.
+  `docker-compose.yml`'s `migrate` service runs `alembic upgrade head` before `backend`/`worker` start;
+  `Base.metadata.create_all` only still runs outside production/staging, for local `uvicorn` convenience.
 
 ## Project Conventions
 - TypeScript strict mode.

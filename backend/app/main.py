@@ -255,14 +255,21 @@ def _setup_pgvector() -> None:
 @app.on_event("startup")
 async def on_startup() -> None:
     # Validate JWT configuration before anything else
-    from .auth import validate_jwt_config
+    from .auth import is_production_env, validate_jwt_config
 
     validate_jwt_config()
 
-    Base.metadata.create_all(bind=engine)
+    if is_production_env():
+        # Production/staging schema changes are applied via `alembic upgrade
+        # head` in the Docker entrypoint/CI before the app starts - create_all
+        # only adds missing tables and never migrates existing ones, so it
+        # must not run here.
+        logger.info("Skipping create_all in production/staging - schema is Alembic-managed")
+    else:
+        Base.metadata.create_all(bind=engine)
     _setup_pgvector()
     # Seed default admin user if none exists
-    from .auth import hash_password, is_production_env, verify_password
+    from .auth import hash_password, verify_password
     from .db import SessionLocal
     from .mock_logic import utc_now
     from .models import User
