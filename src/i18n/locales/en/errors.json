@@ -59,5 +59,10 @@
       "clearCache": "Clear Cache"
     },
     "cacheClearedMessage": "Cache cleared. Page will reload..."
+  },
+  "viewerBoundary": {
+    "title": "Viewer failed to load",
+    "message": "An error occurred in this viewer pane. Your report text is unaffected.",
+    "reload": "Reload viewer"
   }
 }
