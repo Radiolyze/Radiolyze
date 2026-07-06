@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from ..auth import create_access_token, hash_password, verify_password
+from ..auth import (
+    clear_auth_cookie,
+    create_access_token,
+    hash_password,
+    set_auth_cookie,
+    verify_password,
+)
 from ..deps import get_current_user, get_db
 from ..mock_logic import utc_now
 from ..models import User
@@ -18,8 +24,10 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+    """The JWT itself is never returned in the body - it is set as an
+    HttpOnly cookie (see ``set_auth_cookie``) so page JS can never read or
+    exfiltrate it. This only carries display data for the frontend."""
+
     user_id: str
     username: str
     role: str
@@ -40,16 +48,23 @@ class UserCreateRequest(BaseModel):
 
 
 @router.post("/api/v1/auth/login", response_model=LoginResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse:
+def login(
+    payload: LoginRequest, response: Response, db: Session = Depends(get_db)
+) -> LoginResponse:
     user = db.query(User).filter(User.username == payload.username).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
     token = create_access_token({"sub": user.id, "username": user.username, "role": user.role})
-    return LoginResponse(
-        access_token=token, user_id=user.id, username=user.username, role=user.role
-    )
+    set_auth_cookie(response, token)
+    return LoginResponse(user_id=user.id, username=user.username, role=user.role)
+
+
+@router.post("/api/v1/auth/logout")
+def logout(response: Response) -> dict[str, bool]:
+    clear_auth_cookie(response)
+    return {"success": True}
 
 
 @router.get("/api/v1/auth/me", response_model=UserResponse)

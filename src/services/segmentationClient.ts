@@ -52,9 +52,8 @@ export const segmentationClient = {
     labelId: number,
     format: 'glb' | 'vtp' = 'vtp',
   ): Promise<ArrayBuffer> {
-    const authToken = localStorage.getItem('radiolyze-auth-token');
     const response = await fetch(meshUrl(jobId, labelId, format), {
-      headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+      credentials: 'include',
     });
     if (!response.ok) {
       throw new Error(`Failed to fetch mesh ${labelId} (${response.status})`);

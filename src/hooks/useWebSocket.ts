@@ -84,10 +84,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const connect = useCallback(() => {
     if (clientRef.current) return;
 
-    const authToken = localStorage.getItem('radiolyze-auth-token');
-    const baseWsUrl = import.meta.env.VITE_WS_URL ||
+    // The browser attaches the HttpOnly auth cookie to the WS handshake
+    // automatically for same-origin requests (see issue #100) - no token
+    // needs to be appended to the URL, which used to leak it into proxy/
+    // access logs.
+    const wsUrl = import.meta.env.VITE_WS_URL ||
       `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1/ws`;
-    const wsUrl = authToken ? `${baseWsUrl}?token=${encodeURIComponent(authToken)}` : baseWsUrl;
 
     clientRef.current = createWsClient({
       url: wsUrl,

@@ -5,7 +5,7 @@ import os
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from ..auth import decode_access_token
+from ..auth import AUTH_COOKIE_NAME, decode_access_token
 from ..ws_manager import manager
 
 router = APIRouter()
@@ -26,7 +26,12 @@ def _authenticate_ws(token: str | None) -> str | None:
 @router.websocket("/api/v1/ws")
 async def websocket_endpoint(websocket: WebSocket, token: str | None = None) -> None:
     auth_required = os.getenv("AUTH_REQUIRED", "true").lower() == "true"
-    user_id = _authenticate_ws(token)
+    # Prefer the HttpOnly auth cookie (sent automatically by the browser on
+    # the WS handshake) over the legacy `?token=` query param, which leaks
+    # into proxy/access logs. The query param is kept as a fallback for
+    # non-browser clients that can't rely on cookies.
+    cookie_token = websocket.cookies.get(AUTH_COOKIE_NAME)
+    user_id = _authenticate_ws(cookie_token or token)
 
     if auth_required and not user_id:
         await websocket.close(code=4401, reason="Authentication required")

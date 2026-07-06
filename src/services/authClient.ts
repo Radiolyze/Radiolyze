@@ -1,7 +1,5 @@
+import { AUTH_USER_KEY } from '@/lib/authStorage';
 import { apiClient } from './apiClient';
-
-const AUTH_TOKEN_KEY = 'radiolyze-auth-token';
-const AUTH_USER_KEY = 'radiolyze-auth-user';
 
 export interface LoginPayload {
   username: string;
@@ -9,8 +7,6 @@ export interface LoginPayload {
 }
 
 export interface LoginResponse {
-  access_token: string;
-  token_type: string;
   user_id: string;
   username: string;
   role: string;
@@ -26,8 +22,11 @@ export interface AuthUser {
 
 export const authClient = {
   async login(payload: LoginPayload): Promise<LoginResponse> {
+    // The backend sets the JWT as an HttpOnly cookie on the response (see
+    // issue #100) - it never appears in this body, so there's nothing for
+    // page JS to read or exfiltrate. Only non-secret display data is cached
+    // here for the UI.
     const response = await apiClient.post<LoginResponse>('/api/v1/auth/login', payload);
-    localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify({
       id: response.user_id,
       username: response.username,
@@ -36,13 +35,12 @@ export const authClient = {
     return response;
   },
 
-  logout() {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(AUTH_USER_KEY);
-  },
-
-  getToken(): string | null {
-    return localStorage.getItem(AUTH_TOKEN_KEY);
+  async logout() {
+    try {
+      await apiClient.post('/api/v1/auth/logout');
+    } finally {
+      localStorage.removeItem(AUTH_USER_KEY);
+    }
   },
 
   getUser(): { id: string; username: string; role: string } | null {
@@ -55,7 +53,13 @@ export const authClient = {
     }
   },
 
+  /**
+   * Best-effort, client-side-only check. The cookie itself isn't readable
+   * from JS, so this just reflects whether a login previously succeeded on
+   * this browser; the backend remains the source of truth and returns 401
+   * on any request once the cookie is missing/expired.
+   */
   isAuthenticated(): boolean {
-    return !!localStorage.getItem(AUTH_TOKEN_KEY);
+    return !!localStorage.getItem(AUTH_USER_KEY);
   },
 };
