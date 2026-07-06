@@ -40,6 +40,7 @@ services:
       DRIFT_WINDOW_DAYS: "7"
       DRIFT_BASELINE_DAYS: "7"
       SEGMENTER_URL: http://segmenter:8200
+      SEGMENTER_API_KEY: dev-segmenter-key-change-in-production
       SEGMENTATION_DATA_DIR: /data/segmentations
       SEGMENTATION_JOB_TIMEOUT: "1800"
       ENABLE_TRACING: "true"
@@ -83,6 +84,7 @@ services:
       DICOM_WEB_USERNAME: orthanc
       DICOM_WEB_PASSWORD: orthanc
       SEGMENTER_URL: http://segmenter:8200
+      SEGMENTER_API_KEY: dev-segmenter-key-change-in-production
       SEGMENTATION_DATA_DIR: /data/segmentations
       SEGMENTATION_JOB_TIMEOUT: "1800"
       ENABLE_TRACING: "true"
@@ -266,8 +268,9 @@ services:
   segmenter:
     build:
       context: ./services/segmenter
-    ports:
-      - "8200:8200"
+    # No host port mapping: only backend/worker (same compose network) call
+    # this service. It carries no auth of its own beyond SEGMENTER_API_KEY,
+    # so it must not be reachable directly from the host/internet.
     environment:
       SEGMENTATION_DATA_DIR: /data/segmentations
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
@@ -275,6 +278,7 @@ services:
       DICOM_WEB_PASSWORD: orthanc
       BONE_HU_THRESHOLD: "300"
       SEGMENTER_MAX_PARALLEL_WADO: "8"
+      SEGMENTER_API_KEY: dev-segmenter-key-change-in-production
     volumes:
       - seg-data:/data/segmentations
     depends_on:

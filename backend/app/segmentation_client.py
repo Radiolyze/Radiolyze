@@ -34,6 +34,11 @@ def segmentation_data_dir() -> Path:
     return path
 
 
+def _auth_headers() -> dict[str, str]:
+    key = os.getenv("SEGMENTER_API_KEY")
+    return {"X-Segmenter-Api-Key": key} if key else {}
+
+
 def preprocess_for_medgemma(
     *,
     study_uid: str,
@@ -62,7 +67,7 @@ def preprocess_for_medgemma(
 
     timeout = float(os.getenv("SEGMENTER_PREPROCESS_TIMEOUT", "120"))
     logger.info("Requesting MedGemma volume preprocess from %s", _redact_url(url))
-    with httpx.Client(timeout=timeout) as client:
+    with httpx.Client(timeout=timeout, headers=_auth_headers()) as client:
         response = client.post(url, json=payload)
         response.raise_for_status()
         return response.json()
@@ -84,7 +89,7 @@ def submit_segmentation(
         "options": options or {},
     }
     logger.info("Submitting segmentation job %s to %s", job_id, _redact_url(url))
-    with httpx.Client(timeout=segmenter_timeout()) as client:
+    with httpx.Client(timeout=segmenter_timeout(), headers=_auth_headers()) as client:
         response = client.post(url, json=payload)
         response.raise_for_status()
         return response.json()
@@ -92,7 +97,7 @@ def submit_segmentation(
 
 def get_job_status(job_id: str) -> dict[str, Any]:
     url = f"{segmenter_base_url()}/jobs/{job_id}"
-    with httpx.Client(timeout=segmenter_timeout()) as client:
+    with httpx.Client(timeout=segmenter_timeout(), headers=_auth_headers()) as client:
         response = client.get(url)
         response.raise_for_status()
         return response.json()
@@ -101,7 +106,7 @@ def get_job_status(job_id: str) -> dict[str, Any]:
 def stream_mesh(job_id: str, label_id: int, *, fmt: str = "glb") -> Iterator[bytes]:
     url = f"{segmenter_base_url()}/jobs/{job_id}/mesh/{label_id}"
     params = {"format": fmt}
-    with httpx.Client(timeout=None) as client:
+    with httpx.Client(timeout=None, headers=_auth_headers()) as client:
         with client.stream("GET", url, params=params) as response:
             response.raise_for_status()
             yield from response.iter_bytes()
@@ -109,7 +114,7 @@ def stream_mesh(job_id: str, label_id: int, *, fmt: str = "glb") -> Iterator[byt
 
 def stream_mask(job_id: str, label_id: int) -> Iterator[bytes]:
     url = f"{segmenter_base_url()}/jobs/{job_id}/mask/{label_id}"
-    with httpx.Client(timeout=None) as client:
+    with httpx.Client(timeout=None, headers=_auth_headers()) as client:
         with client.stream("GET", url) as response:
             response.raise_for_status()
             yield from response.iter_bytes()
@@ -123,7 +128,7 @@ def download_dicom_seg(job_id: str) -> bytes:
     pydicom-seg + ITK on its hot path.
     """
     url = f"{segmenter_base_url()}/jobs/{job_id}/dicom-seg"
-    with httpx.Client(timeout=segmenter_timeout()) as client:
+    with httpx.Client(timeout=segmenter_timeout(), headers=_auth_headers()) as client:
         response = client.get(url)
         response.raise_for_status()
         return response.content

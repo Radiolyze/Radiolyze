@@ -146,6 +146,7 @@ Um die SEG-Erzeugung komplett zu deaktivieren (z.B. in reinen Research-Setups oh
 | Variable | Default | Zweck |
 |---|---|---|
 | `SEGMENTER_URL` | `http://segmenter:8200` | Orchestrator → Segmenter Base URL |
+| `SEGMENTER_API_KEY` | *(nicht gesetzt)* | Shared Secret, erforderlich auf jeder Segmenter-Route außer `/health`; denselben Wert bei Backend/Worker und Segmenter setzen |
 | `SEGMENTATION_DATA_DIR` | `/data/segmentations` | Shared Volume Mount |
 | `SEGMENTATION_JOB_TIMEOUT` | `1800` | Worker Poll Timeout (s) |
 | `SEGMENTATION_POLL_INTERVAL` | `3` | Worker Poll Cadence (s) |
