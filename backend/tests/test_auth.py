@@ -236,3 +236,51 @@ def test_rbac_radiologist_cannot_export_training_data(client, seed_radiologist):
             headers=_auth_header(token),
         )
         assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Issue #96: previously-unauthenticated PHI/LLM/monitoring endpoints must now
+# require a token when AUTH_REQUIRED=true.
+# ---------------------------------------------------------------------------
+
+_PREVIOUSLY_UNPROTECTED_ROUTES = [
+    ("GET", "/api/v1/reports/does-not-exist/export-sr"),
+    ("GET", "/api/v1/reports/does-not-exist/export-pdf"),
+    ("GET", "/api/v1/reports/does-not-exist/revisions"),
+    ("POST", "/api/v1/reports/generate-impression", {"findings_text": "test"}),
+    ("POST", "/api/v1/reports/qa-check", {"findings_text": "test", "impression_text": "test"}),
+    ("GET", "/api/v1/reports/does-not-exist/critical-alerts"),
+    ("POST", "/api/v1/reports/does-not-exist/check-critical", {}),
+    (
+        "PATCH",
+        "/api/v1/reports/does-not-exist/critical-alerts/does-not-exist/acknowledge",
+        {"acknowledged_by": "someone"},
+    ),
+    ("POST", "/api/v1/reports/does-not-exist/request-review", {"assigned_to": "someone"}),
+    ("GET", "/api/v1/reports/does-not-exist/reviews"),
+    (
+        "POST",
+        "/api/v1/reports/does-not-exist/reviews/does-not-exist/submit",
+        {"review_comment": "ok", "decision": "approved"},
+    ),
+    ("GET", "/api/v1/report-templates"),
+    (
+        "POST",
+        "/api/v1/report-templates",
+        {"name": "t", "templateText": "text"},
+    ),
+    ("POST", "/api/v1/report-templates/populate", {"templateId": "does-not-exist"}),
+    ("GET", "/api/v1/report-templates/does-not-exist/schema"),
+    ("GET", "/api/v1/metrics"),
+    ("GET", "/api/v1/monitoring/drift"),
+    ("GET", "/api/v1/monitoring/drift/snapshots"),
+]
+
+
+@pytest.mark.parametrize("route", _PREVIOUSLY_UNPROTECTED_ROUTES, ids=lambda r: f"{r[0]} {r[1]}")
+def test_rbac_unauthenticated_blocked_from_previously_open_routes(client, route):
+    """Every route fixed by issue #96 rejects unauthenticated requests (401)."""
+    method, path, *body = route
+    with patch.dict(os.environ, {"AUTH_REQUIRED": "true"}):
+        resp = client.request(method, path, json=(body[0] if body else None))
+        assert resp.status_code == 401, f"{method} {path} returned {resp.status_code}, expected 401"
