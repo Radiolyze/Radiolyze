@@ -1,0 +1,28 @@
+# Optional overlay: TLS-terminating reverse proxy in front of the stack (GAP-11).
+#
+#   docker compose -f docker-compose.yml -f docker/compose/tls.yml up --build
+#
+# Terminates HTTPS on 443 (redirecting 80 -> 443) and proxies everything to
+# the `frontend` service; see docker/nginx-tls.conf.template for details and
+# docs/en/admin/deployment.md#adding-https for certificate setup.
+#
+# Bring your own certificate at ./certs/fullchain.pem + ./certs/privkey.pem
+# (Certbot, your institution's PKI, ...) — this overlay does not obtain one.
+
+services:
+  reverse-proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-localhost}
+      TLS_CERT_PATH: ${TLS_CERT_PATH:-/etc/nginx/certs/fullchain.pem}
+      TLS_KEY_PATH: ${TLS_KEY_PATH:-/etc/nginx/certs/privkey.pem}
+    volumes:
+      - ./docker/nginx-tls.conf.template:/etc/nginx/nginx-tls.conf.template:ro
+      - ./docker/docker-entrypoint.d/tls-render.sh:/docker-entrypoint.d/40-tls-render.sh:ro
+      - ${TLS_CERTS_DIR:-./certs}:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+      - backend

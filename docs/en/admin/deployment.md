@@ -185,7 +185,7 @@ The worklist should display the loaded studies. Click any study to open the view
 
 Before clinical use, complete all of these:
 
-- [ ] **TLS / HTTPS** — terminate TLS at NGINX or another reverse proxy (see below)
+- [ ] **TLS / HTTPS** — terminate TLS at NGINX or another reverse proxy (see below, or the [TLS overlay](#adding-https-nginx-reverse-proxy))
 - [ ] **Orthanc credentials changed** — replace default `orthanc/orthanc`
 - [ ] **PostgreSQL credentials changed** — set strong DB passwords in `.env`
 - [ ] **JWT secrets set** — generate random secrets for token signing
@@ -198,7 +198,36 @@ Before clinical use, complete all of these:
 
 ## Adding HTTPS (NGINX Reverse Proxy)
 
-For production, place NGINX in front of the stack:
+### Option A: the built-in TLS overlay (recommended)
+
+`docker/compose/tls.yml` adds a `reverse-proxy` service (NGINX) that
+terminates HTTPS on 443, redirects 80 → 443, sends HSTS, and proxies
+everything to the `frontend` service:
+
+```bash
+mkdir -p certs
+# Copy/symlink your certificate here as certs/fullchain.pem + certs/privkey.pem
+# (Certbot/Let's Encrypt, or your institution's PKI for air-gapped networks —
+# not appropriate to run Certbot's automated HTTP-01 challenge in that case).
+
+echo "NGINX_SERVER_NAME=radiolyze.yourhospital.example" >> .env
+echo "ENABLE_HSTS=true" >> .env
+
+docker compose -f docker-compose.yml -f docker/compose/tls.yml up --build -d
+```
+
+See `env.example` for the full list of `TLS_*` variables (cert paths, certs
+directory). The overlay's NGINX config lives in
+`docker/nginx-tls.conf.template`, rendered at container startup — see the
+comments in that file if you need to adjust it (e.g. to point at the
+production `docker/Dockerfile.frontend` image on port 8080 instead of the
+Vite dev server on 5173).
+
+### Option B: an external reverse proxy
+
+If you'd rather run NGINX outside of Docker (e.g. a host-level install
+already managing other services), point it at the stack's exposed ports
+instead:
 
 ```nginx
 # /etc/nginx/sites-available/radiolyze
@@ -219,22 +248,9 @@ server {
     # HSTS
     add_header Strict-Transport-Security "max-age=31536000" always;
 
-    # Frontend
+    # Frontend (dev server proxies /api and /dicom-web itself — see vite.config.ts)
     location / {
         proxy_pass http://localhost:5173;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-
-    # Backend API
-    location /api/ {
-        proxy_pass http://localhost:8000;
-    }
-
-    # WebSocket
-    location /ws/ {
-        proxy_pass http://localhost:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -242,7 +258,7 @@ server {
 }
 ```
 
-Use [Certbot](https://certbot.eff.org/) for free Let's Encrypt certificates (not appropriate for air-gapped hospital networks — use your institution's PKI instead).
+Either way, use [Certbot](https://certbot.eff.org/) for free Let's Encrypt certificates (not appropriate for air-gapped hospital networks — use your institution's PKI instead).
 
 ---
 
