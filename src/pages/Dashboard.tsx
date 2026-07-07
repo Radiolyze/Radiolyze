@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -84,33 +84,22 @@ function MetricCardSkeleton() {
 
 export default function Dashboard() {
   const { t } = useTranslation('common');
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [h, m] = await Promise.all([
+  const { data, isFetching, dataUpdatedAt, refetch } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: async () => {
+      const [health, metrics] = await Promise.all([
         apiClient.get<HealthResponse>('/api/v1/health'),
         apiClient.get<Metrics>('/api/v1/metrics'),
       ]);
-      setHealth(h);
-      setMetrics(m);
-      setLastRefreshed(new Date());
-    } catch (err) {
-      console.error('Dashboard fetch failed:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return { health, metrics };
+    },
+    refetchInterval: 30000,
+  });
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const health = data?.health ?? null;
+  const metrics = data?.metrics ?? null;
+  const loading = isFetching;
+  const lastRefreshed = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -144,7 +133,7 @@ export default function Dashboard() {
                 Drift-Monitoring
               </Button>
             </Link>
-            <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
               {t('actions.reload')}
             </Button>

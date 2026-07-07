@@ -20,7 +20,15 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Monitoring = lazy(() => import("./pages/Monitoring"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function RouteFallback() {
   return (

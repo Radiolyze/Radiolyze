@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -134,9 +135,6 @@ export default function History() {
   const [searchQuery, setSearchQuery] = useState('');
   const [eventFilter, setEventFilter] = useState<string>('all');
   const [actorFilter, setActorFilter] = useState<string>('all');
-  const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const eventTypeConfig: Record<AuditEventType, {
     icon: typeof FileText;
@@ -216,40 +214,22 @@ export default function History() {
     return groups;
   }, [t]);
 
+  const {
+    data: auditEntries = [],
+    isLoading,
+    isError: hasAuditError,
+  } = useQuery({
+    queryKey: ['auditEvents'],
+    queryFn: () => auditClient.listEvents(),
+    select: (events) => events.map(mapAuditEventToEntry),
+  });
+  const errorMessage = hasAuditError ? t('status.error') : null;
+
   const studyIds = useMemo(
     () => Array.from(new Set(auditEntries.map((entry) => entry.studyId).filter(Boolean))) as string[],
     [auditEntries]
   );
   const { studyMap, error: studyLookupError } = useStudyLookup(studyIds);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadAuditLog = async () => {
-      setIsLoading(true);
-      setErrorMessage(null);
-      try {
-        const response = await auditClient.listEvents();
-        if (!isActive) return;
-        setAuditEntries(response.map(mapAuditEventToEntry));
-      } catch (error) {
-        console.warn('Failed to load audit log', error);
-        if (isActive) {
-          setErrorMessage(t('status.error'));
-          setAuditEntries([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadAuditLog();
-    return () => {
-      isActive = false;
-    };
-  }, [t]);
 
   useEffect(() => {
     if (studyLookupError) {
