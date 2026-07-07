@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { AIStatus, ImageRef, QueueItem, Report, Series } from '@/types/radiology';
 import { LeftSidebar } from '@/components/Sidebar/LeftSidebar';
 import { ComparisonViewer } from '@/components/Viewer/ComparisonViewer';
@@ -68,6 +68,7 @@ export const ReportWorkspace = () => {
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [imageRefs, setImageRefs] = useState<ImageRef[]>([]);
   const [priorImageRefs, setPriorImageRefs] = useState<ImageRef[]>([]);
+  const lastPersistedComparisonKey = useRef<string | null>(null);
   const [evidenceSelection, setEvidenceSelection] = useState<{ seriesId: string; stackIndex: number } | null>(null);
   const [useAllFrames, setUseAllFrames] = useState(false);
 
@@ -372,7 +373,24 @@ export const ReportWorkspace = () => {
       };
     });
     setPriorImageRefs(enriched);
-  }, [priorStudyDateBySeries, selectedQueueItem?.study.studyDate]);
+
+    const primary = enriched[0];
+    if (report?.id && primary?.studyId) {
+      const key = `${report.id}:${primary.studyId}`;
+      if (lastPersistedComparisonKey.current !== key) {
+        lastPersistedComparisonKey.current = key;
+        reportClient
+          .createComparison(report.id, {
+            priorStudyUid: primary.studyId,
+            priorSeriesUid: primary.seriesId,
+            timeDeltaDays: primary.timeDeltaDays,
+          })
+          .catch((error) => {
+            console.error('Failed to persist report comparison', error);
+          });
+      }
+    }
+  }, [priorStudyDateBySeries, selectedQueueItem?.study.studyDate, report?.id]);
 
   useEffect(() => {
     if (priorStudiesError) {

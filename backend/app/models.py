@@ -54,6 +54,19 @@ class ReportRevision(Base):
     change_reason: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
+class ReportComparison(Base):
+    """Persisted current-study ↔ prior-study pairing for longitudinal context."""
+
+    __tablename__ = "report_comparisons"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
+    current_report_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    prior_study_uid: Mapped[str] = mapped_column(String, nullable=False)
+    prior_series_uid: Mapped[str | None] = mapped_column(String, nullable=True)
+    time_delta_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
 class QACheckResult(Base):
     __tablename__ = "qa_results"
 
