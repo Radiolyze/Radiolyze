@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Columns2, Box, View, Boxes } from 'lucide-react';
+import { Columns2, Box, Loader2, View, Boxes } from 'lucide-react';
 import type { FindingBox, ImageRef, Series } from '@/types/radiology';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,10 +10,22 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { DicomViewer, type ViewerProgress } from './DicomViewer';
-import { MPRViewer } from './MPRViewer';
-import { VRTViewer } from './VRTViewer';
-import { MeshViewer } from './MeshViewer';
 import { ViewerErrorBoundary } from './ViewerErrorBoundary';
+
+// MPR/VRT/Mesh pull in the Cornerstone volume-viewport stack and (for Mesh)
+// vtk.js — several MB combined. Load them on demand only once the user picks
+// one of these modes instead of shipping them in the initial route bundle.
+const MPRViewer = lazy(() => import('./MPRViewer').then((m) => ({ default: m.MPRViewer })));
+const VRTViewer = lazy(() => import('./VRTViewer').then((m) => ({ default: m.VRTViewer })));
+const MeshViewer = lazy(() => import('./MeshViewer').then((m) => ({ default: m.MeshViewer })));
+
+function ViewerLoadingFallback() {
+  return (
+    <div className="flex h-full w-full items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 export type ViewerMode = 'stack' | 'mpr' | 'vrt' | 'mesh';
 
@@ -80,17 +92,23 @@ export function ComparisonSingleView({
       )}
       {viewerMode === 'mpr' && (
         <ViewerErrorBoundary label="MPR">
-          <MPRViewer series={currentSeries} />
+          <Suspense fallback={<ViewerLoadingFallback />}>
+            <MPRViewer series={currentSeries} />
+          </Suspense>
         </ViewerErrorBoundary>
       )}
       {viewerMode === 'vrt' && (
         <ViewerErrorBoundary label="3D">
-          <VRTViewer series={currentSeries} />
+          <Suspense fallback={<ViewerLoadingFallback />}>
+            <VRTViewer series={currentSeries} />
+          </Suspense>
         </ViewerErrorBoundary>
       )}
       {viewerMode === 'mesh' && (
         <ViewerErrorBoundary label={t('mesh.title')}>
-          <MeshViewer series={currentSeries} studyUid={studyUid ?? null} />
+          <Suspense fallback={<ViewerLoadingFallback />}>
+            <MeshViewer series={currentSeries} studyUid={studyUid ?? null} />
+          </Suspense>
         </ViewerErrorBoundary>
       )}
 
