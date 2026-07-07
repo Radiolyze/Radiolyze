@@ -137,11 +137,15 @@ DICOM-Daten an Orthanc senden via:
 
 ### Orthanc-Konfiguration
 
-Die Orthanc-Konfiguration ist in `docker-compose.yml` eingebettet. Für Produktion eine eigene `orthanc.json` einbinden:
+`orthanc/orthanc.json` wird beim Container-Start aus `orthanc/orthanc.json.template` generiert,
+befüllt aus `ORTHANC_USERNAME`/`ORTHANC_PASSWORD`/`ORTHANC_CORS_ORIGIN` in `.env` — siehe
+[Security Hardening](security-hardening.md#orthanc). Für Einstellungen über diese drei
+Variablen hinaus stattdessen eine eigene Template-Datei einbinden (eine statische Datei
+unter `/etc/orthanc/orthanc.json` würde bei jedem Start überschrieben):
 
 ```yaml
 volumes:
-  - ./config/orthanc.json:/etc/orthanc/orthanc.json
+  - ./config/orthanc.json.template:/etc/orthanc/orthanc.json.template
 ```
 
 ---

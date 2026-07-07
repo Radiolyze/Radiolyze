@@ -26,21 +26,22 @@ Radiolyze processes protected health information (PHI). The primary threats are:
 Edit `.env`:
 
 ```bash
-VITE_DICOM_WEB_USERNAME=radiology_user
-VITE_DICOM_WEB_PASSWORD=<generate-with: openssl rand -base64 24>
+ORTHANC_USERNAME=radiology_user
+ORTHANC_PASSWORD=<generate-with: openssl rand -base64 24>
+ORTHANC_CORS_ORIGIN=https://your-frontend-host
 ```
 
-Also update the Orthanc configuration with a matching password hash:
+`orthanc/orthanc.json` is rendered from `orthanc/orthanc.json.template` at container
+startup (see `orthanc/entrypoint.sh`), so these three variables are all that's needed —
+`RegisteredUsers` and the CORS origin are filled in automatically and stay in sync with
+`.env`. Do not mount a static `orthanc.json` over the container; it is regenerated on
+every start and any bind-mounted file at that path would either be overwritten (if
+writable) or make the container fail to start (if read-only). To change anything beyond
+these three variables, mount your own `orthanc.json.template` instead.
 
-```json
-// orthanc.json
-{
-  "AuthenticationEnabled": true,
-  "RegisteredUsers": {
-    "radiology_user": "your_bcrypt_hashed_password"
-  }
-}
-```
+Note: Orthanc's `RegisteredUsers` takes the plaintext password shown above directly
+(there is no bcrypt hashing step) — that's why the password must come from `.env`,
+not be committed to the repository.
 
 ### PostgreSQL
 
