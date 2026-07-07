@@ -10,7 +10,9 @@
     "rotate": "Drehen",
     "flip": "Spiegeln",
     "analyzeFrame": "Frame analysieren",
-    "analyzeFrameHint": "Aktuellen Frame an KI-Lokalisierung senden"
+    "analyzeFrameHint": "Aktuellen Frame an KI-Lokalisierung senden",
+    "annotationModeActive": "Annotation-Modus aktiv",
+    "annotationModeActivate": "Annotation-Modus aktivieren"
   },
   "comparison": {
     "title": "Vergleich",
@@ -70,7 +72,15 @@
     "hide": "Overlays ausblenden",
     "patientInfo": "Patienteninfo",
     "studyInfo": "Studieninfo",
-    "annotations": "Annotationen"
+    "annotations": "Annotationen",
+    "showFindings": "KI-Befunde einblenden ({{count}})",
+    "hideFindings": "KI-Befunde ausblenden ({{count}})"
+  },
+  "emptyState": {
+    "selectSeries": "Wählen Sie eine Serie aus",
+    "selectSeriesFor3d": "Wählen Sie eine Serie für die 3D-Darstellung",
+    "selectSeriesForMpr": "Wählen Sie eine Serie für die Multi-Planar-Rekonstruktion",
+    "unsupportedModality": "Modalität {{modality}} wird nicht unterstützt. Nur CT, MR und PT sind verfügbar."
   },
   "mesh": {
     "title": "3D Modell",

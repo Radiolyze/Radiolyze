@@ -29,7 +29,7 @@ export default function Login() {
       await authClient.login({ username, password });
       navigate('/');
     } catch {
-      setError(t('auth.invalidCredentials', 'Ungültige Anmeldedaten'));
+      setError(t('auth.invalidCredentials'));
       triggerShake();
     } finally {
       setLoading(false);
@@ -49,7 +49,7 @@ export default function Login() {
             Radiolyze
           </h1>
           <p className="text-sm text-muted-foreground">
-            {t('auth.loginPrompt', 'Bitte melden Sie sich an')}
+            {t('auth.loginPrompt')}
           </p>
         </div>
 
@@ -58,7 +58,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="username" className="text-sm font-medium">
-                {t('auth.username', 'Benutzername')}
+                {t('auth.username')}
               </label>
               <Input
                 id="username"
@@ -74,7 +74,7 @@ export default function Login() {
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
-                {t('auth.password', 'Passwort')}
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <Input
@@ -92,7 +92,7 @@ export default function Login() {
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
-                  aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -108,7 +108,7 @@ export default function Login() {
 
             <Button type="submit" className="w-full gap-2" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {loading ? t('auth.loggingIn', 'Anmeldung...') : t('auth.login', 'Anmelden')}
+              {loading ? t('auth.loggingIn') : t('auth.login')}
             </Button>
           </form>
 

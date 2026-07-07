@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { toast } from "sonner";
 import ErrorBoundary from "@/components/Common/ErrorBoundary";
 import { setApiErrorHandler } from "@/services/apiClient";
+import i18n from "@/i18n";
 
 const Index = lazy(() => import("./pages/Index"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -34,14 +35,14 @@ const App = () => {
     setApiErrorHandler((error) => {
       if (error.status === 401) return; // handled by redirect
       if (error.status === 429) {
-        toast.error("Zu viele Anfragen. Bitte kurz warten.");
+        toast.error(i18n.t("api.rateLimited", { ns: "errors" }));
         return;
       }
       const detail =
         typeof error.payload === "object" && error.payload !== null && "detail" in error.payload
           ? String((error.payload as Record<string, unknown>).detail)
           : error.message;
-      toast.error(`Fehler ${error.status}: ${detail}`);
+      toast.error(i18n.t("api.errorWithStatus", { ns: "errors", status: error.status, detail }));
     });
     return () => setApiErrorHandler(null);
   }, []);

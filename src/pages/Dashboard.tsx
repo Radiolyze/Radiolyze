@@ -190,7 +190,7 @@ export default function Dashboard() {
                 })}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">Keine Daten verfügbar</p>
+              <p className="text-muted-foreground text-sm">{t('status.noDataAvailable')}</p>
             )}
           </CardContent>
         </Card>

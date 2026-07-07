@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -172,6 +173,7 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
 }
 
 export default function Monitoring() {
+  const { t } = useTranslation('common');
   const [windowDays, setWindowDays] = useState(7);
   const [saving, setSaving] = useState(false);
 
@@ -207,7 +209,7 @@ export default function Monitoring() {
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Zurück
+              {t('actions.back')}
             </Button>
           </Link>
           <Separator orientation="vertical" className="h-6" />
@@ -225,10 +227,10 @@ export default function Monitoring() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="3">Letzte 3 Tage</SelectItem>
-              <SelectItem value="7">Letzte 7 Tage</SelectItem>
-              <SelectItem value="14">Letzte 14 Tage</SelectItem>
-              <SelectItem value="30">Letzte 30 Tage</SelectItem>
+              <SelectItem value="3">{t('time.lastNDays', { count: 3 })}</SelectItem>
+              <SelectItem value="7">{t('time.lastNDays', { count: 7 })}</SelectItem>
+              <SelectItem value="14">{t('time.lastNDays', { count: 14 })}</SelectItem>
+              <SelectItem value="30">{t('time.lastNDays', { count: 30 })}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" className="gap-2" onClick={() => refetch()}>

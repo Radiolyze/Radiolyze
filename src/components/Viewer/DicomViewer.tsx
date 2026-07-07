@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AIStatus, FindingBox, ImageRef, QAStatus, Series } from '@/types/radiology';
 import type { AnnotationToolId, AllToolId } from '@/types/viewer';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -75,6 +76,7 @@ export function DicomViewer({
   onAnalyzeFrame,
   isAnalyzingFrame = false,
 }: DicomViewerProps) {
+  const { t } = useTranslation('viewer');
   const { preferences, setPreference } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<AllToolId>(preferences.defaultTool as Tool);
@@ -346,7 +348,7 @@ export function DicomViewer({
 
   if (!series) {
     return (
-      <ViewerEmptyState title="Wählen Sie eine Serie aus" />
+      <ViewerEmptyState title={t('emptyState.selectSeries')} />
     );
   }
 
@@ -378,7 +380,7 @@ export function DicomViewer({
       <div className="absolute top-4 right-4 z-10 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
         <p className="text-sm font-medium">{series.seriesDescription}</p>
         <p className="text-xs text-muted-foreground">
-          {series.modality} • Serie {series.seriesNumber}
+          {series.modality} • {t('series.seriesNumber', { number: series.seriesNumber })}
         </p>
       </div>
 

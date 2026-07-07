@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { auditClient, type AuditEventResponse } from '@/services/auditClient';
 import { useStudyLookup } from '@/hooks/useStudyLookup';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -44,7 +46,7 @@ const saveIdSet = (key: string, value: Set<string>) => {
   }
 };
 
-const formatRelativeTime = (timestamp: string): string => {
+const formatRelativeTime = (t: TFunction, timestamp: string): string => {
   const now = new Date();
   const date = new Date(timestamp);
   const diffMs = now.getTime() - date.getTime();
@@ -52,27 +54,34 @@ const formatRelativeTime = (timestamp: string): string => {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffMins < 1) return 'Gerade eben';
-  if (diffMins < 60) return `vor ${diffMins} Min.`;
-  if (diffHours < 24) return `vor ${diffHours} Std.`;
-  if (diffDays < 7) return `vor ${diffDays} Tagen`;
-  return date.toLocaleDateString('de-DE');
+  if (diffMins < 1) return t('time.justNow', { ns: 'common' });
+  if (diffMins < 60) return `${diffMins} min`;
+  if (diffHours < 24) return `${diffHours} h`;
+  if (diffDays < 7) return t('time.daysAgo', { ns: 'common', count: diffDays });
+  return date.toLocaleDateString();
 };
 
-const eventTitleMap: Record<string, string> = {
-  report_created: 'Neuer Report',
-  report_opened: 'Report geöffnet',
-  findings_saved: 'Befund gespeichert',
-  impression_generated: 'KI-Beurteilung generiert',
-  asr_transcription: 'Diktat transkribiert',
-  qa_check_run: 'QA-Prüfung',
-  report_approved: 'Report freigegeben',
-  report_amended: 'Report korrigiert',
-  report_exported: 'Report exportiert',
-  inference_queued: 'KI-Analyse gestartet',
-  inference_started: 'KI-Analyse läuft',
-  inference_completed: 'KI-Analyse abgeschlossen',
-  inference_failed: 'KI-Analyse fehlgeschlagen',
+const EVENT_TYPES_WITH_TITLES = [
+  'report_created',
+  'report_opened',
+  'findings_saved',
+  'impression_generated',
+  'asr_transcription',
+  'qa_check_run',
+  'report_approved',
+  'report_amended',
+  'report_exported',
+  'inference_queued',
+  'inference_started',
+  'inference_completed',
+  'inference_failed',
+] as const;
+
+const getEventTitle = (t: TFunction, eventType: string): string => {
+  if ((EVENT_TYPES_WITH_TITLES as readonly string[]).includes(eventType)) {
+    return t(`notifications.events.${eventType}`, { ns: 'common' });
+  }
+  return t('notifications.events.systemMessage', { ns: 'common' });
 };
 
 const resolveNotificationType = (event: AuditEventResponse): NotificationType => {
@@ -101,7 +110,7 @@ const getMetadataString = (metadata: Record<string, unknown>, key: string) => {
   return typeof value === 'string' && value.trim() ? value.trim() : '';
 };
 
-const buildMessage = (event: AuditEventResponse, studyInfo?: { patientName: string; accessionNumber: string; studyDescription: string }) => {
+const buildMessage = (t: TFunction, event: AuditEventResponse, studyInfo?: { patientName: string; accessionNumber: string; studyDescription: string }) => {
   const metadata = event.metadata ?? {};
   const studyDescription =
     getMetadataString(metadata, 'study_description') || studyInfo?.studyDescription || '';
@@ -116,15 +125,16 @@ const buildMessage = (event: AuditEventResponse, studyInfo?: { patientName: stri
   }
 
   if (!message) {
-    if (event.report_id) return `Report ${event.report_id.slice(0, 8)}...`;
-    if (event.study_id) return `Studie ${event.study_id.slice(0, 8)}...`;
-    return 'Neues Ereignis';
+    if (event.report_id) return t('notifications.reportPrefix', { ns: 'common', id: event.report_id.slice(0, 8) });
+    if (event.study_id) return t('notifications.studyPrefix', { ns: 'common', id: event.study_id.slice(0, 8) });
+    return t('notifications.newEvent', { ns: 'common' });
   }
 
   return message;
 };
 
 export function useNotifications(options: UseNotificationsOptions = {}) {
+  const { t } = useTranslation();
   const limit = options.limit ?? DEFAULT_LIMIT;
   const [events, setEvents] = useState<AuditEventResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -147,12 +157,12 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       setEvents(response);
     } catch (error) {
       console.warn('Failed to load notifications', error);
-      setErrorMessage('Benachrichtigungen konnten nicht geladen werden.');
+      setErrorMessage(t('notifications.loadFailed', { ns: 'errors' }));
       setEvents([]);
     } finally {
       setIsLoading(false);
     }
-  }, [limit]);
+  }, [limit, t]);
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimeoutRef.current !== null) {
@@ -196,13 +206,13 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
         return {
           id: event.id,
           type: resolveNotificationType(event),
-          title: eventTitleMap[event.event_type] ?? 'System-Meldung',
-          message: buildMessage(event, studyInfo),
-          time: formatRelativeTime(event.timestamp),
+          title: getEventTitle(t, event.event_type),
+          message: buildMessage(t, event, studyInfo),
+          time: formatRelativeTime(t, event.timestamp),
           read: readIds.has(event.id),
         } satisfies Notification;
       });
-  }, [events, dismissedIds, readIds, studyMap]);
+  }, [events, dismissedIds, readIds, studyMap, t]);
 
   const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications]);
 

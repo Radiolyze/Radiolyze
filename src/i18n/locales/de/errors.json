@@ -19,7 +19,9 @@
     "404": "Ressource nicht gefunden",
     "500": "Serverfehler. Bitte versuchen Sie es später erneut.",
     "502": "Server nicht erreichbar",
-    "503": "Service vorübergehend nicht verfügbar"
+    "503": "Service vorübergehend nicht verfügbar",
+    "rateLimited": "Zu viele Anfragen. Bitte kurz warten.",
+    "errorWithStatus": "Fehler {{status}}: {{detail}}"
   },
   "validation": {
     "required": "Dieses Feld ist erforderlich",
@@ -41,6 +43,9 @@
     "approveFailed": "Freigabe fehlgeschlagen",
     "exportFailed": "Export fehlgeschlagen",
     "generateFailed": "KI-Generierung fehlgeschlagen"
+  },
+  "notifications": {
+    "loadFailed": "Benachrichtigungen konnten nicht geladen werden."
   },
   "asr": {
     "notSupported": "Spracherkennung wird in diesem Browser nicht unterstützt",

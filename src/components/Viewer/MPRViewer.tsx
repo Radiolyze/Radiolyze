@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Box } from 'lucide-react';
 import type { Series } from '@/types/radiology';
 import type { MPROrientation, SlabBlendMode } from '@/types/mpr';
@@ -24,6 +25,7 @@ interface MPRViewerProps {
 }
 
 export function MPRViewer({ series, className }: MPRViewerProps) {
+  const { t } = useTranslation('viewer');
   const [activeTool, setActiveTool] = useState<MPRToolId>('crosshairs');
   const [selectedPresetId, setSelectedPresetId] = useState(windowLevelPresets[0].id);
   const [activeViewport, setActiveViewport] = useState<MPROrientation | null>(null);
@@ -150,9 +152,9 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
 
   if (!series) {
     return (
-      <ViewerEmptyState 
+      <ViewerEmptyState
         title="MPR-Viewer"
-        subtitle="Wählen Sie eine Serie für die Multi-Planar-Rekonstruktion"
+        subtitle={t('emptyState.selectSeriesForMpr')}
       />
     );
   }
