@@ -14,7 +14,7 @@ docker compose up --build
 ### GPU Stack (vLLM + MedASR)
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile gpu up --build
+docker compose -f docker-compose.yml -f docker/compose/gpu.yml --profile gpu up --build
 ```
 
 ### Optional: Whisper ASR (OpenAI-kompatibel, mehrsprachig)
@@ -22,15 +22,15 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile gpu up 
 Statt MedASR (GPU) kann ein lokaler **faster-whisper**-Server (`hwdsl2/whisper-server`) genutzt werden. Dafür den Stack mit Overlay starten:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.whisper.yml up --build
+docker compose -f docker-compose.yml -f docker/compose/whisper.yml up --build
 ```
 
 Der Dienst laeuft auf Port **9000** (Host). Beim ersten Start laedt das Image das gewaehlte Modell (Standard `base` ueber `WHISPER_MODEL`); das kann einige Minuten dauern.
 
-Kombination mit GPU-Overlay (Reihenfolge: zuerst GPU, dann Whisper, damit die ASR-Umgebung aus `docker-compose.whisper.yml` gewinnt):
+Kombination mit GPU-Overlay (Reihenfolge: zuerst GPU, dann Whisper, damit die ASR-Umgebung aus `docker/compose/whisper.yml` gewinnt):
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.whisper.yml --profile gpu up --build
+docker compose -f docker-compose.yml -f docker/compose/gpu.yml -f docker/compose/whisper.yml --profile gpu up --build
 ```
 
 Backend-Variablen (werden im Overlay gesetzt, bei Bedarf in `.env` ueberschreibbar): `ASR_ENABLED=true`, `ASR_PROVIDER=whisper`, `ASR_OPENAI_BASE_URL=http://whisper-asr:9000`, `ASR_OPENAI_MODEL=whisper-1`, `MEDASR_ENABLED=false`. Siehe auch `.env.whisper.example` fuer optionale `WHISPER_*`-Overrides.
@@ -39,7 +39,7 @@ Backend-Variablen (werden im Overlay gesetzt, bei Bedarf in `.env` ueberschreibb
 
 ```bash
 DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile.rocm -t vllm-rocm .
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.rocm.yml --profile rocm up --build
+docker compose -f docker-compose.yml -f docker/compose/gpu.yml -f docker/compose/rocm.yml --profile rocm up --build
 ```
 
 - ROCm Device Mounts: `/dev/kfd` und `/dev/dri`

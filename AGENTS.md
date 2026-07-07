@@ -38,7 +38,7 @@ docker compose -f docker-compose.yml -f docker/compose/gpu.yml --profile gpu up 
 ```
 docker compose -f docker-compose.yml -f docker/compose/whisper.yml up --build
 ```
-See `docs/en/development/setup.md` and `docker-compose.whisper.yml`.
+See `docs/en/development/setup.md` and `docker/compose/whisper.yml`.
 
 ### Local Frontend Development
 ```

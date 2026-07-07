@@ -259,6 +259,8 @@ python3 -m mkdocs build --strict   # output to site/
 - [Development Setup](docs/en/development/setup.md)
 - [Workflows](docs/en/workflows/overview.md)
 
+`docs-internal/` holds working drafts (project-analysis/improvement plans) that are not part of the published site — see `docs-internal/README.md`.
+
 ## License
 
 Proprietary – All rights reserved.
