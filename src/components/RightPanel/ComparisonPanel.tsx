@@ -134,7 +134,7 @@ export function ComparisonPanel({
           </div>
 
           {sortedChanges.length > 0 && (
-            <ul className="flex flex-col gap-2" role="list">
+            <ul className="flex flex-col gap-2">
               {sortedChanges.map((change, index) => (
                 <li
                   key={`${change.finding}-${index}`}

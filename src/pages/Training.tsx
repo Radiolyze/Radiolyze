@@ -281,6 +281,7 @@ export default function Training() {
             <CardContent className="space-y-4">
               {(Object.entries(FORMAT_INFO) as [ExportFormat, typeof FORMAT_INFO['coco']][]).map(
                 ([format, info]) => (
+                  // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- pre-existing click-only selection pattern, keyboard support tracked separately
                   <div
                     key={format}
                     className={cn(

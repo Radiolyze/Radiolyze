@@ -197,6 +197,23 @@ docker compose ps
 curl http://localhost:8000/api/v1/health
 ```
 
+**Update von einem Deployment vor der Container-Härtung:** Die Backend-,
+Worker- und Segmenter-Images laufen jetzt als Non-Root-Benutzer `appuser`
+(UID 1000) statt als root. Wurden die Named Volumes `seg-data` (und bei
+GPU-Segmenter-Deployments `totalseg-models`) mit einer älteren Version
+dieser Images angelegt, gehören sie noch root — nach dem Pull der neuen
+Images einmalig die Berechtigungen korrigieren, bevor die Container
+gestartet werden:
+
+```bash
+docker compose run --rm --user root backend chown -R 1000:1000 /data/segmentations
+# nur bei GPU-Segmenter:
+docker compose -f docker-compose.yml -f docker/compose/gpu.yml run --rm --user root segmenter chown -R 1000:1000 /models
+```
+
+Frisch angelegte Volumes bei einer Neuinstallation benötigen diesen Schritt
+nicht — sie werden automatisch mit den richtigen Berechtigungen angelegt.
+
 ---
 
 ## Fehlerbehebung Erstinstallation

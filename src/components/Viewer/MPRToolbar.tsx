@@ -91,6 +91,7 @@ export function MPRToolbar({
                   activeTool === tool.id && 'bg-primary text-primary-foreground'
                 )}
                 onClick={() => onToolSelect(tool.id)}
+                aria-label={tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label}
               >
                 <tool.icon className="h-4 w-4" />
               </Button>
@@ -207,6 +208,7 @@ export function MPRToolbar({
             className="h-8 w-8"
             onClick={() => onMaximize(isMaximized ? null : activeViewport)}
             disabled={!activeViewport && !isMaximized}
+            aria-label={isMaximized ? 'Alle Ansichten' : 'Maximieren'}
           >
             {isMaximized ? (
               <Grid2X2 className="h-4 w-4" />
@@ -227,6 +229,7 @@ export function MPRToolbar({
             size="icon"
             className="h-8 w-8"
             onClick={onReset}
+            aria-label={`${t('tools.reset')} (R)`}
           >
             <RotateCcw className="h-4 w-4" />
           </Button>
