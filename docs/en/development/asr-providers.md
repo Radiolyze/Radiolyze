@@ -220,8 +220,8 @@ MEDASR_FALLBACK_TO_MOCK=false
 ## Testing ASR Integration
 
 ```bash
-# 1. Check the backend picks up the right provider
-curl -s http://localhost:8000/api/v1/health | python3 -m json.tool
+# 1. Check the backend picks up the right provider (requires an auth token)
+curl -s http://localhost:8000/api/v1/health/detailed -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
 
 # 2. Run the ASR provider unit tests
 cd backend

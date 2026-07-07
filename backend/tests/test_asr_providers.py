@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -44,7 +44,9 @@ def test_asr_inference_enabled_prefers_asr_enabled(monkeypatch: pytest.MonkeyPat
     assert asr_inference_enabled() is True
 
 
-def test_health_reports_asr_openai_when_whisper_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_health_detailed_reports_asr_openai_when_whisper_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from fastapi.testclient import TestClient
 
     from app.main import app
@@ -52,12 +54,11 @@ def test_health_reports_asr_openai_when_whisper_provider(monkeypatch: pytest.Mon
     monkeypatch.setenv("ASR_PROVIDER", "whisper")
     monkeypatch.setenv("ASR_OPENAI_BASE_URL", "http://whisper-asr:9000")
 
-    with patch("httpx.get") as mock_get:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_get.return_value = mock_resp
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    with patch("httpx.AsyncClient.get", new=AsyncMock(return_value=mock_resp)):
         tc = TestClient(app)
-        response = tc.get("/api/v1/health")
+        response = tc.get("/api/v1/health/detailed")
 
     assert response.status_code == 200
     services = response.json()["services"]

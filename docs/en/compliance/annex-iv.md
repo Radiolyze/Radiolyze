@@ -207,7 +207,7 @@ The following monitoring infrastructure is implemented and operational:
 | Drift scheduler | `backend/app/main.py` (APScheduler) | ✅ Active (default: 24 h interval) |
 | Drift API endpoint | `GET /api/v1/monitoring/drift` | ✅ Active |
 | QA metrics endpoint | `GET /api/v1/monitoring/qa-stats` | ✅ Active |
-| Health check endpoint | `GET /api/v1/health` | ✅ Active |
+| Health check endpoint | `GET /api/v1/health/detailed` (authenticated) | ✅ Active |
 
 Drift snapshots capture QA pass/warn/fail rates and inference confidence
 distributions. Deployers can consume these endpoints via any observability

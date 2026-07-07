@@ -128,8 +128,8 @@ Der Workflow wird durch ASR-Ausfall nie blockiert.
 ## ASR-Integration testen
 
 ```bash
-# Backend-Provider-Konfiguration prüfen
-curl -s http://localhost:8000/api/v1/health | python3 -m json.tool
+# Backend-Provider-Konfiguration prüfen (erfordert ein Auth-Token)
+curl -s http://localhost:8000/api/v1/health/detailed -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
 
 # ASR-Provider Unit-Tests ausführen
 cd backend && python -m pytest tests/test_asr_providers.py -v

@@ -6,7 +6,11 @@ Alle Routen liegen unter dem FastAPI-Orchestrator mit Praefix `/api/v1` (Ausnahm
 
 `GET /api/v1/health`
 
-- Aggregierter Health-Check (Datenbank, Redis, optional vLLM, MedASR, Orthanc)
+- Flacher, öffentlicher Liveness-Check (`{"status": "ok"}`). Keine Auth, keine Downstream-Aufrufe — wird vom Docker-Healthcheck und dem Deployment-Smoke-Test genutzt.
+
+`GET /api/v1/health/detailed`
+
+- Authentifizierter Deep-Readiness-Check: Aufschlüsselung pro Service (Datenbank, Redis, optional vLLM, MedASR, Segmenter, Orthanc), parallel geprüft.
 
 ## Auth
 
