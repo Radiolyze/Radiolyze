@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { CheckCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface ApprovalDialogProps {
   onConfirm: (signature: string) => void;
@@ -30,8 +30,8 @@ export function ApprovalDialog({
   title,
   description,
 }: ApprovalDialogProps) {
-  const { t } = useTranslation('report');
-  const [signature, setSignature] = useState('');
+  const { t } = useTranslation("report");
+  const [signature, setSignature] = useState("");
   const [open, setOpen] = useState(false);
 
   const handleConfirm = () => {
@@ -40,7 +40,7 @@ export function ApprovalDialog({
       return;
     }
     onConfirm(trimmed);
-    setSignature('');
+    setSignature("");
     setOpen(false);
   };
 
@@ -49,30 +49,32 @@ export function ApprovalDialog({
       <AlertDialogTrigger asChild>
         <Button className="w-full" size="lg" disabled={disabled}>
           <CheckCircle className="h-5 w-5 mr-2" />
-          {triggerLabel || t('approval.approve')}
+          {triggerLabel || t("approval.approve")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title || t('approval.title')}</AlertDialogTitle>
-          <AlertDialogDescription>{description || t('approval.description')}</AlertDialogDescription>
+          <AlertDialogTitle>{title || t("approval.title")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {description || t("approval.description")}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground" htmlFor="report-signature">
-            {t('approval.signature')}
+            {t("approval.signature")}
           </label>
           <Input
             id="report-signature"
             value={signature}
             onChange={(event) => setSignature(event.target.value)}
-            placeholder={t('approval.signaturePlaceholder')}
+            placeholder={t("approval.signaturePlaceholder")}
             autoComplete="name"
           />
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel>{t('approval.cancel')}</AlertDialogCancel>
+          <AlertDialogCancel>{t("approval.cancel")}</AlertDialogCancel>
           <AlertDialogAction onClick={handleConfirm} disabled={!signature.trim()}>
-            {t('approval.approve')}
+            {t("approval.approve")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

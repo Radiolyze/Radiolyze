@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Enums, imageLoader } from '@cornerstonejs/core';
+import { useEffect, useRef } from "react";
+import { Enums, imageLoader } from "@cornerstonejs/core";
 
 interface StackPrefetchOptions {
   enabled: boolean;

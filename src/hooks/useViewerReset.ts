@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
-import type { RefObject, Dispatch, SetStateAction } from 'react';
-import type { StackViewport } from '@cornerstonejs/core';
-import type { ViewerToolId } from '@/types/viewer';
-import { logger } from '@/lib/logger';
+import { useCallback } from "react";
+import type { RefObject, Dispatch, SetStateAction } from "react";
+import type { StackViewport } from "@cornerstonejs/core";
+import type { ViewerToolId } from "@/types/viewer";
+import { logger } from "@/lib/logger";
 
 interface UseViewerResetOptions {
   stackViewportRef: RefObject<StackViewport | null>;
@@ -22,7 +22,7 @@ export const useViewerReset = ({
   setZoom,
 }: UseViewerResetOptions) =>
   useCallback(() => {
-    setActiveTool('windowLevel');
+    setActiveTool("windowLevel");
     setSelectedPresetId(defaultPresetId);
     setFrameIndex(0);
 
@@ -37,7 +37,7 @@ export const useViewerReset = ({
         }
       } catch (err) {
         // Image data not yet loaded
-        logger.debug('[useViewerReset] Failed to reset properties', err);
+        logger.debug("[useViewerReset] Failed to reset properties", err);
       }
     }
 

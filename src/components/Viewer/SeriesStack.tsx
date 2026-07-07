@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 interface SeriesStackProps {
   totalFrames: number;
@@ -16,7 +16,7 @@ export function SeriesStack({
   maxThumbnails = 10,
   className,
 }: SeriesStackProps) {
-  const { t } = useTranslation('viewer');
+  const { t } = useTranslation("viewer");
   const visibleFrames = Math.min(totalFrames, maxThumbnails);
   const frameIndexes = Array.from({ length: visibleFrames }, (_, idx) => {
     if (totalFrames <= maxThumbnails) {
@@ -30,8 +30,8 @@ export function SeriesStack({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-2',
-        className
+        "flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-2",
+        className,
       )}
     >
       {frameIndexes.map((frame) => (
@@ -39,11 +39,11 @@ export function SeriesStack({
           key={frame}
           onClick={() => onSelectFrame(frame)}
           className={cn(
-            'h-12 w-10 rounded border border-border bg-panel-secondary/70 text-[10px] text-muted-foreground',
-            'hover:border-primary hover:text-foreground transition-colors',
-            frame === currentFrame && 'border-primary text-foreground bg-primary/20'
+            "h-12 w-10 rounded border border-border bg-panel-secondary/70 text-[10px] text-muted-foreground",
+            "hover:border-primary hover:text-foreground transition-colors",
+            frame === currentFrame && "border-primary text-foreground bg-primary/20",
           )}
-          title={t('progress.frame', { current: frame + 1, total: totalFrames })}
+          title={t("progress.frame", { current: frame + 1, total: totalFrames })}
         >
           {frame + 1}
         </button>

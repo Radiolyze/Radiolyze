@@ -1,34 +1,34 @@
-import { useCallback, useEffect, useState } from 'react';
-import { logger } from '@/lib/logger';
+import { useCallback, useEffect, useState } from "react";
+import { logger } from "@/lib/logger";
 
-const STORAGE_KEY = 'radiolyze:mesh:label-colors';
+const STORAGE_KEY = "radiolyze:mesh:label-colors";
 
 type RGB = [number, number, number];
 type ColorMap = Record<string, RGB>;
 
 function readStored(): ColorMap {
-  if (typeof window === 'undefined') return {};
+  if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
-    if (parsed && typeof parsed === 'object') {
+    if (parsed && typeof parsed === "object") {
       return parsed as ColorMap;
     }
   } catch (err) {
     /* corrupt JSON; fall through to empty map */
-    logger.debug('[useLabelColors] Failed to read stored label colors', err);
+    logger.debug("[useLabelColors] Failed to read stored label colors", err);
   }
   return {};
 }
 
 function persist(map: ColorMap): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
   } catch (err) {
     /* storage full or unavailable */
-    logger.debug('[useLabelColors] Failed to persist label colors', err);
+    logger.debug("[useLabelColors] Failed to persist label colors", err);
   }
 }
 
@@ -53,13 +53,13 @@ export function useLabelColors(): UseLabelColorsResult {
 
   // Re-hydrate on storage changes from other tabs.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     const onStorage = (event: StorageEvent) => {
       if (event.key !== STORAGE_KEY) return;
       setMap(readStored());
     };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const getOverride = useCallback(

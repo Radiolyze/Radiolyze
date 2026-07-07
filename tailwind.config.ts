@@ -3,7 +3,12 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -120,7 +125,7 @@ export default {
           from: { opacity: "0", transform: "translateY(12px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
-        "shake": {
+        shake: {
           "0%, 100%": { transform: "translateX(0)" },
           "15%": { transform: "translateX(-6px)" },
           "30%": { transform: "translateX(6px)" },
@@ -147,7 +152,7 @@ export default {
         "pulse-ring": "pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "scale-in": "scale-in 0.2s ease-out",
         "slide-up": "slide-up 0.3s ease-out both",
-        "shake": "shake 0.4s ease-in-out",
+        shake: "shake 0.4s ease-in-out",
         "record-glow": "record-glow 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "bounce-in": "bounce-in 0.35s ease-out",
       },

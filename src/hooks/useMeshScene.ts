@@ -1,20 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 // vtk.js side-effect import: ensure geometry rendering profile is registered.
-import '@kitware/vtk.js/Rendering/Profiles/Geometry';
-import vtkFullScreenRenderWindow from '@kitware/vtk.js/Rendering/Misc/FullScreenRenderWindow';
-import vtkActor from '@kitware/vtk.js/Rendering/Core/Actor';
-import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
-import vtkXMLPolyDataReader from '@kitware/vtk.js/IO/XML/XMLPolyDataReader';
-import vtkPlane from '@kitware/vtk.js/Common/DataModel/Plane';
-import { logger } from '@/lib/logger';
+import "@kitware/vtk.js/Rendering/Profiles/Geometry";
+import vtkFullScreenRenderWindow from "@kitware/vtk.js/Rendering/Misc/FullScreenRenderWindow";
+import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
+import vtkMapper from "@kitware/vtk.js/Rendering/Core/Mapper";
+import vtkXMLPolyDataReader from "@kitware/vtk.js/IO/XML/XMLPolyDataReader";
+import vtkPlane from "@kitware/vtk.js/Common/DataModel/Plane";
+import { logger } from "@/lib/logger";
 
 interface VtkScene {
   fullScreen: ReturnType<typeof vtkFullScreenRenderWindow.newInstance>;
-  renderer: ReturnType<
-    ReturnType<typeof vtkFullScreenRenderWindow.newInstance>['getRenderer']
-  >;
+  renderer: ReturnType<ReturnType<typeof vtkFullScreenRenderWindow.newInstance>["getRenderer"]>;
   renderWindow: ReturnType<
-    ReturnType<typeof vtkFullScreenRenderWindow.newInstance>['getRenderWindow']
+    ReturnType<typeof vtkFullScreenRenderWindow.newInstance>["getRenderWindow"]
   >;
 }
 
@@ -23,7 +21,7 @@ interface ActorEntry {
   mapper: ReturnType<typeof vtkMapper.newInstance>;
 }
 
-export type ClipAxis = 'x' | 'y' | 'z';
+export type ClipAxis = "x" | "y" | "z";
 
 interface UseMeshSceneResult {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -52,7 +50,7 @@ export function useMeshScene(): UseMeshSceneResult {
   // Aggregate bounds across all actors: [xmin, xmax, ymin, ymax, zmin, zmax].
   const boundsRef = useRef<[number, number, number, number, number, number] | null>(null);
   const clipPlaneRef = useRef<ReturnType<typeof vtkPlane.newInstance> | null>(null);
-  const clipAxisRef = useRef<ClipAxis>('z');
+  const clipAxisRef = useRef<ClipAxis>("z");
 
   useEffect(() => {
     const container = containerRef.current;
@@ -61,10 +59,10 @@ export function useMeshScene(): UseMeshSceneResult {
     const fullScreen = vtkFullScreenRenderWindow.newInstance({
       container,
       containerStyle: {
-        position: 'absolute',
-        inset: '0',
-        width: '100%',
-        height: '100%',
+        position: "absolute",
+        inset: "0",
+        width: "100%",
+        height: "100%",
       },
       background: [0.05, 0.07, 0.1],
     });
@@ -80,7 +78,7 @@ export function useMeshScene(): UseMeshSceneResult {
           renderer.removeActor(actor);
         } catch (err) {
           /* noop */
-          logger.debug('[useMeshScene] Failed to remove actor during cleanup', err);
+          logger.debug("[useMeshScene] Failed to remove actor during cleanup", err);
         }
         actor.delete?.();
         mapper.delete?.();
@@ -95,33 +93,33 @@ export function useMeshScene(): UseMeshSceneResult {
     };
   }, []);
 
-  const _aggregateBounds = useCallback(
-    (incoming: number[]) => {
-      if (!incoming || incoming.length !== 6) return;
-      const current = boundsRef.current;
-      if (!current) {
-        boundsRef.current = [
-          incoming[0], incoming[1],
-          incoming[2], incoming[3],
-          incoming[4], incoming[5],
-        ];
-        return;
-      }
+  const _aggregateBounds = useCallback((incoming: number[]) => {
+    if (!incoming || incoming.length !== 6) return;
+    const current = boundsRef.current;
+    if (!current) {
       boundsRef.current = [
-        Math.min(current[0], incoming[0]),
-        Math.max(current[1], incoming[1]),
-        Math.min(current[2], incoming[2]),
-        Math.max(current[3], incoming[3]),
-        Math.min(current[4], incoming[4]),
-        Math.max(current[5], incoming[5]),
+        incoming[0],
+        incoming[1],
+        incoming[2],
+        incoming[3],
+        incoming[4],
+        incoming[5],
       ];
-    },
-    [],
-  );
+      return;
+    }
+    boundsRef.current = [
+      Math.min(current[0], incoming[0]),
+      Math.max(current[1], incoming[1]),
+      Math.min(current[2], incoming[2]),
+      Math.max(current[3], incoming[3]),
+      Math.min(current[4], incoming[4]),
+      Math.max(current[5], incoming[5]),
+    ];
+  }, []);
 
   const _normalForAxis = (axis: ClipAxis): [number, number, number] => {
-    if (axis === 'x') return [1, 0, 0];
-    if (axis === 'y') return [0, 1, 0];
+    if (axis === "x") return [1, 0, 0];
+    if (axis === "y") return [0, 1, 0];
     return [0, 0, 1];
   };
 
@@ -139,7 +137,7 @@ export function useMeshScene(): UseMeshSceneResult {
       }
 
       const reader = vtkXMLPolyDataReader.newInstance();
-      if (typeof reader.parseAsArrayBuffer === 'function') {
+      if (typeof reader.parseAsArrayBuffer === "function") {
         reader.parseAsArrayBuffer(data);
       } else {
         const text = new TextDecoder().decode(new Uint8Array(data));
@@ -153,14 +151,14 @@ export function useMeshScene(): UseMeshSceneResult {
       actor.setMapper(mapper);
 
       // Inherit the active clip plane so newly loaded labels are clipped too.
-      if (clipPlaneRef.current && typeof mapper.addClippingPlane === 'function') {
+      if (clipPlaneRef.current && typeof mapper.addClippingPlane === "function") {
         mapper.addClippingPlane(clipPlaneRef.current);
       }
 
       scene.renderer.addActor(actor);
       actorsRef.current.set(labelId, { actor, mapper });
 
-      if (typeof polyData.getBounds === 'function') {
+      if (typeof polyData.getBounds === "function") {
         _aggregateBounds(polyData.getBounds());
       }
 
@@ -188,16 +186,13 @@ export function useMeshScene(): UseMeshSceneResult {
     scene.renderWindow.render();
   }, []);
 
-  const setColor = useCallback(
-    (labelId: number, rgb: [number, number, number]) => {
-      const scene = sceneRef.current;
-      const entry = actorsRef.current.get(labelId);
-      if (!scene || !entry) return;
-      entry.actor.getProperty().setColor(rgb[0], rgb[1], rgb[2]);
-      scene.renderWindow.render();
-    },
-    [],
-  );
+  const setColor = useCallback((labelId: number, rgb: [number, number, number]) => {
+    const scene = sceneRef.current;
+    const entry = actorsRef.current.get(labelId);
+    if (!scene || !entry) return;
+    entry.actor.getProperty().setColor(rgb[0], rgb[1], rgb[2]);
+    scene.renderWindow.render();
+  }, []);
 
   const resetCamera = useCallback(() => {
     const scene = sceneRef.current;
@@ -206,7 +201,7 @@ export function useMeshScene(): UseMeshSceneResult {
     scene.renderWindow.render();
   }, []);
 
-  const enableClipPlane = useCallback((enabled: boolean, axis: ClipAxis = 'z') => {
+  const enableClipPlane = useCallback((enabled: boolean, axis: ClipAxis = "z") => {
     const scene = sceneRef.current;
     if (!scene) return;
 
@@ -218,7 +213,7 @@ export function useMeshScene(): UseMeshSceneResult {
             mapper.removeClippingPlane?.(plane);
           } catch (err) {
             /* mapper may have already been freed */
-            logger.debug('[useMeshScene] Failed to remove clipping plane', err);
+            logger.debug("[useMeshScene] Failed to remove clipping plane", err);
           }
         });
         plane.delete?.();
@@ -246,7 +241,7 @@ export function useMeshScene(): UseMeshSceneResult {
       const plane = vtkPlane.newInstance({ origin, normal });
       clipPlaneRef.current = plane;
       actorsRef.current.forEach(({ mapper }) => {
-        if (typeof mapper.addClippingPlane === 'function') {
+        if (typeof mapper.addClippingPlane === "function") {
           mapper.addClippingPlane(plane);
         }
       });

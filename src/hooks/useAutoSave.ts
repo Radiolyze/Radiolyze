@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'conflict' | 'error';
+export type AutoSaveStatus = "idle" | "saving" | "saved" | "conflict" | "error";
 
 interface UseAutoSaveOptions {
   /** Debounce interval in milliseconds (default: 1500) */
@@ -16,9 +16,9 @@ interface UseAutoSaveOptions {
  * when the user types continuously. Reports save status for UI indicators.
  */
 export function useAutoSave({ debounceMs = 1500, onSave }: UseAutoSaveOptions) {
-  const [status, setStatus] = useState<AutoSaveStatus>('idle');
+  const [status, setStatus] = useState<AutoSaveStatus>("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSavedRef = useRef<string>('');
+  const lastSavedRef = useRef<string>("");
   const pendingRef = useRef<string | null>(null);
 
   const save = useCallback(
@@ -28,16 +28,16 @@ export function useAutoSave({ debounceMs = 1500, onSave }: UseAutoSaveOptions) {
         return;
       }
 
-      setStatus('saving');
+      setStatus("saving");
       try {
         await onSave(value);
         lastSavedRef.current = value;
-        setStatus('saved');
+        setStatus("saved");
       } catch (err: unknown) {
-        if (err instanceof Error && err.message?.includes('409')) {
-          setStatus('conflict');
+        if (err instanceof Error && err.message?.includes("409")) {
+          setStatus("conflict");
         } else {
-          setStatus('error');
+          setStatus("error");
         }
       }
     },
@@ -78,7 +78,7 @@ export function useAutoSave({ debounceMs = 1500, onSave }: UseAutoSaveOptions) {
   const reset = useCallback((initialValue: string) => {
     lastSavedRef.current = initialValue;
     pendingRef.current = null;
-    setStatus('idle');
+    setStatus("idle");
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;

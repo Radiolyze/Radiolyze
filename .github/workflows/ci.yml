@@ -75,6 +75,7 @@ jobs:
       - run: npm ci
       - run: npm run bundle:worker
       - run: npm run lint
+      - run: npm run format:check
       - run: npm run typecheck
       - run: npm run test
       # Dependency vulnerability scan. Currently reported-only: the backlog

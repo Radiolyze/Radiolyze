@@ -15,22 +15,22 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Lovable" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    
+
     <!-- Prevent flash of wrong theme -->
     <script>
-      (function() {
+      (function () {
         try {
-          var stored = localStorage.getItem('radiolyze-user-preferences');
+          var stored = localStorage.getItem("radiolyze-user-preferences");
           if (stored) {
             var prefs = JSON.parse(stored);
             var theme = prefs.theme;
-            if (theme === 'light') {
-              document.documentElement.classList.remove('dark');
-              document.documentElement.classList.add('light');
-            } else if (theme === 'system') {
-              var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-              document.documentElement.classList.toggle('dark', isDark);
-              document.documentElement.classList.toggle('light', !isDark);
+            if (theme === "light") {
+              document.documentElement.classList.remove("dark");
+              document.documentElement.classList.add("light");
+            } else if (theme === "system") {
+              var isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+              document.documentElement.classList.toggle("dark", isDark);
+              document.documentElement.classList.toggle("light", !isDark);
             }
             // else: keep 'dark' class (default)
           }

@@ -1,11 +1,6 @@
-export type SegmentationPreset = 'bone' | 'total';
+export type SegmentationPreset = "bone" | "total";
 
-export type SegmentationStatus =
-  | 'queued'
-  | 'started'
-  | 'running'
-  | 'finished'
-  | 'failed';
+export type SegmentationStatus = "queued" | "started" | "running" | "finished" | "failed";
 
 export interface SegmentationLabel {
   id: number;

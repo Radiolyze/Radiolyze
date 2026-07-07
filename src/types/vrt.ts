@@ -35,16 +35,16 @@ export interface VRTPreset {
 
 export const VRT_PRESETS: VRTPreset[] = [
   {
-    id: 'ct-bone',
-    name: 'CT Bone',
-    description: 'Optimiert für Knochenstrukturen',
+    id: "ct-bone",
+    name: "CT Bone",
+    description: "Optimiert für Knochenstrukturen",
     ambient: 0.2,
     diffuse: 0.9,
     specular: 0.3,
     specularPower: 15,
     transferFunction: {
-      id: 'ct-bone-tf',
-      name: 'CT Bone',
+      id: "ct-bone-tf",
+      name: "CT Bone",
       opacityPoints: [
         { x: -1024, y: 0 },
         { x: 200, y: 0 },
@@ -63,16 +63,16 @@ export const VRT_PRESETS: VRTPreset[] = [
     },
   },
   {
-    id: 'ct-lung',
-    name: 'CT Lung',
-    description: 'Optimiert für Lungenparenchym',
+    id: "ct-lung",
+    name: "CT Lung",
+    description: "Optimiert für Lungenparenchym",
     ambient: 0.2,
     diffuse: 0.9,
     specular: 0.1,
     specularPower: 10,
     transferFunction: {
-      id: 'ct-lung-tf',
-      name: 'CT Lung',
+      id: "ct-lung-tf",
+      name: "CT Lung",
       opacityPoints: [
         { x: -1024, y: 0 },
         { x: -900, y: 0.02 },
@@ -96,16 +96,16 @@ export const VRT_PRESETS: VRTPreset[] = [
     },
   },
   {
-    id: 'ct-soft-tissue',
-    name: 'CT Soft Tissue',
-    description: 'Weichteilgewebe und Organe',
+    id: "ct-soft-tissue",
+    name: "CT Soft Tissue",
+    description: "Weichteilgewebe und Organe",
     ambient: 0.3,
     diffuse: 0.8,
     specular: 0.2,
     specularPower: 10,
     transferFunction: {
-      id: 'ct-soft-tissue-tf',
-      name: 'CT Soft Tissue',
+      id: "ct-soft-tissue-tf",
+      name: "CT Soft Tissue",
       opacityPoints: [
         { x: -1024, y: 0 },
         { x: -200, y: 0 },
@@ -129,16 +129,16 @@ export const VRT_PRESETS: VRTPreset[] = [
     },
   },
   {
-    id: 'ct-angiography',
-    name: 'CT Angiography',
-    description: 'Kontrastmittelgefüllte Gefäße',
+    id: "ct-angiography",
+    name: "CT Angiography",
+    description: "Kontrastmittelgefüllte Gefäße",
     ambient: 0.2,
     diffuse: 0.9,
     specular: 0.5,
     specularPower: 25,
     transferFunction: {
-      id: 'ct-angio-tf',
-      name: 'CT Angiography',
+      id: "ct-angio-tf",
+      name: "CT Angiography",
       opacityPoints: [
         { x: -1024, y: 0 },
         { x: 100, y: 0 },
@@ -160,16 +160,16 @@ export const VRT_PRESETS: VRTPreset[] = [
     },
   },
   {
-    id: 'ct-muscle-bone',
-    name: 'CT Muscle/Bone',
-    description: 'Muskel- und Knochenstrukturen',
+    id: "ct-muscle-bone",
+    name: "CT Muscle/Bone",
+    description: "Muskel- und Knochenstrukturen",
     ambient: 0.2,
     diffuse: 0.85,
     specular: 0.3,
     specularPower: 20,
     transferFunction: {
-      id: 'ct-muscle-bone-tf',
-      name: 'CT Muscle/Bone',
+      id: "ct-muscle-bone-tf",
+      name: "CT Muscle/Bone",
       opacityPoints: [
         { x: -1024, y: 0 },
         { x: -100, y: 0 },
@@ -194,9 +194,12 @@ export const VRT_PRESETS: VRTPreset[] = [
   },
 ];
 
-export type VRTViewAngle = 'anterior' | 'posterior' | 'left' | 'right' | 'superior' | 'inferior';
+export type VRTViewAngle = "anterior" | "posterior" | "left" | "right" | "superior" | "inferior";
 
-export const VRT_VIEW_ANGLES: Record<VRTViewAngle, { position: [number, number, number]; viewUp: [number, number, number] }> = {
+export const VRT_VIEW_ANGLES: Record<
+  VRTViewAngle,
+  { position: [number, number, number]; viewUp: [number, number, number] }
+> = {
   anterior: { position: [0, -1, 0], viewUp: [0, 0, 1] },
   posterior: { position: [0, 1, 0], viewUp: [0, 0, 1] },
   left: { position: [1, 0, 0], viewUp: [0, 0, 1] },
@@ -215,7 +218,7 @@ export interface VRTSettings {
 }
 
 export const DEFAULT_VRT_SETTINGS: VRTSettings = {
-  presetId: 'ct-bone',
+  presetId: "ct-bone",
   sampleDistance: 1.0,
   ambient: 0.2,
   diffuse: 0.9,

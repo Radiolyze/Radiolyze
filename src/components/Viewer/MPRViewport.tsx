@@ -1,7 +1,7 @@
-import { forwardRef } from 'react';
-import { cn } from '@/lib/utils';
-import type { MPRViewportConfig, SlabSettings } from '@/types/mpr';
-import { SLAB_BLEND_MODE_LABELS } from '@/types/mpr';
+import { forwardRef } from "react";
+import { cn } from "@/lib/utils";
+import type { MPRViewportConfig, SlabSettings } from "@/types/mpr";
+import { SLAB_BLEND_MODE_LABELS } from "@/types/mpr";
 
 interface MPRViewportProps {
   config: MPRViewportConfig;
@@ -16,27 +16,24 @@ interface MPRViewportProps {
 export const MPRViewport = forwardRef<HTMLDivElement, MPRViewportProps>(
   ({ config, sliceIndex, totalSlices, isActive, onClick, className, slabSettings }, ref) => {
     const isSlabActive = slabSettings && slabSettings.thickness > 0;
-    
+
     return (
       // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- pre-existing click-only viewport selection, keyboard support tracked separately
       <div
         className={cn(
-          'relative bg-black rounded-lg overflow-hidden border-2 transition-colors',
-          isActive ? 'border-primary' : 'border-border/50',
-          className
+          "relative bg-black rounded-lg overflow-hidden border-2 transition-colors",
+          isActive ? "border-primary" : "border-border/50",
+          className,
         )}
         onClick={onClick}
       >
         {/* Viewport canvas */}
-        <div
-          ref={ref}
-          className="absolute inset-0 cursor-crosshair"
-        />
+        <div ref={ref} className="absolute inset-0 cursor-crosshair" />
 
         {/* Orientation label */}
         <div
           className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded text-xs font-semibold"
-          style={{ backgroundColor: config.color, color: 'black' }}
+          style={{ backgroundColor: config.color, color: "black" }}
         >
           {config.label}
         </div>
@@ -57,28 +54,28 @@ export const MPRViewport = forwardRef<HTMLDivElement, MPRViewportProps>(
 
         {/* Orientation markers */}
         <div className="absolute top-1/2 left-2 z-10 text-xs text-muted-foreground/60 -translate-y-1/2">
-          {config.orientation === 'axial' && 'R'}
-          {config.orientation === 'sagittal' && 'A'}
-          {config.orientation === 'coronal' && 'R'}
+          {config.orientation === "axial" && "R"}
+          {config.orientation === "sagittal" && "A"}
+          {config.orientation === "coronal" && "R"}
         </div>
         <div className="absolute top-1/2 right-2 z-10 text-xs text-muted-foreground/60 -translate-y-1/2">
-          {config.orientation === 'axial' && 'L'}
-          {config.orientation === 'sagittal' && 'P'}
-          {config.orientation === 'coronal' && 'L'}
+          {config.orientation === "axial" && "L"}
+          {config.orientation === "sagittal" && "P"}
+          {config.orientation === "coronal" && "L"}
         </div>
         <div className="absolute top-2 left-1/2 z-10 text-xs text-muted-foreground/60 -translate-x-1/2">
-          {config.orientation === 'axial' && 'A'}
-          {config.orientation === 'sagittal' && 'S'}
-          {config.orientation === 'coronal' && 'S'}
+          {config.orientation === "axial" && "A"}
+          {config.orientation === "sagittal" && "S"}
+          {config.orientation === "coronal" && "S"}
         </div>
         <div className="absolute bottom-2 left-1/2 z-10 text-xs text-muted-foreground/60 -translate-x-1/2">
-          {config.orientation === 'axial' && 'P'}
-          {config.orientation === 'sagittal' && 'I'}
-          {config.orientation === 'coronal' && 'I'}
+          {config.orientation === "axial" && "P"}
+          {config.orientation === "sagittal" && "I"}
+          {config.orientation === "coronal" && "I"}
         </div>
       </div>
     );
-  }
+  },
 );
 
-MPRViewport.displayName = 'MPRViewport';
+MPRViewport.displayName = "MPRViewport";

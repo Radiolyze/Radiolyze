@@ -1,9 +1,9 @@
-import { useTranslation } from 'react-i18next';
-import { FileText, Clock, CheckCircle, Sparkles } from 'lucide-react';
-import type { AIStatus, QueueItem } from '@/types/radiology';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { formatTime } from '@/data/mockData';
+import { useTranslation } from "react-i18next";
+import { FileText, Clock, CheckCircle, Sparkles } from "lucide-react";
+import type { AIStatus, QueueItem } from "@/types/radiology";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { formatTime } from "@/data/mockData";
 
 interface ReportQueueProps {
   items: QueueItem[];
@@ -12,50 +12,67 @@ interface ReportQueueProps {
 }
 
 export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueueProps) {
-  const { t } = useTranslation('common');
-  const { t: tReport } = useTranslation('report');
-  
-  const pendingCount = items.filter(i => i.report.status === 'pending' || i.report.status === 'in_progress').length;
+  const { t } = useTranslation("common");
+  const { t: tReport } = useTranslation("report");
+
+  const pendingCount = items.filter(
+    (i) => i.report.status === "pending" || i.report.status === "in_progress",
+  ).length;
 
   const statusConfig = {
     pending: {
       icon: Clock,
-      label: t('status.pending'),
-      className: 'bg-muted text-muted-foreground',
+      label: t("status.pending"),
+      className: "bg-muted text-muted-foreground",
     },
     in_progress: {
       icon: FileText,
-      label: t('status.inProgress'),
-      className: 'bg-info/20 text-info',
+      label: t("status.inProgress"),
+      className: "bg-info/20 text-info",
     },
     draft: {
       icon: FileText,
-      label: t('status.draft'),
-      className: 'bg-warning/20 text-warning',
+      label: t("status.draft"),
+      className: "bg-warning/20 text-warning",
     },
     approved: {
       icon: CheckCircle,
-      label: t('status.approved'),
-      className: 'bg-success/20 text-success',
+      label: t("status.approved"),
+      className: "bg-success/20 text-success",
     },
     finalized: {
       icon: CheckCircle,
-      label: t('status.finalized'),
-      className: 'bg-success/20 text-success',
+      label: t("status.finalized"),
+      className: "bg-success/20 text-success",
     },
   };
 
   const priorityConfig = {
     normal: null,
-    urgent: { label: t('priority.urgent'), className: 'bg-warning/20 text-warning border-warning/30' },
-    stat: { label: t('priority.stat'), className: 'bg-destructive/20 text-destructive border-destructive/30' },
+    urgent: {
+      label: t("priority.urgent"),
+      className: "bg-warning/20 text-warning border-warning/30",
+    },
+    stat: {
+      label: t("priority.stat"),
+      className: "bg-destructive/20 text-destructive border-destructive/30",
+    },
   };
 
   const aiStatusConfig: Record<AIStatus, { label: string; className: string }> = {
-    idle: { label: tReport('ai.status.idle'), className: 'bg-muted text-muted-foreground' },
-    queued: { label: tReport('ai.status.queued'), className: 'bg-warning/20 text-warning border-warning/30' },
-    processing: { label: tReport('ai.status.running'), className: 'bg-info/20 text-info border-info/30' },
-    error: { label: tReport('ai.status.failed'), className: 'bg-destructive/20 text-destructive border-destructive/30' },
+    idle: { label: tReport("ai.status.idle"), className: "bg-muted text-muted-foreground" },
+    queued: {
+      label: tReport("ai.status.queued"),
+      className: "bg-warning/20 text-warning border-warning/30",
+    },
+    processing: {
+      label: tReport("ai.status.running"),
+      className: "bg-info/20 text-info border-info/30",
+    },
+    error: {
+      label: tReport("ai.status.failed"),
+      className: "bg-destructive/20 text-destructive border-destructive/30",
+    },
   };
 
   return (
@@ -63,7 +80,7 @@ export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueue
       <div className="px-4 py-3 border-b border-sidebar-border flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-medium text-sidebar-foreground">
           <FileText className="h-4 w-4" />
-          <span>{t('queue.title')}</span>
+          <span>{t("queue.title")}</span>
         </div>
         {pendingCount > 0 && (
           <Badge variant="secondary" className="bg-primary/20 text-primary">
@@ -85,12 +102,12 @@ export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueue
               key={item.id}
               onClick={() => onSelectItem(item)}
               className={cn(
-                'w-full p-2 rounded-lg text-left transition-colors',
-                'hover:bg-sidebar-accent',
-                'focus:outline-none focus:ring-2 focus:ring-sidebar-ring',
+                "w-full p-2 rounded-lg text-left transition-colors",
+                "hover:bg-sidebar-accent",
+                "focus:outline-none focus:ring-2 focus:ring-sidebar-ring",
                 selectedItemId === item.id
-                  ? 'bg-sidebar-accent border border-primary/50'
-                  : 'bg-transparent'
+                  ? "bg-sidebar-accent border border-primary/50"
+                  : "bg-transparent",
               )}
             >
               <div className="flex items-center justify-between gap-2">
@@ -103,18 +120,27 @@ export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueue
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', status.className)}>
+                  <Badge
+                    variant="outline"
+                    className={cn("text-[10px] px-1.5 py-0", status.className)}
+                  >
                     <StatusIcon className="h-3 w-3 mr-1" />
                     {status.label}
                   </Badge>
-                  {aiStatus && aiStatus !== 'idle' && aiConfig && (
-                    <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', aiConfig.className)}>
+                  {aiStatus && aiStatus !== "idle" && aiConfig && (
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[10px] px-1.5 py-0", aiConfig.className)}
+                    >
                       <Sparkles className="h-3 w-3 mr-1" />
                       {aiConfig.label}
                     </Badge>
                   )}
                   {priority && (
-                    <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', priority.className)}>
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[10px] px-1.5 py-0", priority.className)}
+                    >
                       {priority.label}
                     </Badge>
                   )}

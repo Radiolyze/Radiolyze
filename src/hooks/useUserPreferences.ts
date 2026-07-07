@@ -1,28 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
-import i18n from '@/i18n';
-import { logger } from '@/lib/logger';
+import { useState, useEffect, useCallback } from "react";
+import i18n from "@/i18n";
+import { logger } from "@/lib/logger";
 
-export type UILanguage = 'de' | 'en';
+export type UILanguage = "de" | "en";
 
 export interface UserPreferences {
   // Display
-  theme: 'dark' | 'light' | 'system';
-  fontSize: 'small' | 'medium' | 'large';
+  theme: "dark" | "light" | "system";
+  fontSize: "small" | "medium" | "large";
   compactMode: boolean;
   uiLanguage: UILanguage;
-  
+
   // Audio / ASR
   microphoneEnabled: boolean;
-  asrLanguage: 'de-DE' | 'en-US';
+  asrLanguage: "de-DE" | "en-US";
   autoTranscribe: boolean;
-  
+
   // Viewer
-  defaultTool: 'zoom' | 'pan' | 'measure' | 'window';
+  defaultTool: "zoom" | "pan" | "measure" | "window";
   invertColors: boolean;
   showOverlays: boolean;
   /** Persisted window/level per modality (e.g. "CT", "MR"). */
   viewportWL: Record<string, { windowWidth: number; windowCenter: number }>;
-  
+
   // Report
   autoGenerateImpression: boolean;
   showQAWarnings: boolean;
@@ -30,14 +30,14 @@ export interface UserPreferences {
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
-  theme: 'dark',
-  fontSize: 'medium',
+  theme: "dark",
+  fontSize: "medium",
   compactMode: false,
-  uiLanguage: 'de',
+  uiLanguage: "de",
   microphoneEnabled: true,
-  asrLanguage: 'de-DE',
+  asrLanguage: "de-DE",
   autoTranscribe: true,
-  defaultTool: 'window',
+  defaultTool: "window",
   invertColors: false,
   showOverlays: true,
   viewportWL: {},
@@ -46,7 +46,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   defaultTemplate: null,
 };
 
-const STORAGE_KEY = 'radiolyze-user-preferences';
+const STORAGE_KEY = "radiolyze-user-preferences";
 
 export function useUserPreferences() {
   const [preferences, setPreferencesState] = useState<UserPreferences>(() => {
@@ -56,7 +56,7 @@ export function useUserPreferences() {
         return { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) };
       }
     } catch (e) {
-      logger.warn('Failed to load user preferences:', e);
+      logger.warn("Failed to load user preferences:", e);
     }
     return DEFAULT_PREFERENCES;
   });
@@ -66,37 +66,37 @@ export function useUserPreferences() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
     } catch (e) {
-      logger.warn('Failed to save user preferences:', e);
+      logger.warn("Failed to save user preferences:", e);
     }
   }, [preferences]);
 
   // Apply theme to document
   useEffect(() => {
     const root = document.documentElement;
-    if (preferences.theme === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else if (preferences.theme === 'light') {
-      root.classList.remove('dark');
-      root.classList.add('light');
+    if (preferences.theme === "dark") {
+      root.classList.add("dark");
+      root.classList.remove("light");
+    } else if (preferences.theme === "light") {
+      root.classList.remove("dark");
+      root.classList.add("light");
     } else {
       // System preference
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.toggle('dark', isDark);
-      root.classList.toggle('light', !isDark);
+      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.classList.toggle("dark", isDark);
+      root.classList.toggle("light", !isDark);
     }
   }, [preferences.theme]);
 
   // Apply font size
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('text-sm', 'text-base', 'text-lg');
-    if (preferences.fontSize === 'small') {
-      root.classList.add('text-sm');
-    } else if (preferences.fontSize === 'large') {
-      root.classList.add('text-lg');
+    root.classList.remove("text-sm", "text-base", "text-lg");
+    if (preferences.fontSize === "small") {
+      root.classList.add("text-sm");
+    } else if (preferences.fontSize === "large") {
+      root.classList.add("text-lg");
     } else {
-      root.classList.add('text-base');
+      root.classList.add("text-base");
     }
   }, [preferences.fontSize]);
 
@@ -107,12 +107,12 @@ export function useUserPreferences() {
     }
   }, [preferences.uiLanguage]);
 
-  const setPreference = useCallback(<K extends keyof UserPreferences>(
-    key: K,
-    value: UserPreferences[K]
-  ) => {
-    setPreferencesState((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const setPreference = useCallback(
+    <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+      setPreferencesState((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
 
   const setPreferences = useCallback((updates: Partial<UserPreferences>) => {
     setPreferencesState((prev) => ({ ...prev, ...updates }));

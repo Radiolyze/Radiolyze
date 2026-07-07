@@ -1,15 +1,15 @@
-import { useCallback } from 'react';
-import type { RefObject } from 'react';
-import type { StackViewport } from '@cornerstonejs/core';
-import { Enums as ToolEnums, ToolGroupManager } from '@cornerstonejs/tools';
-import { cornerstoneToolNames } from '@/services/cornerstone';
-import type { ViewerToolId, AnnotationToolId, AllToolId } from '@/types/viewer';
-import type { WindowLevelPreset } from '@/config/viewer';
-import { logger } from '@/lib/logger';
+import { useCallback } from "react";
+import type { RefObject } from "react";
+import type { StackViewport } from "@cornerstonejs/core";
+import { Enums as ToolEnums, ToolGroupManager } from "@cornerstonejs/tools";
+import { cornerstoneToolNames } from "@/services/cornerstone";
+import type { ViewerToolId, AnnotationToolId, AllToolId } from "@/types/viewer";
+import type { WindowLevelPreset } from "@/config/viewer";
+import { logger } from "@/lib/logger";
 
 // Map viewer tool IDs to Cornerstone tool names
 // Note: 'window' is an alias for 'windowLevel' (used in user preferences)
-const viewerToolNameMap: Record<ViewerToolId | 'window', string> = {
+const viewerToolNameMap: Record<ViewerToolId | "window", string> = {
   zoom: cornerstoneToolNames.zoom,
   pan: cornerstoneToolNames.pan,
   measure: cornerstoneToolNames.length,
@@ -27,7 +27,7 @@ const annotationToolNameMap: Record<AnnotationToolId, string> = {
 };
 
 // Combined map (includes 'window' alias)
-const allToolNameMap: Record<AllToolId | 'window', string> = {
+const allToolNameMap: Record<AllToolId | "window", string> = {
   ...viewerToolNameMap,
   ...annotationToolNameMap,
 };
@@ -44,7 +44,7 @@ export const useCornerstoneViewerTools = ({
   presets,
 }: UseCornerstoneViewerToolsOptions) => {
   const applyToolSelection = useCallback(
-    (tool: AllToolId | 'window') => {
+    (tool: AllToolId | "window") => {
       const toolGroup = toolGroupRef.current;
       if (!toolGroup) {
         return;
@@ -68,7 +68,7 @@ export const useCornerstoneViewerTools = ({
           }
         } catch (err) {
           // Tool may not be added to this group
-          logger.debug('[useCornerstoneViewerTools] Failed to set tool state', toolName, err);
+          logger.debug("[useCornerstoneViewerTools] Failed to set tool state", toolName, err);
         }
       });
 
@@ -77,7 +77,7 @@ export const useCornerstoneViewerTools = ({
         bindings: [{ mouseButton: ToolEnums.MouseBindings.Wheel }],
       });
     },
-    [toolGroupRef]
+    [toolGroupRef],
   );
 
   const applyWindowLevelPreset = useCallback(
@@ -95,7 +95,7 @@ export const useCornerstoneViewerTools = ({
       }
 
       try {
-        if (presetId === 'auto') {
+        if (presetId === "auto") {
           viewport.resetProperties();
           viewport.render();
           return;
@@ -116,10 +116,10 @@ export const useCornerstoneViewerTools = ({
         viewport.render();
       } catch (err) {
         // Image data not yet loaded - will be applied when image loads
-        logger.debug('[useCornerstoneViewerTools] Failed to apply window/level preset', err);
+        logger.debug("[useCornerstoneViewerTools] Failed to apply window/level preset", err);
       }
     },
-    [presets, stackViewportRef]
+    [presets, stackViewportRef],
   );
 
   const applyWindowLevel = useCallback(
@@ -140,10 +140,10 @@ export const useCornerstoneViewerTools = ({
         viewport.render();
       } catch (err) {
         // Image data not yet loaded - will be applied when image loads
-        logger.debug('[useCornerstoneViewerTools] Failed to apply window/level', err);
+        logger.debug("[useCornerstoneViewerTools] Failed to apply window/level", err);
       }
     },
-    [stackViewportRef]
+    [stackViewportRef],
   );
 
   return { applyToolSelection, applyWindowLevelPreset, applyWindowLevel };

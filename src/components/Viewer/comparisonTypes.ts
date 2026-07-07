@@ -1,4 +1,4 @@
-import type { Study } from '@/types/radiology';
+import type { Study } from "@/types/radiology";
 
 export interface PriorStudy {
   study: Study;

@@ -1,0 +1,24 @@
+# Build output / dependencies
+dist
+dist-ssr
+node_modules
+coverage
+package-lock.json
+
+# Non-frontend project code — has its own formatter (ruff) or no formatter yet
+backend
+services
+
+# Docs and repo-level docs, not part of the frontend app
+docs
+docs-internal
+mkdocs.yml
+CHANGELOG.md
+README.md
+AGENTS.md
+
+# Infra/ops config, kept hand-formatted to avoid unrelated diff noise
+docker
+docker-compose.yml
+orthanc
+.github

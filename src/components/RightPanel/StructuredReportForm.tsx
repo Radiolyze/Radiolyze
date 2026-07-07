@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useCallback, useMemo } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 /**
  * Schema definition for a single structured reporting field.
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 export interface StructuredField {
   key: string;
   label: string;
-  type: 'text' | 'select' | 'number' | 'checkbox';
+  type: "text" | "select" | "number" | "checkbox";
   options?: string[];
   required?: boolean;
   default_value?: string;
@@ -43,7 +43,7 @@ export function StructuredReportForm({ schema, data, onChange }: StructuredRepor
   const renderedFields = useMemo(
     () =>
       schema.fields.map((field) => {
-        const value = data[field.key] ?? field.default_value ?? '';
+        const value = data[field.key] ?? field.default_value ?? "";
 
         return (
           <div key={field.key} className="space-y-1">
@@ -52,7 +52,7 @@ export function StructuredReportForm({ schema, data, onChange }: StructuredRepor
               {field.required && <span className="text-destructive ml-0.5">*</span>}
             </Label>
 
-            {field.type === 'text' && (
+            {field.type === "text" && (
               <Input
                 id={`sf-${field.key}`}
                 value={String(value)}
@@ -62,7 +62,7 @@ export function StructuredReportForm({ schema, data, onChange }: StructuredRepor
               />
             )}
 
-            {field.type === 'number' && (
+            {field.type === "number" && (
               <Input
                 id={`sf-${field.key}`}
                 type="number"
@@ -73,7 +73,7 @@ export function StructuredReportForm({ schema, data, onChange }: StructuredRepor
               />
             )}
 
-            {field.type === 'select' && (
+            {field.type === "select" && (
               <select
                 id={`sf-${field.key}`}
                 value={String(value)}
@@ -89,7 +89,7 @@ export function StructuredReportForm({ schema, data, onChange }: StructuredRepor
               </select>
             )}
 
-            {field.type === 'checkbox' && (
+            {field.type === "checkbox" && (
               <div className="flex items-center gap-2">
                 <input
                   id={`sf-${field.key}`}
@@ -98,7 +98,7 @@ export function StructuredReportForm({ schema, data, onChange }: StructuredRepor
                   onChange={(e) => handleFieldChange(field.key, e.target.checked)}
                   className="rounded border-input"
                 />
-                <span className="text-sm text-muted-foreground">{field.placeholder ?? 'Ja'}</span>
+                <span className="text-sm text-muted-foreground">{field.placeholder ?? "Ja"}</span>
               </div>
             )}
           </div>
@@ -118,13 +118,16 @@ export function structuredDataToText(
   data: Record<string, string | number | boolean>,
 ): string {
   return schema.fields
-    .filter((field) => data[field.key] !== undefined && data[field.key] !== '' && data[field.key] !== false)
+    .filter(
+      (field) =>
+        data[field.key] !== undefined && data[field.key] !== "" && data[field.key] !== false,
+    )
     .map((field) => {
       const value = data[field.key];
-      if (field.type === 'checkbox') {
-        return `${field.label}: ${value ? 'Ja' : 'Nein'}`;
+      if (field.type === "checkbox") {
+        return `${field.label}: ${value ? "Ja" : "Nein"}`;
       }
       return `${field.label}: ${value}`;
     })
-    .join('\n');
+    .join("\n");
 }

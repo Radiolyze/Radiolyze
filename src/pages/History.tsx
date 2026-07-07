@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   FileText,
@@ -16,24 +16,24 @@ import {
   Download,
   User,
   Calendar,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
-import { auditClient, type AuditEventResponse } from '@/services/auditClient';
-import { useStudyLookup } from '@/hooks/useStudyLookup';
-import { logger } from '@/lib/logger';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { auditClient, type AuditEventResponse } from "@/services/auditClient";
+import { useStudyLookup } from "@/hooks/useStudyLookup";
+import { logger } from "@/lib/logger";
 
 // Extended audit event type for display
 interface AuditLogEntry {
@@ -50,65 +50,65 @@ interface AuditLogEntry {
 }
 
 type AuditEventType =
-  | 'report_created'
-  | 'report_opened'
-  | 'findings_saved'
-  | 'impression_generated'
-  | 'asr_transcription'
-  | 'qa_check_run'
-  | 'report_approved'
-  | 'report_amended'
-  | 'report_exported'
-  | 'inference_queued'
-  | 'other';
+  | "report_created"
+  | "report_opened"
+  | "findings_saved"
+  | "impression_generated"
+  | "asr_transcription"
+  | "qa_check_run"
+  | "report_approved"
+  | "report_amended"
+  | "report_exported"
+  | "inference_queued"
+  | "other";
 
 const knownEventTypes = new Set<AuditEventType>([
-  'report_created',
-  'report_opened',
-  'findings_saved',
-  'impression_generated',
-  'asr_transcription',
-  'qa_check_run',
-  'report_approved',
-  'report_amended',
-  'report_exported',
-  'inference_queued',
+  "report_created",
+  "report_opened",
+  "findings_saved",
+  "impression_generated",
+  "asr_transcription",
+  "qa_check_run",
+  "report_approved",
+  "report_amended",
+  "report_exported",
+  "inference_queued",
 ]);
 
 const resolveEventType = (eventType: string): AuditEventType =>
-  knownEventTypes.has(eventType as AuditEventType) ? (eventType as AuditEventType) : 'other';
+  knownEventTypes.has(eventType as AuditEventType) ? (eventType as AuditEventType) : "other";
 
 const getMetadataRecord = (metadata?: Record<string, unknown> | null) =>
-  metadata && typeof metadata === 'object' ? metadata : {};
+  metadata && typeof metadata === "object" ? metadata : {};
 
 const getMetadataString = (metadata: Record<string, unknown>, key: string) => {
   const value = metadata[key];
-  return typeof value === 'string' && value.trim() ? value.trim() : '';
+  return typeof value === "string" && value.trim() ? value.trim() : "";
 };
 
 const buildFallbackLabel = (label: string, id?: string | null) =>
-  id ? `${label} ${id.slice(0, 8)}...` : '';
+  id ? `${label} ${id.slice(0, 8)}...` : "";
 
 const resolveActorName = (event: AuditEventResponse) => {
   const metadata = getMetadataRecord(event.metadata);
   return (
-    getMetadataString(metadata, 'actor_name') ||
-    getMetadataString(metadata, 'signature') ||
-    getMetadataString(metadata, 'approved_by') ||
+    getMetadataString(metadata, "actor_name") ||
+    getMetadataString(metadata, "signature") ||
+    getMetadataString(metadata, "approved_by") ||
     event.actor_id ||
-    'System'
+    "System"
   );
 };
 
 const resolvePatientName = (event: AuditEventResponse, unknownLabel: string) => {
   const metadata = getMetadataRecord(event.metadata);
-  const patientName = getMetadataString(metadata, 'patient_name');
+  const patientName = getMetadataString(metadata, "patient_name");
   if (patientName) return patientName;
 
-  const studyFallback = buildFallbackLabel('Study', event.study_id);
+  const studyFallback = buildFallbackLabel("Study", event.study_id);
   if (studyFallback) return studyFallback;
 
-  const reportFallback = buildFallbackLabel('Report', event.report_id);
+  const reportFallback = buildFallbackLabel("Report", event.report_id);
   if (reportFallback) return reportFallback;
 
   return unknownLabel;
@@ -116,44 +116,97 @@ const resolvePatientName = (event: AuditEventResponse, unknownLabel: string) => 
 
 const resolveAccessionNumber = (event: AuditEventResponse) => {
   const metadata = getMetadataRecord(event.metadata);
-  const accession = getMetadataString(metadata, 'accession_number');
+  const accession = getMetadataString(metadata, "accession_number");
   if (accession) return accession;
   if (event.study_id) return event.study_id.slice(0, 12);
   if (event.report_id) return event.report_id.slice(0, 12);
-  return '—';
+  return "—";
 };
 
 const isPlaceholderPatientName = (value: string, unknownLabel: string) =>
-  value === unknownLabel || value.startsWith('Study ') || value.startsWith('Report ');
+  value === unknownLabel || value.startsWith("Study ") || value.startsWith("Report ");
 
 const isPlaceholderAccession = (value: string, studyId?: string) =>
-  value === '—' || (studyId ? value === studyId.slice(0, 12) : false);
+  value === "—" || (studyId ? value === studyId.slice(0, 12) : false);
 
 export default function History() {
-  const { t } = useTranslation('common');
-  const { t: tReport } = useTranslation('report');
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [eventFilter, setEventFilter] = useState<string>('all');
-  const [actorFilter, setActorFilter] = useState<string>('all');
+  const { t } = useTranslation("common");
+  const { t: tReport } = useTranslation("report");
 
-  const eventTypeConfig: Record<AuditEventType, {
-    icon: typeof FileText;
-    label: string;
-    color: string;
-    bgColor: string;
-  }> = {
-    report_created: { icon: FileText, label: t('status.pending'), color: 'text-primary', bgColor: 'bg-primary/10' },
-    report_opened: { icon: FileText, label: 'Report opened', color: 'text-muted-foreground', bgColor: 'bg-muted' },
-    findings_saved: { icon: Edit3, label: tReport('findings.title'), color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-    impression_generated: { icon: Sparkles, label: tReport('impression.aiDraft'), color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
-    asr_transcription: { icon: Mic, label: 'ASR', color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
-    qa_check_run: { icon: AlertTriangle, label: tReport('qa.title'), color: 'text-warning', bgColor: 'bg-warning/10' },
-    report_approved: { icon: CheckCircle, label: t('status.approved'), color: 'text-success', bgColor: 'bg-success/10' },
-    report_amended: { icon: Edit3, label: t('actions.edit'), color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
-    report_exported: { icon: Download, label: t('actions.export'), color: 'text-muted-foreground', bgColor: 'bg-muted' },
-    inference_queued: { icon: Sparkles, label: tReport('ai.status.queued'), color: 'text-info', bgColor: 'bg-info/10' },
-    other: { icon: FileText, label: '-', color: 'text-muted-foreground', bgColor: 'bg-muted' },
+  const [searchQuery, setSearchQuery] = useState("");
+  const [eventFilter, setEventFilter] = useState<string>("all");
+  const [actorFilter, setActorFilter] = useState<string>("all");
+
+  const eventTypeConfig: Record<
+    AuditEventType,
+    {
+      icon: typeof FileText;
+      label: string;
+      color: string;
+      bgColor: string;
+    }
+  > = {
+    report_created: {
+      icon: FileText,
+      label: t("status.pending"),
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+    },
+    report_opened: {
+      icon: FileText,
+      label: "Report opened",
+      color: "text-muted-foreground",
+      bgColor: "bg-muted",
+    },
+    findings_saved: {
+      icon: Edit3,
+      label: tReport("findings.title"),
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/10",
+    },
+    impression_generated: {
+      icon: Sparkles,
+      label: tReport("impression.aiDraft"),
+      color: "text-purple-500",
+      bgColor: "bg-purple-500/10",
+    },
+    asr_transcription: {
+      icon: Mic,
+      label: "ASR",
+      color: "text-cyan-500",
+      bgColor: "bg-cyan-500/10",
+    },
+    qa_check_run: {
+      icon: AlertTriangle,
+      label: tReport("qa.title"),
+      color: "text-warning",
+      bgColor: "bg-warning/10",
+    },
+    report_approved: {
+      icon: CheckCircle,
+      label: t("status.approved"),
+      color: "text-success",
+      bgColor: "bg-success/10",
+    },
+    report_amended: {
+      icon: Edit3,
+      label: t("actions.edit"),
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10",
+    },
+    report_exported: {
+      icon: Download,
+      label: t("actions.export"),
+      color: "text-muted-foreground",
+      bgColor: "bg-muted",
+    },
+    inference_queued: {
+      icon: Sparkles,
+      label: tReport("ai.status.queued"),
+      color: "text-info",
+      bgColor: "bg-info/10",
+    },
+    other: { icon: FileText, label: "-", color: "text-muted-foreground", bgColor: "bg-muted" },
   };
 
   const mapAuditEventToEntry = (event: AuditEventResponse): AuditLogEntry => ({
@@ -163,7 +216,7 @@ export default function History() {
     actorName: resolveActorName(event),
     reportId: event.report_id ?? undefined,
     studyId: event.study_id ?? undefined,
-    patientName: resolvePatientName(event, '-'),
+    patientName: resolvePatientName(event, "-"),
     accessionNumber: resolveAccessionNumber(event),
     timestamp: event.timestamp,
     metadata: event.metadata ?? undefined,
@@ -177,10 +230,10 @@ export default function History() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffMins < 1) return t('time.justNow');
+    if (diffMins < 1) return t("time.justNow");
     if (diffMins < 60) return `${diffMins} min`;
     if (diffHours < 24) return `${diffHours} h`;
-    if (diffDays < 7) return t('time.daysAgo', { count: diffDays });
+    if (diffDays < 7) return t("time.daysAgo", { count: diffDays });
     return date.toLocaleDateString();
   };
 
@@ -188,47 +241,51 @@ export default function History() {
     return new Date(timestamp).toLocaleString();
   };
 
-  const groupByDate = useCallback((entries: AuditLogEntry[]): Map<string, AuditLogEntry[]> => {
-    const groups = new Map<string, AuditLogEntry[]>();
-    
-    entries.forEach((entry) => {
-      const date = new Date(entry.timestamp);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
+  const groupByDate = useCallback(
+    (entries: AuditLogEntry[]): Map<string, AuditLogEntry[]> => {
+      const groups = new Map<string, AuditLogEntry[]>();
 
-      let key: string;
-      if (date.toDateString() === today.toDateString()) {
-        key = t('time.today');
-      } else if (date.toDateString() === yesterday.toDateString()) {
-        key = t('time.yesterday');
-      } else {
-        key = date.toLocaleDateString();
-      }
+      entries.forEach((entry) => {
+        const date = new Date(entry.timestamp);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
 
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(entry);
-    });
+        let key: string;
+        if (date.toDateString() === today.toDateString()) {
+          key = t("time.today");
+        } else if (date.toDateString() === yesterday.toDateString()) {
+          key = t("time.yesterday");
+        } else {
+          key = date.toLocaleDateString();
+        }
 
-    return groups;
-  }, [t]);
+        if (!groups.has(key)) {
+          groups.set(key, []);
+        }
+        groups.get(key)!.push(entry);
+      });
+
+      return groups;
+    },
+    [t],
+  );
 
   const {
     data: auditEntries = [],
     isLoading,
     isError: hasAuditError,
   } = useQuery({
-    queryKey: ['auditEvents'],
+    queryKey: ["auditEvents"],
     queryFn: () => auditClient.listEvents(),
     select: (events) => events.map(mapAuditEventToEntry),
   });
-  const errorMessage = hasAuditError ? t('status.error') : null;
+  const errorMessage = hasAuditError ? t("status.error") : null;
 
   const studyIds = useMemo(
-    () => Array.from(new Set(auditEntries.map((entry) => entry.studyId).filter(Boolean))) as string[],
-    [auditEntries]
+    () =>
+      Array.from(new Set(auditEntries.map((entry) => entry.studyId).filter(Boolean))) as string[],
+    [auditEntries],
   );
   const { studyMap, error: studyLookupError } = useStudyLookup(studyIds);
 
@@ -252,7 +309,7 @@ export default function History() {
       const details = studyMap[entry.studyId];
       if (!details) return entry;
 
-      const patientName = isPlaceholderPatientName(entry.patientName, '-')
+      const patientName = isPlaceholderPatientName(entry.patientName, "-")
         ? details.patientName
         : entry.patientName;
       const accessionNumber = isPlaceholderAccession(entry.accessionNumber, entry.studyId)
@@ -272,22 +329,22 @@ export default function History() {
         const fields = [
           entry.patientName,
           entry.accessionNumber,
-          entry.reportId ?? '',
-          entry.studyId ?? '',
+          entry.reportId ?? "",
+          entry.studyId ?? "",
           entry.actorName,
-          entry.actorId ?? '',
+          entry.actorId ?? "",
         ];
         const matchesSearch = fields.some((value) => value.toLowerCase().includes(query));
         if (!matchesSearch) return false;
       }
 
       // Event type filter
-      if (eventFilter !== 'all' && entry.eventType !== eventFilter) {
+      if (eventFilter !== "all" && entry.eventType !== eventFilter) {
         return false;
       }
 
       // Actor filter
-      if (actorFilter !== 'all' && entry.actorName !== actorFilter) {
+      if (actorFilter !== "all" && entry.actorName !== actorFilter) {
         return false;
       }
 
@@ -296,7 +353,10 @@ export default function History() {
   }, [displayEntries, searchQuery, eventFilter, actorFilter]);
 
   // Group by date
-  const groupedEntries = useMemo(() => groupByDate(filteredEntries), [filteredEntries, groupByDate]);
+  const groupedEntries = useMemo(
+    () => groupByDate(filteredEntries),
+    [filteredEntries, groupByDate],
+  );
 
   // Stats
   const todayCount = auditEntries.filter((e) => {
@@ -305,8 +365,8 @@ export default function History() {
     return date.toDateString() === today.toDateString();
   }).length;
 
-  const approvedCount = auditEntries.filter((e) => e.eventType === 'report_approved').length;
-  const impressionCount = auditEntries.filter((e) => e.eventType === 'impression_generated').length;
+  const approvedCount = auditEntries.filter((e) => e.eventType === "report_approved").length;
+  const impressionCount = auditEntries.filter((e) => e.eventType === "impression_generated").length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -317,7 +377,7 @@ export default function History() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <h1 className="text-lg font-semibold">{t('navigation.history')}</h1>
+        <h1 className="text-lg font-semibold">{t("navigation.history")}</h1>
         <Badge variant="outline" className="ml-2">
           Audit Log
         </Badge>
@@ -335,7 +395,7 @@ export default function History() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{todayCount}</p>
-                  <p className="text-sm text-muted-foreground">{t('time.today')}</p>
+                  <p className="text-sm text-muted-foreground">{t("time.today")}</p>
                 </div>
               </div>
             </CardContent>
@@ -348,7 +408,7 @@ export default function History() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{approvedCount}</p>
-                  <p className="text-sm text-muted-foreground">{t('status.approved')}</p>
+                  <p className="text-sm text-muted-foreground">{t("status.approved")}</p>
                 </div>
               </div>
             </CardContent>
@@ -360,10 +420,8 @@ export default function History() {
                   <Sparkles className="h-5 w-5 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {impressionCount}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{tReport('impression.aiDraft')}</p>
+                  <p className="text-2xl font-bold">{impressionCount}</p>
+                  <p className="text-sm text-muted-foreground">{tReport("impression.aiDraft")}</p>
                 </div>
               </div>
             </CardContent>
@@ -375,7 +433,7 @@ export default function History() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Filter className="h-4 w-4" />
-              {t('actions.filter')}
+              {t("actions.filter")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -384,7 +442,7 @@ export default function History() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder={t('actions.search')}
+                    placeholder={t("actions.search")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -438,7 +496,7 @@ export default function History() {
                 {isLoading ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>{t('status.loading')}</p>
+                    <p>{t("status.loading")}</p>
                   </div>
                 ) : errorMessage ? (
                   <div className="text-center py-12 text-destructive">
@@ -451,7 +509,9 @@ export default function History() {
                       <div key={dateLabel} className="mb-6">
                         {/* Date Header */}
                         <div className="sticky top-0 bg-card z-10 py-2 mb-3">
-                          <h3 className="text-sm font-semibold text-muted-foreground">{dateLabel}</h3>
+                          <h3 className="text-sm font-semibold text-muted-foreground">
+                            {dateLabel}
+                          </h3>
                           <Separator className="mt-2" />
                         </div>
 
@@ -465,18 +525,15 @@ export default function History() {
                             const Icon = config.icon;
 
                             return (
-                              <div
-                                key={entry.id}
-                                className="relative mb-4 last:mb-0"
-                              >
+                              <div key={entry.id} className="relative mb-4 last:mb-0">
                                 {/* Timeline Dot */}
                                 <div
                                   className={cn(
-                                    'absolute -left-5 w-6 h-6 rounded-full flex items-center justify-center',
-                                    config.bgColor
+                                    "absolute -left-5 w-6 h-6 rounded-full flex items-center justify-center",
+                                    config.bgColor,
                                   )}
                                 >
-                                  <Icon className={cn('h-3 w-3', config.color)} />
+                                  <Icon className={cn("h-3 w-3", config.color)} />
                                 </div>
 
                                 {/* Content */}
@@ -484,16 +541,14 @@ export default function History() {
                                   <div className="flex items-start justify-between gap-4">
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2 mb-1">
-                                        <span className={cn('font-medium', config.color)}>
+                                        <span className={cn("font-medium", config.color)}>
                                           {config.label}
                                         </span>
                                         <Badge variant="outline" className="text-xs">
                                           {entry.accessionNumber}
                                         </Badge>
                                       </div>
-                                      <p className="text-sm text-foreground">
-                                        {entry.patientName}
-                                      </p>
+                                      <p className="text-sm text-foreground">{entry.patientName}</p>
                                       <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                                         <span className="flex items-center gap-1">
                                           <User className="h-3 w-3" />
@@ -508,7 +563,7 @@ export default function History() {
                                         <div className="mt-2 text-xs text-muted-foreground bg-background/50 rounded px-2 py-1">
                                           {Object.entries(entry.metadata).map(([key, value]) => (
                                             <span key={key} className="mr-3">
-                                              <span className="font-medium">{key}:</span>{' '}
+                                              <span className="font-medium">{key}:</span>{" "}
                                               {String(value)}
                                             </span>
                                           ))}
@@ -530,7 +585,7 @@ export default function History() {
                     {filteredEntries.length === 0 && (
                       <div className="text-center py-12 text-muted-foreground">
                         <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                        <p>{t('queue.empty')}</p>
+                        <p>{t("queue.empty")}</p>
                       </div>
                     )}
                   </>

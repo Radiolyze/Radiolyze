@@ -1,14 +1,14 @@
-import { useTranslation } from 'react-i18next';
-import { Columns2, X, ArrowLeftRight, Link2, Link2Off, ZoomIn, Move, Sun } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useTranslation } from "react-i18next";
+import { Columns2, X, ArrowLeftRight, Link2, Link2Off, ZoomIn, Move, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,10 +16,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { SyncOptions } from '@/types/viewerSync';
-import type { PriorStudy } from './comparisonTypes';
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { SyncOptions } from "@/types/viewerSync";
+import type { PriorStudy } from "./comparisonTypes";
 
 interface ComparisonToolbarProps {
   priorStudies: PriorStudy[];
@@ -50,22 +50,22 @@ export function ComparisonToolbar({
   onSwap,
   onDisable,
 }: ComparisonToolbarProps) {
-  const { t } = useTranslation('viewer');
+  const { t } = useTranslation("viewer");
 
   return (
     <div className="h-12 bg-card border-b border-border flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-4">
         <Badge variant="outline" className="text-primary border-primary">
           <Columns2 className="h-3 w-3 mr-1" />
-          {t('comparison.title')}
+          {t("comparison.title")}
         </Badge>
 
         {/* Prior Study Selector */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{t('comparison.prior')}:</span>
-          <Select value={selectedPriorStudyId || ''} onValueChange={onSelectPriorStudy}>
+          <span className="text-sm text-muted-foreground">{t("comparison.prior")}:</span>
+          <Select value={selectedPriorStudyId || ""} onValueChange={onSelectPriorStudy}>
             <SelectTrigger className="h-8 w-[200px]">
-              <SelectValue placeholder={t('comparison.selectStudy')} />
+              <SelectValue placeholder={t("comparison.selectStudy")} />
             </SelectTrigger>
             <SelectContent>
               {priorStudies.map((prior) => (
@@ -78,9 +78,9 @@ export function ComparisonToolbar({
 
           {/* Prior Series Selector */}
           {selectedPriorStudy && (
-            <Select value={selectedPriorSeriesId || ''} onValueChange={onSelectPriorSeries}>
+            <Select value={selectedPriorSeriesId || ""} onValueChange={onSelectPriorSeries}>
               <SelectTrigger className="h-8 w-[150px]">
-                <SelectValue placeholder={t('comparison.selectSeries')} />
+                <SelectValue placeholder={t("comparison.selectSeries")} />
               </SelectTrigger>
               <SelectContent>
                 {selectedPriorStudy.study.series.map((series) => (
@@ -99,7 +99,7 @@ export function ComparisonToolbar({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant={hasSyncEnabled || syncOptions.frames ? 'default' : 'outline'}
+              variant={hasSyncEnabled || syncOptions.frames ? "default" : "outline"}
               size="sm"
               className="gap-1"
             >
@@ -112,35 +112,35 @@ export function ComparisonToolbar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>{t('sync.title')}</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("sync.title")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuCheckboxItem
               checked={syncOptions.frames}
-              onCheckedChange={() => onToggleSyncOption('frames')}
+              onCheckedChange={() => onToggleSyncOption("frames")}
             >
-              {t('sync.frames')}
+              {t("sync.frames")}
             </DropdownMenuCheckboxItem>
             <DropdownMenuSeparator />
             <DropdownMenuCheckboxItem
               checked={syncOptions.zoom}
-              onCheckedChange={() => onToggleSyncOption('zoom')}
+              onCheckedChange={() => onToggleSyncOption("zoom")}
             >
               <ZoomIn className="h-3.5 w-3.5 mr-2" />
-              {t('sync.zoom')}
+              {t("sync.zoom")}
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={syncOptions.pan}
-              onCheckedChange={() => onToggleSyncOption('pan')}
+              onCheckedChange={() => onToggleSyncOption("pan")}
             >
               <Move className="h-3.5 w-3.5 mr-2" />
-              {t('sync.pan')}
+              {t("sync.pan")}
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={syncOptions.windowLevel}
-              onCheckedChange={() => onToggleSyncOption('windowLevel')}
+              onCheckedChange={() => onToggleSyncOption("windowLevel")}
             >
               <Sun className="h-3.5 w-3.5 mr-2" />
-              {t('sync.windowLevel')}
+              {t("sync.windowLevel")}
             </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -149,18 +149,16 @@ export function ComparisonToolbar({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={isSwapped ? 'default' : 'outline'}
+              variant={isSwapped ? "default" : "outline"}
               size="icon"
               className="h-8 w-8"
               onClick={onSwap}
-              aria-label={t('comparison.swap')}
+              aria-label={t("comparison.swap")}
             >
               <ArrowLeftRight className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>
-            {t('comparison.swap')}
-          </TooltipContent>
+          <TooltipContent>{t("comparison.swap")}</TooltipContent>
         </Tooltip>
 
         {/* Exit Compare Mode */}
@@ -171,12 +169,12 @@ export function ComparisonToolbar({
               size="icon"
               className="h-8 w-8"
               onClick={onDisable}
-              aria-label={t('comparison.disable')}
+              aria-label={t("comparison.disable")}
             >
               <X className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('comparison.disable')}</TooltipContent>
+          <TooltipContent>{t("comparison.disable")}</TooltipContent>
         </Tooltip>
       </div>
     </div>

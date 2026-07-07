@@ -1,17 +1,17 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { createWsClient } from '@/services/wsClient';
-import type { AIStatus } from '@/types/radiology';
-import { logger } from '@/lib/logger';
+import { useEffect, useRef, useCallback, useState } from "react";
+import { createWsClient } from "@/services/wsClient";
+import type { AIStatus } from "@/types/radiology";
+import { logger } from "@/lib/logger";
 
 export interface ReportStatusPayload {
-  asrStatus?: 'idle' | 'listening' | 'processing';
+  asrStatus?: "idle" | "listening" | "processing";
   aiStatus?: AIStatus;
-  qaStatus?: 'pending' | 'checking' | 'pass' | 'warn' | 'fail';
+  qaStatus?: "pending" | "checking" | "pass" | "warn" | "fail";
   asrConfidence?: number;
 }
 
 export interface ReportStatusEvent {
-  type: 'report_status';
+  type: "report_status";
   reportId: string;
   payload: ReportStatusPayload;
   timestamp: string;
@@ -41,7 +41,7 @@ export function waitForReportStatus(
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       unsubscribe();
-      reject(new Error('WebSocket status wait timed out'));
+      reject(new Error("WebSocket status wait timed out"));
     }, timeoutMs);
 
     const unsubscribe = subscribeReportStatus(reportId, (payload) => {
@@ -74,11 +74,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const handleMessage = useCallback((data: unknown) => {
     const message = data as WsMessage;
 
-    if (message.type === 'report_status') {
+    if (message.type === "report_status") {
       setLastEvent(message);
       callbackRef.current?.(message);
       // Dispatch to module-level subscribers (used by waitForReportStatus)
-      reportStatusListeners.get(message.reportId)?.forEach(fn => fn(message.payload));
+      reportStatusListeners.get(message.reportId)?.forEach((fn) => fn(message.payload));
     }
   }, []);
 
@@ -89,28 +89,29 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     // automatically for same-origin requests (see issue #100) - no token
     // needs to be appended to the URL, which used to leak it into proxy/
     // access logs.
-    const wsUrl = import.meta.env.VITE_WS_URL ||
-      `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/v1/ws`;
+    const wsUrl =
+      import.meta.env.VITE_WS_URL ||
+      `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/v1/ws`;
 
     clientRef.current = createWsClient({
       url: wsUrl,
       onMessage: handleMessage,
       onOpen: () => {
-        logger.debug('[WS] Connected');
+        logger.debug("[WS] Connected");
         setIsConnected(true);
       },
       onClose: () => {
-        logger.debug('[WS] Disconnected');
+        logger.debug("[WS] Disconnected");
         setIsConnected(false);
       },
       onError: (event) => {
-        logger.error('[WS] Error:', event);
+        logger.error("[WS] Error:", event);
       },
       onAuthFailure: () => {
-        logger.error('[WS] Authentication rejected, logging out');
-        localStorage.removeItem('radiolyze-auth-token');
+        logger.error("[WS] Authentication rejected, logging out");
+        localStorage.removeItem("radiolyze-auth-token");
         setIsConnected(false);
-        const loginPath = '/login';
+        const loginPath = "/login";
         if (window.location.pathname !== loginPath) {
           window.location.href = loginPath;
         }
@@ -142,4 +143,3 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     disconnect,
   };
 }
-
