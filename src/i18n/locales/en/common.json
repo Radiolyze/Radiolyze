@@ -3,6 +3,16 @@
     "name": "Radiolyze",
     "tagline": "AI-powered Radiology Reporting"
   },
+  "auth": {
+    "invalidCredentials": "Invalid credentials",
+    "loginPrompt": "Please log in",
+    "username": "Username",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "loggingIn": "Logging in...",
+    "login": "Log in"
+  },
   "navigation": {
     "home": "Home",
     "batch": "Batch Reporting",
@@ -41,7 +51,8 @@
     "processing": "Processing...",
     "success": "Success",
     "error": "Error",
-    "warning": "Warning"
+    "warning": "Warning",
+    "noDataAvailable": "No data available"
   },
   "connection": {
     "connected": "Connected",
@@ -57,7 +68,8 @@
     "weeksAgo": "{{count}} weeks ago",
     "monthsAgo": "{{count}} months ago",
     "yearsAgo": "{{count}} years ago",
-    "justNow": "Just now"
+    "justNow": "Just now",
+    "lastNDays": "Last {{count}} days"
   },
   "patient": {
     "name": "Name",
@@ -184,7 +196,26 @@
     "loading": "Loading notifications...",
     "pleaseWait": "Please wait...",
     "empty": "No notifications",
-    "upToDate": "You are up to date"
+    "upToDate": "You are up to date",
+    "newEvent": "New event",
+    "reportPrefix": "Report {{id}}...",
+    "studyPrefix": "Study {{id}}...",
+    "events": {
+      "report_created": "New report",
+      "report_opened": "Report opened",
+      "findings_saved": "Findings saved",
+      "impression_generated": "AI impression generated",
+      "asr_transcription": "Dictation transcribed",
+      "qa_check_run": "QA check",
+      "report_approved": "Report approved",
+      "report_amended": "Report amended",
+      "report_exported": "Report exported",
+      "inference_queued": "AI analysis started",
+      "inference_started": "AI analysis running",
+      "inference_completed": "AI analysis completed",
+      "inference_failed": "AI analysis failed",
+      "systemMessage": "System message"
+    }
   },
   "qa": {
     "pending": "Pending",

@@ -84,7 +84,7 @@ export function DicomViewerToolbar({
                 size="sm"
                 className={cn('h-8 px-2 gap-1.5', annotationMode && 'bg-primary text-primary-foreground')}
                 onClick={onAnnotationModeToggle}
-                aria-label={annotationMode ? 'Annotation-Modus aktiv' : 'Annotation-Modus aktivieren'}
+                aria-label={annotationMode ? t('tools.annotationModeActive') : t('tools.annotationModeActivate')}
               >
                 <Tag className="h-4 w-4" />
                 {annotationMode ? (
@@ -95,7 +95,7 @@ export function DicomViewerToolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {annotationMode ? 'Annotation-Modus aktiv' : 'Annotation-Modus aktivieren'}
+              {annotationMode ? t('tools.annotationModeActive') : t('tools.annotationModeActivate')}
             </TooltipContent>
           </Tooltip>
 
@@ -137,7 +137,7 @@ export function DicomViewerToolbar({
           disabled={!hasStack}
         >
           <SelectTrigger className="h-8 w-[170px] text-xs">
-            <SelectValue placeholder="Fenster/Level" />
+            <SelectValue placeholder={t('tools.window')} />
           </SelectTrigger>
           <SelectContent>
             {presets.map((preset) => (
@@ -181,8 +181,8 @@ export function DicomViewerToolbar({
                 onClick={onFindingsOverlayToggle}
                 aria-label={
                   showFindingsOverlay
-                    ? `KI-Befunde ausblenden (${findingsCount})`
-                    : `KI-Befunde einblenden (${findingsCount})`
+                    ? t('overlays.hideFindings', { count: findingsCount })
+                    : t('overlays.showFindings', { count: findingsCount })
                 }
               >
                 {showFindingsOverlay ? (
@@ -195,8 +195,8 @@ export function DicomViewerToolbar({
             </TooltipTrigger>
             <TooltipContent>
               {showFindingsOverlay
-                ? `KI-Befunde ausblenden (${findingsCount})`
-                : `KI-Befunde einblenden (${findingsCount})`}
+                ? t('overlays.hideFindings', { count: findingsCount })
+                : t('overlays.showFindings', { count: findingsCount })}
             </TooltipContent>
           </Tooltip>
         )}

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Box } from 'lucide-react';
 import type { Series } from '@/types/radiology';
 import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
@@ -32,6 +33,7 @@ interface VRTViewerProps {
 }
 
 export function VRTViewer({ series, className }: VRTViewerProps) {
+  const { t } = useTranslation('viewer');
   const [viewerError, setViewerError] = useState<string | null>(null);
 
   const {
@@ -121,9 +123,9 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
 
   if (!series) {
     return (
-      <ViewerEmptyState 
+      <ViewerEmptyState
         title="3D Volume Rendering"
-        subtitle="Wählen Sie eine Serie für die 3D-Darstellung"
+        subtitle={t('emptyState.selectSeriesFor3d')}
       />
     );
   }
@@ -132,9 +134,9 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
   const supportedModalities = ['CT', 'MR', 'PT'];
   if (!supportedModalities.includes(series.modality)) {
     return (
-      <ViewerEmptyState 
+      <ViewerEmptyState
         title="3D Volume Rendering"
-        subtitle={`Modalität ${series.modality} wird nicht unterstützt. Nur CT, MR und PT sind verfügbar.`}
+        subtitle={t('emptyState.unsupportedModality', { modality: series.modality })}
       />
     );
   }

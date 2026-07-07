@@ -3,6 +3,16 @@
     "name": "Radiolyze",
     "tagline": "KI-gestützte Radiologie-Befundung"
   },
+  "auth": {
+    "invalidCredentials": "Ungültige Anmeldedaten",
+    "loginPrompt": "Bitte melden Sie sich an",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "showPassword": "Passwort anzeigen",
+    "hidePassword": "Passwort verbergen",
+    "loggingIn": "Anmeldung...",
+    "login": "Anmelden"
+  },
   "navigation": {
     "home": "Startseite",
     "batch": "Batch-Reporting",
@@ -41,7 +51,8 @@
     "processing": "Verarbeiten...",
     "success": "Erfolgreich",
     "error": "Fehler",
-    "warning": "Warnung"
+    "warning": "Warnung",
+    "noDataAvailable": "Keine Daten verfügbar"
   },
   "connection": {
     "connected": "Verbunden",
@@ -57,7 +68,8 @@
     "weeksAgo": "vor {{count}} Wochen",
     "monthsAgo": "vor {{count}} Monaten",
     "yearsAgo": "vor {{count}} Jahren",
-    "justNow": "Gerade eben"
+    "justNow": "Gerade eben",
+    "lastNDays": "Letzte {{count}} Tage"
   },
   "patient": {
     "name": "Name",
@@ -184,7 +196,26 @@
     "loading": "Benachrichtigungen werden geladen...",
     "pleaseWait": "Bitte warten...",
     "empty": "Keine Benachrichtigungen",
-    "upToDate": "Sie sind auf dem neuesten Stand"
+    "upToDate": "Sie sind auf dem neuesten Stand",
+    "newEvent": "Neues Ereignis",
+    "reportPrefix": "Report {{id}}...",
+    "studyPrefix": "Studie {{id}}...",
+    "events": {
+      "report_created": "Neuer Report",
+      "report_opened": "Report geöffnet",
+      "findings_saved": "Befund gespeichert",
+      "impression_generated": "KI-Beurteilung generiert",
+      "asr_transcription": "Diktat transkribiert",
+      "qa_check_run": "QA-Prüfung",
+      "report_approved": "Report freigegeben",
+      "report_amended": "Report korrigiert",
+      "report_exported": "Report exportiert",
+      "inference_queued": "KI-Analyse gestartet",
+      "inference_started": "KI-Analyse läuft",
+      "inference_completed": "KI-Analyse abgeschlossen",
+      "inference_failed": "KI-Analyse fehlgeschlagen",
+      "systemMessage": "System-Meldung"
+    }
   },
   "qa": {
     "pending": "Ausstehend",

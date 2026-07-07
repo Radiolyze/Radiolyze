@@ -10,7 +10,9 @@
     "rotate": "Rotate",
     "flip": "Flip",
     "analyzeFrame": "Analyze frame",
-    "analyzeFrameHint": "Send current frame for AI localization"
+    "analyzeFrameHint": "Send current frame for AI localization",
+    "annotationModeActive": "Annotation mode active",
+    "annotationModeActivate": "Activate annotation mode"
   },
   "comparison": {
     "title": "Comparison",
@@ -70,7 +72,15 @@
     "hide": "Hide overlays",
     "patientInfo": "Patient info",
     "studyInfo": "Study info",
-    "annotations": "Annotations"
+    "annotations": "Annotations",
+    "showFindings": "Show AI findings ({{count}})",
+    "hideFindings": "Hide AI findings ({{count}})"
+  },
+  "emptyState": {
+    "selectSeries": "Select a series",
+    "selectSeriesFor3d": "Select a series for 3D rendering",
+    "selectSeriesForMpr": "Select a series for multi-planar reconstruction",
+    "unsupportedModality": "Modality {{modality}} is not supported. Only CT, MR and PT are available."
   },
   "mesh": {
     "title": "3D Model",

@@ -19,7 +19,9 @@
     "404": "Resource not found",
     "500": "Server error. Please try again later.",
     "502": "Server unreachable",
-    "503": "Service temporarily unavailable"
+    "503": "Service temporarily unavailable",
+    "rateLimited": "Too many requests. Please wait a moment.",
+    "errorWithStatus": "Error {{status}}: {{detail}}"
   },
   "validation": {
     "required": "This field is required",
@@ -41,6 +43,9 @@
     "approveFailed": "Approval failed",
     "exportFailed": "Export failed",
     "generateFailed": "AI generation failed"
+  },
+  "notifications": {
+    "loadFailed": "Notifications could not be loaded."
   },
   "asr": {
     "notSupported": "Speech recognition is not supported in this browser",
