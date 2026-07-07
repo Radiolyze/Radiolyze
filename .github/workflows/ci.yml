@@ -85,6 +85,24 @@ jobs:
         continue-on-error: true
         run: npm audit --audit-level=high
 
+  e2e-frontend:
+    runs-on: ubuntu-latest
+    # Non-blocking for now: only the mocked-network auth flow exists so far
+    # (see #116) - the real docker-stack-backed core workflow (study load ->
+    # AI findings -> QA -> finalize) is a separate, larger follow-up.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run bundle:worker
+      - run: npm run typecheck:e2e
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+
   segmenter-test:
     runs-on: ubuntu-latest
     defaults:

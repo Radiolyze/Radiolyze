@@ -12,7 +12,7 @@ How to run, write, and extend tests for Radiolyze — frontend unit tests, backe
 | Backend unit/integration | pytest | `backend/tests/` | `cd backend && python -m pytest` |
 | Backend smoke | bash | `scripts/smoke-backend.sh` | `./scripts/smoke-backend.sh` |
 | Documentation build | mkdocs | `docs/` | `python3 -m mkdocs build --strict` |
-| E2E (planned) | Playwright | `e2e/` | `npm run e2e` |
+| E2E | Playwright | `e2e/` | `npm run e2e` |
 
 Run all checks before committing:
 
@@ -169,7 +169,10 @@ Always run this before merging documentation changes.
 
 ## E2E Tests (Playwright)
 
-End-to-end tests drive a real browser against the full stack. The E2E test suite is planned; foundational setup is below.
+End-to-end tests drive a real browser. Two styles live side by side in `e2e/`:
+
+- **Mocked-network flows** (e.g. `e2e/auth.spec.ts`) stub backend responses with `page.route(...)` instead of requiring a live stack. These are fast, deterministic, and run non-blocking in CI (`e2e-frontend` job) on every push/PR.
+- **Full-stack flows** (planned — see the scenarios below) drive the real backend/DB/Orthanc via `docker compose`, for the workflows that actually need real data (DICOM viewer, ASR, AI inference, QA).
 
 ### Setup
 
@@ -181,20 +184,24 @@ npx playwright install chromium
 ### Running
 
 ```bash
-# Start the full stack first
-docker compose up --build -d
-
-# Run E2E tests
+# Mocked-network specs: just need the dev server, which playwright.config.ts
+# starts automatically
 npm run e2e
+
+# Full-stack specs: start the stack first, then point Playwright at it
+docker compose up --build -d
+E2E_BASE_URL=http://localhost:5173 npm run e2e
 
 # Run with UI (headed mode for debugging)
 npx playwright test --headed
 
 # Run a specific spec
-npx playwright test e2e/report-workflow.spec.ts
+npx playwright test e2e/auth.spec.ts
 ```
 
 ### Key Scenarios to Cover
+
+`e2e/auth.spec.ts` covers the login form, invalid-credential handling, and the 401-redirect route guard today. The remaining scenarios below need a real backend (Orthanc-seeded study data, inference/QA pipeline) and are follow-up work:
 
 | Test scenario | Why |
 |---|---|
@@ -206,7 +213,9 @@ npx playwright test e2e/report-workflow.spec.ts
 | Keyboard shortcut `Ctrl+Enter` opens approval dialog | Core UX |
 | Batch queue: approve → auto-advance to next study | Batch workflow |
 
-### Example Spec
+### Example Spec (target shape for a full-stack flow)
+
+The selectors below (`.study-row`, `[data-testid="impression-textarea"]`, ...) don't all exist in the app yet — this illustrates the shape a full-stack spec should take once written, not a spec that runs today. See `e2e/auth.spec.ts` for a real, currently-passing example.
 
 ```typescript
 // e2e/report-workflow.spec.ts
@@ -237,24 +246,11 @@ test("approve a report via keyboard shortcut", async ({ page }) => {
 
 ### Playwright Configuration
 
-```typescript
-// playwright.config.ts
-import { defineConfig } from "@playwright/test";
+See `playwright.config.ts` at the repo root. Notes:
 
-export default defineConfig({
-  testDir: "./e2e",
-  use: {
-    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:5173",
-    screenshot: "only-on-failure",
-    video: "retain-on-failure",
-  },
-  webServer: {
-    command: "npm run dev",
-    port: 5173,
-    reuseExistingServer: true,
-  },
-});
-```
+- `baseURL` defaults to `http://localhost:5173`; set `E2E_BASE_URL` to point at a different stack (e.g. a docker-compose deployment) instead.
+- The `webServer` auto-start (`npm run dev`) is skipped whenever `E2E_BASE_URL` is set, since that implies a stack is already running.
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE` lets a sandboxed/offline environment point at a pre-installed Chromium build instead of the one `@playwright/test` would otherwise try to download — not needed for a normal `npx playwright install`.
 
 ---
 

@@ -12,7 +12,7 @@ Frontend-Unit-Tests, Backend-Unit-/Integrationstests, Smoke-Tests und E2E-Tests 
 | Backend Unit/Integration | pytest | `backend/tests/` | `cd backend && python -m pytest` |
 | Backend Smoke | bash | `scripts/smoke-backend.sh` | `./scripts/smoke-backend.sh` |
 | Dokumentationsbuild | mkdocs | `docs/` | `python3 -m mkdocs build --strict` |
-| E2E (geplant) | Playwright | `e2e/` | `npm run e2e` |
+| E2E | Playwright | `e2e/` | `npm run e2e` |
 
 Vor jedem Commit alle Prüfungen ausführen:
 
@@ -132,7 +132,10 @@ python3 -m mkdocs build --strict
 
 ## E2E-Tests (Playwright)
 
-End-to-End-Tests steuern einen echten Browser gegen den vollständigen Stack.
+End-to-End-Tests steuern einen echten Browser. Zwei Stile leben nebeneinander in `e2e/`:
+
+- **Gemockte Flows** (z. B. `e2e/auth.spec.ts`) täuschen Backend-Antworten per `page.route(...)` vor, statt einen laufenden Stack vorauszusetzen. Schnell, deterministisch, laufen non-blocking in CI (`e2e-frontend`-Job) bei jedem Push/PR.
+- **Full-Stack-Flows** (geplant — siehe Szenarien unten) steuern das echte Backend/DB/Orthanc über `docker compose`, für Workflows, die echte Daten brauchen (DICOM-Viewer, ASR, KI-Inferenz, QA).
 
 ### Einrichtung
 
@@ -144,17 +147,21 @@ npx playwright install chromium
 ### Ausführen
 
 ```bash
-# Stack starten
-docker compose up --build -d
-
-# E2E-Tests ausführen
+# Gemockte Specs: nur der Dev-Server wird benötigt, den playwright.config.ts
+# automatisch startet
 npm run e2e
+
+# Full-Stack-Specs: zuerst den Stack starten, dann Playwright darauf richten
+docker compose up --build -d
+E2E_BASE_URL=http://localhost:5173 npm run e2e
 
 # Mit UI (headed mode für Debugging)
 npx playwright test --headed
 ```
 
 ### Wichtige zu abdeckende Szenarien
+
+`e2e/auth.spec.ts` deckt heute das Login-Formular, ungültige Zugangsdaten und den 401-Redirect-Routenschutz ab. Die folgenden Szenarien brauchen ein echtes Backend (mit Orthanc geseedete Studiendaten, Inferenz-/QA-Pipeline) und sind Folgearbeit:
 
 | Testszenario | Warum |
 |---|---|
