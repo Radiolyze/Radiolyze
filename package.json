@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "npm@10.9.7",
   "scripts": {
     "bundle:worker": "node scripts/bundle-cornerstone-worker.mjs",
     "predev": "npm run bundle:worker",
