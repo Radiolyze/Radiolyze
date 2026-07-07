@@ -16,6 +16,7 @@ node_modules
 dist
 dist-ssr
 *.local
+bun.lockb
 
 public/workers
 # Editor directories and files
