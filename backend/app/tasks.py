@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 from typing import Any
+
+from rq import get_current_job
 
 from .audit import add_audit_event
 from .db import SessionLocal
@@ -13,12 +16,15 @@ from .inference_clients import (
     generate_volume_inference_summary,
 )
 from .mock_logic import utc_now
-from .models import InferenceJob, Report
+from .models import InferenceJob, Report, SegmentationJob
+from .queue import get_dead_letter_queue, get_queue_name
 from .tracing import get_tracer, traced_task
 from .utils.inference import build_image_metadata
 from .ws_events import publish_report_status
 
 logger = logging.getLogger(__name__)
+
+DEAD_LETTER_TTL = int(os.getenv("DEAD_LETTER_TTL", str(7 * 24 * 3600)))
 
 
 def _get_or_create_inference_job(
@@ -67,6 +73,190 @@ def _mark_inference_job_failed(db, job_id: str | None, exc: Exception) -> None:
             db.commit()
     except Exception:
         logger.exception("Failed to update inference job %s status to failed", job_id)
+
+
+def _mark_inference_job_retrying(db, job_id: str | None, exc: Exception) -> None:
+    """Best-effort: reset an InferenceJob row to 'queued' after a transient
+    failure that RQ will retry, so its status reflects reality instead of
+    showing a stale 'started'."""
+    if not job_id:
+        return
+    try:
+        job = db.get(InferenceJob, job_id)
+        if job:
+            job.status = "queued"
+            job.error_message = str(exc)[:1000]
+            db.commit()
+    except Exception:
+        logger.exception("Failed to reset inference job %s status for retry", job_id)
+
+
+def _retries_remaining() -> int | None:
+    """Retries left on the currently-executing RQ job.
+
+    Returns ``None`` outside a worker context (e.g. a task invoked directly
+    in tests) or when the job wasn't enqueued with a retry policy - both
+    cases fall back to "this is the only/final attempt".
+    """
+    try:
+        job = get_current_job()
+    except Exception:
+        return None
+    return job.retries_left if job is not None else None
+
+
+def _route_to_dead_letter(task_fn, payload: dict[str, Any], job_id: str | None) -> None:
+    """Move an exhausted job's payload onto a dedicated, unconsumed
+    dead-letter queue so operators can see/count permanently-failed jobs
+    (see ``app.worker`` - no worker listens on `failed-*` queues) instead of
+    them only ever showing up as a DB row with status='failed'.
+    """
+    try:
+        dead_letter_queue = get_dead_letter_queue(get_queue_name())
+        # RQ job IDs may only contain letters, numbers, underscores and
+        # dashes - job_id is a uuid4, so a dash-joined prefix is safe.
+        dead_letter_queue.enqueue(
+            task_fn,
+            payload,
+            job_id=f"dead-letter-{job_id}" if job_id else None,
+            failure_ttl=DEAD_LETTER_TTL,
+            result_ttl=DEAD_LETTER_TTL,
+        )
+    except Exception:
+        logger.exception("Failed to route job %s to the dead-letter queue", job_id)
+
+
+def _handle_inference_failure(
+    db,
+    *,
+    task_fn,
+    payload: dict[str, Any],
+    job_id: str | None,
+    exc: Exception,
+    report_id: str | None,
+    study_id: str | None,
+    requested_by: str,
+    failed_event_type: str,
+    failed_metadata: dict[str, Any],
+) -> None:
+    """Shared tail of every inference task's except-block.
+
+    On an attempt RQ will still retry (``retries_left > 0``), just reset the
+    job row back to 'queued' and audit a retry event. Only on the final
+    attempt do we mark the job permanently failed, audit the failure, and
+    route the payload to the dead-letter queue.
+    """
+    retries_left = _retries_remaining()
+    if retries_left is not None and retries_left > 0:
+        _mark_inference_job_retrying(db, job_id, exc)
+        publish_report_status(report_id, {"aiStatus": "queued"})
+        add_audit_event(
+            db,
+            event_type=f"{failed_event_type}_retry_scheduled",
+            actor_id=requested_by,
+            report_id=report_id,
+            study_id=study_id,
+            metadata={
+                "job_id": job_id,
+                "retries_left": retries_left,
+                "error": str(exc),
+                **failed_metadata,
+            },
+            source="worker",
+        )
+        db.commit()
+        return
+
+    _mark_inference_job_failed(db, job_id, exc)
+    publish_report_status(report_id, {"aiStatus": "error"})
+    add_audit_event(
+        db,
+        event_type=failed_event_type,
+        actor_id=requested_by,
+        report_id=report_id,
+        study_id=study_id,
+        metadata={"job_id": job_id, "error": str(exc), **failed_metadata},
+        source="worker",
+    )
+    db.commit()
+    _route_to_dead_letter(task_fn, payload, job_id)
+
+
+def _mark_segmentation_job_retrying(db, job_id: str, exc: Exception) -> None:
+    """Best-effort: reset a SegmentationJob row to 'queued' after a transient
+    failure that RQ will retry."""
+    try:
+        job = db.get(SegmentationJob, job_id)
+        if job:
+            job.status = "queued"
+            job.error_message = str(exc)[:1000]
+            job.updated_at = utc_now()
+            db.commit()
+    except Exception:
+        logger.exception("Failed to reset segmentation job %s status for retry", job_id)
+
+
+def _mark_segmentation_job_failed(db, job_id: str, exc: Exception) -> None:
+    """Best-effort: mark a SegmentationJob row as failed, swallowing secondary errors."""
+    try:
+        job = db.get(SegmentationJob, job_id)
+        if job:
+            job.status = "failed"
+            job.error_message = str(exc)[:1000]
+            job.updated_at = utc_now()
+            db.commit()
+    except Exception:
+        logger.exception("Failed to mark segmentation job %s as failed", job_id)
+
+
+def _handle_segmentation_failure(
+    db,
+    *,
+    payload: dict[str, Any],
+    job_id: str,
+    exc: Exception,
+    study_uid: str | None,
+    series_uid: str | None,
+    preset: str,
+    requested_by: str,
+) -> None:
+    """Segmentation counterpart of ``_handle_inference_failure``."""
+    retries_left = _retries_remaining()
+    if retries_left is not None and retries_left > 0:
+        _mark_segmentation_job_retrying(db, job_id, exc)
+        add_audit_event(
+            db,
+            event_type="segmentation_retry_scheduled",
+            actor_id=requested_by,
+            study_id=study_uid,
+            metadata={
+                "job_id": job_id,
+                "preset": preset,
+                "series_uid": series_uid,
+                "retries_left": retries_left,
+                "error": str(exc),
+            },
+            source="worker",
+        )
+        db.commit()
+        return
+
+    _mark_segmentation_job_failed(db, job_id, exc)
+    add_audit_event(
+        db,
+        event_type="segmentation_failed",
+        actor_id=requested_by,
+        study_id=study_uid,
+        metadata={
+            "job_id": job_id,
+            "preset": preset,
+            "series_uid": series_uid,
+            "error": str(exc),
+        },
+        source="worker",
+    )
+    db.commit()
+    _route_to_dead_letter(run_segmentation_job, payload, job_id)
 
 
 @traced_task("task.inference")
@@ -190,28 +380,24 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
-        _mark_inference_job_failed(db, job_id, exc)
-
-        publish_report_status(report_id, {"aiStatus": "error"})
-
-        add_audit_event(
+        _handle_inference_failure(
             db,
-            event_type="inference_failed",
-            actor_id=requested_by,
+            task_fn=run_inference_job,
+            payload=payload,
+            job_id=job_id,
+            exc=exc,
             report_id=report_id,
             study_id=study_id,
-            metadata={
-                "job_id": job_id,
+            requested_by=requested_by,
+            failed_event_type="inference_failed",
+            failed_metadata={
                 "model_version": requested_model_version,
                 "requested_model": requested_model_version,
                 "input_hash": input_hash,
-                "error": str(exc),
                 "image_refs": image_refs,
                 **image_metadata,
             },
-            source="worker",
         )
-        db.commit()
         raise
     finally:
         db.close()
@@ -320,26 +506,22 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
-        _mark_inference_job_failed(db, job_id, exc)
-
-        publish_report_status(report_id, {"aiStatus": "error"})
-
-        add_audit_event(
+        _handle_inference_failure(
             db,
-            event_type="inference_failed",
-            actor_id=requested_by,
+            task_fn=run_localize_job,
+            payload=payload,
+            job_id=job_id,
+            exc=exc,
             report_id=report_id,
             study_id=study_id,
-            metadata={
-                "job_id": job_id,
+            requested_by=requested_by,
+            failed_event_type="inference_failed",
+            failed_metadata={
                 "job_type": "localize",
                 "model_version": requested_model_version,
-                "error": str(exc),
                 "image_ref": image_ref,
             },
-            source="worker",
         )
-        db.commit()
         raise
     finally:
         db.close()
@@ -470,26 +652,22 @@ def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
-        _mark_inference_job_failed(db, job_id, exc)
-
-        publish_report_status(report_id, {"aiStatus": "error"})
-
-        add_audit_event(
+        _handle_inference_failure(
             db,
-            event_type="inference_volume_failed",
-            actor_id=requested_by,
+            task_fn=run_volume_inference_job,
+            payload=payload,
+            job_id=job_id,
+            exc=exc,
             report_id=report_id,
             study_id=study_id,
-            metadata={
-                "job_id": job_id,
+            requested_by=requested_by,
+            failed_event_type="inference_volume_failed",
+            failed_metadata={
                 "job_type": "volume_inference",
                 "study_uid": study_uid,
                 "series_uid": series_uid,
-                "error": str(exc),
             },
-            source="worker",
         )
-        db.commit()
         raise
     finally:
         db.close()
@@ -615,28 +793,24 @@ def run_comparison_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "completed_at": completed_at,
         }
     except Exception as exc:
-        _mark_inference_job_failed(db, job_id, exc)
-
-        publish_report_status(report_id, {"aiStatus": "error"})
-
-        add_audit_event(
+        _handle_inference_failure(
             db,
-            event_type="inference_comparison_failed",
-            actor_id=requested_by,
+            task_fn=run_comparison_inference_job,
+            payload=payload,
+            job_id=job_id,
+            exc=exc,
             report_id=report_id,
             study_id=study_id,
-            metadata={
-                "job_id": job_id,
+            requested_by=requested_by,
+            failed_event_type="inference_comparison_failed",
+            failed_metadata={
                 "job_type": "comparison_inference",
                 "study_uid": study_uid,
                 "series_uid": series_uid,
                 "prior_study_uid": prior_study_uid,
                 "prior_series_uid": prior_series_uid,
-                "error": str(exc),
             },
-            source="worker",
         )
-        db.commit()
         raise
     finally:
         db.close()
@@ -644,10 +818,8 @@ def run_comparison_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
 
 def run_segmentation_job(payload: dict[str, Any]) -> dict[str, Any]:
     """Drive a segmentation job: call the segmenter, poll, persist the manifest."""
-    import os
     import time
 
-    from .models import SegmentationJob
     from .segmentation_client import (
         get_job_status as seg_get_status,
     )
@@ -739,30 +911,16 @@ def run_segmentation_job(payload: dict[str, Any]) -> dict[str, Any]:
 
         return {"status": "finished", "manifest": manifest}
     except Exception as exc:
-        try:
-            failed = db.get(SegmentationJob, job_id)
-            if failed:
-                failed.status = "failed"
-                failed.error_message = str(exc)[:1000]
-                failed.updated_at = utc_now()
-                db.commit()
-        except Exception:
-            logger.exception("Failed to mark segmentation job %s as failed", job_id)
-
-        add_audit_event(
+        _handle_segmentation_failure(
             db,
-            event_type="segmentation_failed",
-            actor_id=requested_by,
-            study_id=study_uid,
-            metadata={
-                "job_id": job_id,
-                "preset": preset,
-                "series_uid": series_uid,
-                "error": str(exc),
-            },
-            source="worker",
+            payload=payload,
+            job_id=job_id,
+            exc=exc,
+            study_uid=study_uid,
+            series_uid=series_uid,
+            preset=preset,
+            requested_by=requested_by,
         )
-        db.commit()
         raise
     finally:
         db.close()

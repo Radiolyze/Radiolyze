@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from ..audit import add_audit_event
 from ..deps import get_db, require_radiologist_or_admin
 from ..models import AuditEvent, DriftSnapshot, InferenceJob, QACheckResult, Report
+from ..queue import get_dead_letter_queue, get_queue_name
 from ..utils.metrics import (
     compute_deltas,
     counts_to_dict,
@@ -203,6 +204,13 @@ def get_metrics(
     )
     audit_events_total = db.query(func.count(AuditEvent.id)).scalar() or 0
 
+    dead_letter_queue = get_dead_letter_queue(get_queue_name())
+    try:
+        dead_letter_count = dead_letter_queue.count
+    except Exception:
+        # Redis unavailable shouldn't take the whole metrics endpoint down.
+        dead_letter_count = None
+
     return {
         "timestamp": now_iso(),
         "reports_total": reports_total,
@@ -210,6 +218,7 @@ def get_metrics(
         "qa_status_counts": qa_status_counts,
         "inference_job_status_counts": inference_job_counts,
         "audit_events_total": audit_events_total,
+        "dead_letter_queue_counts": {dead_letter_queue.name: dead_letter_count},
     }
 
 
