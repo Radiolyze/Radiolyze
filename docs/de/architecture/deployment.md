@@ -29,7 +29,7 @@ GPU Services sind als Overlay verfuegbar:
 - MedASR (Speech) via `docker-compose.gpu.yml`
 - AMD ROCm Overlay via `docker-compose.rocm.yml` (Image: `vllm-rocm`)
 
-Optionale Services: NGINX.
+Optionale Services: NGINX (`docker/compose/tls.yml`-Overlay — TLS-Terminierung vor dem Stack, siehe [Deployment-Leitfaden — HTTPS hinzufügen](../admin/deployment.md#https-hinzufugen-nginx-reverse-proxy)).
 
 ### Orthanc Hinweise
 

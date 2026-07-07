@@ -138,7 +138,7 @@ curl -s -u orthanc:orthanc http://localhost:8042/studies \
 
 ## Produktions-Checkliste
 
-- [ ] **TLS / HTTPS** — TLS an NGINX oder anderem Reverse Proxy terminieren
+- [ ] **TLS / HTTPS** — TLS an NGINX oder anderem Reverse Proxy terminieren (siehe unten oder das [TLS-Overlay](#https-hinzufugen-nginx-reverse-proxy))
 - [ ] **Orthanc-Zugangsdaten geändert** — Standard `orthanc/orthanc` ersetzen
 - [ ] **PostgreSQL-Zugangsdaten geändert** — starke Passwörter in `.env`
 - [ ] **JWT-Secrets gesetzt** — zufällige Secrets für Token-Signierung generieren
@@ -150,6 +150,39 @@ curl -s -u orthanc:orthanc http://localhost:8042/studies \
 ---
 
 ## HTTPS hinzufügen (NGINX Reverse Proxy)
+
+### Option A: das eingebaute TLS-Overlay (empfohlen)
+
+`docker/compose/tls.yml` fügt einen `reverse-proxy`-Dienst (NGINX) hinzu,
+der HTTPS auf 443 terminiert, 80 → 443 weiterleitet, HSTS sendet und alles
+an den `frontend`-Dienst weiterreicht:
+
+```bash
+mkdir -p certs
+# Zertifikat hier ablegen als certs/fullchain.pem + certs/privkey.pem
+# (Certbot/Let's Encrypt, oder die PKI der eigenen Institution für
+# abgeschottete Krankenhausnetze — dort ist Certbots automatische
+# HTTP-01-Challenge nicht angebracht).
+
+echo "NGINX_SERVER_NAME=radiolyze.ihrkrankenhaus.de" >> .env
+echo "ENABLE_HSTS=true" >> .env
+
+docker compose -f docker-compose.yml -f docker/compose/tls.yml up --build -d
+```
+
+Die vollständige Liste der `TLS_*`-Variablen (Zertifikatspfade,
+Zertifikatsverzeichnis) steht in `env.example`. Die NGINX-Konfiguration des
+Overlays liegt in `docker/nginx-tls.conf.template` und wird beim
+Container-Start gerendert — siehe die Kommentare in dieser Datei, falls
+Anpassungen nötig sind (z. B. um stattdessen auf das Produktions-Image
+`docker/Dockerfile.frontend` auf Port 8080 statt auf den Vite-Dev-Server
+auf 5173 zu zeigen).
+
+### Option B: ein externer Reverse Proxy
+
+Wer NGINX lieber außerhalb von Docker betreibt (z. B. eine bestehende
+Host-Installation, die weitere Dienste verwaltet), zeigt stattdessen auf
+die exponierten Ports des Stacks:
 
 ```nginx
 server {
@@ -168,23 +201,19 @@ server {
 
     add_header Strict-Transport-Security "max-age=31536000" always;
 
+    # Frontend (Dev-Server proxied /api und /dicom-web selbst — siehe vite.config.ts)
     location / {
         proxy_pass http://localhost:5173;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
-
-    location /api/ { proxy_pass http://localhost:8000; }
-
-    location /ws/ {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
 }
 ```
+
+In beiden Fällen: [Certbot](https://certbot.eff.org/) für kostenlose
+Let's-Encrypt-Zertifikate nutzen (für abgeschottete Krankenhausnetze
+ungeeignet — dort die PKI der eigenen Institution verwenden).
 
 ---
 

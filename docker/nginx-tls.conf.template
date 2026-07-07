@@ -1,0 +1,60 @@
+# TLS-terminating reverse proxy for the docker-compose stack (GAP-11).
+#
+# Fronts the `frontend` service (Vite dev server, which already proxies
+# /api and /dicom-web to backend/orthanc per vite.config.ts) with HTTPS,
+# an HTTP->HTTPS redirect, and HSTS. Rendered from this template into
+# /etc/nginx/conf.d/default.conf at container startup by
+# docker-entrypoint.d/tls-render.sh (see docker/compose/tls.yml).
+#
+# Certificates are expected at ${TLS_CERT_PATH}/${TLS_KEY_PATH} (defaults
+# below match the volume mount in docker/compose/tls.yml). Obtain them
+# however fits your environment: Certbot/Let's Encrypt for a
+# publicly-reachable host (the /.well-known/acme-challenge/ location below
+# supports the HTTP-01 webroot method), or your institution's own PKI for
+# air-gapped hospital networks.
+
+server {
+    listen 80;
+    server_name ${NGINX_SERVER_NAME};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${NGINX_SERVER_NAME};
+
+    ssl_certificate     ${TLS_CERT_PATH};
+    ssl_certificate_key ${TLS_KEY_PATH};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    client_max_body_size 200m;
+
+    # Everything (app shell, /api, /dicom-web, the /api/v1/ws websocket)
+    # goes to the frontend dev server, which already proxies /api and
+    # /dicom-web per vite.config.ts. Point this at frontend:8080 instead if
+    # you build/run the production image (docker/Dockerfile.frontend).
+    location / {
+        proxy_pass http://frontend:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
