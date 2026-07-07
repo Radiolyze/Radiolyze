@@ -230,8 +230,9 @@ def get_drift_report(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    return compute_drift_snapshot(db, window_days=window_days,
-                                  baseline_days=baseline_days, persist=persist)
+    return compute_drift_snapshot(
+        db, window_days=window_days, baseline_days=baseline_days, persist=persist
+    )
 
 
 @router.get("/api/v1/monitoring/drift/snapshots")

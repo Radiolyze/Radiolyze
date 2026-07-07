@@ -3,6 +3,7 @@
 Uses the Orthanc DICOMweb plugin endpoint configured via ``DICOM_WEB_BASE_URL``
 (default: ``http://orthanc:8042/dicom-web``).
 """
+
 from __future__ import annotations
 
 import logging
@@ -47,10 +48,10 @@ def store_dicom_object(study_instance_uid: str, dicom_bytes: bytes) -> str:
 
     # Build multipart/related body per DICOMweb STOW-RS spec (PS3.18 §10.5.1)
     body = (
-        f"--{boundary}\r\n"
-        f"Content-Type: application/dicom\r\n"
-        f"\r\n"
-    ).encode("utf-8") + dicom_bytes + f"\r\n--{boundary}--\r\n".encode("utf-8")
+        (f"--{boundary}\r\nContent-Type: application/dicom\r\n\r\n").encode()
+        + dicom_bytes
+        + f"\r\n--{boundary}--\r\n".encode()
+    )
 
     content_type = f'multipart/related; type="application/dicom"; boundary="{boundary}"'
 

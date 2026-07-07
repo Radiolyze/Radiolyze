@@ -127,21 +127,29 @@ def test_generate_volume_summary_uses_preprocess(monkeypatch) -> None:
         "resize": 896,
         "pixel_spacing": [0.7, 0.7],
         "slice_thickness": 1.5,
-        "slices": [
-            {"index": i, "data_url": f"data:image/png;base64,FAKE{i}"} for i in range(1, 5)
-        ],
+        "slices": [{"index": i, "data_url": f"data:image/png;base64,FAKE{i}"} for i in range(1, 5)],
     }
 
     captured: dict = {}
 
-    def fake_chat(prompt, *, model_name, system_prompt, image_urls=None, image_paths=None, guided_json_schema=None):
+    def fake_chat(
+        prompt,
+        *,
+        model_name,
+        system_prompt,
+        image_urls=None,
+        image_paths=None,
+        guided_json_schema=None,
+    ):
         captured["prompt"] = prompt
         captured["image_urls"] = image_urls
         captured["model_name"] = model_name
         return '{"summary":"Mediastinal lymphadenopathy.","evidence_indices":[1,3]}'
 
-    with patch("app.segmentation_client.preprocess_for_medgemma", return_value=fake_preprocess), \
-         patch("app.inference_clients._vllm_chat_completion", side_effect=fake_chat):
+    with (
+        patch("app.segmentation_client.preprocess_for_medgemma", return_value=fake_preprocess),
+        patch("app.inference_clients._vllm_chat_completion", side_effect=fake_chat),
+    ):
         from app.inference_clients import generate_volume_inference_summary
 
         text, confidence, model, metadata = generate_volume_inference_summary(
@@ -184,8 +192,10 @@ def test_generate_comparison_text_emits_structured_output(monkeypatch) -> None:
         '"overall_trend":"worsened","confidence":"medium"}'
     )
 
-    with patch("app.segmentation_client.preprocess_for_medgemma", side_effect=fake_preprocess), \
-         patch("app.inference_clients._vllm_chat_completion", return_value=fake_response):
+    with (
+        patch("app.segmentation_client.preprocess_for_medgemma", side_effect=fake_preprocess),
+        patch("app.inference_clients._vllm_chat_completion", return_value=fake_response),
+    ):
         from app.inference_clients import generate_comparison_text
 
         summary, _confidence, _model, metadata = generate_comparison_text(

@@ -90,9 +90,7 @@ def create_segmentation_job(
 
 
 @router.get("/jobs/{job_id}", response_model=SegmentationStatusResponse)
-def get_segmentation_job(
-    job_id: str, db: Session = Depends(get_db)
-) -> SegmentationStatusResponse:
+def get_segmentation_job(job_id: str, db: Session = Depends(get_db)) -> SegmentationStatusResponse:
     record = db.get(SegmentationJob, job_id)
     if not record:
         raise HTTPException(status_code=404, detail="Segmentation job not found")
@@ -173,6 +171,7 @@ def download_mesh(
     media = "model/gltf-binary" if format == "glb" else "application/vnd.kitware.vtp+xml"
     local = _safe_local_path(record, "meshes", f"{label_id}.{format}")
     if local is not None:
+
         def _file_iter() -> Iterator[bytes]:
             with local.open("rb") as fh:
                 while chunk := fh.read(64 * 1024):
@@ -206,6 +205,7 @@ def download_mask(
     filename = _label_filename(record, label_id)
     local = _safe_local_path(record, "masks", filename) if filename else None
     if local is not None:
+
         def _file_iter() -> Iterator[bytes]:
             with local.open("rb") as fh:
                 while chunk := fh.read(64 * 1024):
@@ -267,9 +267,7 @@ def push_to_pacs(
             source="api",
         )
         db.commit()
-        raise HTTPException(
-            status_code=502, detail=f"Could not fetch DICOM SEG: {exc}"
-        ) from exc
+        raise HTTPException(status_code=502, detail=f"Could not fetch DICOM SEG: {exc}") from exc
 
     try:
         orthanc_url = store_dicom_object(record.study_uid, seg_bytes)
@@ -289,9 +287,7 @@ def push_to_pacs(
             source="api",
         )
         db.commit()
-        raise HTTPException(
-            status_code=502, detail=f"STOW-RS push failed: {exc}"
-        ) from exc
+        raise HTTPException(status_code=502, detail=f"STOW-RS push failed: {exc}") from exc
 
     record.dicom_seg_orthanc_url = orthanc_url
     record.updated_at = pushed_at

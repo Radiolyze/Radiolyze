@@ -82,9 +82,9 @@ def _openai_audio_config(
         api_key = os.getenv("MEDASR_API_KEY")
         return base_url, path, model_name, timeout, api_key
 
-    base_url = (os.getenv("ASR_OPENAI_BASE_URL") or os.getenv("MEDASR_BASE_URL", "http://medasr:8001")).rstrip(
-        "/"
-    )
+    base_url = (
+        os.getenv("ASR_OPENAI_BASE_URL") or os.getenv("MEDASR_BASE_URL", "http://medasr:8001")
+    ).rstrip("/")
     path = os.getenv("ASR_OPENAI_TRANSCRIBE_PATH") or os.getenv(
         "MEDASR_TRANSCRIBE_PATH", "/v1/audio/transcriptions"
     )
@@ -189,9 +189,14 @@ async def transcribe_audio(
         logger.warning("ASR transcription failed (%s): %s", mode, exc)
         if _env_flag("MEDASR_FALLBACK_TO_MOCK", True):
             text, confidence = generate_asr_transcript()
-            return text, confidence, "mock-medasr-0.1", {
-                "provider": "mock",
-                "error": str(exc),
-                "asr_provider": mode,
-            }
+            return (
+                text,
+                confidence,
+                "mock-medasr-0.1",
+                {
+                    "provider": "mock",
+                    "error": str(exc),
+                    "asr_provider": mode,
+                },
+            )
         raise RuntimeError("ASR transcription failed") from exc

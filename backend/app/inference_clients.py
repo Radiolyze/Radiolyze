@@ -382,7 +382,9 @@ def _build_volume_prompt(
 ) -> str:
     spacing_str = ""
     if pixel_spacing and len(pixel_spacing) >= 2:
-        spacing_str = f" pixel_spacing={_format_float(pixel_spacing[0])}x{_format_float(pixel_spacing[1])}mm"
+        spacing_str = (
+            f" pixel_spacing={_format_float(pixel_spacing[0])}x{_format_float(pixel_spacing[1])}mm"
+        )
     thickness_str = ""
     if slice_thickness is not None:
         thickness_str = f" slice_thickness={_format_float(float(slice_thickness))}mm"
@@ -420,10 +422,15 @@ def generate_volume_inference_summary(
 
     if not _env_flag("VLLM_ENABLED", False):
         text, confidence = generate_inference_summary(findings_text)
-        return text, confidence, model_name or "mock-medgemma-volume-0.1", {
-            "provider": "mock",
-            "volume_preprocess": {"skipped": True, "reason": "vllm_disabled"},
-        }
+        return (
+            text,
+            confidence,
+            model_name or "mock-medgemma-volume-0.1",
+            {
+                "provider": "mock",
+                "volume_preprocess": {"skipped": True, "reason": "vllm_disabled"},
+            },
+        )
 
     # Lazy import to avoid pulling segmenter_client into mock-only environments.
     from .segmentation_client import preprocess_for_medgemma
@@ -565,10 +572,15 @@ def generate_comparison_text(
 
     if not _env_flag("VLLM_ENABLED", False):
         text, confidence = generate_inference_summary(findings_text)
-        return text, confidence, model_name or "mock-medgemma-comparison-0.1", {
-            "provider": "mock",
-            "comparison": {"skipped": True, "reason": "vllm_disabled"},
-        }
+        return (
+            text,
+            confidence,
+            model_name or "mock-medgemma-comparison-0.1",
+            {
+                "provider": "mock",
+                "comparison": {"skipped": True, "reason": "vllm_disabled"},
+            },
+        )
 
     from .segmentation_client import preprocess_for_medgemma
 
@@ -602,7 +614,9 @@ def generate_comparison_text(
     if not current_slices or not prior_slices:
         raise RuntimeError("Comparison preprocess returned empty slice list")
 
-    current_urls = [s["data_url"] for s in current_slices if isinstance(s, dict) and s.get("data_url")]
+    current_urls = [
+        s["data_url"] for s in current_slices if isinstance(s, dict) and s.get("data_url")
+    ]
     prior_urls = [s["data_url"] for s in prior_slices if isinstance(s, dict) and s.get("data_url")]
     image_urls = current_urls + prior_urls
     resolved_model = _vllm_model_name(model_name)
@@ -615,9 +629,7 @@ def generate_comparison_text(
             {
                 "findings_text": findings_text,
                 "current_manifest": _format_slice_manifest(current_slices, offset=0),
-                "prior_manifest": _format_slice_manifest(
-                    prior_slices, offset=len(current_slices)
-                ),
+                "prior_manifest": _format_slice_manifest(prior_slices, offset=len(current_slices)),
                 "time_delta_days": str(time_delta_days) if time_delta_days is not None else "",
             },
         )
@@ -660,15 +672,11 @@ def generate_comparison_text(
             metadata["json_error"] = parse_error or "no_json_object"
 
         if _schema_strict() and not metadata.get("json_schema_valid"):
-            raise RuntimeError(
-                f"Schema validation failed: {metadata.get('json_error', 'unknown')}"
-            )
+            raise RuntimeError(f"Schema validation failed: {metadata.get('json_error', 'unknown')}")
 
         latency_ms = int((time.monotonic() - start_time) * 1000)
         confidence = _env_float("VLLM_DEFAULT_CONFIDENCE", 0.0)
-        summary_text = (
-            comparison_payload.get("summary_change") if comparison_payload else raw_text
-        )
+        summary_text = comparison_payload.get("summary_change") if comparison_payload else raw_text
         if comparison_payload:
             metadata["comparison_output"] = comparison_payload
         return (
@@ -749,7 +757,7 @@ async def generate_impression_stream(
                     line = raw_line.strip()
                     if not line or not line.startswith("data:"):
                         continue
-                    data_str = line[len("data:"):].strip()
+                    data_str = line[len("data:") :].strip()
                     if data_str == "[DONE]":
                         break
                     try:

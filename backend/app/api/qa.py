@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..deps import get_db, require_admin, require_radiologist_or_admin
+from ..deps import get_db, require_admin
 from ..mock_logic import utc_now
 from ..models import QARule
 

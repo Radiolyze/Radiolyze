@@ -139,9 +139,6 @@ def test_create_access_token_and_decode():
 # RBAC enforcement tests (AUTH_REQUIRED=true)
 # ---------------------------------------------------------------------------
 
-import os  # noqa: E402
-from unittest.mock import patch  # noqa: E402
-
 
 def _login_as(client, username: str, password: str) -> str:
     """Helper: log in and return the JWT the backend set as an HttpOnly cookie.

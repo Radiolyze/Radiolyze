@@ -199,8 +199,9 @@ def _run_scheduled_drift() -> None:
 
     db = SessionLocal()
     try:
-        compute_drift_snapshot(db, window_days=window_days,
-                               baseline_days=baseline_days, persist=True)
+        compute_drift_snapshot(
+            db, window_days=window_days, baseline_days=baseline_days, persist=True
+        )
         logger.info("Scheduled drift snapshot created (window=%dd)", window_days)
     except Exception:
         logger.exception("Scheduled drift snapshot failed")
@@ -226,10 +227,7 @@ def _setup_pgvector() -> None:
         with engine.connect() as conn:
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             conn.execute(
-                text(
-                    f"ALTER TABLE guidelines"
-                    f" ADD COLUMN IF NOT EXISTS embedding vector({dim})"
-                )
+                text(f"ALTER TABLE guidelines ADD COLUMN IF NOT EXISTS embedding vector({dim})")
             )
             conn.commit()
     except Exception:

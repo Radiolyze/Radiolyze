@@ -60,9 +60,7 @@ class ReportService:
     # Serialization
     # ------------------------------------------------------------------
     @staticmethod
-    def serialize(
-        report: Report, inference_job: InferenceJob | None = None
-    ) -> ReportResponse:
+    def serialize(report: Report, inference_job: InferenceJob | None = None) -> ReportResponse:
         return ReportResponse(
             id=report.id,
             study_id=report.study_id,
@@ -105,17 +103,13 @@ class ReportService:
     def get(self, report_id: str) -> Report | None:
         return self.db.get(Report, report_id)
 
-    def list(
-        self, *, status: str | None = None, limit: int = 50, offset: int = 0
-    ) -> list[Report]:
+    def list(self, *, status: str | None = None, limit: int = 50, offset: int = 0) -> list[Report]:
         query = self.db.query(Report)
         if status:
             query = query.filter(Report.status == status)
         return query.order_by(Report.created_at.desc()).offset(offset).limit(limit).all()
 
-    def list_by_patient(
-        self, patient_id: str, *, limit: int = 20, offset: int = 0
-    ) -> list[Report]:
+    def list_by_patient(self, patient_id: str, *, limit: int = 20, offset: int = 0) -> list[Report]:
         return (
             self.db.query(Report)
             .filter(Report.patient_id == patient_id)

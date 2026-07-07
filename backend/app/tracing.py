@@ -66,9 +66,7 @@ def setup_tracing(service_name: str) -> None:
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-        resource = Resource.create(
-            {SERVICE_NAME: os.getenv("OTEL_SERVICE_NAME", service_name)}
-        )
+        resource = Resource.create({SERVICE_NAME: os.getenv("OTEL_SERVICE_NAME", service_name)})
         provider = TracerProvider(resource=resource)
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
         trace.set_tracer_provider(provider)
