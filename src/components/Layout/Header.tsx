@@ -112,6 +112,7 @@ export function Header() {
                   variant="ghost"
                   size="icon"
                   onClick={cycleTheme}
+                  aria-label={`Theme: ${themeLabel}`}
                 >
                   <ThemeIcon className="h-5 w-5" />
                 </Button>
@@ -127,6 +128,7 @@ export function Header() {
                   size="icon"
                   className="relative"
                   onClick={() => setNotificationsOpen(true)}
+                  aria-label={t('header.notifications')}
                 >
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
@@ -143,7 +145,7 @@ export function Header() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/batch">
-                  <Button variant="ghost" size="icon" className={navLinkClass('/batch')}>
+                  <Button variant="ghost" size="icon" className={navLinkClass('/batch')} aria-label={t('navigation.batch')}>
                     <LayoutGrid className="h-5 w-5" />
                   </Button>
                 </Link>
@@ -155,7 +157,7 @@ export function Header() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/training">
-                  <Button variant="ghost" size="icon" className={navLinkClass('/training')}>
+                  <Button variant="ghost" size="icon" className={navLinkClass('/training')} aria-label="Training Export">
                     <GraduationCap className="h-5 w-5" />
                   </Button>
                 </Link>
@@ -167,7 +169,7 @@ export function Header() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/history">
-                  <Button variant="ghost" size="icon" className={navLinkClass('/history')}>
+                  <Button variant="ghost" size="icon" className={navLinkClass('/history')} aria-label={t('navigation.history')}>
                     <History className="h-5 w-5" />
                   </Button>
                 </Link>
@@ -179,7 +181,7 @@ export function Header() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/settings">
-                  <Button variant="ghost" size="icon" className={navLinkClass('/settings')}>
+                  <Button variant="ghost" size="icon" className={navLinkClass('/settings')} aria-label={t('navigation.settings')}>
                     <Settings className="h-5 w-5" />
                   </Button>
                 </Link>
@@ -190,7 +192,7 @@ export function Header() {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
+                <Button variant="ghost" size="icon" className="rounded-full" aria-label={displayName}>
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center ring-1 ring-primary/20 hover:ring-primary/40 transition-all">
                     <User className="h-4 w-4 text-primary" />
                   </div>

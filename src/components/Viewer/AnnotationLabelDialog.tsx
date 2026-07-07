@@ -84,6 +84,7 @@ export function AnnotationLabelDialog({
               placeholder="z.B. Rundlicher Nodulus 1.2cm"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional: focuses the label input when the dialog opens
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && label.trim()) {
