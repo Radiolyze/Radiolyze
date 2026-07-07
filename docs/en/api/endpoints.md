@@ -6,7 +6,11 @@ All routes are served by the FastAPI orchestrator under the prefix `/api/v1` (ex
 
 `GET /api/v1/health`
 
-- Aggregated health check (database, Redis, optional vLLM, MedASR, Orthanc)
+- Shallow, public liveness check (`{"status": "ok"}`). No auth, no downstream calls — used by the Docker healthcheck and deployment smoke test.
+
+`GET /api/v1/health/detailed`
+
+- Authenticated deep readiness check: per-service breakdown (database, Redis, optional vLLM, MedASR, segmenter, Orthanc), probed concurrently.
 
 ## Auth
 

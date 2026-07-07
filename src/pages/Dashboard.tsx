@@ -88,7 +88,7 @@ export default function Dashboard() {
     queryKey: ['dashboard'],
     queryFn: async () => {
       const [health, metrics] = await Promise.all([
-        apiClient.get<HealthResponse>('/api/v1/health'),
+        apiClient.get<HealthResponse>('/api/v1/health/detailed'),
         apiClient.get<Metrics>('/api/v1/metrics'),
       ]);
       return { health, metrics };

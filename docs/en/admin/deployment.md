@@ -153,8 +153,10 @@ curl -u orthanc:orthanc http://localhost:8042/api/system
 Expected response from backend health:
 
 ```json
-{"status": "ok", "version": "..."}
+{"status": "ok"}
 ```
+
+For a per-service breakdown (database, Redis, vLLM, MedASR, segmenter, Orthanc), authenticate and call `GET /api/v1/health/detailed` instead.
 
 ---
 

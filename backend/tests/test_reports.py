@@ -8,6 +8,12 @@ from unittest.mock import MagicMock, patch
 def test_health(client):
     response = client.get("/api/v1/health")
     assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_health_detailed(client):
+    response = client.get("/api/v1/health/detailed")
+    assert response.status_code == 200
     data = response.json()
     assert data["status"] in ("ok", "degraded")
     assert "services" in data

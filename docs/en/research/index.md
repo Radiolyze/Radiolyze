@@ -100,7 +100,7 @@ INFERENCE_MODEL=your-model-name               # model identifier
 curl http://localhost:8001/v1/models
 ```
 
-The backend health check at `GET /api/v1/health` also reports the inference service status.
+The authenticated backend health check at `GET /api/v1/health/detailed` also reports the inference service status.
 
 ---
 

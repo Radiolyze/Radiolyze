@@ -7,7 +7,7 @@ import uuid
 from typing import Any
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import annotations as annotations_api
@@ -26,6 +26,7 @@ from .api import (
     ws,
 )
 from .db import Base, engine
+from .deps import get_current_user
 from .rate_limiter import RateLimiter
 from .tracing import instrument_fastapi, set_current_span_attribute, setup_tracing
 from .ws_events import run_ws_bridge
@@ -40,7 +41,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Orchestrator API", version="0.1.0")
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    """App lifespan: replaces the deprecated `@app.on_event` startup/shutdown hooks.
+
+    `_run_startup`/`_run_shutdown` are defined further down in this module;
+    that's fine since they're only looked up when the server actually starts,
+    by which point the whole module has finished importing.
+    """
+    await _run_startup(app)
+    yield
+    await _run_shutdown(app)
+
+
+app = FastAPI(title="Orchestrator API", version="0.1.0", lifespan=lifespan)
 
 # Distributed tracing (GAP-05): opt-in via ENABLE_TRACING, no-op otherwise.
 setup_tracing("radiolyze-backend")
@@ -267,8 +282,7 @@ def _setup_pgvector() -> None:
         logger.warning("pgvector backfill enqueue failed (non-critical)")
 
 
-@app.on_event("startup")
-async def on_startup() -> None:
+async def _run_startup(app: FastAPI) -> None:
     # Validate JWT configuration before anything else
     from .auth import is_production_env, validate_jwt_config
 
@@ -350,8 +364,7 @@ async def on_startup() -> None:
         logger.info("Drift scheduler disabled (DRIFT_SCHEDULE_HOURS=0)")
 
 
-@app.on_event("shutdown")
-async def on_shutdown() -> None:
+async def _run_shutdown(app: FastAPI) -> None:
     task = getattr(app.state, "ws_bridge_task", None)
     if task:
         task.cancel()
@@ -365,58 +378,99 @@ async def on_shutdown() -> None:
 
 @app.get("/api/v1/health")
 def health() -> dict[str, Any]:
-    """Comprehensive health check for all services."""
+    """Shallow, public liveness check.
+
+    Deliberately does not touch the database, Redis, or any downstream
+    service — it only confirms the process is up and serving requests. Used
+    by the Docker healthcheck and the deployment smoke test, both of which
+    need a fast, unauthenticated 200. For a full dependency breakdown, see
+    `/api/v1/health/detailed`.
+    """
+    return {"status": "ok"}
+
+
+async def _collect_service_health() -> dict[str, dict[str, Any]]:
+    """Run all downstream dependency probes concurrently."""
     import httpx
     from sqlalchemy import text
 
     from .db import SessionLocal
     from .queue import get_redis
 
+    timeout = float(os.getenv("HEALTH_CHECK_TIMEOUT_SECONDS", "2"))
     services: dict[str, dict[str, Any]] = {}
 
-    # Database
-    try:
-        db = SessionLocal()
+    def _check_database() -> tuple[str, dict[str, Any]]:
         try:
-            db.execute(text("SELECT 1"))
-            services["database"] = {"status": "ok"}
-        finally:
-            db.close()
-    except Exception as exc:
-        services["database"] = {"status": "error", "detail": str(exc)}
-
-    # Redis
-    try:
-        r = get_redis()
-        r.ping()
-        services["redis"] = {"status": "ok"}
-    except Exception as exc:
-        services["redis"] = {"status": "error", "detail": str(exc)}
-
-    # External service checks
-    def _check_url(name: str, url: str, path: str) -> None:
-        if not url:
-            services[name] = {"status": "disabled"}
-            return
-        try:
-            resp = httpx.get(f"{url}{path}", timeout=5)
-            services[name] = {"status": "ok" if resp.status_code == 200 else "degraded"}
+            db = SessionLocal()
+            try:
+                db.execute(text("SELECT 1"))
+                return "database", {"status": "ok"}
+            finally:
+                db.close()
         except Exception as exc:
-            services[name] = {"status": "error", "detail": str(exc)}
+            return "database", {"status": "error", "detail": str(exc)}
 
-    _check_url("vllm", os.getenv("VLLM_BASE_URL", ""), "/health")
-    _check_url("medasr", os.getenv("MEDASR_BASE_URL", ""), "/health")
-    _check_url("segmenter", os.getenv("SEGMENTER_URL", ""), "/health")
+    def _check_redis() -> tuple[str, dict[str, Any]]:
+        try:
+            get_redis().ping()
+            return "redis", {"status": "ok"}
+        except Exception as exc:
+            return "redis", {"status": "error", "detail": str(exc)}
 
-    # OpenAI-compatible ASR (e.g. hwdsl2/whisper-server: /docs for liveness)
-    asr_provider = os.getenv("ASR_PROVIDER", "medasr").strip().lower()
-    if asr_provider in {"openai", "openai_audio", "whisper", "whisper_http"}:
-        openai_asr_base = (os.getenv("ASR_OPENAI_BASE_URL") or "").rstrip("/")
-        if openai_asr_base:
-            _check_url("asr_openai", openai_asr_base, "/docs")
+    async def _check_url(
+        client: httpx.AsyncClient, name: str, url: str, path: str
+    ) -> tuple[str, dict[str, Any]]:
+        if not url:
+            return name, {"status": "disabled"}
+        try:
+            resp = await client.get(f"{url}{path}", timeout=timeout)
+            return name, {"status": "ok" if resp.status_code == 200 else "degraded"}
+        except Exception as exc:
+            return name, {"status": "error", "detail": str(exc)}
 
-    orthanc_url = os.getenv("DICOM_WEB_BASE_URL", "")
-    _check_url("orthanc", orthanc_url.replace("/dicom-web", "") if orthanc_url else "", "/system")
+    async with httpx.AsyncClient() as client:
+        checks = [
+            asyncio.to_thread(_check_database),
+            asyncio.to_thread(_check_redis),
+            _check_url(client, "vllm", os.getenv("VLLM_BASE_URL", ""), "/health"),
+            _check_url(client, "medasr", os.getenv("MEDASR_BASE_URL", ""), "/health"),
+            _check_url(client, "segmenter", os.getenv("SEGMENTER_URL", ""), "/health"),
+        ]
+
+        # OpenAI-compatible ASR (e.g. hwdsl2/whisper-server: /docs for liveness)
+        asr_provider = os.getenv("ASR_PROVIDER", "medasr").strip().lower()
+        if asr_provider in {"openai", "openai_audio", "whisper", "whisper_http"}:
+            openai_asr_base = (os.getenv("ASR_OPENAI_BASE_URL") or "").rstrip("/")
+            if openai_asr_base:
+                checks.append(_check_url(client, "asr_openai", openai_asr_base, "/docs"))
+
+        orthanc_url = os.getenv("DICOM_WEB_BASE_URL", "")
+        checks.append(
+            _check_url(
+                client,
+                "orthanc",
+                orthanc_url.replace("/dicom-web", "") if orthanc_url else "",
+                "/system",
+            )
+        )
+
+        for name, result in await asyncio.gather(*checks):
+            services[name] = result
+
+    return services
+
+
+@app.get("/api/v1/health/detailed")
+async def health_detailed(user=Depends(get_current_user)) -> dict[str, Any]:
+    """Authenticated, deep readiness check with a per-service breakdown.
+
+    Exposes internal topology and downstream error details, so unlike the
+    shallow `/api/v1/health`, this requires a logged-in user. Probes run
+    concurrently instead of serially to keep the worst case bounded by the
+    slowest single check rather than their sum.
+    """
+    services = await _collect_service_health()
 
     overall = "ok"
     for svc in services.values():
