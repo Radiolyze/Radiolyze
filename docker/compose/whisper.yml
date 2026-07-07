@@ -1,7 +1,7 @@
 # Optional overlay: self-hosted Whisper (OpenAI-compatible) via hwdsl2/whisper-server.
 # Merge only when you want multilingual STT without MedASR/vLLM.
 #
-#   docker compose -f docker-compose.yml -f docker-compose.whisper.yml up --build
+#   docker compose -f docker-compose.yml -f docker/compose/whisper.yml up --build
 #
 # First model download can take several minutes; healthcheck uses start_period.
 
