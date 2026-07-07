@@ -5,6 +5,7 @@ import { Eye, EyeOff, Activity, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/services/authClient';
+import { logger } from '@/lib/logger';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -28,7 +29,8 @@ export default function Login() {
     try {
       await authClient.login({ username, password });
       navigate('/');
-    } catch {
+    } catch (err) {
+      logger.debug('[Login] Login attempt failed', err);
       setError(t('auth.invalidCredentials'));
       triggerShake();
     } finally {

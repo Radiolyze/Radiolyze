@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { RefObject, Dispatch, SetStateAction } from 'react';
 import type { StackViewport } from '@cornerstonejs/core';
 import type { ViewerToolId } from '@/types/viewer';
+import { logger } from '@/lib/logger';
 
 interface UseViewerResetOptions {
   stackViewportRef: RefObject<StackViewport | null>;
@@ -34,8 +35,9 @@ export const useViewerReset = ({
         if (viewport.getCurrentImageId?.()) {
           viewport.resetProperties();
         }
-      } catch {
+      } catch (err) {
         // Image data not yet loaded
+        logger.debug('[useViewerReset] Failed to reset properties', err);
       }
     }
 

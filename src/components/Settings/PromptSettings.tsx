@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { promptClient } from '@/services/promptClient';
 import type { PromptList, PromptTemplate, PromptType } from '@/types/prompts';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 const promptOrder: PromptType[] = ['system', 'summary', 'impression'];
 
@@ -44,7 +45,7 @@ export function PromptSettings() {
         impression: response.prompts.find((prompt) => prompt.promptType === 'impression')?.templateText ?? '',
       });
     } catch (error) {
-      console.warn('Failed to load prompt templates', error);
+      logger.warn('Failed to load prompt templates', error);
       toast.error(t('prompts.loadError'));
     } finally {
       setIsLoading(false);
@@ -99,7 +100,7 @@ export function PromptSettings() {
       setDrafts((prev) => ({ ...prev, [activeTab]: updated.templateText }));
       toast.success(t('prompts.saveSuccess'));
     } catch (error) {
-      console.warn('Prompt update failed', error);
+      logger.warn('Prompt update failed', error);
       toast.error(t('prompts.saveError'));
     } finally {
       setIsSaving(null);

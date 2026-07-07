@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 const STORAGE_KEY = 'radiolyze:mesh:label-colors';
 
@@ -14,8 +15,9 @@ function readStored(): ColorMap {
     if (parsed && typeof parsed === 'object') {
       return parsed as ColorMap;
     }
-  } catch {
+  } catch (err) {
     /* corrupt JSON; fall through to empty map */
+    logger.debug('[useLabelColors] Failed to read stored label colors', err);
   }
   return {};
 }
@@ -24,8 +26,9 @@ function persist(map: ColorMap): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {
+  } catch (err) {
     /* storage full or unavailable */
+    logger.debug('[useLabelColors] Failed to persist label colors', err);
   }
 }
 

@@ -12,6 +12,7 @@ import {
 } from '@cornerstonejs/tools';
 import { initCornerstone, cornerstoneToolNames, getCornerstoneInitErrorMessage } from '@/services/cornerstone';
 import { VRT_PRESETS, VRT_VIEW_ANGLES, DEFAULT_VRT_SETTINGS, type VRTSettings, type VRTViewAngle, type VRTPreset } from '@/types/vrt';
+import { logger } from '@/lib/logger';
 
 /** Minimal VTK actor property interface (VTK.js types not shipped by Cornerstone). */
 interface VTKActorProperty {
@@ -118,7 +119,7 @@ export const useVRTViewport = ({
       
       viewport.render();
     } catch (e) {
-      console.warn('Failed to apply transfer function:', e);
+      logger.warn('Failed to apply transfer function:', e);
     }
   }, [volumeViewport]);
 
@@ -165,7 +166,7 @@ export const useVRTViewport = ({
       
       volumeViewport.render();
     } catch (e) {
-      console.warn('Failed to set view angle:', e);
+      logger.warn('Failed to set view angle:', e);
     }
   }, [volumeViewport]);
 
@@ -177,7 +178,7 @@ export const useVRTViewport = ({
       volumeViewport.resetCamera();
       volumeViewport.render();
     } catch (e) {
-      console.warn('Failed to reset camera:', e);
+      logger.warn('Failed to reset camera:', e);
     }
   }, [volumeViewport]);
 
@@ -203,7 +204,7 @@ export const useVRTViewport = ({
       
       volumeViewport.render();
     } catch (e) {
-      console.warn('Failed to apply VRT settings:', e);
+      logger.warn('Failed to apply VRT settings:', e);
     }
   }, [volumeViewport]);
 
@@ -323,7 +324,7 @@ export const useVRTViewport = ({
         setIsReady(true);
 
       } catch (error) {
-        console.error('VRT initialization failed:', error);
+        logger.error('VRT initialization failed:', error);
         if (isActive) {
           onInitErrorRef.current?.(
             getCornerstoneInitErrorMessage('3D-Viewer konnte nicht initialisiert werden.', error)

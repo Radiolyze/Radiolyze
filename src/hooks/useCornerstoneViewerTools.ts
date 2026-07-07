@@ -5,6 +5,7 @@ import { Enums as ToolEnums, ToolGroupManager } from '@cornerstonejs/tools';
 import { cornerstoneToolNames } from '@/services/cornerstone';
 import type { ViewerToolId, AnnotationToolId, AllToolId } from '@/types/viewer';
 import type { WindowLevelPreset } from '@/config/viewer';
+import { logger } from '@/lib/logger';
 
 // Map viewer tool IDs to Cornerstone tool names
 // Note: 'window' is an alias for 'windowLevel' (used in user preferences)
@@ -51,7 +52,7 @@ export const useCornerstoneViewerTools = ({
 
       const selectedTool = allToolNameMap[tool];
       if (!selectedTool) {
-        console.warn(`[useCornerstoneViewerTools] Unknown tool: ${tool}`);
+        logger.warn(`[useCornerstoneViewerTools] Unknown tool: ${tool}`);
         return;
       }
 
@@ -65,8 +66,9 @@ export const useCornerstoneViewerTools = ({
           } else {
             toolGroup.setToolPassive(toolName, { removeAllBindings: true });
           }
-        } catch {
+        } catch (err) {
           // Tool may not be added to this group
+          logger.debug('[useCornerstoneViewerTools] Failed to set tool state', toolName, err);
         }
       });
 
@@ -112,8 +114,9 @@ export const useCornerstoneViewerTools = ({
           },
         });
         viewport.render();
-      } catch {
+      } catch (err) {
         // Image data not yet loaded - will be applied when image loads
+        logger.debug('[useCornerstoneViewerTools] Failed to apply window/level preset', err);
       }
     },
     [presets, stackViewportRef]
@@ -135,8 +138,9 @@ export const useCornerstoneViewerTools = ({
           },
         });
         viewport.render();
-      } catch {
+      } catch (err) {
         // Image data not yet loaded - will be applied when image loads
+        logger.debug('[useCornerstoneViewerTools] Failed to apply window/level', err);
       }
     },
     [stackViewportRef]

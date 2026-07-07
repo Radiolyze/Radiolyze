@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 import { auditClient, type AuditEventResponse } from '@/services/auditClient';
 import { useStudyLookup } from '@/hooks/useStudyLookup';
 import { useWebSocket } from '@/hooks/useWebSocket';
+import { logger } from '@/lib/logger';
 
 export type NotificationType = 'report' | 'urgent' | 'system' | 'success';
 
@@ -32,7 +33,8 @@ const loadIdSet = (key: string): Set<string> => {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return new Set();
     return new Set(parsed.filter((id) => typeof id === 'string'));
-  } catch {
+  } catch (err) {
+    logger.debug('[useNotifications] Failed to read stored id set', key, err);
     return new Set();
   }
 };
@@ -41,8 +43,9 @@ const saveIdSet = (key: string, value: Set<string>) => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(key, JSON.stringify(Array.from(value)));
-  } catch {
+  } catch (err) {
     // Ignore persistence errors.
+    logger.debug('[useNotifications] Failed to persist id set', key, err);
   }
 };
 
@@ -156,7 +159,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       const response = await auditClient.listEvents({ limit });
       setEvents(response);
     } catch (error) {
-      console.warn('Failed to load notifications', error);
+      logger.warn('Failed to load notifications', error);
       setErrorMessage(t('notifications.loadFailed', { ns: 'errors' }));
       setEvents([]);
     } finally {

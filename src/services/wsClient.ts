@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 type MessageHandler = (data: unknown) => void;
 
 // Close codes that indicate the server rejected authentication — reconnecting
@@ -70,7 +72,9 @@ export function createWsClient(options: WsClientOptions) {
       try {
         const parsed = JSON.parse(event.data);
         onMessage?.(parsed);
-      } catch {
+      } catch (err) {
+        // Non-JSON payload; pass the raw data through as-is.
+        logger.debug('[wsClient] Received non-JSON message, passing through raw', err);
         onMessage?.(event.data);
       }
     });

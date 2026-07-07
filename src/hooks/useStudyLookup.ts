@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { orthancClient } from '@/services/orthancClient';
 import type { DicomJsonRecord } from '@/services/dicomWebMapping';
 import { mapStudyRecordToPatient, mapStudyRecordToStudy } from '@/services/dicomWebMapping';
+import { logger } from '@/lib/logger';
 
 export interface StudyLookupEntry {
   studyId: string;
@@ -104,7 +105,7 @@ export function useStudyLookup(studyIds: string[]) {
           return next;
         });
       } catch (err) {
-        console.warn('Failed to load study lookup', err);
+        logger.warn('Failed to load study lookup', err);
         if (isActive) {
           setError('Studieninformationen konnten nicht geladen werden.');
         }

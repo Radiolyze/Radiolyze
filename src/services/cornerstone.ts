@@ -1,5 +1,6 @@
 import { init as initCornerstoneCore, isCornerstoneInitialized, imageLoader, metaData, getWebWorkerManager } from '@cornerstonejs/core';
 import * as cornerstoneDICOMImageLoader from '@cornerstonejs/dicom-image-loader';
+import { logger } from '@/lib/logger';
 
 // Re-export for use in other modules
 export { metaData, cornerstoneDICOMImageLoader };
@@ -26,7 +27,7 @@ let initialized = false;
 const shouldDebug = import.meta.env.VITE_DEBUG_CORNERSTONE === 'true';
 const log = (...args: Parameters<typeof console.log>) => {
   if (shouldDebug) {
-    console.log(...args);
+    logger.debug(...args);
   }
 };
 
@@ -130,10 +131,10 @@ export const initCornerstone = async () => {
       log('[cornerstone] Creating worker from:', WORKER_BUNDLE_PATH);
       const worker = new Worker(WORKER_BUNDLE_PATH, { type: 'module' });
       worker.addEventListener('error', (event) => {
-        console.error('[cornerstone] Worker runtime error:', event.message);
+        logger.error('[cornerstone] Worker runtime error:', event.message);
       });
       worker.addEventListener('messageerror', () => {
-        console.error('[cornerstone] Worker messageerror detected');
+        logger.error('[cornerstone] Worker messageerror detected');
       });
       return worker;
     };
@@ -144,7 +145,7 @@ export const initCornerstone = async () => {
     
     log('[cornerstone] DICOM image loader initialized with', maxWorkers, 'workers');
   } catch (err) {
-    console.warn('[cornerstone] DICOM image loader init skipped:', err);
+    logger.warn('[cornerstone] DICOM image loader init skipped:', err);
   }
 
   initCornerstoneTools();
@@ -252,9 +253,9 @@ export const prefetchWadorsMetadata = async (
       }
       log('[cornerstone] Metadata pre-fetched for', instanceId, `(${numberOfFrames} frames)`);
     } else {
-      console.warn('[cornerstone] No metaDataManager available or no metadata');
+      logger.warn('[cornerstone] No metaDataManager available or no metadata');
     }
   } catch (err) {
-    console.error('[cornerstone] Failed to prefetch metadata:', err);
+    logger.error('[cornerstone] Failed to prefetch metadata:', err);
   }
 };

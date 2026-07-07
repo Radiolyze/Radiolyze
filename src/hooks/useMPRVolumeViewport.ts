@@ -14,6 +14,7 @@ import {
 } from '@cornerstonejs/tools';
 import { initCornerstone, cornerstoneToolNames, getCornerstoneInitErrorMessage } from '@/services/cornerstone';
 import type { MPROrientation, MPRViewportState, SlabBlendMode, SlabSettings } from '@/types/mpr';
+import { logger } from '@/lib/logger';
 
 // Ensure CrosshairsTool is registered
 let crosshairsRegistered = false;
@@ -142,7 +143,7 @@ export const useMPRVolumeViewport = ({
         viewport.render();
       }
     } catch (e) {
-      console.warn('Failed to jump to slice:', e);
+      logger.warn('Failed to jump to slice:', e);
     }
   }, [volumeViewports]);
 
@@ -310,7 +311,7 @@ export const useMPRVolumeViewport = ({
         setIsReady(true);
 
       } catch (error) {
-        console.error('MPR initialization failed:', error);
+        logger.error('MPR initialization failed:', error);
         if (isActive) {
           onInitErrorRef.current?.(
             getCornerstoneInitErrorMessage('MPR-Viewer konnte nicht initialisiert werden.', error)
@@ -380,7 +381,7 @@ export const useMPRVolumeViewport = ({
         
         viewport.render();
       } catch (e) {
-        console.warn('Failed to apply slab settings:', e);
+        logger.warn('Failed to apply slab settings:', e);
       }
     });
     

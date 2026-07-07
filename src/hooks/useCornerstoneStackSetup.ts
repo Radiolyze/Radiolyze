@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { MutableRefObject, RefObject } from 'react';
 import type { StackViewport } from '@cornerstonejs/core';
 import type { AllToolId } from '@/types/viewer';
+import { logger } from '@/lib/logger';
 
 interface UseCornerstoneStackSetupOptions {
   isReady: boolean;
@@ -64,7 +65,7 @@ export const useCornerstoneStackSetup = ({
           initialParallelScaleRef.current = camera?.parallelScale ?? null;
         }
       } catch (error) {
-        console.warn('Cornerstone stack setup failed', error);
+        logger.warn('Cornerstone stack setup failed', error);
         if (isActive) {
           onError?.('Viewer konnte nicht initialisiert werden.');
         }

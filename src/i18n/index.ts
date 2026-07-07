@@ -17,6 +17,7 @@ import enViewer from './locales/en/viewer.json';
 import enBatch from './locales/en/batch.json';
 import enSettings from './locales/en/settings.json';
 import enErrors from './locales/en/errors.json';
+import { logger } from '@/lib/logger';
 
 export const defaultNS = 'common';
 export const resources = {
@@ -49,7 +50,7 @@ const getInitialLanguage = (): string => {
       }
     }
   } catch (e) {
-    console.warn('Failed to read language preference:', e);
+    logger.warn('Failed to read language preference:', e);
   }
   return 'en'; // Default to English
 };

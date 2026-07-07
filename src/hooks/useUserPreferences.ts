@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import i18n from '@/i18n';
+import { logger } from '@/lib/logger';
 
 export type UILanguage = 'de' | 'en';
 
@@ -55,7 +56,7 @@ export function useUserPreferences() {
         return { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) };
       }
     } catch (e) {
-      console.warn('Failed to load user preferences:', e);
+      logger.warn('Failed to load user preferences:', e);
     }
     return DEFAULT_PREFERENCES;
   });
@@ -65,7 +66,7 @@ export function useUserPreferences() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
     } catch (e) {
-      console.warn('Failed to save user preferences:', e);
+      logger.warn('Failed to save user preferences:', e);
     }
   }, [preferences]);
 

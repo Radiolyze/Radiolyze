@@ -1,5 +1,6 @@
 import { AUTH_USER_KEY } from '@/lib/authStorage';
 import { apiClient } from './apiClient';
+import { logger } from '@/lib/logger';
 
 export interface LoginPayload {
   username: string;
@@ -48,7 +49,8 @@ export const authClient = {
     if (!raw) return null;
     try {
       return JSON.parse(raw);
-    } catch {
+    } catch (err) {
+      logger.debug('[authClient] Failed to parse stored user, treating as logged out', err);
       return null;
     }
   },

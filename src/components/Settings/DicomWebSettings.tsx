@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+import { DEFAULT_DICOM_WEB_URL } from '@/config/dicomWeb';
 
 interface DicomWebConfig {
   url: string;
@@ -32,11 +34,12 @@ const loadConfig = (): DicomWebConfig => {
     if (stored) {
       return JSON.parse(stored);
     }
-  } catch {
-    // Ignore
+  } catch (err) {
+    // Corrupt JSON; fall through to env-based defaults.
+    logger.debug('Failed to load stored DICOMweb config', err);
   }
   return {
-    url: import.meta.env.VITE_DICOM_WEB_URL ?? 'http://localhost:8042/dicom-web',
+    url: import.meta.env.VITE_DICOM_WEB_URL ?? DEFAULT_DICOM_WEB_URL,
     username: import.meta.env.VITE_DICOM_WEB_USERNAME ?? '',
     password: import.meta.env.VITE_DICOM_WEB_PASSWORD ?? '',
   };
@@ -45,8 +48,9 @@ const loadConfig = (): DicomWebConfig => {
 const saveConfig = (config: DicomWebConfig) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  } catch {
-    // Ignore
+  } catch (err) {
+    // Storage full or unavailable; setting persists for the session only.
+    logger.debug('Failed to persist DICOMweb config', err);
   }
 };
 

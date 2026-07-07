@@ -6,6 +6,7 @@ import vtkActor from '@kitware/vtk.js/Rendering/Core/Actor';
 import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
 import vtkXMLPolyDataReader from '@kitware/vtk.js/IO/XML/XMLPolyDataReader';
 import vtkPlane from '@kitware/vtk.js/Common/DataModel/Plane';
+import { logger } from '@/lib/logger';
 
 interface VtkScene {
   fullScreen: ReturnType<typeof vtkFullScreenRenderWindow.newInstance>;
@@ -77,8 +78,9 @@ export function useMeshScene(): UseMeshSceneResult {
       actors.forEach(({ actor, mapper }) => {
         try {
           renderer.removeActor(actor);
-        } catch {
+        } catch (err) {
           /* noop */
+          logger.debug('[useMeshScene] Failed to remove actor during cleanup', err);
         }
         actor.delete?.();
         mapper.delete?.();
@@ -214,8 +216,9 @@ export function useMeshScene(): UseMeshSceneResult {
         actorsRef.current.forEach(({ mapper }) => {
           try {
             mapper.removeClippingPlane?.(plane);
-          } catch {
+          } catch (err) {
             /* mapper may have already been freed */
+            logger.debug('[useMeshScene] Failed to remove clipping plane', err);
           }
         });
         plane.delete?.();

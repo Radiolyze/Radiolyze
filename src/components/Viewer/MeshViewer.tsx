@@ -43,6 +43,7 @@ import { segmentationClient } from '@/services/segmentationClient';
 import { ViewerEmptyState } from './ViewerEmptyState';
 import { MeshNotForDiagnosticBanner } from './MeshNotForDiagnosticBanner';
 import { MeshColorPicker } from './MeshColorPicker';
+import { logger } from '@/lib/logger';
 
 interface MeshViewerProps {
   series: Series | null;
@@ -128,7 +129,7 @@ export function MeshViewer({ series, studyUid, className }: MeshViewerProps) {
         loadedLabelsRef.current.delete(label.id);
         const message = err instanceof Error ? err.message : String(err);
         setLabelErrors((current) => ({ ...current, [label.id]: message }));
-        console.error(`Failed to load mesh ${label.id}`, err);
+        logger.error(`Failed to load mesh ${label.id}`, err);
       }
     },
     [jobId, loadVtp, setColor, labelColors],

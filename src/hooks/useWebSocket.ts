@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createWsClient } from '@/services/wsClient';
 import type { AIStatus } from '@/types/radiology';
+import { logger } from '@/lib/logger';
 
 export interface ReportStatusPayload {
   asrStatus?: 'idle' | 'listening' | 'processing';
@@ -95,18 +96,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       url: wsUrl,
       onMessage: handleMessage,
       onOpen: () => {
-        console.log('[WS] Connected');
+        logger.debug('[WS] Connected');
         setIsConnected(true);
       },
       onClose: () => {
-        console.log('[WS] Disconnected');
+        logger.debug('[WS] Disconnected');
         setIsConnected(false);
       },
       onError: (event) => {
-        console.error('[WS] Error:', event);
+        logger.error('[WS] Error:', event);
       },
       onAuthFailure: () => {
-        console.error('[WS] Authentication rejected, logging out');
+        logger.error('[WS] Authentication rejected, logging out');
         localStorage.removeItem('radiolyze-auth-token');
         setIsConnected(false);
         const loginPath = '/login';

@@ -1,4 +1,6 @@
-export const DICOM_WEB_URL = import.meta.env.VITE_DICOM_WEB_URL ?? 'http://localhost:8042/dicom-web';
+import { DEFAULT_DICOM_WEB_URL } from '@/config/dicomWeb';
+
+export const DICOM_WEB_URL = import.meta.env.VITE_DICOM_WEB_URL ?? DEFAULT_DICOM_WEB_URL;
 const DICOM_WEB_INFERENCE_URL = import.meta.env.VITE_DICOM_WEB_INFERENCE_URL ?? DICOM_WEB_URL;
 const DICOM_WEB_USERNAME = import.meta.env.VITE_DICOM_WEB_USERNAME;
 const DICOM_WEB_PASSWORD = import.meta.env.VITE_DICOM_WEB_PASSWORD;
