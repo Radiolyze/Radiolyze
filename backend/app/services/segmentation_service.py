@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from ..audit import add_audit_event
 from ..mock_logic import utc_now
 from ..models import SegmentationJob
-from ..queue import get_queue
+from ..queue import default_retry, get_queue
 from ..schemas_segmentation import SegmentationCreateRequest
 from ..segmentation_client import get_job_status as segmenter_status
 from ..segmentation_client import segmentation_data_dir
@@ -96,6 +96,7 @@ class SegmentationService:
             job_timeout=self.job_timeout(),
             result_ttl=self.result_ttl(),
             failure_ttl=self.result_ttl(),
+            retry=default_retry(),
         )
 
         return job_id, queued_at

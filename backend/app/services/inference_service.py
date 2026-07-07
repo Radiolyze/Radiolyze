@@ -12,12 +12,13 @@ import os
 from collections.abc import Callable
 from typing import Any
 
+from rq.exceptions import NoSuchJobError
 from rq.job import Job
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
 from ..models import InferenceJob, Report
-from ..queue import get_queue
+from ..queue import default_retry, get_queue, get_redis
 from ..schemas import InferenceQueueResponse
 
 
@@ -45,6 +46,44 @@ class InferenceService:
         )
 
     # ------------------------------------------------------------------
+    # Idempotency
+    # ------------------------------------------------------------------
+    def find_active_duplicate(
+        self,
+        *,
+        input_hash: str | None,
+        report_id: str | None,
+        study_id: str | None,
+    ) -> Job | None:
+        """Return the in-flight RQ job for an identical, still-running request.
+
+        Resubmitting the exact same inference request (double-click, client
+        retry) while the original is still queued/started would otherwise
+        enqueue a second job and pay for a second LLM call. Dedup is
+        best-effort (a race between two near-simultaneous requests can still
+        create two jobs) rather than relying on distributed locking.
+        """
+        if not input_hash:
+            return None
+        query = self.db.query(InferenceJob).filter(
+            InferenceJob.input_hash == input_hash,
+            InferenceJob.status.in_(("queued", "started")),
+        )
+        if report_id:
+            query = query.filter(InferenceJob.report_id == report_id)
+        if study_id:
+            query = query.filter(InferenceJob.study_id == study_id)
+        existing = query.order_by(InferenceJob.queued_at.desc()).first()
+        if not existing:
+            return None
+        try:
+            return Job.fetch(existing.id, connection=get_redis())
+        except NoSuchJobError:
+            # DB row is stale (e.g. the RQ job's bookkeeping key expired) -
+            # fall through and enqueue a fresh job.
+            return None
+
+    # ------------------------------------------------------------------
     # Enqueue
     # ------------------------------------------------------------------
     def enqueue(
@@ -65,7 +104,31 @@ class InferenceService:
         audit_metadata: dict[str, Any],
     ) -> Job:
         """Enqueue a task, persist the queued job row + audit event, and bump
-        the report status. Returns the enqueued RQ job."""
+        the report status. Returns the enqueued RQ job (or a duplicate
+        in-flight job with the same input hash, see ``find_active_duplicate``).
+        """
+        duplicate = self.find_active_duplicate(
+            input_hash=input_hash, report_id=report_id, study_id=study_id
+        )
+        if duplicate is not None:
+            add_audit_event(
+                self.db,
+                event_type="inference_deduplicated",
+                actor_id=requested_by,
+                report_id=report_id,
+                study_id=study_id,
+                metadata={
+                    "job_id": duplicate.id,
+                    "original_event_type": audit_event_type,
+                    "input_hash": input_hash,
+                    **audit_metadata,
+                },
+                timestamp=queued_at,
+                source="api",
+            )
+            self.db.commit()
+            return duplicate
+
         queue = get_queue()
         job = queue.enqueue(
             task_fn,
@@ -74,6 +137,7 @@ class InferenceService:
             job_timeout=self.job_timeout(),
             result_ttl=self.result_ttl(),
             failure_ttl=self.result_ttl(),
+            retry=default_retry(),
         )
 
         self.db.add(
