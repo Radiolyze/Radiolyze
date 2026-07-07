@@ -56,6 +56,7 @@ from ..schemas import (
     ReportUpdateRequest,
 )
 from ..services import ReportService
+from ..services.exceptions import ConflictError, NotFoundError
 from ..sr import build_sr_export
 from ..utils.hashing import compute_bytes_hash, compute_input_hash, compute_text_hash
 from ..utils.inference import build_image_metadata, build_output_summary
@@ -150,86 +151,22 @@ async def update_report(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user),
 ) -> ReportResponse:
+    # Actor is the authenticated caller when available; the client-supplied
+    # payload.actor_id is only a dev-mode fallback (AUTH_REQUIRED=false),
+    # since it cannot otherwise be trusted to identify who made the change.
+    actor_id = current_user.id if current_user is not None else payload.actor_id
+    if_match = request.headers.get("If-Match") if request else None
+
     def _update_sync() -> tuple[ReportResponse, bool, str | None]:
-        report = db.get(Report, report_id)
-        if not report:
-            raise HTTPException(status_code=404, detail="Report not found")
-
-        # Actor is the authenticated caller when available; the client-supplied
-        # payload.actor_id is only a dev-mode fallback (AUTH_REQUIRED=false),
-        # since it cannot otherwise be trusted to identify who made the change.
-        actor_id = current_user.id if current_user is not None else payload.actor_id
-
-        # ETag-based conflict detection (If-Match header)
-        if request:
-            if_match = request.headers.get("If-Match")
-            if if_match:
-                current_etag = f'"{_compute_etag(report)}"'
-                if if_match.strip('" ') != current_etag.strip('" '):
-                    raise HTTPException(
-                        status_code=409,
-                        detail="Conflict: report was modified by another user",
-                    )
-
-        # Capture old state for revision
-        old_findings = report.findings_text
-        old_impression = report.impression_text
-
-        updated_fields: list[str] = []
-        if payload.findings_text is not None:
-            report.findings_text = payload.findings_text
-            updated_fields.append("findings_text")
-        if payload.impression_text is not None:
-            report.impression_text = payload.impression_text
-            updated_fields.append("impression_text")
-        if payload.status is not None:
-            report.status = payload.status
-            updated_fields.append("status")
-        if payload.structured_data is not None:
-            report.structured_data = payload.structured_data
-            updated_fields.append("structured_data")
-
-        should_broadcast = False
-        qa_status: str | None = None
-        if updated_fields:
-            now = utc_now()
-
-            # Create revision snapshot of previous state
-            revision = ReportRevision(
-                report_id=report_id,
-                findings_text=old_findings,
-                impression_text=old_impression,
-                changed_by=actor_id,
-                changed_at=now,
+        service = ReportService(db)
+        try:
+            report, should_broadcast, qa_status = service.update(
+                report_id, payload, actor_id=actor_id, if_match=if_match
             )
-            db.add(revision)
-
-            report.updated_at = now
-            if payload.status is None and report.status in {"pending", "in_progress"}:
-                report.status = "draft"
-
-            event_type = "report_updated"
-            if "findings_text" in updated_fields:
-                event_type = "findings_saved"
-            elif "impression_text" in updated_fields:
-                event_type = "report_amended"
-
-            add_audit_event(
-                db,
-                event_type=event_type,
-                actor_id=actor_id,
-                report_id=report_id,
-                study_id=report.study_id,
-                metadata={"updated_fields": updated_fields},
-                timestamp=now,
-                source="api",
-            )
-            db.commit()
-            db.refresh(report)
-
-            if payload.status is None and report.status in {"draft", "pending", "in_progress"}:
-                should_broadcast = True
-                qa_status = report.qa_status
+        except NotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Report not found") from exc
+        except ConflictError as exc:
+            raise HTTPException(status_code=409, detail=f"Conflict: {exc}") from exc
 
         inference_job = _get_latest_inference_job(db, report.id)
         return _serialize_report(report, inference_job), should_broadcast, qa_status
@@ -252,31 +189,14 @@ async def finalize_report(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> ReportResponse:
-    report = db.get(Report, report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
-    if report.status == "finalized":
-        raise HTTPException(status_code=409, detail="Report already finalized")
+    service = ReportService(db)
+    try:
+        report = service.finalize(report_id, payload)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Report not found") from exc
+    except ConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    now = utc_now()
-    approver = payload.approved_by or payload.signature
-    report.status = "finalized"
-    report.approved_at = now
-    report.approved_by = approver
-    report.updated_at = now
-
-    add_audit_event(
-        db,
-        event_type="report_approved",
-        actor_id=approver,
-        report_id=report_id,
-        study_id=report.study_id,
-        metadata={"signature": approver} if approver else None,
-        timestamp=now,
-        source="api",
-    )
-    db.commit()
-    db.refresh(report)
     inference_job = _get_latest_inference_job(db, report.id)
 
     await broadcast_status(
