@@ -16,7 +16,7 @@ interface UseCornerstoneStackViewportOptions {
 }
 
 interface UseCornerstoneStackViewportResult {
-  viewportRef: React.RefObject<HTMLDivElement>;
+  viewportRef: React.RefObject<HTMLDivElement | null>;
   stackViewportRef: React.RefObject<StackViewport | null>;
   toolGroupRef: React.RefObject<ReturnType<typeof ToolGroupManager.getToolGroup> | null>;
   initialParallelScaleRef: React.RefObject<number | null>;

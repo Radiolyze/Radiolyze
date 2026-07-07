@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type JSX } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowRight, ArrowUp, CheckCircle2, Sparkles } from 'lucide-react';
 

@@ -41,7 +41,7 @@ interface UseVRTViewportOptions {
 }
 
 interface UseVRTViewportResult {
-  viewportRef: React.RefObject<HTMLDivElement>;
+  viewportRef: React.RefObject<HTMLDivElement | null>;
   volumeViewport: VolumeViewport3D | null;
   isInitializing: boolean;
   isReady: boolean;
