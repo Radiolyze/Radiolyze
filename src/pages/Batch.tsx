@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -102,9 +103,6 @@ export default function Batch() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processProgress, setProcessProgress] = useState(0);
   const [reports, setReports] = useState<BatchReport[]>([]);
-  const [reportPayloads, setReportPayloads] = useState<ReportResponsePayload[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const statusConfig: Record<ReportStatus, { label: string; color: string; icon: typeof FileText }> = {
     pending: { label: tCommon('status.pending'), color: 'bg-muted text-muted-foreground', icon: Clock },
@@ -128,8 +126,18 @@ export default function Batch() {
     stat: { label: tCommon('priority.stat'), color: 'bg-destructive/10 text-destructive border-destructive' },
   };
 
+  const {
+    data: reportPayloads = [],
+    isLoading,
+    isError: hasReportsError,
+  } = useQuery<ReportResponsePayload[]>({
+    queryKey: ['batchReports'],
+    queryFn: () => reportClient.listReports({ limit: 200 }),
+  });
+  const errorMessage = hasReportsError ? t('table.loading') : null;
+
   const studyIds = useMemo(
-    () => Array.from(new Set((Array.isArray(reportPayloads) ? reportPayloads : []).map((report) => report.study_id).filter(Boolean))),
+    () => Array.from(new Set(reportPayloads.map((report) => report.study_id).filter(Boolean))),
     [reportPayloads]
   );
   const { studyMap, error: studyLookupError } = useStudyLookup(studyIds);
@@ -139,36 +147,6 @@ export default function Batch() {
       toast.error(studyLookupError);
     }
   }, [studyLookupError]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadReports = async () => {
-      setIsLoading(true);
-      setErrorMessage(null);
-      try {
-        const response = await reportClient.listReports({ limit: 200 });
-        if (!isActive) return;
-        setReportPayloads(Array.isArray(response) ? response : []);
-      } catch (error) {
-        console.warn('Failed to load reports', error);
-        if (isActive) {
-          setErrorMessage(t('table.loading'));
-          setReportPayloads([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadReports();
-
-    return () => {
-      isActive = false;
-    };
-  }, [t]);
 
   const mappedReports = useMemo(() => {
     const safePayloads = Array.isArray(reportPayloads) ? reportPayloads : [];
