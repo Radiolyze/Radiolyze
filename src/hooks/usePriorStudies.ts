@@ -1,18 +1,22 @@
-import { useEffect, useState } from 'react';
-import type { Series, Study } from '@/types/radiology';
-import { orthancClient } from '@/services/orthancClient';
-import type { DicomJsonRecord } from '@/services/dicomWebMapping';
-import { mapSeriesRecordToSeries, mapStudyRecordToPatient, mapStudyRecordToStudy } from '@/services/dicomWebMapping';
-import { logger } from '@/lib/logger';
+import { useEffect, useState } from "react";
+import type { Series, Study } from "@/types/radiology";
+import { orthancClient } from "@/services/orthancClient";
+import type { DicomJsonRecord } from "@/services/dicomWebMapping";
+import {
+  mapSeriesRecordToSeries,
+  mapStudyRecordToPatient,
+  mapStudyRecordToStudy,
+} from "@/services/dicomWebMapping";
+import { logger } from "@/lib/logger";
 
 const buildFallbackStudy = (studyId: string, patientId: string): Study => ({
   id: studyId,
   patientId,
   accessionNumber: `ACC-${studyId.slice(0, 8)}`,
-  modality: 'CT',
+  modality: "CT",
   studyDate: new Date().toISOString().slice(0, 10),
-  studyDescription: 'Unbekannte Studie',
-  referringPhysician: 'Unbekannt',
+  studyDescription: "Unbekannte Studie",
+  referringPhysician: "Unbekannt",
   series: [],
 });
 
@@ -40,7 +44,11 @@ interface PriorStudiesState {
   error: string | null;
 }
 
-export function usePriorStudies(patientId?: string, currentStudyId?: string, limit = 12): PriorStudiesState {
+export function usePriorStudies(
+  patientId?: string,
+  currentStudyId?: string,
+  limit = 12,
+): PriorStudiesState {
   const [priorStudies, setPriorStudies] = useState<Study[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,14 +77,14 @@ export function usePriorStudies(patientId?: string, currentStudyId?: string, lim
 
         const mapped = await Promise.all(
           records.map(async (record) => {
-            if (typeof record === 'string') {
+            if (typeof record === "string") {
               const studyId = record;
               return buildFallbackStudy(studyId, patientId);
             }
 
             const dicomRecord = record as DicomJsonRecord;
             const studyId =
-              (dicomRecord['0020000D']?.Value?.[0] as string | undefined) ||
+              (dicomRecord["0020000D"]?.Value?.[0] as string | undefined) ||
               (dicomRecord.StudyInstanceUID as string | undefined);
             if (!studyId) return null;
 
@@ -88,7 +96,7 @@ export function usePriorStudies(patientId?: string, currentStudyId?: string, lim
             const study = mapStudyRecordToStudy(dicomRecord, patient.id, studyId);
             const series = await resolveSeries(study.id);
             return { ...study, series };
-          })
+          }),
         );
 
         const filtered = mapped
@@ -100,9 +108,9 @@ export function usePriorStudies(patientId?: string, currentStudyId?: string, lim
           setPriorStudies(filtered);
         }
       } catch (err) {
-        logger.warn('Failed to load prior studies', err);
+        logger.warn("Failed to load prior studies", err);
         if (isActive) {
-          setError('Voruntersuchungen konnten nicht geladen werden.');
+          setError("Voruntersuchungen konnten nicht geladen werden.");
           setPriorStudies([]);
         }
       } finally {

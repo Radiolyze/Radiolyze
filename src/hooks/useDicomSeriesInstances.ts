@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
-import type { ImageRef, Series } from '@/types/radiology';
+import { useEffect, useState } from "react";
+import type { ImageRef, Series } from "@/types/radiology";
 import {
   buildWadorsFrameUrl,
   buildWadorsImageId,
   buildWadorsRenderedFrameUrl,
   orthancClient,
-} from '@/services/orthancClient';
-import { prefetchWadorsMetadata } from '@/services/cornerstone';
-import { logger } from '@/lib/logger';
+} from "@/services/orthancClient";
+import { prefetchWadorsMetadata } from "@/services/cornerstone";
+import { logger } from "@/lib/logger";
 
 export type InstanceInfo = {
   instanceId: string;
@@ -46,22 +46,22 @@ const readNumberArray = (values: unknown[] | undefined) => {
   if (!values) return undefined;
   const parsed = values
     .map(readNumber)
-    .filter((entry): entry is number => typeof entry === 'number');
+    .filter((entry): entry is number => typeof entry === "number");
   return parsed.length > 0 ? parsed : undefined;
 };
 
 export const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
-  if (typeof entry === 'string') {
+  if (typeof entry === "string") {
     return { instanceId: entry, frames: 1 };
   }
 
-  if (!entry || typeof entry !== 'object') {
+  if (!entry || typeof entry !== "object") {
     return null;
   }
 
   const record = entry as Record<string, unknown>;
   const instanceId =
-    (getTagValue(record, '00080018') as string | undefined) ||
+    (getTagValue(record, "00080018") as string | undefined) ||
     (record.SOPInstanceUID as string | undefined) ||
     (record.instanceId as string | undefined) ||
     (record.id as string | undefined) ||
@@ -72,23 +72,19 @@ export const getInstanceInfo = (entry: unknown): InstanceInfo | null => {
   }
 
   const rawFrames =
-    getTagValue(record, '00280008') ||
-    record.numberOfFrames ||
-    record.NumberOfFrames;
+    getTagValue(record, "00280008") || record.numberOfFrames || record.NumberOfFrames;
   const parsedFrames = readNumber(rawFrames);
   const frames = parsedFrames && parsedFrames > 1 ? parsedFrames : 1;
 
-  const rawInstanceNumber =
-    getTagValue(record, '00200013') ||
-    record.InstanceNumber;
+  const rawInstanceNumber = getTagValue(record, "00200013") || record.InstanceNumber;
   const parsedInstanceNumber = readNumber(rawInstanceNumber);
 
-  const pixelSpacing = readNumberArray(getTagValues(record, '00280030'));
-  const sliceThickness = readNumber(getTagValue(record, '00180050'));
-  const spacingBetweenSlices = readNumber(getTagValue(record, '00180088'));
-  const imageOrientation = readNumberArray(getTagValues(record, '00200037'));
-  const imagePosition = readNumberArray(getTagValues(record, '00200032'));
-  const sliceLocation = readNumber(getTagValue(record, '00201041'));
+  const pixelSpacing = readNumberArray(getTagValues(record, "00280030"));
+  const sliceThickness = readNumber(getTagValue(record, "00180050"));
+  const spacingBetweenSlices = readNumber(getTagValue(record, "00180088"));
+  const imageOrientation = readNumberArray(getTagValues(record, "00200037"));
+  const imagePosition = readNumberArray(getTagValues(record, "00200032"));
+  const sliceLocation = readNumber(getTagValue(record, "00201041"));
 
   return {
     instanceId,
@@ -165,7 +161,7 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
           .filter((item): item is InstanceInfo => Boolean(item));
 
         if (parsed.length === 0) {
-          throw new Error('Keine DICOM Instanzen gefunden');
+          throw new Error("Keine DICOM Instanzen gefunden");
         }
 
         parsed.sort(compareInstancesBySlice);
@@ -173,8 +169,8 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
         // Pre-fetch metadata for all unique instances (required for WADORS decoding)
         await Promise.all(
           parsed.map((instance) =>
-            prefetchWadorsMetadata(series.studyId, series.id, instance.instanceId, instance.frames)
-          )
+            prefetchWadorsMetadata(series.studyId, series.id, instance.instanceId, instance.frames),
+          ),
         );
 
         const ids: string[] = [];
@@ -184,9 +180,24 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
         parsed.forEach((instance) => {
           for (let index = 0; index < instance.frames; index += 1) {
             const frameIndex = index + 1;
-            const imageId = buildWadorsImageId(series.studyId, series.id, instance.instanceId, frameIndex);
-            const wadoUrl = buildWadorsFrameUrl(series.studyId, series.id, instance.instanceId, frameIndex);
-            const inferenceUrl = buildWadorsRenderedFrameUrl(series.studyId, series.id, instance.instanceId, frameIndex);
+            const imageId = buildWadorsImageId(
+              series.studyId,
+              series.id,
+              instance.instanceId,
+              frameIndex,
+            );
+            const wadoUrl = buildWadorsFrameUrl(
+              series.studyId,
+              series.id,
+              instance.instanceId,
+              frameIndex,
+            );
+            const inferenceUrl = buildWadorsRenderedFrameUrl(
+              series.studyId,
+              series.id,
+              instance.instanceId,
+              frameIndex,
+            );
             ids.push(imageId);
             refs.push({
               studyId: series.studyId,
@@ -215,9 +226,9 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
           setImageRefs(refs);
         }
       } catch (err) {
-        logger.warn('Failed to load DICOM instances', err);
+        logger.warn("Failed to load DICOM instances", err);
         if (isActive) {
-          setError('DICOM-Daten konnten nicht geladen werden.');
+          setError("DICOM-Daten konnten nicht geladen werden.");
           setImageIds([]);
           setImageRefs([]);
         }

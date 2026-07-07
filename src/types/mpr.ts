@@ -1,6 +1,6 @@
-import type { Enums } from '@cornerstonejs/core';
+import type { Enums } from "@cornerstonejs/core";
 
-export type MPROrientation = 'axial' | 'sagittal' | 'coronal';
+export type MPROrientation = "axial" | "sagittal" | "coronal";
 
 export interface MPRViewportConfig {
   id: string;
@@ -31,13 +31,13 @@ export interface MPRCrosshairPosition {
 }
 
 export const MPR_VIEWPORTS: MPRViewportConfig[] = [
-  { id: 'axial', orientation: 'axial', label: 'Axial', color: 'hsl(var(--chart-1))' },
-  { id: 'sagittal', orientation: 'sagittal', label: 'Sagittal', color: 'hsl(var(--chart-2))' },
-  { id: 'coronal', orientation: 'coronal', label: 'Coronal', color: 'hsl(var(--chart-3))' },
+  { id: "axial", orientation: "axial", label: "Axial", color: "hsl(var(--chart-1))" },
+  { id: "sagittal", orientation: "sagittal", label: "Sagittal", color: "hsl(var(--chart-2))" },
+  { id: "coronal", orientation: "coronal", label: "Coronal", color: "hsl(var(--chart-3))" },
 ];
 
 // Slab/MIP rendering modes
-export type SlabBlendMode = 'composite' | 'mip' | 'minip' | 'average';
+export type SlabBlendMode = "composite" | "mip" | "minip" | "average";
 
 export interface SlabSettings {
   thickness: number; // in mm
@@ -45,17 +45,17 @@ export interface SlabSettings {
 }
 
 export const SLAB_BLEND_MODE_LABELS: Record<SlabBlendMode, string> = {
-  composite: 'Normal',
-  mip: 'MIP',
-  minip: 'MinIP',
-  average: 'Average',
+  composite: "Normal",
+  mip: "MIP",
+  minip: "MinIP",
+  average: "Average",
 };
 
 export const SLAB_THICKNESS_PRESETS = [
-  { value: 0, label: 'Dünn (0mm)' },
-  { value: 5, label: '5mm' },
-  { value: 10, label: '10mm' },
-  { value: 20, label: '20mm' },
-  { value: 50, label: '50mm' },
-  { value: 100, label: '100mm' },
+  { value: 0, label: "Dünn (0mm)" },
+  { value: 5, label: "5mm" },
+  { value: 10, label: "10mm" },
+  { value: 20, label: "20mm" },
+  { value: 50, label: "50mm" },
+  { value: 100, label: "100mm" },
 ];

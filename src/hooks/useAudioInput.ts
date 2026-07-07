@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from "react";
 
-type RecordingStatus = 'idle' | 'recording' | 'processing';
+type RecordingStatus = "idle" | "recording" | "processing";
 
 interface UseAudioInputReturn {
   status: RecordingStatus;
@@ -9,12 +9,12 @@ interface UseAudioInputReturn {
 }
 
 export function useAudioInput(): UseAudioInputReturn {
-  const [status, setStatus] = useState<RecordingStatus>('idle');
+  const [status, setStatus] = useState<RecordingStatus>("idle");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   const start = useCallback(async () => {
-    if (status !== 'idle') return;
+    if (status !== "idle") return;
 
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mediaRecorder = new MediaRecorder(stream);
@@ -25,13 +25,13 @@ export function useAudioInput(): UseAudioInputReturn {
       chunksRef.current.push(event.data);
     };
     mediaRecorder.start();
-    setStatus('recording');
+    setStatus("recording");
   }, [status]);
 
   const stop = useCallback(async () => {
-    if (!mediaRecorderRef.current || status !== 'recording') return null;
+    if (!mediaRecorderRef.current || status !== "recording") return null;
 
-    setStatus('processing');
+    setStatus("processing");
     const recorder = mediaRecorderRef.current;
 
     const blob = await new Promise<Blob>((resolve) => {
@@ -44,7 +44,7 @@ export function useAudioInput(): UseAudioInputReturn {
     });
 
     mediaRecorderRef.current = null;
-    setStatus('idle');
+    setStatus("idle");
     return blob;
   }, [status]);
 

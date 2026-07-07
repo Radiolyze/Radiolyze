@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { BookOpen, ChevronDown, Search, Loader2, AlertTriangle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
-import { guidelinesClient, type GuidelinePayload } from '@/services/guidelinesClient';
-import { logger } from '@/lib/logger';
+import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { BookOpen, ChevronDown, Search, Loader2, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
+import { guidelinesClient, type GuidelinePayload } from "@/services/guidelinesClient";
+import { logger } from "@/lib/logger";
 
 interface GuidelinesPanelProps {
   /** Pre-populate the search with findings context (e.g. extracted keywords). */
@@ -44,7 +44,7 @@ function GuidelineCard({ guideline }: { guideline: GuidelinePayload }) {
 
       <p className="text-xs text-muted-foreground leading-relaxed">
         {expanded ? guideline.body : snippet}
-        {hasMore && !expanded && '…'}
+        {hasMore && !expanded && "…"}
       </p>
 
       {hasMore && (
@@ -52,17 +52,21 @@ function GuidelineCard({ guideline }: { guideline: GuidelinePayload }) {
           className="text-[10px] text-primary hover:underline"
           onClick={() => setExpanded((v) => !v)}
         >
-          {expanded ? 'Weniger anzeigen' : 'Mehr anzeigen'}
+          {expanded ? "Weniger anzeigen" : "Mehr anzeigen"}
         </button>
       )}
 
       {guideline.keywords && (
         <div className="flex flex-wrap gap-1">
-          {guideline.keywords.split(',').map((kw) => kw.trim()).filter(Boolean).map((kw) => (
-            <Badge key={kw} variant="secondary" className="text-[10px] px-1.5 py-0">
-              {kw}
-            </Badge>
-          ))}
+          {guideline.keywords
+            .split(",")
+            .map((kw) => kw.trim())
+            .filter(Boolean)
+            .map((kw) => (
+              <Badge key={kw} variant="secondary" className="text-[10px] px-1.5 py-0">
+                {kw}
+              </Badge>
+            ))}
         </div>
       )}
     </div>
@@ -70,12 +74,12 @@ function GuidelineCard({ guideline }: { guideline: GuidelinePayload }) {
 }
 
 export function GuidelinesPanel({
-  findingsContext = '',
+  findingsContext = "",
   isOpenByDefault = false,
 }: GuidelinesPanelProps) {
-  const { t } = useTranslation('report');
+  const { t } = useTranslation("report");
   const [isOpen, setIsOpen] = useState(isOpenByDefault);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<GuidelinePayload[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,8 +95,8 @@ export function GuidelinesPanel({
       setResults(data);
       setHasLoaded(true);
     } catch (err) {
-      logger.debug('[GuidelinesPanel] Semantic search failed', err);
-      setError('Leitlinien konnten nicht geladen werden.');
+      logger.debug("[GuidelinesPanel] Semantic search failed", err);
+      setError("Leitlinien konnten nicht geladen werden.");
       setResults([]);
     } finally {
       setLoading(false);
@@ -119,7 +123,7 @@ export function GuidelinesPanel({
         <div className="px-4 py-3 border-t border-border flex items-center justify-between hover:bg-accent/50 transition-colors">
           <div className="flex items-center gap-2 text-sm font-medium">
             <BookOpen className="h-4 w-4" />
-            <span>{t('guidelines.title', 'Leitlinien')}</span>
+            <span>{t("guidelines.title", "Leitlinien")}</span>
             {results.length > 0 && (
               <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
                 {results.length}
@@ -128,8 +132,8 @@ export function GuidelinesPanel({
           </div>
           <ChevronDown
             className={cn(
-              'h-4 w-4 text-muted-foreground transition-transform',
-              isOpen && 'rotate-180'
+              "h-4 w-4 text-muted-foreground transition-transform",
+              isOpen && "rotate-180",
             )}
           />
         </div>

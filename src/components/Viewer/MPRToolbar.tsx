@@ -1,40 +1,23 @@
-import { useTranslation } from 'react-i18next';
-import { 
-  Move, 
-  ZoomIn, 
-  Sun, 
-  Crosshair, 
-  RotateCcw,
-  Maximize2,
-  Grid2X2,
-  Layers,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useTranslation } from "react-i18next";
+import { Move, ZoomIn, Sun, Crosshair, RotateCcw, Maximize2, Grid2X2, Layers } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import type { MPROrientation, SlabBlendMode, SlabSettings } from '@/types/mpr';
-import { SLAB_BLEND_MODE_LABELS, SLAB_THICKNESS_PRESETS } from '@/types/mpr';
-import type { WindowLevelPreset } from '@/config/viewer';
+} from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import type { MPROrientation, SlabBlendMode, SlabSettings } from "@/types/mpr";
+import { SLAB_BLEND_MODE_LABELS, SLAB_THICKNESS_PRESETS } from "@/types/mpr";
+import type { WindowLevelPreset } from "@/config/viewer";
 
-export type MPRToolId = 'crosshairs' | 'pan' | 'zoom' | 'windowLevel';
+export type MPRToolId = "crosshairs" | "pan" | "zoom" | "windowLevel";
 
 interface MPRToolbarProps {
   activeTool: MPRToolId;
@@ -51,13 +34,13 @@ interface MPRToolbarProps {
 }
 
 const tools: { id: MPRToolId; icon: typeof Crosshair; label: string; shortcut?: string }[] = [
-  { id: 'crosshairs', icon: Crosshair, label: 'Crosshairs', shortcut: 'C' },
-  { id: 'pan', icon: Move, label: 'Pan', shortcut: 'P' },
-  { id: 'zoom', icon: ZoomIn, label: 'Zoom', shortcut: 'Z' },
-  { id: 'windowLevel', icon: Sun, label: 'Fenster/Level', shortcut: 'W' },
+  { id: "crosshairs", icon: Crosshair, label: "Crosshairs", shortcut: "C" },
+  { id: "pan", icon: Move, label: "Pan", shortcut: "P" },
+  { id: "zoom", icon: ZoomIn, label: "Zoom", shortcut: "Z" },
+  { id: "windowLevel", icon: Sun, label: "Fenster/Level", shortcut: "W" },
 ];
 
-const blendModes: SlabBlendMode[] = ['composite', 'mip', 'minip', 'average'];
+const blendModes: SlabBlendMode[] = ["composite", "mip", "minip", "average"];
 
 export function MPRToolbar({
   activeTool,
@@ -72,8 +55,8 @@ export function MPRToolbar({
   slabSettings,
   onSlabSettingsChange,
 }: MPRToolbarProps) {
-  const { t } = useTranslation('viewer');
-  
+  const { t } = useTranslation("viewer");
+
   const isSlabActive = slabSettings.thickness > 0;
 
   return (
@@ -87,8 +70,8 @@ export function MPRToolbar({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'h-8 w-8',
-                  activeTool === tool.id && 'bg-primary text-primary-foreground'
+                  "h-8 w-8",
+                  activeTool === tool.id && "bg-primary text-primary-foreground",
                 )}
                 onClick={() => onToolSelect(tool.id)}
                 aria-label={tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label}
@@ -125,9 +108,9 @@ export function MPRToolbar({
       <Popover>
         <PopoverTrigger asChild>
           <Button
-            variant={isSlabActive ? 'default' : 'outline'}
+            variant={isSlabActive ? "default" : "outline"}
             size="sm"
-            className={cn('h-8 gap-1.5', isSlabActive && 'bg-primary text-primary-foreground')}
+            className={cn("h-8 gap-1.5", isSlabActive && "bg-primary text-primary-foreground")}
           >
             <Layers className="h-4 w-4" />
             {isSlabActive ? (
@@ -147,7 +130,7 @@ export function MPRToolbar({
                 {blendModes.map((mode) => (
                   <Button
                     key={mode}
-                    variant={slabSettings.blendMode === mode ? 'default' : 'outline'}
+                    variant={slabSettings.blendMode === mode ? "default" : "outline"}
                     size="sm"
                     className="flex-1 h-7 text-xs"
                     onClick={() => onSlabSettingsChange({ ...slabSettings, blendMode: mode })}
@@ -165,7 +148,9 @@ export function MPRToolbar({
               </div>
               <Slider
                 value={[slabSettings.thickness]}
-                onValueChange={([value]) => onSlabSettingsChange({ ...slabSettings, thickness: value })}
+                onValueChange={([value]) =>
+                  onSlabSettingsChange({ ...slabSettings, thickness: value })
+                }
                 min={0}
                 max={100}
                 step={1}
@@ -175,10 +160,12 @@ export function MPRToolbar({
                 {SLAB_THICKNESS_PRESETS.map((preset) => (
                   <Button
                     key={preset.value}
-                    variant={slabSettings.thickness === preset.value ? 'secondary' : 'ghost'}
+                    variant={slabSettings.thickness === preset.value ? "secondary" : "ghost"}
                     size="sm"
                     className="h-6 text-xs px-2"
-                    onClick={() => onSlabSettingsChange({ ...slabSettings, thickness: preset.value })}
+                    onClick={() =>
+                      onSlabSettingsChange({ ...slabSettings, thickness: preset.value })
+                    }
                   >
                     {preset.label}
                   </Button>
@@ -188,9 +175,15 @@ export function MPRToolbar({
 
             <div className="pt-2 border-t border-border">
               <div className="text-xs text-muted-foreground space-y-1">
-                <p><strong>MIP:</strong> Maximum Intensity Projection (Gefäße, Knochen)</p>
-                <p><strong>MinIP:</strong> Minimum Intensity Projection (Lunge, Atemwege)</p>
-                <p><strong>Average:</strong> Mittlere Intensität (Rauschreduktion)</p>
+                <p>
+                  <strong>MIP:</strong> Maximum Intensity Projection (Gefäße, Knochen)
+                </p>
+                <p>
+                  <strong>MinIP:</strong> Minimum Intensity Projection (Lunge, Atemwege)
+                </p>
+                <p>
+                  <strong>Average:</strong> Mittlere Intensität (Rauschreduktion)
+                </p>
               </div>
             </div>
           </div>
@@ -208,18 +201,12 @@ export function MPRToolbar({
             className="h-8 w-8"
             onClick={() => onMaximize(isMaximized ? null : activeViewport)}
             disabled={!activeViewport && !isMaximized}
-            aria-label={isMaximized ? 'Alle Ansichten' : 'Maximieren'}
+            aria-label={isMaximized ? "Alle Ansichten" : "Maximieren"}
           >
-            {isMaximized ? (
-              <Grid2X2 className="h-4 w-4" />
-            ) : (
-              <Maximize2 className="h-4 w-4" />
-            )}
+            {isMaximized ? <Grid2X2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>
-          {isMaximized ? 'Alle Ansichten' : 'Maximieren'}
-        </TooltipContent>
+        <TooltipContent>{isMaximized ? "Alle Ansichten" : "Maximieren"}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
@@ -229,14 +216,12 @@ export function MPRToolbar({
             size="icon"
             className="h-8 w-8"
             onClick={onReset}
-            aria-label={`${t('tools.reset')} (R)`}
+            aria-label={`${t("tools.reset")} (R)`}
           >
             <RotateCcw className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>
-          {t('tools.reset')} (R)
-        </TooltipContent>
+        <TooltipContent>{t("tools.reset")} (R)</TooltipContent>
       </Tooltip>
     </div>
   );

@@ -1,4 +1,4 @@
-import { ReportWorkspace } from './ReportWorkspace';
+import { ReportWorkspace } from "./ReportWorkspace";
 
 const Index = () => <ReportWorkspace />;
 

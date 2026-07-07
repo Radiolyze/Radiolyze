@@ -1,6 +1,6 @@
-import { Link2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import type { SyncOptions } from '@/types/viewerSync';
+import { Link2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import type { SyncOptions } from "@/types/viewerSync";
 
 interface ComparisonSyncIndicatorProps {
   isVisible: boolean;
@@ -13,13 +13,13 @@ export function ComparisonSyncIndicator({ isVisible, syncOptions }: ComparisonSy
   }
 
   const labels = [
-    syncOptions.frames && 'Frames',
-    syncOptions.zoom && 'Zoom',
-    syncOptions.pan && 'Pan',
-    syncOptions.windowLevel && 'WL',
+    syncOptions.frames && "Frames",
+    syncOptions.zoom && "Zoom",
+    syncOptions.pan && "Pan",
+    syncOptions.windowLevel && "WL",
   ]
     .filter(Boolean)
-    .join(', ');
+    .join(", ");
 
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">

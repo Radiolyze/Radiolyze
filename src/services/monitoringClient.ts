@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from "./apiClient";
 
 export interface DriftWindow {
   start: string;
@@ -60,20 +60,24 @@ export interface DriftSnapshot {
 }
 
 export const monitoringClient = {
-  async getDriftReport(windowDays = 7, baselineDays?: number, persist = false): Promise<DriftReport> {
+  async getDriftReport(
+    windowDays = 7,
+    baselineDays?: number,
+    persist = false,
+  ): Promise<DriftReport> {
     const params = new URLSearchParams({ window_days: String(windowDays) });
-    if (baselineDays) params.set('baseline_days', String(baselineDays));
-    if (persist) params.set('persist', 'true');
+    if (baselineDays) params.set("baseline_days", String(baselineDays));
+    if (persist) params.set("persist", "true");
     return apiClient.get<DriftReport>(`/api/v1/monitoring/drift?${params}`);
   },
 
   async listDriftSnapshots(limit = 50, offset = 0): Promise<DriftSnapshot[]> {
     return apiClient.get<DriftSnapshot[]>(
-      `/api/v1/monitoring/drift/snapshots?limit=${limit}&offset=${offset}`
+      `/api/v1/monitoring/drift/snapshots?limit=${limit}&offset=${offset}`,
     );
   },
 
   async getMetrics() {
-    return apiClient.get<Record<string, unknown>>('/api/v1/metrics');
+    return apiClient.get<Record<string, unknown>>("/api/v1/metrics");
   },
 };

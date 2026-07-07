@@ -1,5 +1,5 @@
-import { type LucideIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { type LucideIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface EmptyStateProps {
   icon?: LucideIcon;
@@ -12,9 +12,17 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export function EmptyState({ icon: Icon, title, description, action, className = '' }: EmptyStateProps) {
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  className = "",
+}: EmptyStateProps) {
   return (
-    <div className={`flex flex-col items-center justify-center gap-3 py-16 px-6 text-center animate-fade-in ${className}`}>
+    <div
+      className={`flex flex-col items-center justify-center gap-3 py-16 px-6 text-center animate-fade-in ${className}`}
+    >
       {Icon && (
         <div className="p-4 rounded-2xl bg-muted/40">
           <Icon className="h-10 w-10 text-muted-foreground/40" />
@@ -22,9 +30,7 @@ export function EmptyState({ icon: Icon, title, description, action, className =
       )}
       <div className="space-y-1">
         <p className="text-sm font-medium text-foreground/80">{title}</p>
-        {description && (
-          <p className="text-xs text-muted-foreground max-w-xs">{description}</p>
-        )}
+        {description && <p className="text-xs text-muted-foreground max-w-xs">{description}</p>}
       </div>
       {action && (
         <Button variant="outline" size="sm" onClick={action.onClick} className="mt-1">

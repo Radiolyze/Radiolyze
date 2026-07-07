@@ -1,12 +1,12 @@
-import { useState, useCallback } from 'react';
-import type { AIStatus, ImageRef, QACheck, QAStatus, Report } from '@/types/radiology';
-import { mockAIImpressions, mockQAChecks } from '@/data/mockData';
-import { ApiError } from '@/services/apiClient';
-import { impressionClient } from '@/services/impressionClient';
-import { inferenceClient } from '@/services/inferenceClient';
-import { qaClient } from '@/services/qaClient';
-import { reportClient } from '@/services/reportClient';
-import { mapReportResponse } from '@/services/reportMapping';
+import { useState, useCallback } from "react";
+import type { AIStatus, ImageRef, QACheck, QAStatus, Report } from "@/types/radiology";
+import { mockAIImpressions, mockQAChecks } from "@/data/mockData";
+import { ApiError } from "@/services/apiClient";
+import { impressionClient } from "@/services/impressionClient";
+import { inferenceClient } from "@/services/inferenceClient";
+import { qaClient } from "@/services/qaClient";
+import { reportClient } from "@/services/reportClient";
+import { mapReportResponse } from "@/services/reportMapping";
 import {
   extractInferenceCompletedAt,
   extractInferenceConfidence,
@@ -18,11 +18,15 @@ import {
   extractInferenceSummary,
   awaitInferenceResult,
   selectInferenceImageRefs,
-} from '@/hooks/reporting/inferenceHelpers';
-import { buildChecksFromService, getQaStatus, getWarningsFromChecks } from '@/hooks/reporting/qaHelpers';
-import { logger } from '@/lib/logger';
+} from "@/hooks/reporting/inferenceHelpers";
+import {
+  buildChecksFromService,
+  getQaStatus,
+  getWarningsFromChecks,
+} from "@/hooks/reporting/qaHelpers";
+import { logger } from "@/lib/logger";
 
-const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
+const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === "true";
 
 interface GenerateImpressionOptions {
   reportId?: string;
@@ -77,380 +81,464 @@ export function useReport(initialReport?: Report): UseReportReturn {
   const [error, setError] = useState<string | null>(null);
   const [qaChecks, setQaChecks] = useState<QACheck[]>(allowMockFallback ? mockQAChecks : []);
 
-  const updateFindings = useCallback(async (text: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      if (report?.id) {
-        const response = await reportClient.updateReport(report.id, {
-          findingsText: text,
-        });
-        setReport(prev => (prev ? mapReportResponse(response, prev) : mapReportResponse(response)));
-      } else {
-        setReport(prev => prev ? {
-          ...prev,
-          findingsText: text,
-          updatedAt: new Date().toISOString(),
-          status: 'draft',
-        } : null);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update findings';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [report?.id]);
-
-  const updateImpression = useCallback(async (text: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      if (report?.id) {
-        const response = await reportClient.updateReport(report.id, {
-          impressionText: text,
-        });
-        setReport(prev => (prev ? mapReportResponse(response, prev) : mapReportResponse(response)));
-      } else {
-        setReport(prev => prev ? {
-          ...prev,
-          impressionText: text,
-          updatedAt: new Date().toISOString(),
-        } : null);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update impression';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [report?.id]);
-
-  const generateImpression = useCallback(async (
-    findings: string,
-    options?: GenerateImpressionOptions
-  ): Promise<string> => {
-    setIsLoading(true);
-
-    const reportId = options?.reportId ?? report?.id;
-    const studyId = options?.studyId ?? report?.studyId;
-    const onStatus = options?.onStatus;
-    const requestedBy = options?.requestedBy;
-    const modelVersion = options?.modelVersion;
-    const selectedCurrentRefs = selectInferenceImageRefs(options?.imageRefs, {
-      includeAllFrames: options?.includeAllFrames,
-      role: 'current',
-    });
-    const selectedPriorRefs = selectInferenceImageRefs(options?.priorImageRefs, {
-      includeAllFrames: options?.includeAllFrames,
-      role: 'prior',
-    });
-    const selectedImageRefs = [...selectedCurrentRefs, ...selectedPriorRefs];
-    const imageUrls = selectedImageRefs.map((ref) => ref.inferenceUrl ?? ref.wadoUrl);
-    let succeeded = false;
-
-    try {
-      onStatus?.('queued');
-      const queueResponse = await inferenceClient.queueInference({
-        reportId,
-        studyId,
-        findingsText: findings,
-        imageUrls,
-        imageRefs: selectedImageRefs,
-        requestedBy,
-        modelVersion,
-      });
-
-      const jobId = queueResponse.job_id ?? queueResponse.jobId;
-      if (!jobId) {
-        throw new Error('Inference queue missing job id');
-      }
-
-      setReport(prev => prev ? {
-        ...prev,
-        inferenceJobId: jobId,
-        inferenceStatus: queueResponse.status ?? 'queued',
-        inferenceModelVersion: queueResponse.model_version ?? queueResponse.modelVersion ?? modelVersion,
-        inferenceImageRefs: selectedImageRefs,
-      } : null);
-
-      const result = await awaitInferenceResult(jobId, reportId, onStatus);
-      const summary = extractInferenceSummary(result);
-      if (!summary) {
-        throw new Error('Inference result missing summary');
-      }
-
-      const confidence = extractInferenceConfidence(result);
-      const inferredModel = extractInferenceModel(result);
-      const completedAt = extractInferenceCompletedAt(result);
-      const inferredImageRefs = extractInferenceImageRefs(result);
-      const evidenceIndices = extractInferenceEvidenceIndices(result);
-      const inferenceFindings = extractInferenceFindings(result);
-      const inferenceMetadata = extractInferenceMetadata(result);
-
-      setReport(prev => prev ? {
-        ...prev,
-        impressionText: summary,
-        updatedAt: new Date().toISOString(),
-        status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
-        inferenceStatus: 'finished',
-        inferenceSummary: summary,
-        inferenceConfidence: confidence,
-        inferenceModelVersion: inferredModel ?? prev.inferenceModelVersion ?? modelVersion,
-        inferenceCompletedAt: completedAt,
-        inferenceImageRefs: inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
-        inferenceEvidenceIndices: evidenceIndices ?? prev.inferenceEvidenceIndices,
-        inferenceFindings: inferenceFindings ?? prev.inferenceFindings,
-        inferenceMetadata: inferenceMetadata ?? prev.inferenceMetadata,
-      } : null);
-
-      succeeded = true;
-      return summary;
-    } catch (error) {
-      // Only fall back to impression service for transient/network errors.
-      // Client errors (4xx) indicate a bug or bad input — don't mask them.
-      const isClientError = error instanceof ApiError && error.status >= 400 && error.status < 500;
-      if (isClientError) {
-        throw error;
-      }
-
-      logger.warn('Inference queue failed, falling back to impression service.', error);
-      setReport(prev => prev ? {
-        ...prev,
-        inferenceStatus: 'failed',
-      } : null);
-      onStatus?.('processing');
+  const updateFindings = useCallback(
+    async (text: string) => {
+      setIsLoading(true);
+      setError(null);
 
       try {
-        const response = await impressionClient.generateImpression({
+        if (report?.id) {
+          const response = await reportClient.updateReport(report.id, {
+            findingsText: text,
+          });
+          setReport((prev) =>
+            prev ? mapReportResponse(response, prev) : mapReportResponse(response),
+          );
+        } else {
+          setReport((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  findingsText: text,
+                  updatedAt: new Date().toISOString(),
+                  status: "draft",
+                }
+              : null,
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to update findings";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [report?.id],
+  );
+
+  const updateImpression = useCallback(
+    async (text: string) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        if (report?.id) {
+          const response = await reportClient.updateReport(report.id, {
+            impressionText: text,
+          });
+          setReport((prev) =>
+            prev ? mapReportResponse(response, prev) : mapReportResponse(response),
+          );
+        } else {
+          setReport((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  impressionText: text,
+                  updatedAt: new Date().toISOString(),
+                }
+              : null,
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to update impression";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [report?.id],
+  );
+
+  const generateImpression = useCallback(
+    async (findings: string, options?: GenerateImpressionOptions): Promise<string> => {
+      setIsLoading(true);
+
+      const reportId = options?.reportId ?? report?.id;
+      const studyId = options?.studyId ?? report?.studyId;
+      const onStatus = options?.onStatus;
+      const requestedBy = options?.requestedBy;
+      const modelVersion = options?.modelVersion;
+      const selectedCurrentRefs = selectInferenceImageRefs(options?.imageRefs, {
+        includeAllFrames: options?.includeAllFrames,
+        role: "current",
+      });
+      const selectedPriorRefs = selectInferenceImageRefs(options?.priorImageRefs, {
+        includeAllFrames: options?.includeAllFrames,
+        role: "prior",
+      });
+      const selectedImageRefs = [...selectedCurrentRefs, ...selectedPriorRefs];
+      const imageUrls = selectedImageRefs.map((ref) => ref.inferenceUrl ?? ref.wadoUrl);
+      let succeeded = false;
+
+      try {
+        onStatus?.("queued");
+        const queueResponse = await inferenceClient.queueInference({
           reportId,
+          studyId,
           findingsText: findings,
+          imageUrls,
+          imageRefs: selectedImageRefs,
+          requestedBy,
+          modelVersion,
         });
 
-        const impression = response.text?.trim() || '';
-        if (!impression) {
-          throw new Error('Impression response missing text');
+        const jobId = queueResponse.job_id ?? queueResponse.jobId;
+        if (!jobId) {
+          throw new Error("Inference queue missing job id");
         }
 
-        setReport(prev => prev ? {
-          ...prev,
-          impressionText: impression,
-          updatedAt: new Date().toISOString(),
-          status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
-        } : null);
+        setReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                inferenceJobId: jobId,
+                inferenceStatus: queueResponse.status ?? "queued",
+                inferenceModelVersion:
+                  queueResponse.model_version ?? queueResponse.modelVersion ?? modelVersion,
+                inferenceImageRefs: selectedImageRefs,
+              }
+            : null,
+        );
 
-        succeeded = true;
-        return impression;
-      } catch (fallbackError) {
-        if (!allowMockFallback) {
-          logger.warn('Impression service failed.', fallbackError);
-          onStatus?.('error');
-          throw fallbackError;
+        const result = await awaitInferenceResult(jobId, reportId, onStatus);
+        const summary = extractInferenceSummary(result);
+        if (!summary) {
+          throw new Error("Inference result missing summary");
         }
 
-        logger.warn('Impression service failed, using mock impression.', fallbackError);
+        const confidence = extractInferenceConfidence(result);
+        const inferredModel = extractInferenceModel(result);
+        const completedAt = extractInferenceCompletedAt(result);
+        const inferredImageRefs = extractInferenceImageRefs(result);
+        const evidenceIndices = extractInferenceEvidenceIndices(result);
+        const inferenceFindings = extractInferenceFindings(result);
+        const inferenceMetadata = extractInferenceMetadata(result);
 
-        await wait(1200 + Math.random() * 800);
-        const impressionIndex = Math.floor(Math.random() * mockAIImpressions.length);
-        const impression = mockAIImpressions[impressionIndex];
-
-        setReport(prev => prev ? {
-          ...prev,
-          impressionText: impression,
-          updatedAt: new Date().toISOString(),
-          status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
-        } : null);
+        setReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                impressionText: summary,
+                updatedAt: new Date().toISOString(),
+                status:
+                  prev.status === "pending" || prev.status === "in_progress"
+                    ? "draft"
+                    : prev.status,
+                inferenceStatus: "finished",
+                inferenceSummary: summary,
+                inferenceConfidence: confidence,
+                inferenceModelVersion: inferredModel ?? prev.inferenceModelVersion ?? modelVersion,
+                inferenceCompletedAt: completedAt,
+                inferenceImageRefs:
+                  inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
+                inferenceEvidenceIndices: evidenceIndices ?? prev.inferenceEvidenceIndices,
+                inferenceFindings: inferenceFindings ?? prev.inferenceFindings,
+                inferenceMetadata: inferenceMetadata ?? prev.inferenceMetadata,
+              }
+            : null,
+        );
 
         succeeded = true;
-        return impression;
+        return summary;
+      } catch (error) {
+        // Only fall back to impression service for transient/network errors.
+        // Client errors (4xx) indicate a bug or bad input — don't mask them.
+        const isClientError =
+          error instanceof ApiError && error.status >= 400 && error.status < 500;
+        if (isClientError) {
+          throw error;
+        }
+
+        logger.warn("Inference queue failed, falling back to impression service.", error);
+        setReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                inferenceStatus: "failed",
+              }
+            : null,
+        );
+        onStatus?.("processing");
+
+        try {
+          const response = await impressionClient.generateImpression({
+            reportId,
+            findingsText: findings,
+          });
+
+          const impression = response.text?.trim() || "";
+          if (!impression) {
+            throw new Error("Impression response missing text");
+          }
+
+          setReport((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  impressionText: impression,
+                  updatedAt: new Date().toISOString(),
+                  status:
+                    prev.status === "pending" || prev.status === "in_progress"
+                      ? "draft"
+                      : prev.status,
+                }
+              : null,
+          );
+
+          succeeded = true;
+          return impression;
+        } catch (fallbackError) {
+          if (!allowMockFallback) {
+            logger.warn("Impression service failed.", fallbackError);
+            onStatus?.("error");
+            throw fallbackError;
+          }
+
+          logger.warn("Impression service failed, using mock impression.", fallbackError);
+
+          await wait(1200 + Math.random() * 800);
+          const impressionIndex = Math.floor(Math.random() * mockAIImpressions.length);
+          const impression = mockAIImpressions[impressionIndex];
+
+          setReport((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  impressionText: impression,
+                  updatedAt: new Date().toISOString(),
+                  status:
+                    prev.status === "pending" || prev.status === "in_progress"
+                      ? "draft"
+                      : prev.status,
+                }
+              : null,
+          );
+
+          succeeded = true;
+          return impression;
+        }
+      } finally {
+        setIsLoading(false);
+        if (succeeded) {
+          onStatus?.("idle");
+        }
       }
-    } finally {
-      setIsLoading(false);
-      if (succeeded) {
-        onStatus?.('idle');
-      }
-    }
-  }, [report?.id, report?.studyId]);
+    },
+    [report?.id, report?.studyId],
+  );
 
-  const analyzeImages = useCallback(async (
-    options?: AnalyzeImagesOptions
-  ): Promise<AnalyzeImagesResult> => {
-    setIsLoading(true);
+  const analyzeImages = useCallback(
+    async (options?: AnalyzeImagesOptions): Promise<AnalyzeImagesResult> => {
+      setIsLoading(true);
 
-    const reportId = options?.reportId ?? report?.id;
-    const studyId = options?.studyId ?? report?.studyId;
-    const onStatus = options?.onStatus;
-    const requestedBy = options?.requestedBy;
-    const modelVersion = options?.modelVersion;
-    const selectedCurrentRefs = selectInferenceImageRefs(options?.imageRefs, {
-      includeAllFrames: options?.includeAllFrames,
-      role: 'current',
-    });
-    const selectedPriorRefs = selectInferenceImageRefs(options?.priorImageRefs, {
-      includeAllFrames: options?.includeAllFrames,
-      role: 'prior',
-    });
-    const selectedImageRefs = [...selectedCurrentRefs, ...selectedPriorRefs];
-    const imageUrls = selectedImageRefs.map((ref) => ref.inferenceUrl ?? ref.wadoUrl);
-    let succeeded = false;
-
-    try {
-      onStatus?.('queued');
-      // Call inference without findings - the AI will analyze the images directly
-      const queueResponse = await inferenceClient.queueInference({
-        reportId,
-        studyId,
-        findingsText: '', // Empty - let AI generate from images
-        imageUrls,
-        imageRefs: selectedImageRefs,
-        requestedBy,
-        modelVersion,
+      const reportId = options?.reportId ?? report?.id;
+      const studyId = options?.studyId ?? report?.studyId;
+      const onStatus = options?.onStatus;
+      const requestedBy = options?.requestedBy;
+      const modelVersion = options?.modelVersion;
+      const selectedCurrentRefs = selectInferenceImageRefs(options?.imageRefs, {
+        includeAllFrames: options?.includeAllFrames,
+        role: "current",
       });
+      const selectedPriorRefs = selectInferenceImageRefs(options?.priorImageRefs, {
+        includeAllFrames: options?.includeAllFrames,
+        role: "prior",
+      });
+      const selectedImageRefs = [...selectedCurrentRefs, ...selectedPriorRefs];
+      const imageUrls = selectedImageRefs.map((ref) => ref.inferenceUrl ?? ref.wadoUrl);
+      let succeeded = false;
 
-      const jobId = queueResponse.job_id ?? queueResponse.jobId;
-      if (!jobId) {
-        throw new Error('Inference queue missing job id');
+      try {
+        onStatus?.("queued");
+        // Call inference without findings - the AI will analyze the images directly
+        const queueResponse = await inferenceClient.queueInference({
+          reportId,
+          studyId,
+          findingsText: "", // Empty - let AI generate from images
+          imageUrls,
+          imageRefs: selectedImageRefs,
+          requestedBy,
+          modelVersion,
+        });
+
+        const jobId = queueResponse.job_id ?? queueResponse.jobId;
+        if (!jobId) {
+          throw new Error("Inference queue missing job id");
+        }
+
+        setReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                inferenceJobId: jobId,
+                inferenceStatus: queueResponse.status ?? "queued",
+                inferenceModelVersion:
+                  queueResponse.model_version ?? queueResponse.modelVersion ?? modelVersion,
+                inferenceImageRefs: selectedImageRefs,
+              }
+            : null,
+        );
+
+        const result = await awaitInferenceResult(jobId, reportId, onStatus);
+        const summary = extractInferenceSummary(result);
+        if (!summary) {
+          throw new Error("Inference result missing summary");
+        }
+
+        const confidence = extractInferenceConfidence(result);
+        const inferredModel = extractInferenceModel(result);
+        const completedAt = extractInferenceCompletedAt(result);
+        const inferredImageRefs = extractInferenceImageRefs(result);
+        const evidenceIndices = extractInferenceEvidenceIndices(result);
+        const inferenceFindings = extractInferenceFindings(result);
+        const inferenceMetadata = extractInferenceMetadata(result);
+
+        // Use the AI-generated summary as both findings and impression
+        setReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                findingsText: summary,
+                impressionText: summary,
+                updatedAt: new Date().toISOString(),
+                status:
+                  prev.status === "pending" || prev.status === "in_progress"
+                    ? "draft"
+                    : prev.status,
+                inferenceStatus: "finished",
+                inferenceSummary: summary,
+                inferenceConfidence: confidence,
+                inferenceModelVersion: inferredModel ?? prev.inferenceModelVersion ?? modelVersion,
+                inferenceCompletedAt: completedAt,
+                inferenceImageRefs:
+                  inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
+                inferenceEvidenceIndices: evidenceIndices ?? prev.inferenceEvidenceIndices,
+                inferenceFindings: inferenceFindings ?? prev.inferenceFindings,
+                inferenceMetadata: inferenceMetadata ?? prev.inferenceMetadata,
+              }
+            : null,
+        );
+
+        succeeded = true;
+        return { findings: summary, impression: summary };
+      } catch (error) {
+        logger.warn("Image analysis failed.", error);
+        setReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                inferenceStatus: "failed",
+              }
+            : null,
+        );
+        onStatus?.("error");
+        throw error;
+      } finally {
+        setIsLoading(false);
+        if (succeeded) {
+          onStatus?.("idle");
+        }
       }
+    },
+    [report?.id, report?.studyId],
+  );
 
-      setReport(prev => prev ? {
-        ...prev,
-        inferenceJobId: jobId,
-        inferenceStatus: queueResponse.status ?? 'queued',
-        inferenceModelVersion: queueResponse.model_version ?? queueResponse.modelVersion ?? modelVersion,
-        inferenceImageRefs: selectedImageRefs,
-      } : null);
+  const runQAChecks = useCallback(
+    async (input?: { reportId?: string; findingsText?: string; impressionText?: string }) => {
+      setReport((prev) => (prev ? { ...prev, qaStatus: "checking" } : null));
 
-      const result = await awaitInferenceResult(jobId, reportId, onStatus);
-      const summary = extractInferenceSummary(result);
-      if (!summary) {
-        throw new Error('Inference result missing summary');
-      }
+      const payload = {
+        reportId: input?.reportId ?? report?.id,
+        findingsText: input?.findingsText ?? report?.findingsText ?? "",
+        impressionText: input?.impressionText ?? report?.impressionText ?? "",
+      };
 
-      const confidence = extractInferenceConfidence(result);
-      const inferredModel = extractInferenceModel(result);
-      const completedAt = extractInferenceCompletedAt(result);
-      const inferredImageRefs = extractInferenceImageRefs(result);
-      const evidenceIndices = extractInferenceEvidenceIndices(result);
-      const inferenceFindings = extractInferenceFindings(result);
-      const inferenceMetadata = extractInferenceMetadata(result);
-
-      // Use the AI-generated summary as both findings and impression
-      setReport(prev => prev ? {
-        ...prev,
-        findingsText: summary,
-        impressionText: summary,
-        updatedAt: new Date().toISOString(),
-        status: prev.status === 'pending' || prev.status === 'in_progress' ? 'draft' : prev.status,
-        inferenceStatus: 'finished',
-        inferenceSummary: summary,
-        inferenceConfidence: confidence,
-        inferenceModelVersion: inferredModel ?? prev.inferenceModelVersion ?? modelVersion,
-        inferenceCompletedAt: completedAt,
-        inferenceImageRefs: inferredImageRefs ?? prev.inferenceImageRefs ?? selectedImageRefs,
-        inferenceEvidenceIndices: evidenceIndices ?? prev.inferenceEvidenceIndices,
-        inferenceFindings: inferenceFindings ?? prev.inferenceFindings,
-        inferenceMetadata: inferenceMetadata ?? prev.inferenceMetadata,
-      } : null);
-
-      succeeded = true;
-      return { findings: summary, impression: summary };
-    } catch (error) {
-      logger.warn('Image analysis failed.', error);
-      setReport(prev => prev ? {
-        ...prev,
-        inferenceStatus: 'failed',
-      } : null);
-      onStatus?.('error');
-      throw error;
-    } finally {
-      setIsLoading(false);
-      if (succeeded) {
-        onStatus?.('idle');
-      }
-    }
-  }, [report?.id, report?.studyId]);
-
-  const runQAChecks = useCallback(async (input?: {
-    reportId?: string;
-    findingsText?: string;
-    impressionText?: string;
-  }) => {
-    setReport(prev => prev ? { ...prev, qaStatus: 'checking' } : null);
-
-    const payload = {
-      reportId: input?.reportId ?? report?.id,
-      findingsText: input?.findingsText ?? report?.findingsText ?? '',
-      impressionText: input?.impressionText ?? report?.impressionText ?? '',
-    };
-
-    try {
-      const response = await qaClient.runChecks(payload);
-      const checks = buildChecksFromService(response);
-      const warnings = getWarningsFromChecks(checks, response);
-      const status = getQaStatus(checks, response);
-
-      setQaChecks(checks);
-      setReport(prev => prev ? {
-        ...prev,
-        qaStatus: status,
-        qaWarnings: warnings,
-      } : null);
-
-      return { status, checks, warnings };
-    } catch (error) {
-      if (!allowMockFallback) {
-        logger.warn('QA check failed.', error);
-        const checks: QACheck[] = [];
-        const warnings = ['QA-Prüfung fehlgeschlagen'];
-        const status: QAStatus = 'warn';
+      try {
+        const response = await qaClient.runChecks(payload);
+        const checks = buildChecksFromService(response);
+        const warnings = getWarningsFromChecks(checks, response);
+        const status = getQaStatus(checks, response);
 
         setQaChecks(checks);
-        setReport(prev => prev ? {
-          ...prev,
-          qaStatus: status,
-          qaWarnings: warnings,
-        } : null);
+        setReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                qaStatus: status,
+                qaWarnings: warnings,
+              }
+            : null,
+        );
+
+        return { status, checks, warnings };
+      } catch (error) {
+        if (!allowMockFallback) {
+          logger.warn("QA check failed.", error);
+          const checks: QACheck[] = [];
+          const warnings = ["QA-Prüfung fehlgeschlagen"];
+          const status: QAStatus = "warn";
+
+          setQaChecks(checks);
+          setReport((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  qaStatus: status,
+                  qaWarnings: warnings,
+                }
+              : null,
+          );
+
+          return { status, checks, warnings };
+        }
+
+        logger.warn("QA check failed, using mock checks.", error);
+
+        const checks = mockQAChecks;
+        const warnings = getWarningsFromChecks(checks);
+        const status = getQaStatus(checks);
+
+        setQaChecks(checks);
+        setReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                qaStatus: status,
+                qaWarnings: warnings,
+              }
+            : null,
+        );
 
         return { status, checks, warnings };
       }
+    },
+    [report?.findingsText, report?.id, report?.impressionText],
+  );
 
-      logger.warn('QA check failed, using mock checks.', error);
+  const approveReport = useCallback(
+    async (signature: string) => {
+      if (!report?.id) return;
+      setIsLoading(true);
+      setError(null);
 
-      const checks = mockQAChecks;
-      const warnings = getWarningsFromChecks(checks);
-      const status = getQaStatus(checks);
-
-      setQaChecks(checks);
-      setReport(prev => prev ? {
-        ...prev,
-        qaStatus: status,
-        qaWarnings: warnings,
-      } : null);
-
-      return { status, checks, warnings };
-    }
-  }, [report?.findingsText, report?.id, report?.impressionText]);
-
-  const approveReport = useCallback(async (signature: string) => {
-    if (!report?.id) return;
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await reportClient.finalizeReport(report.id, signature);
-      setReport(prev => (prev ? mapReportResponse(response, prev) : mapReportResponse(response)));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to approve report';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [report?.id]);
+      try {
+        const response = await reportClient.finalizeReport(report.id, signature);
+        setReport((prev) =>
+          prev ? mapReportResponse(response, prev) : mapReportResponse(response),
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to approve report";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [report?.id],
+  );
 
   return {
     report,

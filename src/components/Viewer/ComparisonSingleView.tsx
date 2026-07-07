@@ -1,23 +1,19 @@
-import { lazy, Suspense, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Columns2, Box, Loader2, View, Boxes } from 'lucide-react';
-import type { FindingBox, ImageRef, Series } from '@/types/radiology';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { DicomViewer, type ViewerProgress } from './DicomViewer';
-import { ViewerErrorBoundary } from './ViewerErrorBoundary';
+import { lazy, Suspense, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Columns2, Box, Loader2, View, Boxes } from "lucide-react";
+import type { FindingBox, ImageRef, Series } from "@/types/radiology";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DicomViewer, type ViewerProgress } from "./DicomViewer";
+import { ViewerErrorBoundary } from "./ViewerErrorBoundary";
 
 // MPR/VRT/Mesh pull in the Cornerstone volume-viewport stack and (for Mesh)
 // vtk.js — several MB combined. Load them on demand only once the user picks
 // one of these modes instead of shipping them in the initial route bundle.
-const MPRViewer = lazy(() => import('./MPRViewer').then((m) => ({ default: m.MPRViewer })));
-const VRTViewer = lazy(() => import('./VRTViewer').then((m) => ({ default: m.VRTViewer })));
-const MeshViewer = lazy(() => import('./MeshViewer').then((m) => ({ default: m.MeshViewer })));
+const MPRViewer = lazy(() => import("./MPRViewer").then((m) => ({ default: m.MPRViewer })));
+const VRTViewer = lazy(() => import("./VRTViewer").then((m) => ({ default: m.VRTViewer })));
+const MeshViewer = lazy(() => import("./MeshViewer").then((m) => ({ default: m.MeshViewer })));
 
 function ViewerLoadingFallback() {
   return (
@@ -27,7 +23,7 @@ function ViewerLoadingFallback() {
   );
 }
 
-export type ViewerMode = 'stack' | 'mpr' | 'vrt' | 'mesh';
+export type ViewerMode = "stack" | "mpr" | "vrt" | "mesh";
 
 interface ComparisonSingleViewProps {
   currentSeries: Series | null;
@@ -60,23 +56,24 @@ export function ComparisonSingleView({
   isAnalyzingFrame = false,
   studyUid,
 }: ComparisonSingleViewProps) {
-  const { t } = useTranslation('viewer');
-  const [viewerMode, setViewerMode] = useState<ViewerMode>('stack');
+  const { t } = useTranslation("viewer");
+  const [viewerMode, setViewerMode] = useState<ViewerMode>("stack");
 
   const requestedFrameIndex =
     evidenceSelection && currentSeries?.id === evidenceSelection.seriesId
       ? evidenceSelection.stackIndex
       : null;
   const showToggle = priorStudiesCount > 0 && currentSeries;
-  
+
   // Check if series supports MPR/VRT (CT/MR/PT with sufficient frames)
-  const supportsVolumeViewer = currentSeries && 
-    ['CT', 'MR', 'PT'].includes(currentSeries.modality) && 
+  const supportsVolumeViewer =
+    currentSeries &&
+    ["CT", "MR", "PT"].includes(currentSeries.modality) &&
     (currentSeries.frameCount || 0) >= 10;
 
   return (
     <div className="h-full relative">
-      {viewerMode === 'stack' && (
+      {viewerMode === "stack" && (
         <ViewerErrorBoundary label="Stack">
           <DicomViewer
             series={currentSeries}
@@ -90,22 +87,22 @@ export function ComparisonSingleView({
           />
         </ViewerErrorBoundary>
       )}
-      {viewerMode === 'mpr' && (
+      {viewerMode === "mpr" && (
         <ViewerErrorBoundary label="MPR">
           <Suspense fallback={<ViewerLoadingFallback />}>
             <MPRViewer series={currentSeries} />
           </Suspense>
         </ViewerErrorBoundary>
       )}
-      {viewerMode === 'vrt' && (
+      {viewerMode === "vrt" && (
         <ViewerErrorBoundary label="3D">
           <Suspense fallback={<ViewerLoadingFallback />}>
             <VRTViewer series={currentSeries} />
           </Suspense>
         </ViewerErrorBoundary>
       )}
-      {viewerMode === 'mesh' && (
-        <ViewerErrorBoundary label={t('mesh.title')}>
+      {viewerMode === "mesh" && (
+        <ViewerErrorBoundary label={t("mesh.title")}>
           <Suspense fallback={<ViewerLoadingFallback />}>
             <MeshViewer series={currentSeries} studyUid={studyUid ?? null} />
           </Suspense>
@@ -119,9 +116,9 @@ export function ComparisonSingleView({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={viewerMode === 'mpr' ? 'default' : 'outline'}
+                variant={viewerMode === "mpr" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setViewerMode(viewerMode === 'mpr' ? 'stack' : 'mpr')}
+                onClick={() => setViewerMode(viewerMode === "mpr" ? "stack" : "mpr")}
                 className="bg-card/90 backdrop-blur-sm"
               >
                 <Box className="h-4 w-4 mr-2" />
@@ -129,7 +126,7 @@ export function ComparisonSingleView({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {viewerMode === 'mpr' ? 'Stack-Ansicht' : 'Multi-Planar Rekonstruktion'}
+              {viewerMode === "mpr" ? "Stack-Ansicht" : "Multi-Planar Rekonstruktion"}
             </TooltipContent>
           </Tooltip>
         )}
@@ -139,9 +136,9 @@ export function ComparisonSingleView({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={viewerMode === 'vrt' ? 'default' : 'outline'}
+                variant={viewerMode === "vrt" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setViewerMode(viewerMode === 'vrt' ? 'stack' : 'vrt')}
+                onClick={() => setViewerMode(viewerMode === "vrt" ? "stack" : "vrt")}
                 className="bg-card/90 backdrop-blur-sm"
               >
                 <View className="h-4 w-4 mr-2" />
@@ -149,31 +146,31 @@ export function ComparisonSingleView({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {viewerMode === 'vrt' ? 'Stack-Ansicht' : '3D Volume Rendering'}
+              {viewerMode === "vrt" ? "Stack-Ansicht" : "3D Volume Rendering"}
             </TooltipContent>
           </Tooltip>
         )}
 
         {/* Mesh Model Toggle */}
-        {supportsVolumeViewer && currentSeries?.modality === 'CT' && (
+        {supportsVolumeViewer && currentSeries?.modality === "CT" && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={viewerMode === 'mesh' ? 'default' : 'outline'}
+                variant={viewerMode === "mesh" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setViewerMode(viewerMode === 'mesh' ? 'stack' : 'mesh')}
+                onClick={() => setViewerMode(viewerMode === "mesh" ? "stack" : "mesh")}
                 className="bg-card/90 backdrop-blur-sm"
               >
                 <Boxes className="h-4 w-4 mr-2" />
-                {t('mesh.title')}
+                {t("mesh.title")}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t('mesh.tooltip')}</TooltipContent>
+            <TooltipContent>{t("mesh.tooltip")}</TooltipContent>
           </Tooltip>
         )}
 
         {/* Compare Mode Toggle */}
-        {showToggle && viewerMode === 'stack' && (
+        {showToggle && viewerMode === "stack" && (
           <Button
             variant="outline"
             size="sm"
@@ -181,7 +178,7 @@ export function ComparisonSingleView({
             className="bg-card/90 backdrop-blur-sm"
           >
             <Columns2 className="h-4 w-4 mr-2" />
-            {t('comparison.enable')}
+            {t("comparison.enable")}
             <Badge variant="secondary" className="ml-2">
               {priorStudiesCount}
             </Badge>

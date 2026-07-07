@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react';
-import type { QueueItem, Report, Series, Study } from '@/types/radiology';
-import { orthancClient } from '@/services/orthancClient';
-import { ApiError } from '@/services/apiClient';
-import { reportClient } from '@/services/reportClient';
-import { mapReportResponse } from '@/services/reportMapping';
-import type { DicomJsonRecord } from '@/services/dicomWebMapping';
-import { mapSeriesRecordToSeries, mapStudyRecordToPatient, mapStudyRecordToStudy } from '@/services/dicomWebMapping';
-import { mockQueueItems } from '@/data/mockData';
-import { logger } from '@/lib/logger';
+import { useEffect, useState } from "react";
+import type { QueueItem, Report, Series, Study } from "@/types/radiology";
+import { orthancClient } from "@/services/orthancClient";
+import { ApiError } from "@/services/apiClient";
+import { reportClient } from "@/services/reportClient";
+import { mapReportResponse } from "@/services/reportMapping";
+import type { DicomJsonRecord } from "@/services/dicomWebMapping";
+import {
+  mapSeriesRecordToSeries,
+  mapStudyRecordToPatient,
+  mapStudyRecordToStudy,
+} from "@/services/dicomWebMapping";
+import { mockQueueItems } from "@/data/mockData";
+import { logger } from "@/lib/logger";
 
-const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
+const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === "true";
 
 const buildReport = (study: Study): Report => {
   const now = new Date().toISOString();
@@ -17,14 +21,14 @@ const buildReport = (study: Study): Report => {
     id: `report-${study.id}`,
     studyId: study.id,
     patientId: study.patientId,
-    status: 'pending',
-    findingsText: '',
-    impressionText: '',
+    status: "pending",
+    findingsText: "",
+    impressionText: "",
     createdAt: now,
     updatedAt: now,
-    qaStatus: 'pending',
+    qaStatus: "pending",
     qaWarnings: [],
-    aiStatus: 'idle',
+    aiStatus: "idle",
   };
 };
 
@@ -36,25 +40,29 @@ const countSeriesInstances = async (studyId: string, seriesId: string): Promise<
       : Array.isArray((response as { Instances?: unknown[] }).Instances)
         ? (response as { Instances: unknown[] }).Instances
         : [];
-    
+
     // Count total frames across all instances
     let totalFrames = 0;
     for (const instance of instances) {
-      if (!instance || typeof instance !== 'object') {
+      if (!instance || typeof instance !== "object") {
         totalFrames += 1;
         continue;
       }
       const record = instance as Record<string, unknown>;
       // Check NumberOfFrames tag (00280008)
-      const framesTag = record['00280008'] as { Value?: unknown[] } | undefined;
+      const framesTag = record["00280008"] as { Value?: unknown[] } | undefined;
       const framesValue = framesTag?.Value?.[0];
-      const frames = typeof framesValue === 'number' ? framesValue : 
-                     typeof framesValue === 'string' ? parseInt(framesValue, 10) : 1;
-      totalFrames += (Number.isFinite(frames) && frames > 0) ? frames : 1;
+      const frames =
+        typeof framesValue === "number"
+          ? framesValue
+          : typeof framesValue === "string"
+            ? parseInt(framesValue, 10)
+            : 1;
+      totalFrames += Number.isFinite(frames) && frames > 0 ? frames : 1;
     }
     return totalFrames || instances.length || 1;
   } catch (err) {
-    logger.debug('[useDicomWebQueue] Failed to count series instances, defaulting to 1', err);
+    logger.debug("[useDicomWebQueue] Failed to count series instances, defaulting to 1", err);
     return 1;
   }
 };
@@ -79,7 +87,7 @@ const resolveSeries = async (studyId: string): Promise<Series[]> => {
       }
       const actualFrameCount = await countSeriesInstances(studyId, series.id);
       return { ...series, frameCount: actualFrameCount };
-    })
+    }),
   );
 
   return seriesWithFrameCounts;
@@ -87,9 +95,9 @@ const resolveSeries = async (studyId: string): Promise<Series[]> => {
 
 const buildFallbackPatient = (studyId: string) => ({
   id: `patient-${studyId}`,
-  name: 'Unbekannt',
-  dateOfBirth: '',
-  gender: 'O' as const,
+  name: "Unbekannt",
+  dateOfBirth: "",
+  gender: "O" as const,
   mrn: `MRN-${studyId.slice(0, 8)}`,
 });
 
@@ -97,10 +105,10 @@ const buildFallbackStudy = (studyId: string, patientId: string): Study => ({
   id: studyId,
   patientId,
   accessionNumber: `ACC-${studyId.slice(0, 8)}`,
-  modality: 'CT',
+  modality: "CT",
   studyDate: new Date().toISOString().slice(0, 10),
-  studyDescription: 'Unbekannte Studie',
-  referringPhysician: 'Unbekannt',
+  studyDescription: "Unbekannte Studie",
+  referringPhysician: "Unbekannt",
   series: [],
 });
 
@@ -117,14 +125,14 @@ const resolveReport = async (study: Study, patientId: string): Promise<Report> =
           reportId,
           studyId: study.id,
           patientId,
-          status: 'pending',
-          findingsText: '',
-          impressionText: '',
+          status: "pending",
+          findingsText: "",
+          impressionText: "",
         });
         return mapReportResponse(response);
       } catch (createError) {
         if (allowMockFallback) {
-          logger.warn('Report create failed, using local report fallback.', createError);
+          logger.warn("Report create failed, using local report fallback.", createError);
           return buildReport(study);
         }
         throw createError;
@@ -132,7 +140,7 @@ const resolveReport = async (study: Study, patientId: string): Promise<Report> =
     }
 
     if (allowMockFallback) {
-      logger.warn('Report fetch failed, using local report fallback.', error);
+      logger.warn("Report fetch failed, using local report fallback.", error);
       return buildReport(study);
     }
     throw error;
@@ -146,7 +154,7 @@ export function useDicomWebQueue() {
 
   useEffect(() => {
     let isActive = true;
-    const useMockQueue = import.meta.env.VITE_USE_MOCK_QUEUE === 'true';
+    const useMockQueue = import.meta.env.VITE_USE_MOCK_QUEUE === "true";
 
     const loadStudies = async () => {
       setIsLoading(true);
@@ -170,7 +178,7 @@ export function useDicomWebQueue() {
 
         const parsedStudies = records
           .map((record) => {
-            if (typeof record === 'string') {
+            if (typeof record === "string") {
               const patient = buildFallbackPatient(record);
               const study = buildFallbackStudy(record, patient.id);
               return { study, patient };
@@ -178,7 +186,7 @@ export function useDicomWebQueue() {
 
             const dicomRecord = record as DicomJsonRecord;
             const studyId =
-              (dicomRecord['0020000D']?.Value?.[0] as string | undefined) ||
+              (dicomRecord["0020000D"]?.Value?.[0] as string | undefined) ||
               (dicomRecord.StudyInstanceUID as string | undefined);
 
             if (!studyId) return null;
@@ -187,7 +195,10 @@ export function useDicomWebQueue() {
             const study = mapStudyRecordToStudy(dicomRecord, patient.id, studyId);
             return { study, patient };
           })
-          .filter((item): item is { study: Study; patient: ReturnType<typeof mapStudyRecordToPatient> } => Boolean(item));
+          .filter(
+            (item): item is { study: Study; patient: ReturnType<typeof mapStudyRecordToPatient> } =>
+              Boolean(item),
+          );
 
         const queueItems = await Promise.all(
           parsedStudies.map(async ({ study, patient }) => {
@@ -200,18 +211,18 @@ export function useDicomWebQueue() {
               patient,
               study: { ...study, series },
               report,
-              priority: 'normal' as const,
+              priority: "normal" as const,
             };
-          })
+          }),
         );
 
         if (isActive) {
           setItems(queueItems);
         }
       } catch (err) {
-        logger.warn('Failed to load DICOM studies', err);
+        logger.warn("Failed to load DICOM studies", err);
         if (isActive) {
-          setError('DICOMweb-Studien konnten nicht geladen werden.');
+          setError("DICOMweb-Studien konnten nicht geladen werden.");
           setItems([]);
         }
       } finally {

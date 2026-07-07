@@ -1,6 +1,6 @@
-import { AUTH_USER_KEY } from '@/lib/authStorage';
-import { apiClient } from './apiClient';
-import { logger } from '@/lib/logger';
+import { AUTH_USER_KEY } from "@/lib/authStorage";
+import { apiClient } from "./apiClient";
+import { logger } from "@/lib/logger";
 
 export interface LoginPayload {
   username: string;
@@ -27,18 +27,21 @@ export const authClient = {
     // issue #100) - it never appears in this body, so there's nothing for
     // page JS to read or exfiltrate. Only non-secret display data is cached
     // here for the UI.
-    const response = await apiClient.post<LoginResponse>('/api/v1/auth/login', payload);
-    localStorage.setItem(AUTH_USER_KEY, JSON.stringify({
-      id: response.user_id,
-      username: response.username,
-      role: response.role,
-    }));
+    const response = await apiClient.post<LoginResponse>("/api/v1/auth/login", payload);
+    localStorage.setItem(
+      AUTH_USER_KEY,
+      JSON.stringify({
+        id: response.user_id,
+        username: response.username,
+        role: response.role,
+      }),
+    );
     return response;
   },
 
   async logout() {
     try {
-      await apiClient.post('/api/v1/auth/logout');
+      await apiClient.post("/api/v1/auth/logout");
     } finally {
       localStorage.removeItem(AUTH_USER_KEY);
     }
@@ -50,7 +53,7 @@ export const authClient = {
     try {
       return JSON.parse(raw);
     } catch (err) {
-      logger.debug('[authClient] Failed to parse stored user, treating as logged out', err);
+      logger.debug("[authClient] Failed to parse stored user, treating as logged out", err);
       return null;
     }
   },

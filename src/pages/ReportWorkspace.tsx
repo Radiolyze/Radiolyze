@@ -1,43 +1,40 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import type { AIStatus, ImageRef, QueueItem, Report, Series } from '@/types/radiology';
-import { LeftSidebar } from '@/components/Sidebar/LeftSidebar';
-import { ComparisonViewer } from '@/components/Viewer/ComparisonViewer';
-import { RightPanel } from '@/components/RightPanel/RightPanel';
-import { useReport } from '@/hooks/useReport';
-import { useDicomWebQueue } from '@/hooks/useDicomWebQueue';
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useReportStatusSync } from '@/hooks/useReportStatusSync';
-import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { usePriorStudies } from '@/hooks/usePriorStudies';
-import { ReportWorkspaceView } from './ReportWorkspaceView';
-import { toast } from 'sonner';
-import { auditLogger } from '@/services/auditLogger';
-import { reportClient } from '@/services/reportClient';
-import { formatDate } from '@/data/mockData';
-import { inferenceClient } from '@/services/inferenceClient';
-import {
-  extractInferenceFindings,
-  pollInferenceResult,
-} from '@/hooks/reporting/inferenceHelpers';
-import { logger } from '@/lib/logger';
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import type { AIStatus, ImageRef, QueueItem, Report, Series } from "@/types/radiology";
+import { LeftSidebar } from "@/components/Sidebar/LeftSidebar";
+import { ComparisonViewer } from "@/components/Viewer/ComparisonViewer";
+import { RightPanel } from "@/components/RightPanel/RightPanel";
+import { useReport } from "@/hooks/useReport";
+import { useDicomWebQueue } from "@/hooks/useDicomWebQueue";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useReportStatusSync } from "@/hooks/useReportStatusSync";
+import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { usePriorStudies } from "@/hooks/usePriorStudies";
+import { ReportWorkspaceView } from "./ReportWorkspaceView";
+import { toast } from "sonner";
+import { auditLogger } from "@/services/auditLogger";
+import { reportClient } from "@/services/reportClient";
+import { formatDate } from "@/data/mockData";
+import { inferenceClient } from "@/services/inferenceClient";
+import { extractInferenceFindings, pollInferenceResult } from "@/hooks/reporting/inferenceHelpers";
+import { logger } from "@/lib/logger";
 
 const placeholderReport: Report = {
-  id: 'placeholder',
-  studyId: 'placeholder',
-  patientId: 'placeholder',
-  status: 'pending',
-  findingsText: '',
-  impressionText: '',
+  id: "placeholder",
+  studyId: "placeholder",
+  patientId: "placeholder",
+  status: "pending",
+  findingsText: "",
+  impressionText: "",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
-  qaStatus: 'pending',
+  qaStatus: "pending",
   qaWarnings: [],
 };
 
 const toStudyTimestamp = (value?: string) => {
   if (!value) return undefined;
-  const datePart = value.split('T')[0];
-  const parts = datePart.split('-').map((entry) => Number(entry));
+  const datePart = value.split("T")[0];
+  const parts = datePart.split("-").map((entry) => Number(entry));
   if (parts.length === 3 && parts.every((entry) => Number.isFinite(entry))) {
     return Date.UTC(parts[0], parts[1] - 1, parts[2]);
   }
@@ -57,12 +54,19 @@ export const ReportWorkspace = () => {
   // Defensive: when DICOMweb requests fail, ensure we never call .map on non-arrays.
   const queueItems = useMemo(
     () => (Array.isArray(queueItemsRaw) ? queueItemsRaw : []),
-    [queueItemsRaw]
+    [queueItemsRaw],
   );
 
   // WebSocket live status sync
-  const { isConnected: wsConnected, getEnhancedItems, getReportStatus } = useReportStatusSync(queueItems);
-  const enhancedQueueItems = useMemo(() => getEnhancedItems(queueItems), [queueItems, getEnhancedItems]);
+  const {
+    isConnected: wsConnected,
+    getEnhancedItems,
+    getReportStatus,
+  } = useReportStatusSync(queueItems);
+  const enhancedQueueItems = useMemo(
+    () => getEnhancedItems(queueItems),
+    [queueItems, getEnhancedItems],
+  );
 
   // Current selection state
   const [selectedQueueItem, setSelectedQueueItem] = useState<QueueItem | null>(null);
@@ -70,7 +74,10 @@ export const ReportWorkspace = () => {
   const [imageRefs, setImageRefs] = useState<ImageRef[]>([]);
   const [priorImageRefs, setPriorImageRefs] = useState<ImageRef[]>([]);
   const lastPersistedComparisonKey = useRef<string | null>(null);
-  const [evidenceSelection, setEvidenceSelection] = useState<{ seriesId: string; stackIndex: number } | null>(null);
+  const [evidenceSelection, setEvidenceSelection] = useState<{
+    seriesId: string;
+    stackIndex: number;
+  } | null>(null);
   const [useAllFrames, setUseAllFrames] = useState(false);
 
   // Report state
@@ -85,22 +92,23 @@ export const ReportWorkspace = () => {
     approveReport,
     updateFindings,
   } = useReport();
-  const [findings, setFindings] = useState('');
-  const [impression, setImpression] = useState('');
-  const [aiStatus, setAiStatus] = useState<AIStatus>('idle');
+  const [findings, setFindings] = useState("");
+  const [impression, setImpression] = useState("");
+  const [aiStatus, setAiStatus] = useState<AIStatus>("idle");
   const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
-  const [asrStatus, setAsrStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
+  const [asrStatus, setAsrStatus] = useState<"idle" | "listening" | "processing">("idle");
   const [asrConfidence, setAsrConfidence] = useState(0);
   const [isAnalyzingFrame, setIsAnalyzingFrame] = useState(false);
 
   // Apply live status updates to current report
   const liveStatus = report ? getReportStatus(report.id) : undefined;
-  const effectiveAiStatus: AIStatus = liveStatus?.aiStatus === 'error'
-    ? 'error'
-    : aiStatus === 'idle'
-      ? liveStatus?.aiStatus ?? 'idle'
-      : aiStatus;
-  const isGenerating = effectiveAiStatus === 'queued' || effectiveAiStatus === 'processing';
+  const effectiveAiStatus: AIStatus =
+    liveStatus?.aiStatus === "error"
+      ? "error"
+      : aiStatus === "idle"
+        ? (liveStatus?.aiStatus ?? "idle")
+        : aiStatus;
+  const isGenerating = effectiveAiStatus === "queued" || effectiveAiStatus === "processing";
 
   useEffect(() => {
     if (queueError) {
@@ -109,13 +117,13 @@ export const ReportWorkspace = () => {
   }, [queueError]);
 
   useEffect(() => {
-    setAiStatus('idle');
+    setAiStatus("idle");
   }, [report?.id]);
 
   useEffect(() => {
     if (!report?.id) return;
     auditLogger.logEvent({
-      eventType: 'report_opened',
+      eventType: "report_opened",
       reportId: report.id,
       studyId: report.studyId,
     });
@@ -142,34 +150,40 @@ export const ReportWorkspace = () => {
   // Sync local text state when the report is updated externally (e.g. via WebSocket)
   useEffect(() => {
     if (!report) return;
-    setFindings(prev => prev !== report.findingsText ? report.findingsText : prev);
-    setImpression(prev => prev !== report.impressionText ? report.impressionText : prev);
+    setFindings((prev) => (prev !== report.findingsText ? report.findingsText : prev));
+    setImpression((prev) => (prev !== report.impressionText ? report.impressionText : prev));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally watching only specific fields, not whole report object
   }, [report?.findingsText, report?.impressionText]);
 
   // Update report when queue item changes
-  const handleSelectQueueItem = useCallback((item: QueueItem) => {
-    setSelectedQueueItem(item);
-    setSelectedSeries(item.study.series[0] || null);
-    setReport(item.report);
-    setFindings(item.report.findingsText);
-    setImpression(item.report.impressionText);
-  }, [setReport]);
+  const handleSelectQueueItem = useCallback(
+    (item: QueueItem) => {
+      setSelectedQueueItem(item);
+      setSelectedSeries(item.study.series[0] || null);
+      setReport(item.report);
+      setFindings(item.report.findingsText);
+      setImpression(item.report.impressionText);
+    },
+    [setReport],
+  );
 
   const handleSelectSeries = useCallback((series: Series) => {
     setSelectedSeries(series);
   }, []);
 
-  const handleImageRefsChange = useCallback((refs: ImageRef[]) => {
-    const studyDate = selectedQueueItem?.study.studyDate;
-    const enriched = refs.map((ref) => ({
-      ...ref,
-      studyDate: ref.studyDate ?? studyDate,
-      role: ref.role ?? 'current',
-      timeDeltaDays: studyDate ? 0 : ref.timeDeltaDays,
-    }));
-    setImageRefs(enriched);
-  }, [selectedQueueItem?.study.studyDate]);
+  const handleImageRefsChange = useCallback(
+    (refs: ImageRef[]) => {
+      const studyDate = selectedQueueItem?.study.studyDate;
+      const enriched = refs.map((ref) => ({
+        ...ref,
+        studyDate: ref.studyDate ?? studyDate,
+        role: ref.role ?? "current",
+        timeDeltaDays: studyDate ? 0 : ref.timeDeltaDays,
+      }));
+      setImageRefs(enriched);
+    },
+    [selectedQueueItem?.study.studyDate],
+  );
 
   const handleEvidenceSelect = useCallback((ref: ImageRef) => {
     setEvidenceSelection({ seriesId: ref.seriesId, stackIndex: ref.stackIndex });
@@ -179,7 +193,7 @@ export const ReportWorkspace = () => {
     async (imageRef: ImageRef) => {
       if (isAnalyzingFrame || isGenerating) return;
       if (!report?.id || !selectedQueueItem) {
-        toast.error('Kein Report ausgewählt');
+        toast.error("Kein Report ausgewählt");
         return;
       }
       setIsAnalyzingFrame(true);
@@ -191,7 +205,7 @@ export const ReportWorkspace = () => {
         });
         const jobId = response.job_id ?? response.jobId;
         if (!jobId) {
-          throw new Error('Keine Job-ID erhalten');
+          throw new Error("Keine Job-ID erhalten");
         }
         const result = await pollInferenceResult(jobId, setAiStatus);
         const newFindings = extractInferenceFindings(result);
@@ -202,27 +216,21 @@ export const ReportWorkspace = () => {
                   ...prev,
                   inferenceFindings: [...(prev.inferenceFindings ?? []), ...newFindings],
                 }
-              : prev
+              : prev,
           );
           toast.success(`${newFindings.length} Befund(e) lokalisiert`);
         } else {
-          toast.info('Keine Befunde in diesem Frame erkannt');
+          toast.info("Keine Befunde in diesem Frame erkannt");
         }
       } catch (error) {
-        logger.warn('Frame-Lokalisierung fehlgeschlagen', error);
-        setAiStatus('error');
-        toast.error('Frame-Analyse fehlgeschlagen');
+        logger.warn("Frame-Lokalisierung fehlgeschlagen", error);
+        setAiStatus("error");
+        toast.error("Frame-Analyse fehlgeschlagen");
       } finally {
         setIsAnalyzingFrame(false);
       }
     },
-    [
-      isAnalyzingFrame,
-      isGenerating,
-      report?.id,
-      selectedQueueItem,
-      setReport,
-    ]
+    [isAnalyzingFrame, isGenerating, report?.id, selectedQueueItem, setReport],
   );
 
   const handleGenerateImpression = useCallback(async () => {
@@ -242,16 +250,25 @@ export const ReportWorkspace = () => {
         impressionText: result,
       });
     } catch (error) {
-      logger.warn('Failed to generate impression', error);
-      setAiStatus('error');
-      toast.error('KI-Analyse fehlgeschlagen');
+      logger.warn("Failed to generate impression", error);
+      setAiStatus("error");
+      toast.error("KI-Analyse fehlgeschlagen");
     }
-  }, [findings, generateImpression, imageRefs, isGenerating, priorImageRefs, report?.id, runQAChecks, useAllFrames]);
+  }, [
+    findings,
+    generateImpression,
+    imageRefs,
+    isGenerating,
+    priorImageRefs,
+    report?.id,
+    runQAChecks,
+    useAllFrames,
+  ]);
 
   const handleAnalyzeImages = useCallback(async () => {
     if (isGenerating || isAnalyzingImages) return;
     if (imageRefs.length === 0 && priorImageRefs.length === 0) {
-      toast.error('Keine Bilder zum Analysieren vorhanden');
+      toast.error("Keine Bilder zum Analysieren vorhanden");
       return;
     }
 
@@ -270,31 +287,43 @@ export const ReportWorkspace = () => {
         findingsText: result.findings,
         impressionText: result.impression,
       });
-      toast.success('KI-Analyse abgeschlossen');
+      toast.success("KI-Analyse abgeschlossen");
     } catch (error) {
-      logger.warn('Failed to analyze images', error);
-      setAiStatus('error');
-      toast.error('KI-Analyse fehlgeschlagen');
+      logger.warn("Failed to analyze images", error);
+      setAiStatus("error");
+      toast.error("KI-Analyse fehlgeschlagen");
     } finally {
       setIsAnalyzingImages(false);
     }
-  }, [analyzeImages, imageRefs, isAnalyzingImages, isGenerating, priorImageRefs, report?.id, runQAChecks, useAllFrames]);
+  }, [
+    analyzeImages,
+    imageRefs,
+    isAnalyzingImages,
+    isGenerating,
+    priorImageRefs,
+    report?.id,
+    runQAChecks,
+    useAllFrames,
+  ]);
 
-  const handleApprove = useCallback(async (signature?: string) => {
-    const name = signature?.trim();
-    if (!name) {
-      toast.error('Bitte Name/Unterschrift eingeben');
-      return;
-    }
+  const handleApprove = useCallback(
+    async (signature?: string) => {
+      const name = signature?.trim();
+      if (!name) {
+        toast.error("Bitte Name/Unterschrift eingeben");
+        return;
+      }
 
-    try {
-      await approveReport(name);
-      toast.success(`Report freigegeben (${name})`);
-    } catch (error) {
-      logger.warn('Report finalize failed', error);
-      toast.error('Report-Freigabe fehlgeschlagen');
-    }
-  }, [approveReport]);
+      try {
+        await approveReport(name);
+        toast.success(`Report freigegeben (${name})`);
+      } catch (error) {
+        logger.warn("Report finalize failed", error);
+        toast.error("Report-Freigabe fehlgeschlagen");
+      }
+    },
+    [approveReport],
+  );
 
   const handleSaveFindings = useCallback(async () => {
     if (!report?.id) {
@@ -302,39 +331,45 @@ export const ReportWorkspace = () => {
     }
     try {
       await updateFindings(findings);
-      toast.success('Befund gespeichert');
+      toast.success("Befund gespeichert");
     } catch (error) {
-      logger.warn('Findings update failed', error);
-      toast.error('Befund speichern fehlgeschlagen');
+      logger.warn("Findings update failed", error);
+      toast.error("Befund speichern fehlgeschlagen");
     }
   }, [findings, report?.id, updateFindings]);
 
-  const handleExportSr = useCallback(async (format: 'json' | 'dicom') => {
-    if (!report?.id) {
-      return;
-    }
+  const handleExportSr = useCallback(
+    async (format: "json" | "dicom") => {
+      if (!report?.id) {
+        return;
+      }
 
-    let blobUrl: string | null = null;
-    try {
-      const result = await reportClient.exportStructuredReport(report.id, format);
-      blobUrl = URL.createObjectURL(result.blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = result.fileName;
-      link.click();
-      toast.success(`DICOM SR exportiert (${format.toUpperCase()})`);
-    } catch (error) {
-      logger.warn('DICOM SR export failed', error);
-      toast.error('DICOM SR Export fehlgeschlagen');
-    } finally {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-    }
-  }, [report?.id]);
+      let blobUrl: string | null = null;
+      try {
+        const result = await reportClient.exportStructuredReport(report.id, format);
+        blobUrl = URL.createObjectURL(result.blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = result.fileName;
+        link.click();
+        toast.success(`DICOM SR exportiert (${format.toUpperCase()})`);
+      } catch (error) {
+        logger.warn("DICOM SR export failed", error);
+        toast.error("DICOM SR Export fehlgeschlagen");
+      } finally {
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+      }
+    },
+    [report?.id],
+  );
 
-  const handleAsrStatusChange = useCallback((status: 'idle' | 'listening' | 'processing', confidence: number) => {
-    setAsrStatus(status);
-    setAsrConfidence(confidence);
-  }, []);
+  const handleAsrStatusChange = useCallback(
+    (status: "idle" | "listening" | "processing", confidence: number) => {
+      setAsrStatus(status);
+      setAsrConfidence(confidence);
+    },
+    [],
+  );
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -342,14 +377,14 @@ export const ReportWorkspace = () => {
     onApprove: handleApprove,
   });
 
-  const {
-    priorStudies: priorStudiesRaw,
-    error: priorStudiesError,
-  } = usePriorStudies(selectedQueueItem?.patient.id, selectedQueueItem?.study.id);
+  const { priorStudies: priorStudiesRaw, error: priorStudiesError } = usePriorStudies(
+    selectedQueueItem?.patient.id,
+    selectedQueueItem?.study.id,
+  );
 
   const priorStudies = useMemo(
     () => (Array.isArray(priorStudiesRaw) ? priorStudiesRaw : []),
-    [priorStudiesRaw]
+    [priorStudiesRaw],
   );
 
   const priorStudyDateBySeries = useMemo(() => {
@@ -362,36 +397,39 @@ export const ReportWorkspace = () => {
     return map;
   }, [priorStudies]);
 
-  const handlePriorImageRefsChange = useCallback((refs: ImageRef[]) => {
-    const currentStudyDate = selectedQueueItem?.study.studyDate;
-    const enriched = refs.map((ref) => {
-      const priorStudyDate = ref.studyDate ?? priorStudyDateBySeries.get(ref.seriesId);
-      return {
-        ...ref,
-        studyDate: priorStudyDate,
-        role: ref.role ?? 'prior',
-        timeDeltaDays: computeDeltaDays(currentStudyDate, priorStudyDate),
-      };
-    });
-    setPriorImageRefs(enriched);
+  const handlePriorImageRefsChange = useCallback(
+    (refs: ImageRef[]) => {
+      const currentStudyDate = selectedQueueItem?.study.studyDate;
+      const enriched = refs.map((ref) => {
+        const priorStudyDate = ref.studyDate ?? priorStudyDateBySeries.get(ref.seriesId);
+        return {
+          ...ref,
+          studyDate: priorStudyDate,
+          role: ref.role ?? "prior",
+          timeDeltaDays: computeDeltaDays(currentStudyDate, priorStudyDate),
+        };
+      });
+      setPriorImageRefs(enriched);
 
-    const primary = enriched[0];
-    if (report?.id && primary?.studyId) {
-      const key = `${report.id}:${primary.studyId}`;
-      if (lastPersistedComparisonKey.current !== key) {
-        lastPersistedComparisonKey.current = key;
-        reportClient
-          .createComparison(report.id, {
-            priorStudyUid: primary.studyId,
-            priorSeriesUid: primary.seriesId,
-            timeDeltaDays: primary.timeDeltaDays,
-          })
-          .catch((error) => {
-            logger.error('Failed to persist report comparison', error);
-          });
+      const primary = enriched[0];
+      if (report?.id && primary?.studyId) {
+        const key = `${report.id}:${primary.studyId}`;
+        if (lastPersistedComparisonKey.current !== key) {
+          lastPersistedComparisonKey.current = key;
+          reportClient
+            .createComparison(report.id, {
+              priorStudyUid: primary.studyId,
+              priorSeriesUid: primary.seriesId,
+              timeDeltaDays: primary.timeDeltaDays,
+            })
+            .catch((error) => {
+              logger.error("Failed to persist report comparison", error);
+            });
+        }
       }
-    }
-  }, [priorStudyDateBySeries, selectedQueueItem?.study.studyDate, report?.id]);
+    },
+    [priorStudyDateBySeries, selectedQueueItem?.study.studyDate, report?.id],
+  );
 
   useEffect(() => {
     if (priorStudiesError) {
@@ -406,7 +444,7 @@ export const ReportWorkspace = () => {
         label: study.studyDescription,
         date: formatDate(study.studyDate),
       })),
-    [priorStudies]
+    [priorStudies],
   );
 
   if (!report || !selectedQueueItem) {
@@ -414,15 +452,15 @@ export const ReportWorkspace = () => {
       <ReportWorkspaceView
         leftSidebar={
           <LeftSidebar
-            patient={{ id: 'unknown', name: 'Laden...', dateOfBirth: '', gender: 'O', mrn: '-' }}
+            patient={{ id: "unknown", name: "Laden...", dateOfBirth: "", gender: "O", mrn: "-" }}
             study={{
-              id: 'unknown',
-              patientId: 'unknown',
-              accessionNumber: '-',
-              modality: 'CT',
-              studyDate: '',
-              studyDescription: isQueueLoading ? 'Lade Studien...' : 'Keine Studien',
-              referringPhysician: '-',
+              id: "unknown",
+              patientId: "unknown",
+              accessionNumber: "-",
+              modality: "CT",
+              studyDate: "",
+              studyDescription: isQueueLoading ? "Lade Studien..." : "Keine Studien",
+              referringPhysician: "-",
               series: [],
             }}
             queueItems={enhancedQueueItems}

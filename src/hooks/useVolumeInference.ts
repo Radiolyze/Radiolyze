@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState } from "react";
 
 import {
   inferenceClient,
   type ComparisonPayload,
   type VolumeInferencePayload,
-} from '@/services/inferenceClient';
+} from "@/services/inferenceClient";
 import {
   extractInferenceCompletedAt,
   extractInferenceConfidence,
@@ -13,8 +13,8 @@ import {
   extractInferenceModel,
   extractInferenceSummary,
   pollInferenceResult,
-} from '@/hooks/reporting/inferenceHelpers';
-import type { AIStatus } from '@/types/radiology';
+} from "@/hooks/reporting/inferenceHelpers";
+import type { AIStatus } from "@/types/radiology";
 
 export interface VolumeInferenceResult {
   summary: string;
@@ -37,7 +37,7 @@ export interface UseVolumeInferenceReturn {
 const buildResult = (raw: Record<string, unknown> | null | undefined): VolumeInferenceResult => {
   const summary = extractInferenceSummary(raw);
   if (!summary) {
-    throw new Error('Inference result missing summary');
+    throw new Error("Inference result missing summary");
   }
   return {
     summary,
@@ -59,54 +59,54 @@ export function useVolumeInference(): UseVolumeInferenceReturn {
     async (payload: VolumeInferencePayload): Promise<VolumeInferenceResult> => {
       setIsRunning(true);
       setError(null);
-      setStatus('queued');
+      setStatus("queued");
       try {
         const queueResponse = await inferenceClient.queueVolumeInference(payload);
         const jobId = queueResponse.job_id ?? queueResponse.jobId;
         if (!jobId) {
-          throw new Error('Volume inference queue missing job id');
+          throw new Error("Volume inference queue missing job id");
         }
         const raw = await pollInferenceResult(jobId, (next) => setStatus(next));
         const result = buildResult(raw);
-        setStatus('idle');
+        setStatus("idle");
         return result;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Volume inference failed';
+        const message = err instanceof Error ? err.message : "Volume inference failed";
         setError(message);
-        setStatus('error');
+        setStatus("error");
         throw err;
       } finally {
         setIsRunning(false);
       }
     },
-    []
+    [],
   );
 
   const runComparison = useCallback(
     async (payload: ComparisonPayload): Promise<VolumeInferenceResult> => {
       setIsRunning(true);
       setError(null);
-      setStatus('queued');
+      setStatus("queued");
       try {
         const queueResponse = await inferenceClient.queueComparison(payload);
         const jobId = queueResponse.job_id ?? queueResponse.jobId;
         if (!jobId) {
-          throw new Error('Comparison queue missing job id');
+          throw new Error("Comparison queue missing job id");
         }
         const raw = await pollInferenceResult(jobId, (next) => setStatus(next));
         const result = buildResult(raw);
-        setStatus('idle');
+        setStatus("idle");
         return result;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Comparison failed';
+        const message = err instanceof Error ? err.message : "Comparison failed";
         setError(message);
-        setStatus('error');
+        setStatus("error");
         throw err;
       } finally {
         setIsRunning(false);
       }
     },
-    []
+    [],
   );
 
   return { isRunning, error, status, runVolumeInference, runComparison };

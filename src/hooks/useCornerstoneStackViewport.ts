@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Enums, RenderingEngine, type StackViewport } from '@cornerstonejs/core';
-import { ToolGroupManager } from '@cornerstonejs/tools';
-import { initCornerstone, cornerstoneToolNames, getCornerstoneInitErrorMessage } from '@/services/cornerstone';
-import type { ViewportState } from '@/types/viewerSync';
-import { logger } from '@/lib/logger';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Enums, RenderingEngine, type StackViewport } from "@cornerstonejs/core";
+import { ToolGroupManager } from "@cornerstonejs/tools";
+import {
+  initCornerstone,
+  cornerstoneToolNames,
+  getCornerstoneInitErrorMessage,
+} from "@/services/cornerstone";
+import type { ViewportState } from "@/types/viewerSync";
+import { logger } from "@/lib/logger";
 
 interface UseCornerstoneStackViewportOptions {
   isEnabled: boolean;
@@ -68,13 +72,14 @@ export const useCornerstoneStackViewport = ({
 
   const handleStackNewImage = useCallback((event: Event) => {
     const detail = (event as CustomEvent<{ imageIdIndex?: number }>).detail;
-    if (detail && typeof detail.imageIdIndex === 'number') {
+    if (detail && typeof detail.imageIdIndex === "number") {
       onFrameIndexChangeRef.current?.(detail.imageIdIndex);
     }
   }, []);
 
   const handleCameraModified = useCallback((event: Event) => {
-    const detail = (event as CustomEvent<{ camera?: { parallelScale?: number; pan?: number[] } }>).detail;
+    const detail = (event as CustomEvent<{ camera?: { parallelScale?: number; pan?: number[] } }>)
+      .detail;
     const initialScale = initialParallelScaleRef.current;
     const currentScale = detail?.camera?.parallelScale;
     const panValues = detail?.camera?.pan;
@@ -136,7 +141,7 @@ export const useCornerstoneStackViewport = ({
 
         const toolGroup = ToolGroupManager.createToolGroup(toolGroupId);
         if (!toolGroup) {
-          throw new Error('Failed to create Cornerstone tool group');
+          throw new Error("Failed to create Cornerstone tool group");
         }
         toolGroupRef.current = toolGroup;
 
@@ -146,7 +151,7 @@ export const useCornerstoneStackViewport = ({
         toolGroup.addTool(cornerstoneToolNames.zoom);
         toolGroup.addTool(cornerstoneToolNames.windowLevel);
         toolGroup.addTool(cornerstoneToolNames.length);
-        
+
         // Annotation tools for training data
         toolGroup.addTool(cornerstoneToolNames.rectangle);
         toolGroup.addTool(cornerstoneToolNames.ellipse);
@@ -160,10 +165,10 @@ export const useCornerstoneStackViewport = ({
         element.addEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
         element.addEventListener(Enums.Events.VOI_MODIFIED, handleVoiModified);
       } catch (error) {
-        logger.warn('Cornerstone initialization failed', error);
+        logger.warn("Cornerstone initialization failed", error);
         if (isActive) {
           onInitErrorRef.current?.(
-            getCornerstoneInitErrorMessage('Viewer konnte nicht initialisiert werden.', error)
+            getCornerstoneInitErrorMessage("Viewer konnte nicht initialisiert werden.", error),
           );
         }
       } finally {

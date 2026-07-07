@@ -1,6 +1,6 @@
-export type PromptType = 'system' | 'summary' | 'impression';
+export type PromptType = "system" | "summary" | "impression";
 
-export type PromptSource = 'db' | 'env' | 'default';
+export type PromptSource = "db" | "env" | "default";
 
 export interface PromptTemplate {
   promptType: PromptType;

@@ -1,8 +1,8 @@
-import type { AIStatus, FindingBox, ImageRef } from '@/types/radiology';
-import { inferenceClient } from '@/services/inferenceClient';
-import { waitForReportStatus } from '@/hooks/useWebSocket';
+import type { AIStatus, FindingBox, ImageRef } from "@/types/radiology";
+import { inferenceClient } from "@/services/inferenceClient";
+import { waitForReportStatus } from "@/hooks/useWebSocket";
 
-type InferenceImageRole = 'current' | 'prior';
+type InferenceImageRole = "current" | "prior";
 
 interface InferenceImageSelectionOptions {
   includeAllFrames?: boolean;
@@ -25,7 +25,7 @@ const inferenceFrameLimits = {
 };
 
 const getMaxInferenceFrames = (role?: InferenceImageRole) => {
-  if (role === 'prior') return inferenceFrameLimits.prior;
+  if (role === "prior") return inferenceFrameLimits.prior;
   return inferenceFrameLimits.current;
 };
 
@@ -110,10 +110,10 @@ const distributeFrameBudget = (groups: SeriesGroup[], totalMax: number) => {
 
 export const selectInferenceImageRefs = (
   refs: ImageRef[] | undefined,
-  options?: InferenceImageSelectionOptions | boolean
+  options?: InferenceImageSelectionOptions | boolean,
 ) => {
   if (!refs || refs.length === 0) return [];
-  const normalized = typeof options === 'boolean' ? { includeAllFrames: options } : options || {};
+  const normalized = typeof options === "boolean" ? { includeAllFrames: options } : options || {};
   if (normalized.includeAllFrames) return refs;
 
   const maxFrames = normalized.maxFrames ?? getMaxInferenceFrames(normalized.role);
@@ -133,22 +133,22 @@ export const selectInferenceImageRefs = (
 };
 
 export const extractInferenceSummary = (result?: Record<string, unknown> | null) => {
-  if (!result) return '';
-  if (typeof result.summary === 'string') return result.summary.trim();
-  if (typeof result.text === 'string') return result.text.trim();
-  return '';
+  if (!result) return "";
+  if (typeof result.summary === "string") return result.summary.trim();
+  if (typeof result.text === "string") return result.text.trim();
+  return "";
 };
 
 export const extractInferenceConfidence = (result?: Record<string, unknown> | null) => {
   if (!result) return undefined;
-  if (typeof result.confidence === 'number') return result.confidence;
+  if (typeof result.confidence === "number") return result.confidence;
   return undefined;
 };
 
 export const extractInferenceModel = (result?: Record<string, unknown> | null) => {
   if (!result) return undefined;
-  if (typeof result.model_version === 'string') return result.model_version;
-  if (typeof result.model === 'string') return result.model;
+  if (typeof result.model_version === "string") return result.model_version;
+  if (typeof result.model === "string") return result.model;
   return undefined;
 };
 
@@ -158,8 +158,8 @@ export const extractInferenceEvidenceIndices = (result?: Record<string, unknown>
   if (!Array.isArray(raw)) return undefined;
   const indices = raw
     .map((entry) => {
-      if (typeof entry === 'number' && Number.isInteger(entry)) return entry;
-      if (typeof entry === 'string') {
+      if (typeof entry === "number" && Number.isInteger(entry)) return entry;
+      if (typeof entry === "string") {
         const parsed = Number(entry);
         return Number.isInteger(parsed) ? parsed : null;
       }
@@ -171,14 +171,14 @@ export const extractInferenceEvidenceIndices = (result?: Record<string, unknown>
 
 export const extractInferenceCompletedAt = (result?: Record<string, unknown> | null) => {
   if (!result) return undefined;
-  if (typeof result.completed_at === 'string') return result.completed_at;
-  if (typeof result.completedAt === 'string') return result.completedAt;
+  if (typeof result.completed_at === "string") return result.completed_at;
+  if (typeof result.completedAt === "string") return result.completedAt;
   return undefined;
 };
 
 const readNumber = (value: unknown) => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
   }
@@ -187,40 +187,42 @@ const readNumber = (value: unknown) => {
 
 const normalizeNumberArray = (raw: unknown) => {
   if (!Array.isArray(raw)) return undefined;
-  const values = raw
-    .map(readNumber)
-    .filter((entry): entry is number => typeof entry === 'number');
+  const values = raw.map(readNumber).filter((entry): entry is number => typeof entry === "number");
   return values.length > 0 ? values : undefined;
 };
 
 const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null => {
-  const studyId = typeof value.study_id === 'string' ? value.study_id : value.studyId;
-  const seriesId = typeof value.series_id === 'string' ? value.series_id : value.seriesId;
-  const instanceId = typeof value.instance_id === 'string' ? value.instance_id : value.instanceId;
-  const frameIndex = typeof value.frame_index === 'number' ? value.frame_index : value.frameIndex;
-  const stackIndex = typeof value.stack_index === 'number' ? value.stack_index : value.stackIndex;
-  const wadoUrl = typeof value.wado_url === 'string' ? value.wado_url : value.wadoUrl;
+  const studyId = typeof value.study_id === "string" ? value.study_id : value.studyId;
+  const seriesId = typeof value.series_id === "string" ? value.series_id : value.seriesId;
+  const instanceId = typeof value.instance_id === "string" ? value.instance_id : value.instanceId;
+  const frameIndex = typeof value.frame_index === "number" ? value.frame_index : value.frameIndex;
+  const stackIndex = typeof value.stack_index === "number" ? value.stack_index : value.stackIndex;
+  const wadoUrl = typeof value.wado_url === "string" ? value.wado_url : value.wadoUrl;
   if (
-    typeof studyId !== 'string' ||
-    typeof seriesId !== 'string' ||
-    typeof instanceId !== 'string' ||
-    typeof frameIndex !== 'number' ||
-    typeof stackIndex !== 'number' ||
-    typeof wadoUrl !== 'string'
+    typeof studyId !== "string" ||
+    typeof seriesId !== "string" ||
+    typeof instanceId !== "string" ||
+    typeof frameIndex !== "number" ||
+    typeof stackIndex !== "number" ||
+    typeof wadoUrl !== "string"
   ) {
     return null;
   }
-  const imageId = typeof value.image_id === 'string' ? value.image_id : value.imageId;
-  const studyDate = typeof value.study_date === 'string' ? value.study_date : value.studyDate;
+  const imageId = typeof value.image_id === "string" ? value.image_id : value.imageId;
+  const studyDate = typeof value.study_date === "string" ? value.study_date : value.studyDate;
   const timeDeltaDays = readNumber(value.time_delta_days ?? value.timeDeltaDays);
   const seriesDescription =
-    typeof value.series_description === 'string' ? value.series_description : value.seriesDescription;
+    typeof value.series_description === "string"
+      ? value.series_description
+      : value.seriesDescription;
   const seriesModality =
-    typeof value.series_modality === 'string' ? value.series_modality : value.seriesModality;
-  const role = typeof value.role === 'string' ? value.role : undefined;
+    typeof value.series_modality === "string" ? value.series_modality : value.seriesModality;
+  const role = typeof value.role === "string" ? value.role : undefined;
   const pixelSpacing = normalizeNumberArray(value.pixel_spacing ?? value.pixelSpacing);
   const sliceThickness = readNumber(value.slice_thickness ?? value.sliceThickness);
-  const spacingBetweenSlices = readNumber(value.spacing_between_slices ?? value.spacingBetweenSlices);
+  const spacingBetweenSlices = readNumber(
+    value.spacing_between_slices ?? value.spacingBetweenSlices,
+  );
   const imageOrientation = normalizeNumberArray(value.image_orientation ?? value.imageOrientation);
   const imagePosition = normalizeNumberArray(value.image_position ?? value.imagePosition);
   const instanceNumber = readNumber(value.instance_number ?? value.instanceNumber);
@@ -231,71 +233,73 @@ const mapInferenceImageRef = (value: Record<string, unknown>): ImageRef | null =
     frameIndex,
     stackIndex,
     wadoUrl,
-    imageId: typeof imageId === 'string' ? imageId : undefined,
-    studyDate: typeof studyDate === 'string' ? studyDate : undefined,
-    timeDeltaDays: typeof timeDeltaDays === 'number' ? timeDeltaDays : undefined,
-    seriesDescription: typeof seriesDescription === 'string' ? seriesDescription : undefined,
-    seriesModality: typeof seriesModality === 'string' ? seriesModality : undefined,
-    role: role === 'current' || role === 'prior' ? role : undefined,
+    imageId: typeof imageId === "string" ? imageId : undefined,
+    studyDate: typeof studyDate === "string" ? studyDate : undefined,
+    timeDeltaDays: typeof timeDeltaDays === "number" ? timeDeltaDays : undefined,
+    seriesDescription: typeof seriesDescription === "string" ? seriesDescription : undefined,
+    seriesModality: typeof seriesModality === "string" ? seriesModality : undefined,
+    role: role === "current" || role === "prior" ? role : undefined,
     pixelSpacing,
     sliceThickness,
     spacingBetweenSlices,
     imageOrientation,
     imagePosition,
-    instanceNumber: typeof instanceNumber === 'number' ? instanceNumber : undefined,
+    instanceNumber: typeof instanceNumber === "number" ? instanceNumber : undefined,
   };
 };
 
-export const extractInferenceImageRefs = (result?: Record<string, unknown> | null): ImageRef[] | undefined => {
+export const extractInferenceImageRefs = (
+  result?: Record<string, unknown> | null,
+): ImageRef[] | undefined => {
   if (!result) return undefined;
   const raw = (result.image_refs ?? result.imageRefs) as unknown;
   if (!Array.isArray(raw)) return undefined;
   return raw
-    .map((entry) => (entry && typeof entry === 'object' ? mapInferenceImageRef(entry as Record<string, unknown>) : null))
+    .map((entry) =>
+      entry && typeof entry === "object"
+        ? mapInferenceImageRef(entry as Record<string, unknown>)
+        : null,
+    )
     .filter((entry): entry is ImageRef => Boolean(entry));
 };
 
 export const extractInferenceFindings = (
-  result?: Record<string, unknown> | null
+  result?: Record<string, unknown> | null,
 ): FindingBox[] | undefined => {
   if (!result) return undefined;
   const raw = result.findings;
   if (!Array.isArray(raw) || raw.length === 0) return undefined;
   const findings: FindingBox[] = [];
   for (const item of raw) {
-    if (!item || typeof item !== 'object') continue;
+    if (!item || typeof item !== "object") continue;
     const entry = item as Record<string, unknown>;
     const box = entry.box_2d;
     const label = entry.label;
     const confidence = entry.confidence;
-    if (
-      !Array.isArray(box) ||
-      box.length !== 4 ||
-      box.some((c) => typeof c !== 'number')
-    ) continue;
-    if (typeof label !== 'string' || !label.trim()) continue;
+    if (!Array.isArray(box) || box.length !== 4 || box.some((c) => typeof c !== "number")) continue;
+    if (typeof label !== "string" || !label.trim()) continue;
     findings.push({
       box_2d: box as [number, number, number, number],
       label: label.trim(),
-      confidence: typeof confidence === 'number' ? confidence : undefined,
+      confidence: typeof confidence === "number" ? confidence : undefined,
     });
   }
   return findings.length > 0 ? findings : undefined;
 };
 
 export const extractInferenceMetadata = (
-  result?: Record<string, unknown> | null
+  result?: Record<string, unknown> | null,
 ): Record<string, unknown> | undefined => {
   if (!result) return undefined;
   const raw = (result.metadata ?? result.meta) as unknown;
-  if (!raw || typeof raw !== 'object') return undefined;
+  if (!raw || typeof raw !== "object") return undefined;
   return raw as Record<string, unknown>;
 };
 
 const mapJobStatusToAiStatus = (status?: string): AIStatus | null => {
   if (!status) return null;
-  if (status === 'queued' || status === 'deferred' || status === 'scheduled') return 'queued';
-  if (status === 'started') return 'processing';
+  if (status === "queued" || status === "deferred" || status === "scheduled") return "queued";
+  if (status === "started") return "processing";
   return null;
 };
 
@@ -309,12 +313,12 @@ export const pollInferenceResult = async (jobId: string, onStatus?: (status: AIS
     const response = await inferenceClient.getStatus(jobId);
     const status = response.status;
 
-    if (status === 'finished') {
+    if (status === "finished") {
       return response.result;
     }
 
-    if (status === 'failed') {
-      const message = response.error?.trim() || 'Inference job failed';
+    if (status === "failed") {
+      const message = response.error?.trim() || "Inference job failed";
       throw new Error(message);
     }
 
@@ -327,7 +331,7 @@ export const pollInferenceResult = async (jobId: string, onStatus?: (status: AIS
     await wait(pollIntervalMs);
   }
 
-  throw new Error('Inference timeout');
+  throw new Error("Inference timeout");
 };
 
 // WS_FALLBACK_DELAY_MS: if the WebSocket delivers no terminal status within this window,
@@ -347,28 +351,33 @@ export const awaitInferenceResult = async (
 
   const wsPath = waitForReportStatus(
     reportId,
-    (p) => p.aiStatus === 'idle' || p.aiStatus === 'error',
+    (p) => p.aiStatus === "idle" || p.aiStatus === "error",
     120_000,
   ).then(async (payload) => {
     clearTimeout(fallbackTimer);
-    if (payload.aiStatus === 'error') {
-      throw new Error('Inference failed');
+    if (payload.aiStatus === "error") {
+      throw new Error("Inference failed");
     }
     // Fetch the full result once after WS signals completion
     const response = await inferenceClient.getStatus(jobId);
-    if (response.status === 'failed') {
-      throw new Error(response.error?.trim() || 'Inference job failed');
+    if (response.status === "failed") {
+      throw new Error(response.error?.trim() || "Inference job failed");
     }
     return response.result;
   });
 
-  const fallbackPath = new Promise<Awaited<ReturnType<typeof pollInferenceResult>>>((resolve, reject) => {
-    fallbackTimer = setTimeout(() => {
-      pollInferenceResult(jobId, onStatus).then(resolve, reject);
-    }, WS_FALLBACK_DELAY_MS);
-    // Cancel the delayed fallback if WS succeeds first
-    wsPath.then(() => clearTimeout(fallbackTimer), () => clearTimeout(fallbackTimer));
-  });
+  const fallbackPath = new Promise<Awaited<ReturnType<typeof pollInferenceResult>>>(
+    (resolve, reject) => {
+      fallbackTimer = setTimeout(() => {
+        pollInferenceResult(jobId, onStatus).then(resolve, reject);
+      }, WS_FALLBACK_DELAY_MS);
+      // Cancel the delayed fallback if WS succeeds first
+      wsPath.then(
+        () => clearTimeout(fallbackTimer),
+        () => clearTimeout(fallbackTimer),
+      );
+    },
+  );
 
   return Promise.race([wsPath, fallbackPath]);
 };

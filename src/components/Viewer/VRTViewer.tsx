@@ -1,30 +1,30 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Loader2, Box } from 'lucide-react';
-import type { Series } from '@/types/radiology';
-import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
-import { useVRTViewport } from '@/hooks/useVRTViewport';
-import { VRTToolbar } from './VRTToolbar';
-import { ViewerEmptyState } from './ViewerEmptyState';
-import { VRT_PRESETS, DEFAULT_VRT_SETTINGS, type VRTViewAngle } from '@/types/vrt';
-import { cn } from '@/lib/utils';
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { Loader2, Box } from "lucide-react";
+import type { Series } from "@/types/radiology";
+import { useDicomSeriesInstances } from "@/hooks/useDicomSeriesInstances";
+import { useVRTViewport } from "@/hooks/useVRTViewport";
+import { VRTToolbar } from "./VRTToolbar";
+import { ViewerEmptyState } from "./ViewerEmptyState";
+import { VRT_PRESETS, DEFAULT_VRT_SETTINGS, type VRTViewAngle } from "@/types/vrt";
+import { cn } from "@/lib/utils";
 
 // Keyboard shortcut mappings
 const PRESET_SHORTCUTS: Record<string, number> = {
-  '1': 0, // CT Bone
-  '2': 1, // CT Lung
-  '3': 2, // CT Soft Tissue
-  '4': 3, // CT Angiography
-  '5': 4, // CT Muscle/Bone
+  "1": 0, // CT Bone
+  "2": 1, // CT Lung
+  "3": 2, // CT Soft Tissue
+  "4": 3, // CT Angiography
+  "5": 4, // CT Muscle/Bone
 };
 
 const VIEW_ANGLE_SHORTCUTS: Record<string, VRTViewAngle> = {
-  'a': 'anterior',
-  'p': 'posterior',
-  'l': 'left',
-  'r': 'right',
-  's': 'superior',
-  'i': 'inferior',
+  a: "anterior",
+  p: "posterior",
+  l: "left",
+  r: "right",
+  s: "superior",
+  i: "inferior",
 };
 
 interface VRTViewerProps {
@@ -33,7 +33,7 @@ interface VRTViewerProps {
 }
 
 export function VRTViewer({ series, className }: VRTViewerProps) {
-  const { t } = useTranslation('viewer');
+  const { t } = useTranslation("viewer");
   const [viewerError, setViewerError] = useState<string | null>(null);
 
   const {
@@ -44,7 +44,7 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
 
   const viewerInstanceId = useMemo(
     () => `vrt-viewer-${Math.random().toString(36).slice(2, 9)}`,
-    []
+    [],
   );
 
   const {
@@ -85,9 +85,13 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle if focused on input elements
-      if (e.target instanceof HTMLInputElement || 
-          e.target instanceof HTMLTextAreaElement ||
-          e.ctrlKey || e.metaKey || e.altKey) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey
+      ) {
         return;
       }
 
@@ -111,32 +115,29 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
       }
 
       // Reset with Escape
-      if (key === 'escape') {
+      if (key === "escape") {
         e.preventDefault();
         handleReset();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isReady, applyPreset, setViewAngle, handleReset]);
 
   if (!series) {
     return (
-      <ViewerEmptyState
-        title="3D Volume Rendering"
-        subtitle={t('emptyState.selectSeriesFor3d')}
-      />
+      <ViewerEmptyState title="3D Volume Rendering" subtitle={t("emptyState.selectSeriesFor3d")} />
     );
   }
 
   // Check if modality supports VRT
-  const supportedModalities = ['CT', 'MR', 'PT'];
+  const supportedModalities = ["CT", "MR", "PT"];
   if (!supportedModalities.includes(series.modality)) {
     return (
       <ViewerEmptyState
         title="3D Volume Rendering"
-        subtitle={t('emptyState.unsupportedModality', { modality: series.modality })}
+        subtitle={t("emptyState.unsupportedModality", { modality: series.modality })}
       />
     );
   }
@@ -144,7 +145,7 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
   // Need enough slices for 3D
   if (imageIds.length < 10) {
     return (
-      <ViewerEmptyState 
+      <ViewerEmptyState
         title="3D Volume Rendering"
         subtitle={`Nicht genügend Bilder für 3D-Rendering. Mindestens 10 erforderlich, ${imageIds.length} vorhanden.`}
       />
@@ -152,14 +153,14 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
   }
 
   // Show warning for modalities that may lack proper 3D metadata
-  const modalitiesWithLimitedSupport = ['US', 'XA', 'RF', 'SC'];
+  const modalitiesWithLimitedSupport = ["US", "XA", "RF", "SC"];
   const hasLimitedSupport = modalitiesWithLimitedSupport.includes(series.modality);
-  const limitedSupportWarning = hasLimitedSupport 
+  const limitedSupportWarning = hasLimitedSupport
     ? `Hinweis: ${series.modality}-Bilder haben oft keine räumlichen Metadaten. Die 3D-Darstellung kann ungenau sein.`
     : null;
 
   return (
-    <div className={cn('h-full flex flex-col bg-viewer', className)}>
+    <div className={cn("h-full flex flex-col bg-viewer", className)}>
       {/* Toolbar */}
       <VRTToolbar
         settings={settings}
@@ -175,11 +176,9 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin" />
             <span className="text-sm">
-              {isFetchingInstances ? 'Lade DICOM-Daten...' : 'Erstelle 3D-Volumen...'}
+              {isFetchingInstances ? "Lade DICOM-Daten..." : "Erstelle 3D-Volumen..."}
             </span>
-            <span className="text-xs text-muted-foreground/60">
-              {imageIds.length} Bilder
-            </span>
+            <span className="text-xs text-muted-foreground/60">{imageIds.length} Bilder</span>
           </div>
         </div>
       )}
@@ -192,8 +191,8 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
             <p className="text-xs text-muted-foreground mt-1">{effectiveError}</p>
             {hasLimitedSupport && (
               <p className="text-xs text-yellow-500 mt-2">
-                {series.modality}-Bilder sind für 3D-Rendering nicht optimal geeignet, 
-                da oft räumliche Metadaten (PixelSpacing, ImageOrientation) fehlen.
+                {series.modality}-Bilder sind für 3D-Rendering nicht optimal geeignet, da oft
+                räumliche Metadaten (PixelSpacing, ImageOrientation) fehlen.
               </p>
             )}
           </div>
@@ -204,28 +203,37 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
       {!isLoading && !effectiveError && (
         <div className="flex-1 relative">
           {/* Viewport container */}
-          <div 
-            ref={viewportRef}
-            className="absolute inset-0 bg-black"
-          />
+          <div ref={viewportRef} className="absolute inset-0 bg-black" />
 
           {/* Overlay info */}
           {isReady && (
             <>
               {/* Preset badge */}
               <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 text-xs text-white">
-                {VRT_PRESETS.find(p => p.id === settings.presetId)?.name || 'Custom'}
+                {VRT_PRESETS.find((p) => p.id === settings.presetId)?.name || "Custom"}
               </div>
 
               {/* Controls hint */}
               <div className="absolute bottom-3 left-3 space-y-0.5 text-xs text-white/70 bg-black/40 rounded px-2 py-1">
-                <p><kbd className="px-1 bg-black/40 rounded">LMB</kbd> Rotieren</p>
-                <p><kbd className="px-1 bg-black/40 rounded">RMB</kbd> Pan</p>
-                <p><kbd className="px-1 bg-black/40 rounded">Scroll</kbd> Zoom</p>
+                <p>
+                  <kbd className="px-1 bg-black/40 rounded">LMB</kbd> Rotieren
+                </p>
+                <p>
+                  <kbd className="px-1 bg-black/40 rounded">RMB</kbd> Pan
+                </p>
+                <p>
+                  <kbd className="px-1 bg-black/40 rounded">Scroll</kbd> Zoom
+                </p>
                 <div className="border-t border-white/20 mt-1 pt-1">
-                  <p><kbd className="px-1 bg-black/40 rounded">1-5</kbd> Presets</p>
-                  <p><kbd className="px-1 bg-black/40 rounded">A/P/L/R/S/I</kbd> Ansicht</p>
-                  <p><kbd className="px-1 bg-black/40 rounded">Esc</kbd> Reset</p>
+                  <p>
+                    <kbd className="px-1 bg-black/40 rounded">1-5</kbd> Presets
+                  </p>
+                  <p>
+                    <kbd className="px-1 bg-black/40 rounded">A/P/L/R/S/I</kbd> Ansicht
+                  </p>
+                  <p>
+                    <kbd className="px-1 bg-black/40 rounded">Esc</kbd> Reset
+                  </p>
                 </div>
               </div>
 
@@ -233,9 +241,13 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
               {series && (
                 <div className="absolute bottom-3 right-3 text-right text-xs text-white/70 bg-black/40 rounded px-2 py-1">
                   <p className="truncate max-w-[200px]">{series.seriesDescription}</p>
-                  <p>{series.modality} • {imageIds.length} Bilder</p>
+                  <p>
+                    {series.modality} • {imageIds.length} Bilder
+                  </p>
                   {limitedSupportWarning && (
-                    <p className="text-yellow-400 text-[10px] mt-1 max-w-[200px]">{limitedSupportWarning}</p>
+                    <p className="text-yellow-400 text-[10px] mt-1 max-w-[200px]">
+                      {limitedSupportWarning}
+                    </p>
                   )}
                 </div>
               )}

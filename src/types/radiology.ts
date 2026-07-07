@@ -15,7 +15,7 @@ export interface Patient {
   id: string;
   name: string;
   dateOfBirth: string;
-  gender: 'M' | 'F' | 'O';
+  gender: "M" | "F" | "O";
   mrn: string; // Medical Record Number
 }
 
@@ -23,7 +23,7 @@ export interface Study {
   id: string;
   patientId: string;
   accessionNumber: string;
-  modality: 'CT' | 'MR' | 'CR' | 'DX' | 'US' | 'NM' | 'PT';
+  modality: "CT" | "MR" | "CR" | "DX" | "US" | "NM" | "PT";
   studyDate: string;
   studyDescription: string;
   referringPhysician: string;
@@ -53,7 +53,7 @@ export interface ImageRef {
   timeDeltaDays?: number;
   seriesDescription?: string;
   seriesModality?: string;
-  role?: 'current' | 'prior';
+  role?: "current" | "prior";
   pixelSpacing?: number[];
   sliceThickness?: number;
   spacingBetweenSlices?: number;
@@ -88,11 +88,11 @@ export interface Report {
   inferenceMetadata?: Record<string, unknown>;
 }
 
-export type ReportStatus = 'pending' | 'in_progress' | 'draft' | 'approved' | 'finalized';
+export type ReportStatus = "pending" | "in_progress" | "draft" | "approved" | "finalized";
 
-export type QAStatus = 'pending' | 'checking' | 'pass' | 'warn' | 'fail';
+export type QAStatus = "pending" | "checking" | "pass" | "warn" | "fail";
 
-export type AIStatus = 'idle' | 'queued' | 'processing' | 'error';
+export type AIStatus = "idle" | "queued" | "processing" | "error";
 
 export interface ASRResult {
   text: string;
@@ -117,7 +117,7 @@ export interface QACheckResult {
 export interface QACheck {
   id: string;
   name: string;
-  status: 'pass' | 'warn' | 'fail';
+  status: "pass" | "warn" | "fail";
   message?: string;
 }
 
@@ -135,7 +135,7 @@ export interface Guideline {
   title: string;
   category: string;
   summary: string;
-  status: 'pass' | 'warn' | 'info' | 'critical';
+  status: "pass" | "warn" | "info" | "critical";
   source?: string;
 }
 
@@ -170,6 +170,6 @@ export interface QueueItem {
   patient: Patient;
   study: Study;
   report: Report;
-  priority: 'normal' | 'urgent' | 'stat';
+  priority: "normal" | "urgent" | "stat";
   assignedTo?: string;
 }

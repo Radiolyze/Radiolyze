@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Check, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { AlertTriangle, Check, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export interface CriticalAlert {
   id: string;
@@ -31,9 +31,9 @@ interface CriticalFindingBannerProps {
 }
 
 export function CriticalFindingBanner({ alerts, onAcknowledge }: CriticalFindingBannerProps) {
-  const { t } = useTranslation('report');
+  const { t } = useTranslation("report");
   const [ackDialogAlert, setAckDialogAlert] = useState<CriticalAlert | null>(null);
-  const [signature, setSignature] = useState('');
+  const [signature, setSignature] = useState("");
 
   const unacknowledged = alerts.filter((a) => !a.acknowledged_at);
   const acknowledged = alerts.filter((a) => a.acknowledged_at);
@@ -44,7 +44,7 @@ export function CriticalFindingBanner({ alerts, onAcknowledge }: CriticalFinding
     if (ackDialogAlert && signature.trim()) {
       onAcknowledge(ackDialogAlert.id, signature.trim());
       setAckDialogAlert(null);
-      setSignature('');
+      setSignature("");
     }
   };
 
@@ -55,7 +55,7 @@ export function CriticalFindingBanner({ alerts, onAcknowledge }: CriticalFinding
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="h-5 w-5 text-red-400" />
             <span className="font-bold text-red-300 text-sm">
-              {t('criticalFinding.title', 'KRITISCHER BEFUND')}
+              {t("criticalFinding.title", "KRITISCHER BEFUND")}
             </span>
             <Badge variant="destructive" className="text-xs">
               {unacknowledged.length}
@@ -77,7 +77,7 @@ export function CriticalFindingBanner({ alerts, onAcknowledge }: CriticalFinding
                   onClick={() => setAckDialogAlert(alert)}
                   className="text-xs"
                 >
-                  {t('criticalFinding.acknowledge', 'Bestätigen')}
+                  {t("criticalFinding.acknowledge", "Bestätigen")}
                 </Button>
               </div>
             ))}
@@ -90,13 +90,14 @@ export function CriticalFindingBanner({ alerts, onAcknowledge }: CriticalFinding
           <div className="flex items-center gap-2 mb-1">
             <Check className="h-4 w-4 text-yellow-500" />
             <span className="text-yellow-400 text-xs font-medium">
-              {t('criticalFinding.acknowledged', 'Bestätigte kritische Befunde')}
+              {t("criticalFinding.acknowledged", "Bestätigte kritische Befunde")}
             </span>
           </div>
           <div className="space-y-1">
             {acknowledged.map((alert) => (
               <div key={alert.id} className="text-xs text-muted-foreground">
-                {alert.finding_type} — {alert.acknowledged_by} ({new Date(alert.acknowledged_at!).toLocaleString()})
+                {alert.finding_type} — {alert.acknowledged_by} (
+                {new Date(alert.acknowledged_at!).toLocaleString()})
               </div>
             ))}
           </div>
@@ -108,34 +109,35 @@ export function CriticalFindingBanner({ alerts, onAcknowledge }: CriticalFinding
           <DialogHeader>
             <DialogTitle className="text-red-400 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
-              {t('criticalFinding.ackTitle', 'Kritischen Befund bestätigen')}
+              {t("criticalFinding.ackTitle", "Kritischen Befund bestätigen")}
             </DialogTitle>
             <DialogDescription>
               {t(
-                'criticalFinding.ackDescription',
-                'Bitte bestätigen Sie die Kenntnisnahme des kritischen Befundes und dokumentieren Sie Ihren Namen.'
+                "criticalFinding.ackDescription",
+                "Bitte bestätigen Sie die Kenntnisnahme des kritischen Befundes und dokumentieren Sie Ihren Namen.",
               )}
             </DialogDescription>
           </DialogHeader>
           {ackDialogAlert && (
             <div className="py-2">
               <p className="text-sm font-medium mb-3">
-                {t('criticalFinding.findingType', 'Befundtyp')}: <strong>{ackDialogAlert.finding_type}</strong>
+                {t("criticalFinding.findingType", "Befundtyp")}:{" "}
+                <strong>{ackDialogAlert.finding_type}</strong>
               </p>
               <Input
-                placeholder={t('criticalFinding.signaturePlaceholder', 'Dr. Name')}
+                placeholder={t("criticalFinding.signaturePlaceholder", "Dr. Name")}
                 value={signature}
                 onChange={(e) => setSignature(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAcknowledge()}
+                onKeyDown={(e) => e.key === "Enter" && handleAcknowledge()}
               />
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAckDialogAlert(null)}>
-              {t('criticalFinding.cancel', 'Abbrechen')}
+              {t("criticalFinding.cancel", "Abbrechen")}
             </Button>
             <Button variant="destructive" onClick={handleAcknowledge} disabled={!signature.trim()}>
-              {t('criticalFinding.confirmAck', 'Kenntnisnahme bestätigen')}
+              {t("criticalFinding.confirmAck", "Kenntnisnahme bestätigen")}
             </Button>
           </DialogFooter>
         </DialogContent>

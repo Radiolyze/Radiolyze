@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   Activity,
@@ -14,14 +14,14 @@ import {
   AlertTriangle,
   RefreshCw,
   TrendingUp,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { apiClient } from '@/services/apiClient';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { apiClient } from "@/services/apiClient";
 
 interface ServiceStatus {
-  status: 'ok' | 'degraded' | 'error' | 'disabled';
+  status: "ok" | "degraded" | "error" | "disabled";
   detail?: string;
 }
 
@@ -47,11 +47,24 @@ const serviceIcons: Record<string, typeof Database> = {
   orthanc: HardDrive,
 };
 
-const statusStyles: Record<string, { color: string; dotColor: string; icon: typeof CheckCircle; label: string }> = {
-  ok: { color: 'text-green-400', dotColor: 'bg-green-400', icon: CheckCircle, label: 'Online' },
-  degraded: { color: 'text-yellow-400', dotColor: 'bg-yellow-400', icon: AlertTriangle, label: 'Degraded' },
-  error: { color: 'text-red-400', dotColor: 'bg-red-400', icon: XCircle, label: 'Error' },
-  disabled: { color: 'text-muted-foreground', dotColor: 'bg-muted-foreground', icon: AlertTriangle, label: 'Disabled' },
+const statusStyles: Record<
+  string,
+  { color: string; dotColor: string; icon: typeof CheckCircle; label: string }
+> = {
+  ok: { color: "text-green-400", dotColor: "bg-green-400", icon: CheckCircle, label: "Online" },
+  degraded: {
+    color: "text-yellow-400",
+    dotColor: "bg-yellow-400",
+    icon: AlertTriangle,
+    label: "Degraded",
+  },
+  error: { color: "text-red-400", dotColor: "bg-red-400", icon: XCircle, label: "Error" },
+  disabled: {
+    color: "text-muted-foreground",
+    dotColor: "bg-muted-foreground",
+    icon: AlertTriangle,
+    label: "Disabled",
+  },
 };
 
 function ServiceCardSkeleton() {
@@ -83,13 +96,13 @@ function MetricCardSkeleton() {
 }
 
 export default function Dashboard() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation("common");
   const { data, isFetching, dataUpdatedAt, refetch } = useQuery({
-    queryKey: ['dashboard'],
+    queryKey: ["dashboard"],
     queryFn: async () => {
       const [health, metrics] = await Promise.all([
-        apiClient.get<HealthResponse>('/api/v1/health/detailed'),
-        apiClient.get<Metrics>('/api/v1/metrics'),
+        apiClient.get<HealthResponse>("/api/v1/health/detailed"),
+        apiClient.get<Metrics>("/api/v1/metrics"),
       ]);
       return { health, metrics };
     },
@@ -102,7 +115,7 @@ export default function Dashboard() {
   const lastRefreshed = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
   const formatTime = (date: Date) =>
-    date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="min-h-screen bg-background text-foreground p-6">
@@ -113,7 +126,7 @@ export default function Dashboard() {
             <Link to="/">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                {t('actions.back')}
+                {t("actions.back")}
               </Button>
             </Link>
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -134,14 +147,14 @@ export default function Dashboard() {
               </Button>
             </Link>
             <Button variant="outline" size="sm" onClick={() => refetch()} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-              {t('actions.reload')}
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+              {t("actions.reload")}
             </Button>
           </div>
         </div>
 
         {/* Service Health */}
-        <Card className="animate-slide-up" style={{ animationDelay: '50ms' }}>
+        <Card className="animate-slide-up" style={{ animationDelay: "50ms" }}>
           <CardHeader>
             <CardTitle className="text-lg">Service Status</CardTitle>
           </CardHeader>
@@ -166,11 +179,16 @@ export default function Dashboard() {
                       <Icon className={`h-10 w-10 ${style.color}`} />
                       <span className="text-sm font-medium capitalize">{name}</span>
                       <div className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${style.dotColor} ${svc.status === 'ok' ? 'animate-pulse' : ''}`} />
+                        <span
+                          className={`w-2 h-2 rounded-full ${style.dotColor} ${svc.status === "ok" ? "animate-pulse" : ""}`}
+                        />
                         <span className={`text-xs ${style.color}`}>{style.label}</span>
                       </div>
                       {svc.detail && (
-                        <span className="text-xs text-muted-foreground truncate max-w-full" title={svc.detail}>
+                        <span
+                          className="text-xs text-muted-foreground truncate max-w-full"
+                          title={svc.detail}
+                        >
                           {svc.detail}
                         </span>
                       )}
@@ -179,7 +197,7 @@ export default function Dashboard() {
                 })}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">{t('status.noDataAvailable')}</p>
+              <p className="text-muted-foreground text-sm">{t("status.noDataAvailable")}</p>
             )}
           </CardContent>
         </Card>
@@ -194,7 +212,7 @@ export default function Dashboard() {
             </>
           ) : metrics ? (
             <>
-              <Card className="animate-slide-up" style={{ animationDelay: '150ms' }}>
+              <Card className="animate-slide-up" style={{ animationDelay: "150ms" }}>
                 <CardHeader>
                   <CardTitle className="text-sm text-muted-foreground">Reports</CardTitle>
                 </CardHeader>
@@ -211,7 +229,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="animate-slide-up" style={{ animationDelay: '230ms' }}>
+              <Card className="animate-slide-up" style={{ animationDelay: "230ms" }}>
                 <CardHeader>
                   <CardTitle className="text-sm text-muted-foreground">QA Status</CardTitle>
                 </CardHeader>
@@ -227,7 +245,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="animate-slide-up" style={{ animationDelay: '310ms' }}>
+              <Card className="animate-slide-up" style={{ animationDelay: "310ms" }}>
                 <CardHeader>
                   <CardTitle className="text-sm text-muted-foreground">Inference Jobs</CardTitle>
                 </CardHeader>

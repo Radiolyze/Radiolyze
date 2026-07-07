@@ -1,9 +1,9 @@
-import React, { Component, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import i18n from '@/i18n';
-import { logger } from '@/lib/logger';
+import React, { Component, ReactNode } from "react";
+import { AlertTriangle, RefreshCw, Home, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import i18n from "@/i18n";
+import { logger } from "@/lib/logger";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -17,7 +17,7 @@ interface ErrorBoundaryState {
 }
 
 // Helper to get translations (class components can't use hooks)
-const getTranslation = (key: string, ns: string = 'errors'): string => {
+const getTranslation = (key: string, ns: string = "errors"): string => {
   return i18n.t(key, { ns }) as string;
 };
 
@@ -38,8 +38,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     this.setState({ errorInfo });
     // Log error for debugging
-    logger.error('[ErrorBoundary] Caught error:', error);
-    logger.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
+    logger.error("[ErrorBoundary] Caught error:", error);
+    logger.error("[ErrorBoundary] Component stack:", errorInfo.componentStack);
   }
 
   handleReload = (): void => {
@@ -51,17 +51,17 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   };
 
   handleGoHome = (): void => {
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   handleClearStorage = (): void => {
     try {
       localStorage.clear();
       sessionStorage.clear();
-      alert(getTranslation('boundary.cacheClearedMessage'));
+      alert(getTranslation("boundary.cacheClearedMessage"));
       window.location.reload();
     } catch (e) {
-      logger.error('Failed to clear storage:', e);
+      logger.error("Failed to clear storage:", e);
       window.location.reload();
     }
   };
@@ -81,10 +81,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
                 <AlertTriangle className="h-7 w-7 text-destructive" />
               </div>
-              <CardTitle className="text-xl">{getTranslation('boundary.title')}</CardTitle>
-              <CardDescription>
-                {getTranslation('boundary.message')}
-              </CardDescription>
+              <CardTitle className="text-xl">{getTranslation("boundary.title")}</CardTitle>
+              <CardDescription>{getTranslation("boundary.message")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {error && (
@@ -96,44 +94,32 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               )}
 
               <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="default"
-                  onClick={this.handleReload}
-                  className="w-full"
-                >
+                <Button variant="default" onClick={this.handleReload} className="w-full">
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  {getTranslation('boundary.actions.reload')}
+                  {getTranslation("boundary.actions.reload")}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={this.handleReset}
-                  className="w-full"
-                >
+                <Button variant="outline" onClick={this.handleReset} className="w-full">
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  {getTranslation('boundary.actions.retry')}
+                  {getTranslation("boundary.actions.retry")}
                 </Button>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={this.handleGoHome}
-                  className="w-full"
-                >
+                <Button variant="ghost" onClick={this.handleGoHome} className="w-full">
                   <Home className="mr-2 h-4 w-4" />
-                  {getTranslation('boundary.actions.goHome')}
+                  {getTranslation("boundary.actions.goHome")}
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={this.handleClearStorage}
                   className="w-full text-destructive hover:text-destructive"
                 >
-                  {getTranslation('boundary.actions.clearCache')}
+                  {getTranslation("boundary.actions.clearCache")}
                 </Button>
               </div>
 
               <p className="text-xs text-center text-muted-foreground pt-2">
-                {getTranslation('generic.message')}
+                {getTranslation("generic.message")}
               </p>
             </CardContent>
           </Card>

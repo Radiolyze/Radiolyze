@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Download,
@@ -14,15 +14,15 @@ import {
   Tag,
   Layers,
   Settings2,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { cn } from '@/lib/utils';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 import {
   getTrainingStats,
   getAnnotationCategories,
@@ -32,29 +32,32 @@ import {
   type ExportFormat,
   type ExportRequest,
   type ManifestResponse,
-} from '@/services/trainingClient';
-import { toast } from 'sonner';
+} from "@/services/trainingClient";
+import { toast } from "sonner";
 
-const FORMAT_INFO: Record<ExportFormat, { name: string; description: string; icon: typeof FileJson }> = {
+const FORMAT_INFO: Record<
+  ExportFormat,
+  { name: string; description: string; icon: typeof FileJson }
+> = {
   coco: {
-    name: 'COCO',
-    description: 'Standard Object Detection Format. Kompatibel mit detectron2, MMDetection, YOLO.',
+    name: "COCO",
+    description: "Standard Object Detection Format. Kompatibel mit detectron2, MMDetection, YOLO.",
     icon: FileJson,
   },
   huggingface: {
-    name: 'HuggingFace',
-    description: 'JSONL Dataset Format für 🤗 Transformers und datasets Library.',
+    name: "HuggingFace",
+    description: "JSONL Dataset Format für 🤗 Transformers und datasets Library.",
     icon: Database,
   },
   radiolyze: {
-    name: 'Radiolyze',
-    description: 'Radiolyze Format für Multimodal Fine-Tuning mit LoRA.',
+    name: "Radiolyze",
+    description: "Radiolyze Format für Multimodal Fine-Tuning mit LoRA.",
     icon: Sparkles,
   },
 };
 
 export default function Training() {
-  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('radiolyze');
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("radiolyze");
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [splitRatio, setSplitRatio] = useState([0.8]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -63,27 +66,27 @@ export default function Training() {
   const [isDownloadingManifest, setIsDownloadingManifest] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['training-stats', verifiedOnly],
+    queryKey: ["training-stats", verifiedOnly],
     queryFn: () => getTrainingStats({ verifiedOnly }),
   });
 
   const { data: categoriesData } = useQuery({
-    queryKey: ['annotation-categories'],
+    queryKey: ["annotation-categories"],
     queryFn: getAnnotationCategories,
   });
-  
+
   // Defensive: ensure categories is always an array
   const categories = Array.isArray(categoriesData) ? categoriesData : [];
 
   const exportMutation = useMutation({
     mutationFn: exportAndDownload,
     onSuccess: () => {
-      toast.success('Export erfolgreich', {
-        description: 'Das Training-Dataset wurde heruntergeladen.',
+      toast.success("Export erfolgreich", {
+        description: "Das Training-Dataset wurde heruntergeladen.",
       });
     },
     onError: (error: Error) => {
-      toast.error('Export fehlgeschlagen', {
+      toast.error("Export fehlgeschlagen", {
         description: error.message,
       });
     },
@@ -93,12 +96,12 @@ export default function Training() {
     mutationFn: getTrainingManifest,
     onSuccess: (data) => {
       setManifest(data);
-      toast.success('Manifest erzeugt', {
+      toast.success("Manifest erzeugt", {
         description: `${data.total} Bilder im Data-Capture-Katalog.`,
       });
     },
     onError: (error: Error) => {
-      toast.error('Manifest fehlgeschlagen', {
+      toast.error("Manifest fehlgeschlagen", {
         description: error.message,
       });
     },
@@ -135,13 +138,13 @@ export default function Training() {
     setIsDownloadingManifest(true);
     try {
       const data = await getTrainingManifest(buildManifestRequest(undefined, true));
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const timestamp = new Date().toISOString().slice(0, 10);
       downloadBlob(blob, `radiolyze-manifest-${timestamp}.json`);
-      toast.success('Manifest heruntergeladen');
+      toast.success("Manifest heruntergeladen");
     } catch (error) {
-      toast.error('Manifest Download fehlgeschlagen', {
-        description: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      toast.error("Manifest Download fehlgeschlagen", {
+        description: error instanceof Error ? error.message : "Unbekannter Fehler",
       });
     } finally {
       setIsDownloadingManifest(false);
@@ -150,9 +153,7 @@ export default function Training() {
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category]
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
     );
   };
 
@@ -279,23 +280,25 @@ export default function Training() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(Object.entries(FORMAT_INFO) as [ExportFormat, typeof FORMAT_INFO['coco']][]).map(
+              {(Object.entries(FORMAT_INFO) as [ExportFormat, (typeof FORMAT_INFO)["coco"]][]).map(
                 ([format, info]) => (
                   // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- pre-existing click-only selection pattern, keyboard support tracked separately
                   <div
                     key={format}
                     className={cn(
-                      'flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-colors',
+                      "flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-colors",
                       selectedFormat === format
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50",
                     )}
                     onClick={() => setSelectedFormat(format)}
                   >
                     <div
                       className={cn(
-                        'p-2 rounded-lg',
-                        selectedFormat === format ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                        "p-2 rounded-lg",
+                        selectedFormat === format
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted",
                       )}
                     >
                       <info.icon className="h-5 w-5" />
@@ -310,7 +313,7 @@ export default function Training() {
                       <div className="text-sm text-muted-foreground">{info.description}</div>
                     </div>
                   </div>
-                )
+                ),
               )}
             </CardContent>
           </Card>
@@ -368,7 +371,7 @@ export default function Training() {
                   {categories.map(({ category, count }) => (
                     <Badge
                       key={category}
-                      variant={selectedCategories.includes(category) ? 'default' : 'outline'}
+                      variant={selectedCategories.includes(category) ? "default" : "outline"}
                       className="cursor-pointer"
                       onClick={() => toggleCategory(category)}
                     >
@@ -377,11 +380,7 @@ export default function Training() {
                   ))}
                 </div>
                 {selectedCategories.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedCategories([])}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedCategories([])}>
                     Filter zurücksetzen
                   </Button>
                 )}
@@ -418,7 +417,7 @@ export default function Training() {
                             Manifest wird erzeugt...
                           </>
                         ) : (
-                          'Manifest erzeugen'
+                          "Manifest erzeugen"
                         )}
                       </Button>
                       <Button
@@ -435,7 +434,7 @@ export default function Training() {
                         onClick={handleManifestDownload}
                         disabled={isDownloadingManifest || !stats?.totalAnnotations}
                       >
-                        {isDownloadingManifest ? 'Download läuft...' : 'Manifest herunterladen'}
+                        {isDownloadingManifest ? "Download läuft..." : "Manifest herunterladen"}
                       </Button>
                     </div>
 
@@ -464,8 +463,8 @@ export default function Training() {
                             >
                               <span className="font-mono">{entry.id}</span>
                               <span className="text-muted-foreground">
-                                {entry.splits.join(', ')}
-                                {entry.status === 'error' && ' · Fehler'}
+                                {entry.splits.join(", ")}
+                                {entry.status === "error" && " · Fehler"}
                               </span>
                             </div>
                           ))}
@@ -481,7 +480,7 @@ export default function Training() {
                               Fehlerliste (Preview)
                             </div>
                             {manifest.images
-                              .filter((entry) => entry.status === 'error')
+                              .filter((entry) => entry.status === "error")
                               .slice(0, 3)
                               .map((entry) => (
                                 <div
@@ -490,7 +489,7 @@ export default function Training() {
                                 >
                                   <div className="font-mono">{entry.id}</div>
                                   <div className="text-muted-foreground">
-                                    {entry.error || 'Abruf fehlgeschlagen'}
+                                    {entry.error || "Abruf fehlgeschlagen"}
                                   </div>
                                 </div>
                               ))}
@@ -521,7 +520,7 @@ export default function Training() {
               <div>
                 <h3 className="font-semibold">Bereit zum Export</h3>
                 <p className="text-sm text-muted-foreground">
-                  {stats?.totalAnnotations || 0} Annotations in {FORMAT_INFO[selectedFormat].name}{' '}
+                  {stats?.totalAnnotations || 0} Annotations in {FORMAT_INFO[selectedFormat].name}{" "}
                   Format
                 </p>
               </div>
@@ -545,7 +544,8 @@ export default function Training() {
             </div>
             {includeImages && (
               <div className="mt-3 text-xs text-muted-foreground">
-                Hinweis: Das Export-ZIP enthält ein Manifest unter <code>images/manifest.json</code>.
+                Hinweis: Das Export-ZIP enthält ein Manifest unter <code>images/manifest.json</code>
+                .
               </div>
             )}
 

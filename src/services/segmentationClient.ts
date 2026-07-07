@@ -1,13 +1,12 @@
-import { apiClient } from './apiClient';
+import { apiClient } from "./apiClient";
 import type {
   PushToPacsResponse,
   SegmentationCreateInput,
   SegmentationJobResponse,
   SegmentationPreset,
-} from '@/types/segmentation';
+} from "@/types/segmentation";
 
-const SEGMENTATION_BASE =
-  import.meta.env.VITE_SEGMENTATION_API_URL ?? '/api/v1/segmentation';
+const SEGMENTATION_BASE = import.meta.env.VITE_SEGMENTATION_API_URL ?? "/api/v1/segmentation";
 
 interface CreatePayload {
   study_uid: string;
@@ -18,18 +17,15 @@ interface CreatePayload {
 
 interface CreateResponse {
   job_id: string;
-  status: SegmentationJobResponse['status'];
+  status: SegmentationJobResponse["status"];
   queued_at: string;
   study_uid: string;
   series_uid: string;
   preset: SegmentationPreset;
 }
 
-const meshUrl = (
-  jobId: string,
-  labelId: number,
-  format: 'glb' | 'vtp' = 'glb',
-): string => `${SEGMENTATION_BASE}/jobs/${jobId}/mesh/${labelId}?format=${format}`;
+const meshUrl = (jobId: string, labelId: number, format: "glb" | "vtp" = "glb"): string =>
+  `${SEGMENTATION_BASE}/jobs/${jobId}/mesh/${labelId}?format=${format}`;
 
 export const segmentationClient = {
   async createJob(input: SegmentationCreateInput): Promise<CreateResponse> {
@@ -42,18 +38,16 @@ export const segmentationClient = {
     return apiClient.post<CreateResponse>(`${SEGMENTATION_BASE}/jobs`, payload);
   },
   async getStatus(jobId: string): Promise<SegmentationJobResponse> {
-    return apiClient.get<SegmentationJobResponse>(
-      `${SEGMENTATION_BASE}/jobs/${jobId}`,
-    );
+    return apiClient.get<SegmentationJobResponse>(`${SEGMENTATION_BASE}/jobs/${jobId}`);
   },
   meshUrl,
   async fetchMesh(
     jobId: string,
     labelId: number,
-    format: 'glb' | 'vtp' = 'vtp',
+    format: "glb" | "vtp" = "vtp",
   ): Promise<ArrayBuffer> {
     const response = await fetch(meshUrl(jobId, labelId, format), {
-      credentials: 'include',
+      credentials: "include",
     });
     if (!response.ok) {
       throw new Error(`Failed to fetch mesh ${labelId} (${response.status})`);
@@ -61,8 +55,6 @@ export const segmentationClient = {
     return response.arrayBuffer();
   },
   async pushToPacs(jobId: string): Promise<PushToPacsResponse> {
-    return apiClient.post<PushToPacsResponse>(
-      `${SEGMENTATION_BASE}/jobs/${jobId}/push-to-pacs`,
-    );
+    return apiClient.post<PushToPacsResponse>(`${SEGMENTATION_BASE}/jobs/${jobId}/push-to-pacs`);
   },
 };

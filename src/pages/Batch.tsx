@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   CheckCircle,
@@ -23,20 +23,20 @@ import {
   XCircle,
   Wifi,
   WifiOff,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -44,7 +44,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,18 +55,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { EmptyState } from '@/components/Common/EmptyState';
-import { useWebSocket, ReportStatusEvent } from '@/hooks/useWebSocket';
-import type { ReportStatus, QAStatus } from '@/types/radiology';
-import { reportClient, type ReportResponsePayload } from '@/services/reportClient';
-import { mapReportResponse } from '@/services/reportMapping';
-import { useStudyLookup } from '@/hooks/useStudyLookup';
-import { logger } from '@/lib/logger';
+} from "@/components/ui/alert-dialog";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/Common/EmptyState";
+import { useWebSocket, ReportStatusEvent } from "@/hooks/useWebSocket";
+import type { ReportStatus, QAStatus } from "@/types/radiology";
+import { reportClient, type ReportResponsePayload } from "@/services/reportClient";
+import { mapReportResponse } from "@/services/reportMapping";
+import { useStudyLookup } from "@/hooks/useStudyLookup";
+import { logger } from "@/lib/logger";
 
 interface BatchReport {
   id: string;
@@ -79,7 +79,7 @@ interface BatchReport {
   status: ReportStatus;
   qaStatus: QAStatus;
   assignedTo: string;
-  priority: 'normal' | 'urgent' | 'stat';
+  priority: "normal" | "urgent" | "stat";
   createdAt: string;
   turnaroundMinutes?: number;
 }
@@ -93,38 +93,63 @@ const resolveTurnaroundMinutes = (createdAt: string, updatedAt: string) => {
 };
 
 export default function Batch() {
-  const { t } = useTranslation('batch');
-  const { t: tCommon } = useTranslation('common');
-  const { t: tReport } = useTranslation('report');
-  
+  const { t } = useTranslation("batch");
+  const { t: tCommon } = useTranslation("common");
+  const { t: tReport } = useTranslation("report");
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [modalityFilter, setModalityFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [modalityFilter, setModalityFilter] = useState<string>("all");
   const [isProcessing, setIsProcessing] = useState(false);
   const [processProgress, setProcessProgress] = useState(0);
   const [reports, setReports] = useState<BatchReport[]>([]);
 
-  const statusConfig: Record<ReportStatus, { label: string; color: string; icon: typeof FileText }> = {
-    pending: { label: tCommon('status.pending'), color: 'bg-muted text-muted-foreground', icon: Clock },
-    in_progress: { label: tCommon('status.inProgress'), color: 'bg-blue-500/10 text-blue-500', icon: RefreshCw },
-    draft: { label: tCommon('status.draft'), color: 'bg-warning/10 text-warning', icon: FileText },
-    approved: { label: tCommon('status.approved'), color: 'bg-success/10 text-success', icon: CheckCircle },
-    finalized: { label: tCommon('status.finalized'), color: 'bg-primary/10 text-primary', icon: CheckCircle },
+  const statusConfig: Record<
+    ReportStatus,
+    { label: string; color: string; icon: typeof FileText }
+  > = {
+    pending: {
+      label: tCommon("status.pending"),
+      color: "bg-muted text-muted-foreground",
+      icon: Clock,
+    },
+    in_progress: {
+      label: tCommon("status.inProgress"),
+      color: "bg-blue-500/10 text-blue-500",
+      icon: RefreshCw,
+    },
+    draft: { label: tCommon("status.draft"), color: "bg-warning/10 text-warning", icon: FileText },
+    approved: {
+      label: tCommon("status.approved"),
+      color: "bg-success/10 text-success",
+      icon: CheckCircle,
+    },
+    finalized: {
+      label: tCommon("status.finalized"),
+      color: "bg-primary/10 text-primary",
+      icon: CheckCircle,
+    },
   };
 
   const qaStatusConfig: Record<QAStatus, { label: string; color: string }> = {
-    pending: { label: tCommon('status.pending'), color: 'text-muted-foreground' },
-    checking: { label: tReport('qa.checking'), color: 'text-blue-500' },
-    pass: { label: tReport('qa.passed'), color: 'text-success' },
-    warn: { label: tReport('qa.warning'), color: 'text-warning' },
-    fail: { label: tReport('qa.failed'), color: 'text-destructive' },
+    pending: { label: tCommon("status.pending"), color: "text-muted-foreground" },
+    checking: { label: tReport("qa.checking"), color: "text-blue-500" },
+    pass: { label: tReport("qa.passed"), color: "text-success" },
+    warn: { label: tReport("qa.warning"), color: "text-warning" },
+    fail: { label: tReport("qa.failed"), color: "text-destructive" },
   };
 
   const priorityConfig = {
-    normal: { label: tCommon('priority.normal'), color: 'bg-muted text-muted-foreground' },
-    urgent: { label: tCommon('priority.urgent'), color: 'bg-warning/10 text-warning border-warning' },
-    stat: { label: tCommon('priority.stat'), color: 'bg-destructive/10 text-destructive border-destructive' },
+    normal: { label: tCommon("priority.normal"), color: "bg-muted text-muted-foreground" },
+    urgent: {
+      label: tCommon("priority.urgent"),
+      color: "bg-warning/10 text-warning border-warning",
+    },
+    stat: {
+      label: tCommon("priority.stat"),
+      color: "bg-destructive/10 text-destructive border-destructive",
+    },
   };
 
   const {
@@ -132,14 +157,14 @@ export default function Batch() {
     isLoading,
     isError: hasReportsError,
   } = useQuery<ReportResponsePayload[]>({
-    queryKey: ['batchReports'],
+    queryKey: ["batchReports"],
     queryFn: () => reportClient.listReports({ limit: 200 }),
   });
-  const errorMessage = hasReportsError ? t('table.loading') : null;
+  const errorMessage = hasReportsError ? t("table.loading") : null;
 
   const studyIds = useMemo(
     () => Array.from(new Set(reportPayloads.map((report) => report.study_id).filter(Boolean))),
-    [reportPayloads]
+    [reportPayloads],
   );
   const { studyMap, error: studyLookupError } = useStudyLookup(studyIds);
 
@@ -154,20 +179,20 @@ export default function Batch() {
     return safePayloads.map((payload) => {
       const report = mapReportResponse(payload);
       const study = studyMap[report.studyId];
-      const fallbackAccession = report.studyId ? report.studyId.slice(0, 8) : '—';
+      const fallbackAccession = report.studyId ? report.studyId.slice(0, 8) : "—";
 
       return {
         id: report.id,
         patientName: study?.patientName ?? `Report ${report.id.slice(0, 8)}...`,
         mrn: study?.mrn ?? report.patientId,
         accessionNumber: study?.accessionNumber ?? fallbackAccession,
-        modality: study?.modality ?? 'CT',
-        studyDescription: study?.studyDescription ?? tCommon('study.study'),
+        modality: study?.modality ?? "CT",
+        studyDescription: study?.studyDescription ?? tCommon("study.study"),
         studyDate: study?.studyDate ?? report.createdAt.slice(0, 10),
         status: report.status,
         qaStatus: report.qaStatus,
-        assignedTo: report.approvedBy ?? '-',
-        priority: 'normal' as const,
+        assignedTo: report.approvedBy ?? "-",
+        priority: "normal" as const,
         createdAt: report.createdAt,
         turnaroundMinutes: resolveTurnaroundMinutes(report.createdAt, report.updatedAt),
       };
@@ -197,24 +222,29 @@ export default function Batch() {
   }, [mappedReports, isLoading]);
 
   // WebSocket live updates
-  const handleReportStatus = useCallback((event: ReportStatusEvent) => {
-    const { reportId, payload } = event;
-    
-    setReports(prev => prev.map(report => {
-      if (report.id !== reportId) return report;
-      return {
-        ...report,
-        qaStatus: payload.qaStatus || report.qaStatus,
-      };
-    }));
+  const handleReportStatus = useCallback(
+    (event: ReportStatusEvent) => {
+      const { reportId, payload } = event;
 
-    // Show toast for QA status changes
-    if (payload.qaStatus === 'fail') {
-      toast.error(`Report ${reportId.slice(0, 8)}... ${tReport('qa.failed')}`);
-    } else if (payload.qaStatus === 'pass') {
-      toast.success(`Report ${reportId.slice(0, 8)}... ${tReport('qa.passed')}`);
-    }
-  }, [tReport]);
+      setReports((prev) =>
+        prev.map((report) => {
+          if (report.id !== reportId) return report;
+          return {
+            ...report,
+            qaStatus: payload.qaStatus || report.qaStatus,
+          };
+        }),
+      );
+
+      // Show toast for QA status changes
+      if (payload.qaStatus === "fail") {
+        toast.error(`Report ${reportId.slice(0, 8)}... ${tReport("qa.failed")}`);
+      } else if (payload.qaStatus === "pass") {
+        toast.success(`Report ${reportId.slice(0, 8)}... ${tReport("qa.passed")}`);
+      }
+    },
+    [tReport],
+  );
 
   const { isConnected: wsConnected } = useWebSocket({
     onReportStatus: handleReportStatus,
@@ -232,11 +262,11 @@ export default function Batch() {
         if (!matches) return false;
       }
 
-      if (statusFilter !== 'all' && report.status !== statusFilter) {
+      if (statusFilter !== "all" && report.status !== statusFilter) {
         return false;
       }
 
-      if (modalityFilter !== 'all' && report.modality !== modalityFilter) {
+      if (modalityFilter !== "all" && report.modality !== modalityFilter) {
         return false;
       }
 
@@ -247,16 +277,26 @@ export default function Batch() {
   // Stats - use live reports
   const stats = useMemo(() => {
     const total = reports.length;
-    const pending = reports.filter((r) => r.status === 'pending').length;
-    const drafts = reports.filter((r) => r.status === 'draft').length;
-    const approved = reports.filter((r) => r.status === 'approved' || r.status === 'finalized').length;
-    const avgTurnaround = reports
-      .filter((r) => r.turnaroundMinutes !== undefined)
-      .reduce((acc, r) => acc + (r.turnaroundMinutes || 0), 0) /
+    const pending = reports.filter((r) => r.status === "pending").length;
+    const drafts = reports.filter((r) => r.status === "draft").length;
+    const approved = reports.filter(
+      (r) => r.status === "approved" || r.status === "finalized",
+    ).length;
+    const avgTurnaround =
+      reports
+        .filter((r) => r.turnaroundMinutes !== undefined)
+        .reduce((acc, r) => acc + (r.turnaroundMinutes || 0), 0) /
       (reports.filter((r) => r.turnaroundMinutes !== undefined).length || 1);
-    const qaWarnings = reports.filter((r) => r.qaStatus === 'warn' || r.qaStatus === 'fail').length;
+    const qaWarnings = reports.filter((r) => r.qaStatus === "warn" || r.qaStatus === "fail").length;
 
-    return { total, pending, drafts, approved, avgTurnaround: Math.round(avgTurnaround), qaWarnings };
+    return {
+      total,
+      pending,
+      drafts,
+      approved,
+      avgTurnaround: Math.round(avgTurnaround),
+      qaWarnings,
+    };
   }, [reports]);
 
   // Unique modalities for filter
@@ -299,14 +339,14 @@ export default function Batch() {
 
     for (const id of selectedIds) {
       const report = reports.find((item) => item.id === id);
-      if (!report || report.status !== 'draft' || report.qaStatus !== 'pass') {
+      if (!report || report.status !== "draft" || report.qaStatus !== "pass") {
         processed++;
         setProcessProgress((processed / total) * 100);
         continue;
       }
 
       try {
-        const response = await reportClient.finalizeReport(id, 'Batch');
+        const response = await reportClient.finalizeReport(id, "Batch");
         const updated = mapReportResponse(response);
         approved++;
         setReports((prev) =>
@@ -319,11 +359,11 @@ export default function Batch() {
                   assignedTo: updated.approvedBy ?? item.assignedTo,
                   turnaroundMinutes: resolveTurnaroundMinutes(updated.createdAt, updated.updatedAt),
                 }
-              : item
-          )
+              : item,
+          ),
         );
       } catch (error) {
-        logger.warn('Failed to finalize report', error);
+        logger.warn("Failed to finalize report", error);
         failed++;
       } finally {
         processed++;
@@ -336,10 +376,10 @@ export default function Batch() {
     setSelectedIds(new Set());
 
     if (approved > 0) {
-      toast.success(t('bulk.completed', { count: approved }));
+      toast.success(t("bulk.completed", { count: approved }));
     }
     if (failed > 0) {
-      toast.error(t('bulk.failed', { count: failed }));
+      toast.error(t("bulk.failed", { count: failed }));
     }
   }, [reports, selectedIds, t]);
 
@@ -355,15 +395,15 @@ export default function Batch() {
 
     for (const id of ids) {
       try {
-        const result = await reportClient.exportStructuredReport(id, 'dicom');
+        const result = await reportClient.exportStructuredReport(id, "dicom");
         const url = URL.createObjectURL(result.blob);
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
         link.download = result.fileName;
         link.click();
         URL.revokeObjectURL(url);
       } catch (error) {
-        logger.warn('Bulk export failed', error);
+        logger.warn("Bulk export failed", error);
         failed++;
       } finally {
         processed++;
@@ -376,15 +416,15 @@ export default function Batch() {
     setSelectedIds(new Set());
 
     if (failed === 0) {
-      toast.success(tReport('export.success'));
+      toast.success(tReport("export.success"));
     } else {
-      toast.error(t('bulk.failed', { count: failed }));
+      toast.error(t("bulk.failed", { count: failed }));
     }
   }, [selectedIds, t, tReport]);
 
   const handleBulkDelete = useCallback(() => {
     if (selectedIds.size === 0) return;
-    toast.error(tCommon('status.error'));
+    toast.error(tCommon("status.error"));
   }, [selectedIds, tCommon]);
 
   const isAllSelected = filteredReports.length > 0 && selectedIds.size === filteredReports.length;
@@ -393,7 +433,7 @@ export default function Batch() {
   // Get approvable reports (drafts with passing QA)
   const approvableSelected = useMemo(() => {
     return filteredReports.filter(
-      (r) => selectedIds.has(r.id) && r.status === 'draft' && r.qaStatus === 'pass'
+      (r) => selectedIds.has(r.id) && r.status === "draft" && r.qaStatus === "pass",
     ).length;
   }, [filteredReports, selectedIds]);
 
@@ -406,23 +446,27 @@ export default function Batch() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <h1 className="text-lg font-semibold">{t('title')}</h1>
+        <h1 className="text-lg font-semibold">{t("title")}</h1>
         <Badge variant="outline" className="ml-2">
           <BarChart3 className="h-3 w-3 mr-1" />
           Dashboard
         </Badge>
-        
+
         {/* WebSocket connection status */}
         <div className="ml-auto flex items-center gap-2 text-xs">
           {wsConnected ? (
             <>
               <Wifi className="h-3.5 w-3.5 text-success" />
-              <span className="text-success hidden sm:inline">{tCommon('connection.liveUpdates')}</span>
+              <span className="text-success hidden sm:inline">
+                {tCommon("connection.liveUpdates")}
+              </span>
             </>
           ) : (
             <>
               <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground hidden sm:inline">{tCommon('connection.connecting')}</span>
+              <span className="text-muted-foreground hidden sm:inline">
+                {tCommon("connection.connecting")}
+              </span>
             </>
           )}
         </div>
@@ -436,7 +480,7 @@ export default function Batch() {
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">{t('stats.total')}</span>
+                <span className="text-sm text-muted-foreground">{t("stats.total")}</span>
               </div>
               <p className="text-2xl font-bold mt-1">{stats.total}</p>
             </CardContent>
@@ -445,7 +489,7 @@ export default function Batch() {
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-warning" />
-                <span className="text-sm text-muted-foreground">{t('stats.pending')}</span>
+                <span className="text-sm text-muted-foreground">{t("stats.pending")}</span>
               </div>
               <p className="text-2xl font-bold mt-1">{stats.pending}</p>
             </CardContent>
@@ -454,7 +498,7 @@ export default function Batch() {
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-blue-500" />
-                <span className="text-sm text-muted-foreground">{t('stats.drafts')}</span>
+                <span className="text-sm text-muted-foreground">{t("stats.drafts")}</span>
               </div>
               <p className="text-2xl font-bold mt-1">{stats.drafts}</p>
             </CardContent>
@@ -463,7 +507,7 @@ export default function Batch() {
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-success" />
-                <span className="text-sm text-muted-foreground">{t('stats.approved')}</span>
+                <span className="text-sm text-muted-foreground">{t("stats.approved")}</span>
               </div>
               <p className="text-2xl font-bold mt-1">{stats.approved}</p>
             </CardContent>
@@ -497,7 +541,7 @@ export default function Batch() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder={t('filters.searchPlaceholder')}
+                    placeholder={t("filters.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -508,25 +552,25 @@ export default function Batch() {
               {/* Status Filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder={t('filters.status')} />
+                  <SelectValue placeholder={t("filters.status")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('filters.allStatuses')}</SelectItem>
-                  <SelectItem value="pending">{tCommon('status.pending')}</SelectItem>
-                  <SelectItem value="in_progress">{tCommon('status.inProgress')}</SelectItem>
-                  <SelectItem value="draft">{tCommon('status.draft')}</SelectItem>
-                  <SelectItem value="approved">{tCommon('status.approved')}</SelectItem>
-                  <SelectItem value="finalized">{tCommon('status.finalized')}</SelectItem>
+                  <SelectItem value="all">{t("filters.allStatuses")}</SelectItem>
+                  <SelectItem value="pending">{tCommon("status.pending")}</SelectItem>
+                  <SelectItem value="in_progress">{tCommon("status.inProgress")}</SelectItem>
+                  <SelectItem value="draft">{tCommon("status.draft")}</SelectItem>
+                  <SelectItem value="approved">{tCommon("status.approved")}</SelectItem>
+                  <SelectItem value="finalized">{tCommon("status.finalized")}</SelectItem>
                 </SelectContent>
               </Select>
 
               {/* Modality Filter */}
               <Select value={modalityFilter} onValueChange={setModalityFilter}>
                 <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder={t('filters.modality')} />
+                  <SelectValue placeholder={t("filters.modality")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('filters.allModalities')}</SelectItem>
+                  <SelectItem value="all">{t("filters.allModalities")}</SelectItem>
                   {modalities.map((mod) => (
                     <SelectItem key={mod} value={mod}>
                       {mod}
@@ -539,31 +583,29 @@ export default function Batch() {
               {selectedIds.size > 0 && (
                 <div className="flex items-center gap-2 ml-auto">
                   <Badge variant="secondary">
-                    {t('actions.selected', { count: selectedIds.size })}
+                    {t("actions.selected", { count: selectedIds.size })}
                   </Badge>
-                  
+
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        disabled={approvableSelected === 0}
-                      >
+                      <Button variant="default" size="sm" disabled={approvableSelected === 0}>
                         <Send className="h-4 w-4 mr-1" />
-                        {tCommon('actions.approve')} ({approvableSelected})
+                        {tCommon("actions.approve")} ({approvableSelected})
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>{t('bulk.confirmApprove', { count: approvableSelected })}</AlertDialogTitle>
+                        <AlertDialogTitle>
+                          {t("bulk.confirmApprove", { count: approvableSelected })}
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
-                          {t('bulk.confirmApprove', { count: approvableSelected })}
+                          {t("bulk.confirmApprove", { count: approvableSelected })}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>{tCommon('actions.cancel')}</AlertDialogCancel>
+                        <AlertDialogCancel>{tCommon("actions.cancel")}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleBulkApprove}>
-                          {tCommon('actions.approve')}
+                          {tCommon("actions.approve")}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -571,30 +613,30 @@ export default function Batch() {
 
                   <Button variant="outline" size="sm" onClick={handleBulkExport}>
                     <Download className="h-4 w-4 mr-1" />
-                    {tCommon('actions.export')}
+                    {tCommon("actions.export")}
                   </Button>
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm" className="text-destructive">
                         <Trash2 className="h-4 w-4 mr-1" />
-                        {tCommon('actions.delete')}
+                        {tCommon("actions.delete")}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>{tCommon('actions.delete')}?</AlertDialogTitle>
+                        <AlertDialogTitle>{tCommon("actions.delete")}?</AlertDialogTitle>
                         <AlertDialogDescription>
                           {selectedIds.size} Reports werden dauerhaft gelöscht.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>{tCommon('actions.cancel')}</AlertDialogCancel>
+                        <AlertDialogCancel>{tCommon("actions.cancel")}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={handleBulkDelete}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          {tCommon('actions.delete')}
+                          {tCommon("actions.delete")}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -607,7 +649,9 @@ export default function Batch() {
             {isProcessing && (
               <div className="mt-4">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">{t('bulk.processing', { current: Math.round(processProgress), total: 100 })}</span>
+                  <span className="text-muted-foreground">
+                    {t("bulk.processing", { current: Math.round(processProgress), total: 100 })}
+                  </span>
                   <span className="font-mono">{Math.round(processProgress)}%</span>
                 </div>
                 <Progress value={processProgress} className="h-2" />
@@ -621,7 +665,10 @@ export default function Batch() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
               <span>Reports</span>
-              <Badge variant="outline">{filteredReports.length} {t('table.noResults').includes('Ergebnisse') ? 'Einträge' : 'entries'}</Badge>
+              <Badge variant="outline">
+                {filteredReports.length}{" "}
+                {t("table.noResults").includes("Ergebnisse") ? "Einträge" : "entries"}
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -637,30 +684,49 @@ export default function Batch() {
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
-                    <TableHead>{t('table.patient')}</TableHead>
+                    <TableHead>{t("table.patient")}</TableHead>
                     <TableHead>Accession</TableHead>
-                    <TableHead>{t('table.study')}</TableHead>
-                    <TableHead>{t('table.status')}</TableHead>
+                    <TableHead>{t("table.study")}</TableHead>
+                    <TableHead>{t("table.status")}</TableHead>
                     <TableHead>QA</TableHead>
-                    <TableHead>{t('table.priority')}</TableHead>
+                    <TableHead>{t("table.priority")}</TableHead>
                     <TableHead>-</TableHead>
                     <TableHead className="text-right">TAT</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading && Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={`skel-${i}`}>
-                      <TableCell><Skeleton className="h-4 w-4 rounded" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-10" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
-                    </TableRow>
-                  ))}
+                  {isLoading &&
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={`skel-${i}`}>
+                        <TableCell>
+                          <Skeleton className="h-4 w-4 rounded" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-28" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-16 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-10" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-14 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-8 ml-auto" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   {errorMessage && !isLoading && (
                     <TableRow>
                       <TableCell colSpan={9}>
@@ -682,8 +748,8 @@ export default function Batch() {
                       <TableRow
                         key={report.id}
                         className={cn(
-                          'cursor-pointer transition-colors animate-fade-in',
-                          isSelected && 'bg-accent'
+                          "cursor-pointer transition-colors animate-fade-in",
+                          isSelected && "bg-accent",
                         )}
                         style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                         onClick={() => handleSelectOne(report.id)}
@@ -717,23 +783,18 @@ export default function Batch() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className={cn('text-sm font-medium', qaConf.color)}>
+                          <span className={cn("text-sm font-medium", qaConf.color)}>
                             {qaConf.label}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn(priorityConf.color, 'text-xs')}
-                          >
+                          <Badge variant="outline" className={cn(priorityConf.color, "text-xs")}>
                             {priorityConf.label}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {report.assignedTo}
-                        </TableCell>
+                        <TableCell className="text-sm">{report.assignedTo}</TableCell>
                         <TableCell className="text-right font-mono text-sm">
-                          {report.turnaroundMinutes ? `${report.turnaroundMinutes}m` : '—'}
+                          {report.turnaroundMinutes ? `${report.turnaroundMinutes}m` : "—"}
                         </TableCell>
                       </TableRow>
                     );
@@ -744,10 +805,12 @@ export default function Batch() {
                       <TableCell colSpan={9}>
                         <EmptyState
                           icon={FileText}
-                          title={t('table.noResults')}
-                          description={searchQuery || statusFilter !== 'all' || modalityFilter !== 'all'
-                            ? 'Passen Sie die Filter an um mehr Ergebnisse zu sehen.'
-                            : 'Es sind noch keine Reports vorhanden.'}
+                          title={t("table.noResults")}
+                          description={
+                            searchQuery || statusFilter !== "all" || modalityFilter !== "all"
+                              ? "Passen Sie die Filter an um mehr Ergebnisse zu sehen."
+                              : "Es sind noch keine Reports vorhanden."
+                          }
                         />
                       </TableCell>
                     </TableRow>

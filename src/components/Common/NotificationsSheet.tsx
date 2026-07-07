@@ -1,18 +1,18 @@
-import { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, FileText, AlertTriangle, CheckCircle, Clock, RefreshCw, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { Notification } from '@/hooks/useNotifications';
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Bell, FileText, AlertTriangle, CheckCircle, Clock, RefreshCw, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Notification } from "@/hooks/useNotifications";
 
 interface NotificationsSheetProps {
   open: boolean;
@@ -28,10 +28,10 @@ interface NotificationsSheetProps {
 }
 
 const typeConfig = {
-  report: { icon: FileText, color: 'text-primary' },
-  urgent: { icon: AlertTriangle, color: 'text-warning' },
-  system: { icon: Clock, color: 'text-muted-foreground' },
-  success: { icon: CheckCircle, color: 'text-success' },
+  report: { icon: FileText, color: "text-primary" },
+  urgent: { icon: AlertTriangle, color: "text-warning" },
+  system: { icon: Clock, color: "text-muted-foreground" },
+  success: { icon: CheckCircle, color: "text-success" },
 };
 
 export function NotificationsSheet({
@@ -46,7 +46,7 @@ export function NotificationsSheet({
   onMarkAllAsRead,
   onClearAll,
 }: NotificationsSheetProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation("common");
 
   useEffect(() => {
     if (open) {
@@ -60,16 +60,14 @@ export function NotificationsSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            {t('notifications.title')}
+            {t("notifications.title")}
             {unreadCount > 0 && (
               <Badge variant="destructive" className="text-[10px] px-1.5">
                 {unreadCount}
               </Badge>
             )}
           </SheetTitle>
-          <SheetDescription>
-            {t('notifications.description')}
-          </SheetDescription>
+          <SheetDescription>{t("notifications.description")}</SheetDescription>
         </SheetHeader>
 
         {notifications.length > 0 ? (
@@ -82,7 +80,7 @@ export function NotificationsSheet({
                 disabled={unreadCount === 0}
                 className="text-xs"
               >
-                {t('notifications.markAllRead')}
+                {t("notifications.markAllRead")}
               </Button>
               <Button
                 variant="ghost"
@@ -91,7 +89,7 @@ export function NotificationsSheet({
                 className="text-xs text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="h-3 w-3 mr-1" />
-                {t('notifications.clearAll')}
+                {t("notifications.clearAll")}
               </Button>
             </div>
 
@@ -100,7 +98,7 @@ export function NotificationsSheet({
                 {isLoading && (
                   <div className="py-6 text-center text-sm text-muted-foreground">
                     <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
-                    {t('notifications.loading')}
+                    {t("notifications.loading")}
                   </div>
                 )}
                 {errorMessage && !isLoading && (
@@ -118,21 +116,19 @@ export function NotificationsSheet({
                       key={notification.id}
                       onClick={() => onMarkAsRead(notification.id)}
                       className={cn(
-                        'w-full text-left p-3 rounded-lg border transition-colors',
+                        "w-full text-left p-3 rounded-lg border transition-colors",
                         notification.read
-                          ? 'bg-background border-border/50 opacity-70'
-                          : 'bg-panel-secondary border-border hover:border-primary/50'
+                          ? "bg-background border-border/50 opacity-70"
+                          : "bg-panel-secondary border-border hover:border-primary/50",
                       )}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={cn('mt-0.5', config.color)}>
+                        <div className={cn("mt-0.5", config.color)}>
                           <Icon className="h-4 w-4" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">
-                              {notification.title}
-                            </p>
+                            <p className="text-sm font-medium truncate">{notification.title}</p>
                             {!notification.read && (
                               <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
                             )}
@@ -154,8 +150,8 @@ export function NotificationsSheet({
         ) : isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
             <RefreshCw className="h-10 w-10 text-muted-foreground/50 mb-4 animate-spin" />
-            <p className="text-sm text-muted-foreground">{t('notifications.loading')}</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">{t('notifications.pleaseWait')}</p>
+            <p className="text-sm text-muted-foreground">{t("notifications.loading")}</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">{t("notifications.pleaseWait")}</p>
           </div>
         ) : errorMessage ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12 text-destructive">
@@ -165,12 +161,8 @@ export function NotificationsSheet({
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
             <Bell className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p className="text-sm text-muted-foreground">
-              {t('notifications.empty')}
-            </p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              {t('notifications.upToDate')}
-            </p>
+            <p className="text-sm text-muted-foreground">{t("notifications.empty")}</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">{t("notifications.upToDate")}</p>
           </div>
         )}
       </SheetContent>

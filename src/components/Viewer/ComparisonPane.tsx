@@ -1,13 +1,13 @@
-import type { FindingBox, ImageRef, Series } from '@/types/radiology';
-import type { ViewerProgress } from './DicomViewer';
-import type { ViewportState } from '@/types/viewerSync';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { DicomViewer } from './DicomViewer';
-import { ViewerEmptyState } from './ViewerEmptyState';
-import { ViewerErrorBoundary } from './ViewerErrorBoundary';
+import type { FindingBox, ImageRef, Series } from "@/types/radiology";
+import type { ViewerProgress } from "./DicomViewer";
+import type { ViewportState } from "@/types/viewerSync";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { DicomViewer } from "./DicomViewer";
+import { ViewerEmptyState } from "./ViewerEmptyState";
+import { ViewerErrorBoundary } from "./ViewerErrorBoundary";
 
-type BadgeVariant = 'primary' | 'secondary';
+type BadgeVariant = "primary" | "secondary";
 
 interface ComparisonPaneProps {
   series: Series | null;
@@ -31,8 +31,8 @@ interface ComparisonPaneProps {
 }
 
 const badgeClassNameByVariant: Record<BadgeVariant, string> = {
-  primary: 'bg-primary text-primary-foreground',
-  secondary: 'bg-secondary text-secondary-foreground',
+  primary: "bg-primary text-primary-foreground",
+  secondary: "bg-secondary text-secondary-foreground",
 };
 
 export function ComparisonPane({
@@ -53,7 +53,7 @@ export function ComparisonPane({
   isAnalyzingFrame = false,
 }: ComparisonPaneProps) {
   return (
-    <div className={cn('flex-1 relative', className)}>
+    <div className={cn("flex-1 relative", className)}>
       <div className="absolute top-2 left-2 z-20 flex items-center gap-2">
         <Badge className={badgeClassNameByVariant[badgeVariant]}>
           {label}

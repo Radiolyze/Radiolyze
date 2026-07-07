@@ -1,6 +1,6 @@
-import { apiClient } from './apiClient';
+import { apiClient } from "./apiClient";
 
-export type ExportFormat = 'coco' | 'huggingface' | 'radiolyze';
+export type ExportFormat = "coco" | "huggingface" | "radiolyze";
 
 export interface ExportRequest {
   format: ExportFormat;
@@ -30,7 +30,7 @@ export interface ManifestEntry {
   frame_index: number;
   frame_number: number;
   splits: string[];
-  status?: 'ok' | 'error';
+  status?: "ok" | "error";
   bytes?: number;
   sha256?: string;
   error?: string;
@@ -55,24 +55,24 @@ export interface CategoryCount {
   count: number;
 }
 
-const BASE_PATH = '/api/v1/training';
+const BASE_PATH = "/api/v1/training";
 
 export async function getTrainingStats(params?: {
   studyIds?: string[];
   verifiedOnly?: boolean;
 }): Promise<ExportStats> {
   const queryParams = new URLSearchParams();
-  
+
   if (params?.studyIds?.length) {
-    queryParams.append('studyIds', params.studyIds.join(','));
+    queryParams.append("studyIds", params.studyIds.join(","));
   }
   if (params?.verifiedOnly) {
-    queryParams.append('verifiedOnly', 'true');
+    queryParams.append("verifiedOnly", "true");
   }
-  
+
   const query = queryParams.toString();
   const url = query ? `${BASE_PATH}/stats?${query}` : `${BASE_PATH}/stats`;
-  
+
   return apiClient.get<ExportStats>(url);
 }
 
@@ -82,9 +82,9 @@ export async function getAnnotationCategories(): Promise<CategoryCount[]> {
 
 export async function exportTrainingData(request: ExportRequest): Promise<Blob> {
   const response = await fetch(`${BASE_PATH}/export`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       format: request.format,
@@ -97,8 +97,8 @@ export async function exportTrainingData(request: ExportRequest): Promise<Blob> 
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Export failed' }));
-    throw new Error(error.detail || 'Export failed');
+    const error = await response.json().catch(() => ({ detail: "Export failed" }));
+    throw new Error(error.detail || "Export failed");
   }
 
   return response.blob();
@@ -117,7 +117,7 @@ export async function getTrainingManifest(request: ManifestRequest): Promise<Man
 
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);

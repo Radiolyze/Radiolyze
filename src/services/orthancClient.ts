@@ -1,4 +1,4 @@
-import { DEFAULT_DICOM_WEB_URL } from '@/config/dicomWeb';
+import { DEFAULT_DICOM_WEB_URL } from "@/config/dicomWeb";
 
 export const DICOM_WEB_URL = import.meta.env.VITE_DICOM_WEB_URL ?? DEFAULT_DICOM_WEB_URL;
 const DICOM_WEB_INFERENCE_URL = import.meta.env.VITE_DICOM_WEB_INFERENCE_URL ?? DICOM_WEB_URL;
@@ -16,15 +16,15 @@ export const buildAuthHeaders = (): Record<string, string> => {
 export const buildDicomWebUrl = (
   path: string,
   query?: Record<string, string | number | undefined>,
-  baseOverride?: string
+  baseOverride?: string,
 ) => {
   const baseUrl = baseOverride ?? DICOM_WEB_URL;
   const resolvedBaseUrl =
-    typeof window !== 'undefined' && baseUrl.startsWith('/')
+    typeof window !== "undefined" && baseUrl.startsWith("/")
       ? `${window.location.origin}${baseUrl}`
       : baseUrl;
-  const base = resolvedBaseUrl.endsWith('/') ? resolvedBaseUrl : `${resolvedBaseUrl}/`;
-  const sanitizedPath = path.replace(/^\//, '');
+  const base = resolvedBaseUrl.endsWith("/") ? resolvedBaseUrl : `${resolvedBaseUrl}/`;
+  const sanitizedPath = path.replace(/^\//, "");
   const url = new URL(sanitizedPath, base);
 
   if (query) {
@@ -37,7 +37,10 @@ export const buildDicomWebUrl = (
   return url.toString();
 };
 
-const fetchDicomWebJson = async (path: string, query?: Record<string, string | number | undefined>) => {
+const fetchDicomWebJson = async (
+  path: string,
+  query?: Record<string, string | number | undefined>,
+) => {
   const response = await fetch(buildDicomWebUrl(path, query), {
     headers: buildAuthHeaders(),
   });
@@ -61,31 +64,32 @@ export const buildWadorsImageId = (
   studyId: string,
   seriesId: string,
   instanceId: string,
-  frame = 1
-) => `wadors:${buildDicomWebUrl(`studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/${frame}`)}`;
+  frame = 1,
+) =>
+  `wadors:${buildDicomWebUrl(`studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/${frame}`)}`;
 
 export const buildWadorsFrameUrl = (
   studyId: string,
   seriesId: string,
   instanceId: string,
-  frame = 1
+  frame = 1,
 ) =>
   buildDicomWebUrl(
     `studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/${frame}`,
     undefined,
-    DICOM_WEB_INFERENCE_URL
+    DICOM_WEB_INFERENCE_URL,
   );
 
 export const buildWadorsRenderedFrameUrl = (
   studyId: string,
   seriesId: string,
   instanceId: string,
-  frame = 1
+  frame = 1,
 ) =>
   buildDicomWebUrl(
     `studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/${frame}/rendered`,
     undefined,
-    DICOM_WEB_INFERENCE_URL
+    DICOM_WEB_INFERENCE_URL,
   );
 
 interface ListStudiesOptions {
@@ -96,15 +100,19 @@ interface ListStudiesOptions {
 
 export const orthancClient = {
   async listSeries(studyId: string) {
-    return fetchDicomWebJson(`studies/${studyId}/series`, { includefield: 'all' });
+    return fetchDicomWebJson(`studies/${studyId}/series`, { includefield: "all" });
   },
 
   async listInstances(studyId: string, seriesId: string) {
-    return fetchDicomWebJson(`studies/${studyId}/series/${seriesId}/instances`, { includefield: 'all' });
+    return fetchDicomWebJson(`studies/${studyId}/series/${seriesId}/instances`, {
+      includefield: "all",
+    });
   },
 
   async fetchInstanceMetadata(studyId: string, seriesId: string, instanceId: string) {
-    return fetchDicomWebJson(`studies/${studyId}/series/${seriesId}/instances/${instanceId}/metadata`);
+    return fetchDicomWebJson(
+      `studies/${studyId}/series/${seriesId}/instances/${instanceId}/metadata`,
+    );
   },
 
   async fetchInstanceFrame(studyId: string, seriesId: string, instanceId: string) {
@@ -112,18 +120,18 @@ export const orthancClient = {
       buildDicomWebUrl(`studies/${studyId}/series/${seriesId}/instances/${instanceId}/frames/1`),
       {
         headers: buildAuthHeaders(),
-      }
+      },
     );
     if (!response.ok) {
-      throw new Error('Failed to fetch instance frame');
+      throw new Error("Failed to fetch instance frame");
     }
     return response.arrayBuffer();
   },
 
   async listStudies(options: ListStudiesOptions = {}) {
     const { limit = 25, patientId, studyId } = options;
-    return fetchDicomWebJson('studies', {
-      includefield: 'all',
+    return fetchDicomWebJson("studies", {
+      includefield: "all",
       limit,
       PatientID: patientId,
       StudyInstanceUID: studyId,

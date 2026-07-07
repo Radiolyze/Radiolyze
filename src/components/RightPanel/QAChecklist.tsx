@@ -1,14 +1,10 @@
-import { CheckCircle, AlertTriangle, XCircle, ChevronDown, EyeOff } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { QACheck } from '@/types/radiology';
-import { cn } from '@/lib/utils';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { useState } from 'react';
-import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { CheckCircle, AlertTriangle, XCircle, ChevronDown, EyeOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { QACheck } from "@/types/radiology";
+import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
+import { useUserPreferences } from "@/hooks/useUserPreferences";
 
 interface QAChecklistProps {
   checks: QACheck[];
@@ -22,19 +18,19 @@ const statusIcons = {
 };
 
 const statusColors = {
-  pass: 'text-success',
-  warn: 'text-warning',
-  fail: 'text-destructive',
+  pass: "text-success",
+  warn: "text-warning",
+  fail: "text-destructive",
 };
 
 export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
-  const { t } = useTranslation('report');
+  const { t } = useTranslation("report");
   const [isOpen, setIsOpen] = useState(false);
   const { preferences } = useUserPreferences();
 
-  const passCount = checks.filter(c => c.status === 'pass').length;
-  const warnCount = checks.filter(c => c.status === 'warn').length;
-  const failCount = checks.filter(c => c.status === 'fail').length;
+  const passCount = checks.filter((c) => c.status === "pass").length;
+  const warnCount = checks.filter((c) => c.status === "warn").length;
+  const failCount = checks.filter((c) => c.status === "fail").length;
 
   // If QA warnings are disabled and all checks pass, hide the component
   if (!preferences.showQAWarnings && warnCount === 0 && failCount === 0) {
@@ -46,7 +42,7 @@ export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
     return (
       <div className="px-4 py-3 border-t border-border flex items-center gap-2 text-sm">
         <EyeOff className="h-4 w-4 text-muted-foreground" />
-        <span className="text-muted-foreground">{t('qa.warningsHidden')}</span>
+        <span className="text-muted-foreground">{t("qa.warningsHidden")}</span>
         {(warnCount > 0 || failCount > 0) && (
           <div className="flex items-center gap-1.5 text-xs ml-auto">
             {warnCount > 0 && (
@@ -72,7 +68,7 @@ export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
       <CollapsibleTrigger className="w-full">
         <div className="px-4 py-3 border-t border-border flex items-center justify-between hover:bg-accent/50 transition-colors">
           <div className="flex items-center gap-2 text-sm font-medium">
-            <span>{t('qa.title')}</span>
+            <span>{t("qa.title")}</span>
             {!isLoading && (
               <div className="flex items-center gap-1.5 text-xs">
                 {passCount > 0 && (
@@ -96,10 +92,12 @@ export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
               </div>
             )}
           </div>
-          <ChevronDown className={cn(
-            'h-4 w-4 text-muted-foreground transition-transform',
-            isOpen && 'rotate-180'
-          )} />
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              isOpen && "rotate-180",
+            )}
+          />
         </div>
       </CollapsibleTrigger>
 
@@ -108,17 +106,14 @@ export function QAChecklist({ checks, isLoading = false }: QAChecklistProps) {
           {isLoading ? (
             <div className="py-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full spinner" />
-              {t('qa.checking')}
+              {t("qa.checking")}
             </div>
           ) : (
             checks.map((check) => {
               const Icon = statusIcons[check.status];
               return (
-                <div
-                  key={check.id}
-                  className="flex items-start gap-2 py-1.5 text-sm"
-                >
-                  <Icon className={cn('h-4 w-4 mt-0.5 shrink-0', statusColors[check.status])} />
+                <div key={check.id} className="flex items-start gap-2 py-1.5 text-sm">
+                  <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", statusColors[check.status])} />
                   <div className="flex-1 min-w-0">
                     <span className="text-foreground">{check.name}</span>
                     {check.message && (

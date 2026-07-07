@@ -1,23 +1,31 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { 
-  Enums, 
-  RenderingEngine, 
-  volumeLoader,
-  cache,
-  VolumeViewport3D,
-} from '@cornerstonejs/core';
-import { 
-  ToolGroupManager, 
-  TrackballRotateTool,
-} from '@cornerstonejs/tools';
-import { initCornerstone, cornerstoneToolNames, getCornerstoneInitErrorMessage } from '@/services/cornerstone';
-import { VRT_PRESETS, VRT_VIEW_ANGLES, DEFAULT_VRT_SETTINGS, type VRTSettings, type VRTViewAngle, type VRTPreset } from '@/types/vrt';
-import { logger } from '@/lib/logger';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Enums, RenderingEngine, volumeLoader, cache, VolumeViewport3D } from "@cornerstonejs/core";
+import { ToolGroupManager, TrackballRotateTool } from "@cornerstonejs/tools";
+import {
+  initCornerstone,
+  cornerstoneToolNames,
+  getCornerstoneInitErrorMessage,
+} from "@/services/cornerstone";
+import {
+  VRT_PRESETS,
+  VRT_VIEW_ANGLES,
+  DEFAULT_VRT_SETTINGS,
+  type VRTSettings,
+  type VRTViewAngle,
+  type VRTPreset,
+} from "@/types/vrt";
+import { logger } from "@/lib/logger";
 
 /** Minimal VTK actor property interface (VTK.js types not shipped by Cornerstone). */
 interface VTKActorProperty {
-  getRGBTransferFunction?: (index: number) => { removeAllPoints: () => void; addRGBPoint: (x: number, r: number, g: number, b: number) => void };
-  getScalarOpacity?: (index: number) => { removeAllPoints: () => void; addPoint: (x: number, y: number) => void };
+  getRGBTransferFunction?: (index: number) => {
+    removeAllPoints: () => void;
+    addRGBPoint: (x: number, r: number, g: number, b: number) => void;
+  };
+  getScalarOpacity?: (index: number) => {
+    removeAllPoints: () => void;
+    addPoint: (x: number, y: number) => void;
+  };
   setAmbient?: (v: number) => void;
   setDiffuse?: (v: number) => void;
   setSpecular?: (v: number) => void;
@@ -66,7 +74,7 @@ export const useVRTViewport = ({
   const renderingEngineRef = useRef<RenderingEngine | null>(null);
   const volumeIdRef = useRef<string | null>(null);
   const volumeActorRef = useRef<VTKVolumeActor | null>(null);
-  
+
   const [volumeViewport, setVolumeViewport] = useState<VolumeViewport3D | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -79,134 +87,146 @@ export const useVRTViewport = ({
   }, [onInitError]);
 
   // Apply transfer function to volume actor
-  const applyTransferFunction = useCallback((preset: VRTPreset) => {
-    const viewport = volumeViewport;
-    if (!viewport || !volumeIdRef.current) return;
+  const applyTransferFunction = useCallback(
+    (preset: VRTPreset) => {
+      const viewport = volumeViewport;
+      if (!viewport || !volumeIdRef.current) return;
 
-    try {
-      const volumeActor = viewport.getDefaultActor();
-      if (!volumeActor?.actor) return;
+      try {
+        const volumeActor = viewport.getDefaultActor();
+        if (!volumeActor?.actor) return;
 
-      const actor = volumeActor.actor as VTKActor;
-      const property = actor.getProperty();
-      
-      // Get or create transfer functions
-      const colorTF = property.getRGBTransferFunction?.(0);
-      const opacityTF = property.getScalarOpacity?.(0);
-      
-      if (colorTF && opacityTF) {
-        // Clear existing points
-        colorTF.removeAllPoints();
-        opacityTF.removeAllPoints();
-        
-        // Add color points
-        preset.transferFunction.colorPoints.forEach((point) => {
-          colorTF.addRGBPoint(point.x, point.r, point.g, point.b);
-        });
-        
-        // Add opacity points
-        preset.transferFunction.opacityPoints.forEach((point) => {
-          opacityTF.addPoint(point.x, point.y);
-        });
-        
-        // Set lighting properties
-        property.setAmbient?.(preset.ambient);
-        property.setDiffuse?.(preset.diffuse);
-        property.setSpecular?.(preset.specular);
-        property.setSpecularPower?.(preset.specularPower);
-        property.setShade?.(true);
+        const actor = volumeActor.actor as VTKActor;
+        const property = actor.getProperty();
+
+        // Get or create transfer functions
+        const colorTF = property.getRGBTransferFunction?.(0);
+        const opacityTF = property.getScalarOpacity?.(0);
+
+        if (colorTF && opacityTF) {
+          // Clear existing points
+          colorTF.removeAllPoints();
+          opacityTF.removeAllPoints();
+
+          // Add color points
+          preset.transferFunction.colorPoints.forEach((point) => {
+            colorTF.addRGBPoint(point.x, point.r, point.g, point.b);
+          });
+
+          // Add opacity points
+          preset.transferFunction.opacityPoints.forEach((point) => {
+            opacityTF.addPoint(point.x, point.y);
+          });
+
+          // Set lighting properties
+          property.setAmbient?.(preset.ambient);
+          property.setDiffuse?.(preset.diffuse);
+          property.setSpecular?.(preset.specular);
+          property.setSpecularPower?.(preset.specularPower);
+          property.setShade?.(true);
+        }
+
+        viewport.render();
+      } catch (e) {
+        logger.warn("Failed to apply transfer function:", e);
       }
-      
-      viewport.render();
-    } catch (e) {
-      logger.warn('Failed to apply transfer function:', e);
-    }
-  }, [volumeViewport]);
+    },
+    [volumeViewport],
+  );
 
   // Apply preset
-  const applyPreset = useCallback((presetId: string) => {
-    const preset = VRT_PRESETS.find(p => p.id === presetId);
-    if (!preset) return;
-    
-    setSettingsState(prev => ({
-      ...prev,
-      presetId,
-      ambient: preset.ambient,
-      diffuse: preset.diffuse,
-      specular: preset.specular,
-      specularPower: preset.specularPower,
-    }));
-    
-    applyTransferFunction(preset);
-  }, [applyTransferFunction]);
+  const applyPreset = useCallback(
+    (presetId: string) => {
+      const preset = VRT_PRESETS.find((p) => p.id === presetId);
+      if (!preset) return;
+
+      setSettingsState((prev) => ({
+        ...prev,
+        presetId,
+        ambient: preset.ambient,
+        diffuse: preset.diffuse,
+        specular: preset.specular,
+        specularPower: preset.specularPower,
+      }));
+
+      applyTransferFunction(preset);
+    },
+    [applyTransferFunction],
+  );
 
   // Set view angle
-  const setViewAngle = useCallback((angle: VRTViewAngle) => {
-    if (!volumeViewport) return;
-    
-    try {
-      const viewConfig = VRT_VIEW_ANGLES[angle];
-      const camera = volumeViewport.getCamera();
-      
-      // Calculate position based on focal point and desired direction
-      const focalPoint = camera.focalPoint || [0, 0, 0];
-      const distance = camera.parallelScale || 500;
-      
-      const position: [number, number, number] = [
-        focalPoint[0] + viewConfig.position[0] * distance,
-        focalPoint[1] + viewConfig.position[1] * distance,
-        focalPoint[2] + viewConfig.position[2] * distance,
-      ];
-      
-      volumeViewport.setCamera({
-        position,
-        focalPoint,
-        viewUp: viewConfig.viewUp,
-      });
-      
-      volumeViewport.render();
-    } catch (e) {
-      logger.warn('Failed to set view angle:', e);
-    }
-  }, [volumeViewport]);
+  const setViewAngle = useCallback(
+    (angle: VRTViewAngle) => {
+      if (!volumeViewport) return;
+
+      try {
+        const viewConfig = VRT_VIEW_ANGLES[angle];
+        const camera = volumeViewport.getCamera();
+
+        // Calculate position based on focal point and desired direction
+        const focalPoint = camera.focalPoint || [0, 0, 0];
+        const distance = camera.parallelScale || 500;
+
+        const position: [number, number, number] = [
+          focalPoint[0] + viewConfig.position[0] * distance,
+          focalPoint[1] + viewConfig.position[1] * distance,
+          focalPoint[2] + viewConfig.position[2] * distance,
+        ];
+
+        volumeViewport.setCamera({
+          position,
+          focalPoint,
+          viewUp: viewConfig.viewUp,
+        });
+
+        volumeViewport.render();
+      } catch (e) {
+        logger.warn("Failed to set view angle:", e);
+      }
+    },
+    [volumeViewport],
+  );
 
   // Reset camera
   const resetCamera = useCallback(() => {
     if (!volumeViewport) return;
-    
+
     try {
       volumeViewport.resetCamera();
       volumeViewport.render();
     } catch (e) {
-      logger.warn('Failed to reset camera:', e);
+      logger.warn("Failed to reset camera:", e);
     }
   }, [volumeViewport]);
 
   // Update settings
-  const setSettings = useCallback((newSettings: VRTSettings) => {
-    setSettingsState(newSettings);
-    
-    if (!volumeViewport) return;
-    
-    try {
-      // Apply sample distance
-      volumeViewport.setSampleDistanceMultiplier(newSettings.sampleDistance);
-      
-      // Apply lighting settings to volume actor
-      const volumeActor = volumeViewport.getDefaultActor();
-      if (volumeActor?.actor) {
-        const property = (volumeActor.actor as VTKActor).getProperty();
-        property.setAmbient?.(newSettings.ambient);
-        property.setDiffuse?.(newSettings.diffuse);
-        property.setSpecular?.(newSettings.specular);
-        property.setSpecularPower?.(newSettings.specularPower);
+  const setSettings = useCallback(
+    (newSettings: VRTSettings) => {
+      setSettingsState(newSettings);
+
+      if (!volumeViewport) return;
+
+      try {
+        // Apply sample distance
+        volumeViewport.setSampleDistanceMultiplier(newSettings.sampleDistance);
+
+        // Apply lighting settings to volume actor
+        const volumeActor = volumeViewport.getDefaultActor();
+        if (volumeActor?.actor) {
+          const property = (volumeActor.actor as VTKActor).getProperty();
+          property.setAmbient?.(newSettings.ambient);
+          property.setDiffuse?.(newSettings.diffuse);
+          property.setSpecular?.(newSettings.specular);
+          property.setSpecularPower?.(newSettings.specularPower);
+        }
+
+        volumeViewport.render();
+      } catch (e) {
+        logger.warn("Failed to apply VRT settings:", e);
       }
-      
-      volumeViewport.render();
-    } catch (e) {
-      logger.warn('Failed to apply VRT settings:', e);
-    }
-  }, [volumeViewport]);
+    },
+    [volumeViewport],
+  );
 
   useEffect(() => {
     if (!isEnabled || imageIds.length === 0) return;
@@ -230,7 +250,7 @@ export const useVRTViewport = ({
 
         // Create and load volume
         const volume = await volumeLoader.createAndCacheVolume(volumeId, { imageIds });
-        
+
         if (!isActive) return;
 
         // Load volume data
@@ -258,8 +278,8 @@ export const useVRTViewport = ({
         const viewport = renderingEngine.getViewport(viewportId) as VolumeViewport3D;
 
         // Set volume on viewport with transfer function callback
-        const initialPreset = VRT_PRESETS.find(p => p.id === settings.presetId) || VRT_PRESETS[0];
-        
+        const initialPreset = VRT_PRESETS.find((p) => p.id === settings.presetId) || VRT_PRESETS[0];
+
         await viewport.setVolumes([
           {
             volumeId,
@@ -322,12 +342,11 @@ export const useVRTViewport = ({
 
         setVolumeViewport(viewport);
         setIsReady(true);
-
       } catch (error) {
-        logger.error('VRT initialization failed:', error);
+        logger.error("VRT initialization failed:", error);
         if (isActive) {
           onInitErrorRef.current?.(
-            getCornerstoneInitErrorMessage('3D-Viewer konnte nicht initialisiert werden.', error)
+            getCornerstoneInitErrorMessage("3D-Viewer konnte nicht initialisiert werden.", error),
           );
         }
       } finally {

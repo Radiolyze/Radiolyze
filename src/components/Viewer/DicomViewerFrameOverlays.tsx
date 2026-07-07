@@ -1,6 +1,6 @@
-import { ChevronUp, ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { SeriesStack } from './SeriesStack';
+import { ChevronUp, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SeriesStack } from "./SeriesStack";
 
 interface DicomViewerFrameOverlaysProps {
   hasStack: boolean;

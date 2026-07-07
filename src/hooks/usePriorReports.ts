@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { ReportResponsePayload } from '@/services/reportClient';
-import { reportClient } from '@/services/reportClient';
+import { useCallback, useEffect, useState } from "react";
+import type { ReportResponsePayload } from "@/services/reportClient";
+import { reportClient } from "@/services/reportClient";
 
 interface UsePriorReportsReturn {
   priorReports: ReportResponsePayload[];
@@ -31,12 +31,10 @@ export function usePriorReports(
     try {
       const reports = await reportClient.getReportsByPatient(patientId);
       // Exclude current report from the list
-      const filtered = currentReportId
-        ? reports.filter((r) => r.id !== currentReportId)
-        : reports;
+      const filtered = currentReportId ? reports.filter((r) => r.id !== currentReportId) : reports;
       setPriorReports(filtered);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load prior reports');
+      setError(err instanceof Error ? err.message : "Failed to load prior reports");
       setPriorReports([]);
     } finally {
       setIsLoading(false);

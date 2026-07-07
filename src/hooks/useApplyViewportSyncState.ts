@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
-import type { MutableRefObject } from 'react';
-import type { StackViewport } from '@cornerstonejs/core';
-import type { ViewportState } from '@/types/viewerSync';
-import { logger } from '@/lib/logger';
+import { useEffect } from "react";
+import type { MutableRefObject } from "react";
+import type { StackViewport } from "@cornerstonejs/core";
+import type { ViewportState } from "@/types/viewerSync";
+import { logger } from "@/lib/logger";
 
 interface ApplyViewportSyncOptions {
   syncState?: Partial<ViewportState>;
@@ -67,7 +67,7 @@ export const useApplyViewportSyncState = ({
           needsRender = true;
         } catch (err) {
           // Image data not yet loaded
-          logger.debug('[useApplyViewportSyncState] Failed to apply window/level', err);
+          logger.debug("[useApplyViewportSyncState] Failed to apply window/level", err);
         }
       }
 
