@@ -269,6 +269,26 @@ class ReportRevisionResponse(ApiBaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Report Comparisons (longitudinal context: current ↔ prior study pairing)
+# ---------------------------------------------------------------------------
+
+
+class ReportComparisonCreateRequest(ApiBaseModel):
+    prior_study_uid: str = Field(min_length=1, max_length=256, alias="priorStudyUid")
+    prior_series_uid: str | None = Field(default=None, max_length=256, alias="priorSeriesUid")
+    time_delta_days: int | None = Field(default=None, alias="timeDeltaDays")
+
+
+class ReportComparisonResponse(ApiBaseModel):
+    id: str
+    current_report_id: str
+    prior_study_uid: str
+    prior_series_uid: str | None = None
+    time_delta_days: int | None = None
+    created_at: str
+
+
+# ---------------------------------------------------------------------------
 # Critical Finding Alerts
 # ---------------------------------------------------------------------------
 

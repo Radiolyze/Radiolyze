@@ -79,6 +79,21 @@ export interface PdfExportResult {
   fileName: string;
 }
 
+export interface ReportComparisonPayload {
+  priorStudyUid: string;
+  priorSeriesUid?: string;
+  timeDeltaDays?: number;
+}
+
+export interface ReportComparisonResponsePayload {
+  id: string;
+  current_report_id: string;
+  prior_study_uid: string;
+  prior_series_uid: string | null;
+  time_delta_days: number | null;
+  created_at: string;
+}
+
 export const reportClient = {
   async getReport(reportId: string): Promise<ReportResponsePayload> {
     return apiClient.get<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}`);
@@ -141,6 +156,19 @@ export const reportClient = {
   },
   async getRevisions(reportId: string): Promise<ReportRevisionPayload[]> {
     return apiClient.get<ReportRevisionPayload[]>(`${REPORTS_ENDPOINT}/${reportId}/revisions`);
+  },
+  async createComparison(
+    reportId: string,
+    payload: ReportComparisonPayload
+  ): Promise<ReportComparisonResponsePayload> {
+    return apiClient.post<ReportComparisonResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}/comparisons`, {
+      priorStudyUid: payload.priorStudyUid,
+      priorSeriesUid: payload.priorSeriesUid,
+      timeDeltaDays: payload.timeDeltaDays,
+    });
+  },
+  async getComparisons(reportId: string): Promise<ReportComparisonResponsePayload[]> {
+    return apiClient.get<ReportComparisonResponsePayload[]>(`${REPORTS_ENDPOINT}/${reportId}/comparisons`);
   },
   async getReportsByPatient(patientId: string, limit = 20): Promise<ReportResponsePayload[]> {
     return apiClient.get<ReportResponsePayload[]>(

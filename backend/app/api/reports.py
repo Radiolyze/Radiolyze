@@ -32,6 +32,7 @@ from ..models import (
     PeerReview,
     QACheckResult,
     Report,
+    ReportComparison,
     ReportRevision,
     User,
 )
@@ -46,6 +47,8 @@ from ..schemas import (
     PeerReviewSubmitRequest,
     QACheckRequest,
     QAResponse,
+    ReportComparisonCreateRequest,
+    ReportComparisonResponse,
     ReportCreateRequest,
     ReportFinalizeRequest,
     ReportResponse,
@@ -652,6 +655,69 @@ def list_revisions(
             change_reason=r.change_reason,
         )
         for r in revisions
+    ]
+
+
+@router.post(
+    "/api/v1/reports/{report_id}/comparisons",
+    response_model=ReportComparisonResponse,
+)
+def create_comparison(
+    report_id: str,
+    payload: ReportComparisonCreateRequest,
+    _: None = require_radiologist_or_admin,
+    db: Session = Depends(get_db),
+) -> ReportComparisonResponse:
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    comparison = ReportComparison(
+        current_report_id=report_id,
+        prior_study_uid=payload.prior_study_uid,
+        prior_series_uid=payload.prior_series_uid,
+        time_delta_days=payload.time_delta_days,
+        created_at=utc_now(),
+    )
+    db.add(comparison)
+    db.commit()
+    db.refresh(comparison)
+
+    return ReportComparisonResponse(
+        id=comparison.id,
+        current_report_id=comparison.current_report_id,
+        prior_study_uid=comparison.prior_study_uid,
+        prior_series_uid=comparison.prior_series_uid,
+        time_delta_days=comparison.time_delta_days,
+        created_at=comparison.created_at,
+    )
+
+
+@router.get(
+    "/api/v1/reports/{report_id}/comparisons",
+    response_model=list[ReportComparisonResponse],
+)
+def list_comparisons(
+    report_id: str,
+    _: None = require_radiologist_or_admin,
+    db: Session = Depends(get_db),
+) -> list[ReportComparisonResponse]:
+    comparisons = (
+        db.query(ReportComparison)
+        .filter(ReportComparison.current_report_id == report_id)
+        .order_by(ReportComparison.created_at.desc())
+        .all()
+    )
+    return [
+        ReportComparisonResponse(
+            id=c.id,
+            current_report_id=c.current_report_id,
+            prior_study_uid=c.prior_study_uid,
+            prior_series_uid=c.prior_series_uid,
+            time_delta_days=c.time_delta_days,
+            created_at=c.created_at,
+        )
+        for c in comparisons
     ]
 
 
