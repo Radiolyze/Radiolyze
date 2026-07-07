@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { guidelinesClient, type GuidelinePayload } from '@/services/guidelinesClient';
+import { logger } from '@/lib/logger';
 
 interface GuidelinesPanelProps {
   /** Pre-populate the search with findings context (e.g. extracted keywords). */
@@ -89,7 +90,8 @@ export function GuidelinesPanel({
       const data = await guidelinesClient.semanticSearch(q);
       setResults(data);
       setHasLoaded(true);
-    } catch {
+    } catch (err) {
+      logger.debug('[GuidelinesPanel] Semantic search failed', err);
       setError('Leitlinien konnten nicht geladen werden.');
       setResults([]);
     } finally {

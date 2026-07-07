@@ -33,6 +33,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { auditClient, type AuditEventResponse } from '@/services/auditClient';
 import { useStudyLookup } from '@/hooks/useStudyLookup';
+import { logger } from '@/lib/logger';
 
 // Extended audit event type for display
 interface AuditLogEntry {
@@ -233,7 +234,7 @@ export default function History() {
 
   useEffect(() => {
     if (studyLookupError) {
-      console.warn(studyLookupError);
+      logger.warn(studyLookupError);
     }
   }, [studyLookupError]);
 

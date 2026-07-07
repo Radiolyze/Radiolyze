@@ -12,6 +12,7 @@ import type {
 import { createAnnotation, listAnnotationsForSeries } from '@/services/annotationClient';
 import { cornerstoneToolNames } from '@/services/cornerstone';
 import { useQueryClient } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
 
 interface UseAnnotationModeOptions {
   studyId: string | null;
@@ -84,7 +85,7 @@ export function useAnnotationMode({
       const result = await listAnnotationsForSeries(studyId, seriesId);
       setAnnotations(result);
     } catch (error) {
-      console.warn('Failed to load annotations:', error);
+      logger.warn('Failed to load annotations:', error);
       setAnnotations([]);
     } finally {
       setIsLoading(false);
@@ -114,7 +115,7 @@ export function useAnnotationMode({
       const toolType = toolNameToType[toolName];
       
       if (!toolType) {
-        console.warn('Unknown tool type for annotation:', toolName);
+        logger.warn('Unknown tool type for annotation:', toolName);
         return;
       }
 
@@ -203,7 +204,7 @@ export function useAnnotationMode({
       
       return saved;
     } catch (error) {
-      console.error('Failed to save annotation:', error);
+      logger.error('Failed to save annotation:', error);
       return null;
     }
   }, [pendingAnnotation, studyId, seriesId, currentFrameIndex, refreshAnnotations, queryClient]);
@@ -216,7 +217,7 @@ export function useAnnotationMode({
         const manager = annotation.state.getAnnotationManager();
         manager.removeAnnotation(pendingAnnotation.cornerstoneAnnotationUID);
       } catch (error) {
-        console.warn('Failed to remove annotation:', error);
+        logger.warn('Failed to remove annotation:', error);
       }
     }
     setPendingAnnotation(null);

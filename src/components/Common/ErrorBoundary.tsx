@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw, Home, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import i18n from '@/i18n';
+import { logger } from '@/lib/logger';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -37,8 +38,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     this.setState({ errorInfo });
     // Log error for debugging
-    console.error('[ErrorBoundary] Caught error:', error);
-    console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
+    logger.error('[ErrorBoundary] Caught error:', error);
+    logger.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
   }
 
   handleReload = (): void => {
@@ -60,7 +61,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       alert(getTranslation('boundary.cacheClearedMessage'));
       window.location.reload();
     } catch (e) {
-      console.error('Failed to clear storage:', e);
+      logger.error('Failed to clear storage:', e);
       window.location.reload();
     }
   };

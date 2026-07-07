@@ -7,6 +7,7 @@ import { mapReportResponse } from '@/services/reportMapping';
 import type { DicomJsonRecord } from '@/services/dicomWebMapping';
 import { mapSeriesRecordToSeries, mapStudyRecordToPatient, mapStudyRecordToStudy } from '@/services/dicomWebMapping';
 import { mockQueueItems } from '@/data/mockData';
+import { logger } from '@/lib/logger';
 
 const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
 
@@ -52,7 +53,8 @@ const countSeriesInstances = async (studyId: string, seriesId: string): Promise<
       totalFrames += (Number.isFinite(frames) && frames > 0) ? frames : 1;
     }
     return totalFrames || instances.length || 1;
-  } catch {
+  } catch (err) {
+    logger.debug('[useDicomWebQueue] Failed to count series instances, defaulting to 1', err);
     return 1;
   }
 };
@@ -122,7 +124,7 @@ const resolveReport = async (study: Study, patientId: string): Promise<Report> =
         return mapReportResponse(response);
       } catch (createError) {
         if (allowMockFallback) {
-          console.warn('Report create failed, using local report fallback.', createError);
+          logger.warn('Report create failed, using local report fallback.', createError);
           return buildReport(study);
         }
         throw createError;
@@ -130,7 +132,7 @@ const resolveReport = async (study: Study, patientId: string): Promise<Report> =
     }
 
     if (allowMockFallback) {
-      console.warn('Report fetch failed, using local report fallback.', error);
+      logger.warn('Report fetch failed, using local report fallback.', error);
       return buildReport(study);
     }
     throw error;
@@ -207,7 +209,7 @@ export function useDicomWebQueue() {
           setItems(queueItems);
         }
       } catch (err) {
-        console.warn('Failed to load DICOM studies', err);
+        logger.warn('Failed to load DICOM studies', err);
         if (isActive) {
           setError('DICOMweb-Studien konnten nicht geladen werden.');
           setItems([]);

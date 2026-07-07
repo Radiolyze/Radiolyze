@@ -66,6 +66,7 @@ import type { ReportStatus, QAStatus } from '@/types/radiology';
 import { reportClient, type ReportResponsePayload } from '@/services/reportClient';
 import { mapReportResponse } from '@/services/reportMapping';
 import { useStudyLookup } from '@/hooks/useStudyLookup';
+import { logger } from '@/lib/logger';
 
 interface BatchReport {
   id: string;
@@ -322,7 +323,7 @@ export default function Batch() {
           )
         );
       } catch (error) {
-        console.warn('Failed to finalize report', error);
+        logger.warn('Failed to finalize report', error);
         failed++;
       } finally {
         processed++;
@@ -362,7 +363,7 @@ export default function Batch() {
         link.click();
         URL.revokeObjectURL(url);
       } catch (error) {
-        console.warn('Bulk export failed', error);
+        logger.warn('Bulk export failed', error);
         failed++;
       } finally {
         processed++;

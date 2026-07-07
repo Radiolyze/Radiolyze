@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import i18n from '@/i18n';
+import { logger } from '@/lib/logger';
 
 interface ViewerErrorBoundaryProps {
   children: ReactNode;
@@ -32,8 +33,8 @@ export class ViewerErrorBoundary extends Component<ViewerErrorBoundaryProps, Vie
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('[ViewerErrorBoundary] Caught error:', error);
-    console.error('[ViewerErrorBoundary] Component stack:', errorInfo.componentStack);
+    logger.error('[ViewerErrorBoundary] Caught error:', error);
+    logger.error('[ViewerErrorBoundary] Component stack:', errorInfo.componentStack);
   }
 
   handleReload = (): void => {

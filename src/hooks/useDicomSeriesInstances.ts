@@ -7,6 +7,7 @@ import {
   orthancClient,
 } from '@/services/orthancClient';
 import { prefetchWadorsMetadata } from '@/services/cornerstone';
+import { logger } from '@/lib/logger';
 
 export type InstanceInfo = {
   instanceId: string;
@@ -214,7 +215,7 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
           setImageRefs(refs);
         }
       } catch (err) {
-        console.warn('Failed to load DICOM instances', err);
+        logger.warn('Failed to load DICOM instances', err);
         if (isActive) {
           setError('DICOM-Daten konnten nicht geladen werden.');
           setImageIds([]);

@@ -31,6 +31,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
+import { logger } from '@/lib/logger';
 
 interface DicomViewerProps {
   series: Series | null;
@@ -253,7 +254,7 @@ export function DicomViewer({
     try {
       exportAnnotations({ element, series });
     } catch (err) {
-      console.error('Annotation export failed', err);
+      logger.error('Annotation export failed', err);
     }
   }, [series, viewportRef]);
 

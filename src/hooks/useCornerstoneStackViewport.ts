@@ -3,6 +3,7 @@ import { Enums, RenderingEngine, type StackViewport } from '@cornerstonejs/core'
 import { ToolGroupManager } from '@cornerstonejs/tools';
 import { initCornerstone, cornerstoneToolNames, getCornerstoneInitErrorMessage } from '@/services/cornerstone';
 import type { ViewportState } from '@/types/viewerSync';
+import { logger } from '@/lib/logger';
 
 interface UseCornerstoneStackViewportOptions {
   isEnabled: boolean;
@@ -159,7 +160,7 @@ export const useCornerstoneStackViewport = ({
         element.addEventListener(Enums.Events.CAMERA_MODIFIED, handleCameraModified);
         element.addEventListener(Enums.Events.VOI_MODIFIED, handleVoiModified);
       } catch (error) {
-        console.warn('Cornerstone initialization failed', error);
+        logger.warn('Cornerstone initialization failed', error);
         if (isActive) {
           onInitErrorRef.current?.(
             getCornerstoneInitErrorMessage('Viewer konnte nicht initialisiert werden.', error)

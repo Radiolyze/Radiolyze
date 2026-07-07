@@ -19,6 +19,7 @@ import {
   extractInferenceFindings,
   pollInferenceResult,
 } from '@/hooks/reporting/inferenceHelpers';
+import { logger } from '@/lib/logger';
 
 const placeholderReport: Report = {
   id: 'placeholder',
@@ -208,7 +209,7 @@ export const ReportWorkspace = () => {
           toast.info('Keine Befunde in diesem Frame erkannt');
         }
       } catch (error) {
-        console.warn('Frame-Lokalisierung fehlgeschlagen', error);
+        logger.warn('Frame-Lokalisierung fehlgeschlagen', error);
         setAiStatus('error');
         toast.error('Frame-Analyse fehlgeschlagen');
       } finally {
@@ -241,7 +242,7 @@ export const ReportWorkspace = () => {
         impressionText: result,
       });
     } catch (error) {
-      console.warn('Failed to generate impression', error);
+      logger.warn('Failed to generate impression', error);
       setAiStatus('error');
       toast.error('KI-Analyse fehlgeschlagen');
     }
@@ -271,7 +272,7 @@ export const ReportWorkspace = () => {
       });
       toast.success('KI-Analyse abgeschlossen');
     } catch (error) {
-      console.warn('Failed to analyze images', error);
+      logger.warn('Failed to analyze images', error);
       setAiStatus('error');
       toast.error('KI-Analyse fehlgeschlagen');
     } finally {
@@ -290,7 +291,7 @@ export const ReportWorkspace = () => {
       await approveReport(name);
       toast.success(`Report freigegeben (${name})`);
     } catch (error) {
-      console.warn('Report finalize failed', error);
+      logger.warn('Report finalize failed', error);
       toast.error('Report-Freigabe fehlgeschlagen');
     }
   }, [approveReport]);
@@ -303,7 +304,7 @@ export const ReportWorkspace = () => {
       await updateFindings(findings);
       toast.success('Befund gespeichert');
     } catch (error) {
-      console.warn('Findings update failed', error);
+      logger.warn('Findings update failed', error);
       toast.error('Befund speichern fehlgeschlagen');
     }
   }, [findings, report?.id, updateFindings]);
@@ -323,7 +324,7 @@ export const ReportWorkspace = () => {
       link.click();
       toast.success(`DICOM SR exportiert (${format.toUpperCase()})`);
     } catch (error) {
-      console.warn('DICOM SR export failed', error);
+      logger.warn('DICOM SR export failed', error);
       toast.error('DICOM SR Export fehlgeschlagen');
     } finally {
       if (blobUrl) URL.revokeObjectURL(blobUrl);
@@ -386,7 +387,7 @@ export const ReportWorkspace = () => {
             timeDeltaDays: primary.timeDeltaDays,
           })
           .catch((error) => {
-            console.error('Failed to persist report comparison', error);
+            logger.error('Failed to persist report comparison', error);
           });
       }
     }

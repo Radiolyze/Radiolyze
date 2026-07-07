@@ -3,6 +3,7 @@ import type { Series, Study } from '@/types/radiology';
 import { orthancClient } from '@/services/orthancClient';
 import type { DicomJsonRecord } from '@/services/dicomWebMapping';
 import { mapSeriesRecordToSeries, mapStudyRecordToPatient, mapStudyRecordToStudy } from '@/services/dicomWebMapping';
+import { logger } from '@/lib/logger';
 
 const buildFallbackStudy = (studyId: string, patientId: string): Study => ({
   id: studyId,
@@ -99,7 +100,7 @@ export function usePriorStudies(patientId?: string, currentStudyId?: string, lim
           setPriorStudies(filtered);
         }
       } catch (err) {
-        console.warn('Failed to load prior studies', err);
+        logger.warn('Failed to load prior studies', err);
         if (isActive) {
           setError('Voruntersuchungen konnten nicht geladen werden.');
           setPriorStudies([]);

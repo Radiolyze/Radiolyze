@@ -20,6 +20,7 @@ import {
   selectInferenceImageRefs,
 } from '@/hooks/reporting/inferenceHelpers';
 import { buildChecksFromService, getQaStatus, getWarningsFromChecks } from '@/hooks/reporting/qaHelpers';
+import { logger } from '@/lib/logger';
 
 const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
 
@@ -217,7 +218,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         throw error;
       }
 
-      console.warn('Inference queue failed, falling back to impression service.', error);
+      logger.warn('Inference queue failed, falling back to impression service.', error);
       setReport(prev => prev ? {
         ...prev,
         inferenceStatus: 'failed',
@@ -246,12 +247,12 @@ export function useReport(initialReport?: Report): UseReportReturn {
         return impression;
       } catch (fallbackError) {
         if (!allowMockFallback) {
-          console.warn('Impression service failed.', fallbackError);
+          logger.warn('Impression service failed.', fallbackError);
           onStatus?.('error');
           throw fallbackError;
         }
 
-        console.warn('Impression service failed, using mock impression.', fallbackError);
+        logger.warn('Impression service failed, using mock impression.', fallbackError);
 
         await wait(1200 + Math.random() * 800);
         const impressionIndex = Math.floor(Math.random() * mockAIImpressions.length);
@@ -358,7 +359,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
       succeeded = true;
       return { findings: summary, impression: summary };
     } catch (error) {
-      console.warn('Image analysis failed.', error);
+      logger.warn('Image analysis failed.', error);
       setReport(prev => prev ? {
         ...prev,
         inferenceStatus: 'failed',
@@ -402,7 +403,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
       return { status, checks, warnings };
     } catch (error) {
       if (!allowMockFallback) {
-        console.warn('QA check failed.', error);
+        logger.warn('QA check failed.', error);
         const checks: QACheck[] = [];
         const warnings = ['QA-Prüfung fehlgeschlagen'];
         const status: QAStatus = 'warn';
@@ -417,7 +418,7 @@ export function useReport(initialReport?: Report): UseReportReturn {
         return { status, checks, warnings };
       }
 
-      console.warn('QA check failed, using mock checks.', error);
+      logger.warn('QA check failed, using mock checks.', error);
 
       const checks = mockQAChecks;
       const warnings = getWarningsFromChecks(checks);

@@ -3,6 +3,7 @@ import type { ASRResult } from '@/types/radiology';
 import { mockASRTranscripts } from '@/data/mockData';
 import { useAudioInput } from '@/hooks/useAudioInput';
 import { asrClient } from '@/services/asrClient';
+import { logger } from '@/lib/logger';
 
 type ASRStatus = 'idle' | 'listening' | 'processing';
 const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === 'true';
@@ -69,10 +70,10 @@ export function useASR(options: UseASROptions = {}): UseASRReturn {
       await audioInput.start();
     } catch (error) {
       if (allowMockFallback) {
-        console.warn('ASR recording failed, using mock transcript.', error);
+        logger.warn('ASR recording failed, using mock transcript.', error);
         useMockRecordingRef.current = true;
       } else {
-        console.warn('ASR recording failed.', error);
+        logger.warn('ASR recording failed.', error);
         clearConfidenceInterval();
         setStatus('idle');
         setConfidence(0);
@@ -92,7 +93,7 @@ export function useASR(options: UseASROptions = {}): UseASRReturn {
 
     if (!useMockRecordingRef.current) {
       const blob = await audioInput.stop().catch((error) => {
-        console.warn('ASR stop failed, falling back to mock transcript.', error);
+        logger.warn('ASR stop failed, falling back to mock transcript.', error);
         return null;
       });
 
@@ -104,7 +105,7 @@ export function useASR(options: UseASROptions = {}): UseASRReturn {
             language: options.language,
           });
         } catch (error) {
-          console.warn('ASR service failed, falling back to mock transcript.', error);
+          logger.warn('ASR service failed, falling back to mock transcript.', error);
         }
       }
     }
@@ -113,7 +114,7 @@ export function useASR(options: UseASROptions = {}): UseASRReturn {
       if (allowMockFallback) {
         result = buildMockResult(duration);
       } else {
-        console.warn('ASR failed and mock fallback is disabled.');
+        logger.warn('ASR failed and mock fallback is disabled.');
       }
     }
 
