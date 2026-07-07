@@ -1,13 +1,15 @@
-import type { PromptList, PromptSource, PromptTemplate, PromptType } from '@/types/prompts';
+import type { PromptList, PromptSource, PromptTemplate, PromptType } from "@/types/prompts";
 
-const promptTypes: PromptType[] = ['system', 'summary', 'impression'];
+const promptTypes: PromptType[] = ["system", "summary", "impression"];
 
 const isPromptType = (value?: string): value is PromptType =>
   Boolean(value && promptTypes.includes(value as PromptType));
 
-const readString = (value: unknown, fallback = '') => (typeof value === 'string' ? value : fallback);
-const readNumber = (value: unknown) => (typeof value === 'number' ? value : undefined);
-const readBoolean = (value: unknown, fallback = false) => (typeof value === 'boolean' ? value : fallback);
+const readString = (value: unknown, fallback = "") =>
+  typeof value === "string" ? value : fallback;
+const readNumber = (value: unknown) => (typeof value === "number" ? value : undefined);
+const readBoolean = (value: unknown, fallback = false) =>
+  typeof value === "boolean" ? value : fallback;
 
 export type PromptTemplateResponsePayload = {
   prompt_type?: string;
@@ -44,13 +46,15 @@ export type PromptListResponsePayload = {
   prompts?: PromptTemplateResponsePayload[];
 };
 
-export const mapPromptTemplateResponse = (payload: PromptTemplateResponsePayload): PromptTemplate => {
+export const mapPromptTemplateResponse = (
+  payload: PromptTemplateResponsePayload,
+): PromptTemplate => {
   const promptType = isPromptType(payload.promptType)
     ? payload.promptType
     : isPromptType(payload.prompt_type)
       ? payload.prompt_type
-      : 'summary';
-  const source = (payload.source as PromptSource) ?? 'default';
+      : "summary";
+  const source = (payload.source as PromptSource) ?? "default";
   return {
     promptType,
     name: readString(payload.name, `${promptType}-template`),
@@ -58,17 +62,18 @@ export const mapPromptTemplateResponse = (payload: PromptTemplateResponsePayload
     version: readNumber(payload.version) ?? payload.version ?? null,
     isActive: readBoolean(payload.isActive ?? payload.is_active, true),
     variables: Array.isArray(payload.variables) ? payload.variables : [],
-    createdBy: readString(payload.createdBy ?? payload.created_by, ''),
-    createdAt: readString(payload.createdAt ?? payload.created_at, ''),
-    updatedAt: readString(payload.updatedAt ?? payload.updated_at, ''),
+    createdBy: readString(payload.createdBy ?? payload.created_by, ""),
+    createdAt: readString(payload.createdAt ?? payload.created_at, ""),
+    updatedAt: readString(payload.updatedAt ?? payload.updated_at, ""),
     source,
     defaultText: readString(payload.defaultText ?? payload.default_text),
     editable: readBoolean(payload.editable, false),
-    maxLength: typeof payload.maxLength === 'number'
-      ? payload.maxLength
-      : typeof payload.max_length === 'number'
-        ? payload.max_length
-        : 4000,
+    maxLength:
+      typeof payload.maxLength === "number"
+        ? payload.maxLength
+        : typeof payload.max_length === "number"
+          ? payload.max_length
+          : 4000,
     allowedVariables: Array.isArray(payload.allowedVariables)
       ? payload.allowedVariables
       : Array.isArray(payload.allowed_variables)
@@ -78,7 +83,7 @@ export const mapPromptTemplateResponse = (payload: PromptTemplateResponsePayload
 };
 
 const normalizeAllowedVariables = (
-  raw?: Record<string, string[]>
+  raw?: Record<string, string[]>,
 ): Record<PromptType, string[]> => {
   const allowed: Record<PromptType, string[]> = {
     system: [],
@@ -95,15 +100,20 @@ const normalizeAllowedVariables = (
 };
 
 export const mapPromptListResponse = (payload: PromptListResponsePayload): PromptList => {
-  const prompts = Array.isArray(payload.prompts) ? payload.prompts.map(mapPromptTemplateResponse) : [];
+  const prompts = Array.isArray(payload.prompts)
+    ? payload.prompts.map(mapPromptTemplateResponse)
+    : [];
   return {
     editable: readBoolean(payload.editable, false),
-    maxLength: typeof payload.maxLength === 'number'
-      ? payload.maxLength
-      : typeof payload.max_length === 'number'
-        ? payload.max_length
-        : 4000,
-    allowedVariables: normalizeAllowedVariables(payload.allowedVariables ?? payload.allowed_variables),
+    maxLength:
+      typeof payload.maxLength === "number"
+        ? payload.maxLength
+        : typeof payload.max_length === "number"
+          ? payload.max_length
+          : 4000,
+    allowedVariables: normalizeAllowedVariables(
+      payload.allowedVariables ?? payload.allowed_variables,
+    ),
     prompts,
   };
 };

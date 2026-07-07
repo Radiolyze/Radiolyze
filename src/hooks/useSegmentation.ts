@@ -1,10 +1,7 @@
-import { useCallback, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { segmentationClient } from '@/services/segmentationClient';
-import type {
-  SegmentationCreateInput,
-  SegmentationJobResponse,
-} from '@/types/segmentation';
+import { useCallback, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { segmentationClient } from "@/services/segmentationClient";
+import type { SegmentationCreateInput, SegmentationJobResponse } from "@/types/segmentation";
 
 interface UseSegmentationResult {
   jobId: string | null;
@@ -22,8 +19,7 @@ export function useSegmentation(): UseSegmentationResult {
   const [error, setError] = useState<Error | null>(null);
 
   const createMutation = useMutation({
-    mutationFn: (input: SegmentationCreateInput) =>
-      segmentationClient.createJob(input),
+    mutationFn: (input: SegmentationCreateInput) => segmentationClient.createJob(input),
     onSuccess: (response) => {
       setJobId(response.job_id);
       setError(null);
@@ -32,15 +28,13 @@ export function useSegmentation(): UseSegmentationResult {
   });
 
   const statusQuery = useQuery({
-    queryKey: ['segmentation', jobId],
+    queryKey: ["segmentation", jobId],
     queryFn: () => segmentationClient.getStatus(jobId as string),
     enabled: Boolean(jobId),
     refetchInterval: (query) => {
       const data = query.state.data as SegmentationJobResponse | undefined;
       if (!data) return POLL_INTERVAL_MS;
-      return data.status === 'finished' || data.status === 'failed'
-        ? false
-        : POLL_INTERVAL_MS;
+      return data.status === "finished" || data.status === "failed" ? false : POLL_INTERVAL_MS;
     },
   });
 

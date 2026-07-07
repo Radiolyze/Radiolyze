@@ -4,20 +4,28 @@
  * This is needed because Vite doesn't properly handle worker files from node_modules.
  */
 
-import * as esbuild from 'esbuild';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-import { existsSync, mkdirSync, copyFileSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import * as esbuild from "esbuild";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+import { existsSync, mkdirSync, copyFileSync, readdirSync, readFileSync, writeFileSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const projectRoot = join(__dirname, '..');
+const projectRoot = join(__dirname, "..");
 
 // Directly construct the path to the worker file in node_modules
-const workerEntryPoint = join(projectRoot, 'node_modules', '@cornerstonejs', 'dicom-image-loader', 'dist', 'esm', 'decodeImageFrameWorker.js');
+const workerEntryPoint = join(
+  projectRoot,
+  "node_modules",
+  "@cornerstonejs",
+  "dicom-image-loader",
+  "dist",
+  "esm",
+  "decodeImageFrameWorker.js",
+);
 
 // Output directory
-const outputDir = join(projectRoot, 'public', 'workers');
-const outputFile = join(outputDir, 'cornerstone-decode-worker.bundle.js');
+const outputDir = join(projectRoot, "public", "workers");
+const outputFile = join(outputDir, "cornerstone-decode-worker.bundle.js");
 
 // Create output directory if it doesn't exist
 if (!existsSync(outputDir)) {
@@ -25,25 +33,29 @@ if (!existsSync(outputDir)) {
   console.log(`Created directory: ${outputDir}`);
 }
 
-console.log('Bundling Cornerstone worker...');
+console.log("Bundling Cornerstone worker...");
 console.log(`  Entry: ${workerEntryPoint}`);
 console.log(`  Output: ${outputFile}`);
 
 // Plugin to handle Node.js built-ins that are conditionally imported by codec packages
 // These are only used in Node.js environment, not in web workers
 const nodeBuiltinsPlugin = {
-  name: 'node-builtins',
+  name: "node-builtins",
   setup(build) {
     // Mark Node.js built-ins as external (they won't be used in browser)
-    build.onResolve({ filter: /^(fs|path|crypto|os|stream|util|buffer|http|https|url|zlib)$/ }, args => ({
-      path: args.path,
-      namespace: 'node-builtin',
-    }));
-    
+    build.onResolve(
+      { filter: /^(fs|path|crypto|os|stream|util|buffer|http|https|url|zlib)$/ },
+      (args) => ({
+        path: args.path,
+        namespace: "node-builtin",
+      }),
+    );
+
     // Return empty module for Node.js built-ins
-    build.onLoad({ filter: /.*/, namespace: 'node-builtin' }, () => ({
-      contents: 'export default {}; export const existsSync = () => false; export const readFileSync = () => null;',
-      loader: 'js',
+    build.onLoad({ filter: /.*/, namespace: "node-builtin" }, () => ({
+      contents:
+        "export default {}; export const existsSync = () => false; export const readFileSync = () => null;",
+      loader: "js",
     }));
   },
 };
@@ -122,23 +134,23 @@ try {
     entryPoints: [workerEntryPoint],
     bundle: true,
     outfile: outputFile,
-    format: 'esm',
-    platform: 'browser',
-    target: ['es2020'],
+    format: "esm",
+    platform: "browser",
+    target: ["es2020"],
     // Minify in production
-    minify: process.env.NODE_ENV === 'production',
-    sourcemap: process.env.NODE_ENV !== 'production',
+    minify: process.env.NODE_ENV === "production",
+    sourcemap: process.env.NODE_ENV !== "production",
     // Handle WASM files from codec packages
     loader: {
-      '.wasm': 'file',
+      ".wasm": "file",
     },
     // Use plugin to handle Node.js built-ins
     plugins: [nodeBuiltinsPlugin],
     // Log level
-    logLevel: 'info',
+    logLevel: "info",
     // Define for proper environment detection
     define: {
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
     },
     // Add banner to fix WASM paths
     banner: {
@@ -147,38 +159,38 @@ try {
   });
 
   if (result.errors.length > 0) {
-    console.error('Build errors:', result.errors);
+    console.error("Build errors:", result.errors);
     process.exit(1);
   }
 
-  console.log('Worker bundle created successfully!');
-  
+  console.log("Worker bundle created successfully!");
+
   if (result.warnings.length > 0) {
-    console.log('Warnings:', result.warnings);
+    console.log("Warnings:", result.warnings);
   }
 
   // Post-process: Fix WASM paths directly in the bundle
   // The Emscripten code sets wasmBinaryFile = "filename.wasm" which then gets
   // resolved relative to the page URL instead of the worker URL.
   // We fix this by replacing the bare filenames with absolute paths.
-  console.log('\nFixing WASM paths in bundle...');
-  let bundleContent = readFileSync(outputFile, 'utf-8');
-  
+  console.log("\nFixing WASM paths in bundle...");
+  let bundleContent = readFileSync(outputFile, "utf-8");
+
   const wasmFiles = [
-    'libjpegturbowasm_decode.wasm',
-    'libjpegturbowasm.wasm',
-    'charlswasm_decode.wasm',
-    'charlswasm.wasm',
-    'openjpegwasm_decode.wasm',
-    'openjpegwasm.wasm',
-    'openjphjs.wasm',
+    "libjpegturbowasm_decode.wasm",
+    "libjpegturbowasm.wasm",
+    "charlswasm_decode.wasm",
+    "charlswasm.wasm",
+    "openjpegwasm_decode.wasm",
+    "openjpegwasm.wasm",
+    "openjphjs.wasm",
   ];
-  
+
   let replacements = 0;
   for (const wasmFile of wasmFiles) {
     // Replace: wasmBinaryFile = "filename.wasm"
     // With:    wasmBinaryFile = "/workers/filename.wasm"
-    const pattern = new RegExp(`wasmBinaryFile = "${wasmFile}"`, 'g');
+    const pattern = new RegExp(`wasmBinaryFile = "${wasmFile}"`, "g");
     const replacement = `wasmBinaryFile = "/workers/${wasmFile}"`;
     const matches = bundleContent.match(pattern);
     if (matches) {
@@ -187,48 +199,48 @@ try {
       console.log(`  Fixed: ${wasmFile} (${matches.length} occurrences)`);
     }
   }
-  
+
   if (replacements > 0) {
     writeFileSync(outputFile, bundleContent);
     console.log(`Total WASM path fixes: ${replacements}`);
   } else {
-    console.log('  No WASM paths found to fix (may already be correct)');
+    console.log("  No WASM paths found to fix (may already be correct)");
   }
 
   // Additional post-processing for codec runtime decodewasm path references.
   // Some codec loaders request paths like "/@cornerstonejs/codec-openjpeg/decodewasm"
   // without ".wasm" suffix. Rewrite these to concrete files in /workers.
-  console.log('\nFixing codec decodewasm path references...');
+  console.log("\nFixing codec decodewasm path references...");
   const decodePathRewrites = [
     {
       pattern: /(["'])\/@cornerstonejs\/codec-openjpeg\/decodewasm\1/g,
-      replacement: '$1/workers/openjpegwasm_decode.wasm$1',
-      label: 'codec-openjpeg/decodewasm',
+      replacement: "$1/workers/openjpegwasm_decode.wasm$1",
+      label: "codec-openjpeg/decodewasm",
     },
     {
       pattern: /(["'])\/@cornerstonejs\/codec-openjpeg\/wasm\1/g,
-      replacement: '$1/workers/openjpegwasm.wasm$1',
-      label: 'codec-openjpeg/wasm',
+      replacement: "$1/workers/openjpegwasm.wasm$1",
+      label: "codec-openjpeg/wasm",
     },
     {
       pattern: /(["'])\/@cornerstonejs\/codec-charls\/decodewasm\1/g,
-      replacement: '$1/workers/charlswasm_decode.wasm$1',
-      label: 'codec-charls/decodewasm',
+      replacement: "$1/workers/charlswasm_decode.wasm$1",
+      label: "codec-charls/decodewasm",
     },
     {
       pattern: /(["'])\/@cornerstonejs\/codec-charls\/wasm\1/g,
-      replacement: '$1/workers/charlswasm.wasm$1',
-      label: 'codec-charls/wasm',
+      replacement: "$1/workers/charlswasm.wasm$1",
+      label: "codec-charls/wasm",
     },
     {
       pattern: /(["'])\/@cornerstonejs\/codec-openjph\/decodewasm\1/g,
-      replacement: '$1/workers/openjphjs.wasm$1',
-      label: 'codec-openjph/decodewasm',
+      replacement: "$1/workers/openjphjs.wasm$1",
+      label: "codec-openjph/decodewasm",
     },
     {
       pattern: /(["'])\/@cornerstonejs\/codec-libjpeg-turbo-8bit\/decodewasm\1/g,
-      replacement: '$1/workers/libjpegturbowasm_decode.wasm$1',
-      label: 'codec-libjpeg-turbo-8bit/decodewasm',
+      replacement: "$1/workers/libjpegturbowasm_decode.wasm$1",
+      label: "codec-libjpeg-turbo-8bit/decodewasm",
     },
   ];
 
@@ -246,24 +258,24 @@ try {
     writeFileSync(outputFile, bundleContent);
     console.log(`Total decodewasm path fixes: ${decodeReplacements}`);
   } else {
-    console.log('  No codec decodewasm references found to fix');
+    console.log("  No codec decodewasm references found to fix");
   }
 
   // Copy WASM files from codec packages
-  console.log('\nCopying WASM codec files...');
+  console.log("\nCopying WASM codec files...");
   const codecPackages = [
-    '@cornerstonejs/codec-charls',
-    '@cornerstonejs/codec-libjpeg-turbo-8bit',
-    '@cornerstonejs/codec-openjpeg',
-    '@cornerstonejs/codec-openjph',
+    "@cornerstonejs/codec-charls",
+    "@cornerstonejs/codec-libjpeg-turbo-8bit",
+    "@cornerstonejs/codec-openjpeg",
+    "@cornerstonejs/codec-openjph",
   ];
 
   for (const pkg of codecPackages) {
-    const pkgDistDir = join(projectRoot, 'node_modules', pkg, 'dist');
+    const pkgDistDir = join(projectRoot, "node_modules", pkg, "dist");
     if (existsSync(pkgDistDir)) {
       const files = readdirSync(pkgDistDir);
       for (const file of files) {
-        if (file.endsWith('.wasm')) {
+        if (file.endsWith(".wasm")) {
           const srcPath = join(pkgDistDir, file);
           const destPath = join(outputDir, file);
           copyFileSync(srcPath, destPath);
@@ -273,8 +285,8 @@ try {
     }
   }
 
-  console.log('\nAll codec files copied successfully!');
+  console.log("\nAll codec files copied successfully!");
 } catch (error) {
-  console.error('Failed to bundle worker:', error);
+  console.error("Failed to bundle worker:", error);
   process.exit(1);
 }

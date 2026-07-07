@@ -1,7 +1,7 @@
-import { apiClient } from './apiClient';
-import { logger } from '@/lib/logger';
+import { apiClient } from "./apiClient";
+import { logger } from "@/lib/logger";
 
-const AUDIT_ENDPOINT = import.meta.env.VITE_AUDIT_LOG_URL ?? '/api/v1/audit-log';
+const AUDIT_ENDPOINT = import.meta.env.VITE_AUDIT_LOG_URL ?? "/api/v1/audit-log";
 
 export interface AuditEventResponse {
   id: string;
@@ -34,7 +34,7 @@ export const auditClient = {
       // Guard against non-array responses (e.g., HTML fallback from dev server)
       return Array.isArray(response) ? response : [];
     } catch (err) {
-      logger.debug('[auditClient] Failed to list audit events', err);
+      logger.debug("[auditClient] Failed to list audit events", err);
       return [];
     }
   },

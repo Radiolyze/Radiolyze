@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
-import { User, Calendar, Hash, Stethoscope } from 'lucide-react';
-import type { Patient, Study } from '@/types/radiology';
-import { getAge, formatDate } from '@/data/mockData';
-import { Badge } from '@/components/ui/badge';
+import { useTranslation } from "react-i18next";
+import { User, Calendar, Hash, Stethoscope } from "lucide-react";
+import type { Patient, Study } from "@/types/radiology";
+import { getAge, formatDate } from "@/data/mockData";
+import { Badge } from "@/components/ui/badge";
 
 interface PatientCardProps {
   patient: Patient;
@@ -10,14 +10,15 @@ interface PatientCardProps {
 }
 
 export function PatientCard({ patient, study }: PatientCardProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation("common");
   const age = getAge(patient.dateOfBirth);
 
-  const genderLabel = patient.gender === 'M' 
-    ? t('patient.male') 
-    : patient.gender === 'F' 
-      ? t('patient.female') 
-      : t('patient.other');
+  const genderLabel =
+    patient.gender === "M"
+      ? t("patient.male")
+      : patient.gender === "F"
+        ? t("patient.female")
+        : t("patient.other");
 
   return (
     <div className="p-4 border-b border-sidebar-border">
@@ -29,7 +30,7 @@ export function PatientCard({ patient, study }: PatientCardProps) {
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-foreground truncate">{patient.name}</h3>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{age !== null ? `${age} ${t('patient.years')}` : '—'}</span>
+            <span>{age !== null ? `${age} ${t("patient.years")}` : "—"}</span>
             <span>•</span>
             <span>{genderLabel}</span>
           </div>

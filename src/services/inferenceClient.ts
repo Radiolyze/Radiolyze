@@ -1,16 +1,16 @@
-import { apiClient } from './apiClient';
-import type { ImageRef } from '@/types/radiology';
+import { apiClient } from "./apiClient";
+import type { ImageRef } from "@/types/radiology";
 
 const INFERENCE_QUEUE_ENDPOINT =
-  import.meta.env.VITE_INFERENCE_QUEUE_URL ?? '/api/v1/inference/queue';
+  import.meta.env.VITE_INFERENCE_QUEUE_URL ?? "/api/v1/inference/queue";
 const INFERENCE_LOCALIZE_ENDPOINT =
-  import.meta.env.VITE_INFERENCE_LOCALIZE_URL ?? '/api/v1/inference/localize';
+  import.meta.env.VITE_INFERENCE_LOCALIZE_URL ?? "/api/v1/inference/localize";
 const INFERENCE_VOLUME_ENDPOINT =
-  import.meta.env.VITE_INFERENCE_VOLUME_URL ?? '/api/v1/inference/volume';
+  import.meta.env.VITE_INFERENCE_VOLUME_URL ?? "/api/v1/inference/volume";
 const INFERENCE_COMPARISON_ENDPOINT =
-  import.meta.env.VITE_INFERENCE_COMPARISON_URL ?? '/api/v1/inference/comparison';
+  import.meta.env.VITE_INFERENCE_COMPARISON_URL ?? "/api/v1/inference/comparison";
 const INFERENCE_STATUS_ENDPOINT =
-  import.meta.env.VITE_INFERENCE_STATUS_URL ?? '/api/v1/inference/status';
+  import.meta.env.VITE_INFERENCE_STATUS_URL ?? "/api/v1/inference/status";
 
 export interface InferenceQueuePayload {
   reportId?: string;
@@ -28,11 +28,11 @@ export interface LocalizePayload {
   imageRef: ImageRef;
   requestedBy?: string;
   modelVersion?: string;
-  mode?: 'cxr_finding' | 'cxr_anatomy';
+  mode?: "cxr_finding" | "cxr_anatomy";
 }
 
-export type VolumeWindowPreset = 'auto' | 'lung' | 'mediastinum' | 'bone' | 'abdomen' | 'mr';
-export type VolumeStrategy = 'uniform' | 'central';
+export type VolumeWindowPreset = "auto" | "lung" | "mediastinum" | "bone" | "abdomen" | "mr";
+export type VolumeStrategy = "uniform" | "central";
 
 export interface VolumeInferencePayload {
   reportId?: string;

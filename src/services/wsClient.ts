@@ -1,4 +1,4 @@
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 type MessageHandler = (data: unknown) => void;
 
@@ -64,21 +64,21 @@ export function createWsClient(options: WsClientOptions) {
 
     socket = new WebSocket(url);
 
-    socket.addEventListener('open', () => {
+    socket.addEventListener("open", () => {
       reconnectAttempts = 0;
       onOpen?.();
     });
-    socket.addEventListener('message', (event) => {
+    socket.addEventListener("message", (event) => {
       try {
         const parsed = JSON.parse(event.data);
         onMessage?.(parsed);
       } catch (err) {
         // Non-JSON payload; pass the raw data through as-is.
-        logger.debug('[wsClient] Received non-JSON message, passing through raw', err);
+        logger.debug("[wsClient] Received non-JSON message, passing through raw", err);
         onMessage?.(event.data);
       }
     });
-    socket.addEventListener('close', (event) => {
+    socket.addEventListener("close", (event) => {
       onClose?.(event);
       if (!shouldReconnect) {
         return;
@@ -90,7 +90,7 @@ export function createWsClient(options: WsClientOptions) {
       }
       scheduleReconnect();
     });
-    socket.addEventListener('error', (event) => onError?.(event));
+    socket.addEventListener("error", (event) => onError?.(event));
   };
 
   const disconnect = () => {

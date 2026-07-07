@@ -91,3 +91,18 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## Code-Qualität
+
+```bash
+npm run lint           # ESLint
+npm run format          # Prettier — schreibt Änderungen
+npm run format:check    # Prettier — nur prüfen (auch in CI genutzt)
+```
+
+Optional: [pre-commit](https://pre-commit.com/) installieren, um ruff/ruff-format (Backend) und eslint/prettier via lint-staged (Frontend) automatisch bei `git commit` auszuführen:
+
+```bash
+pip install pre-commit
+pre-commit install
+```

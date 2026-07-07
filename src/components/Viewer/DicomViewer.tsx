@@ -1,37 +1,33 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { AIStatus, FindingBox, ImageRef, QAStatus, Series } from '@/types/radiology';
-import type { AnnotationToolId, AllToolId } from '@/types/viewer';
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { useDicomSeriesInstances } from '@/hooks/useDicomSeriesInstances';
-import { useCornerstoneStackViewport } from '@/hooks/useCornerstoneStackViewport';
-import { useApplyViewportSyncState } from '@/hooks/useApplyViewportSyncState';
-import { useStackPrefetch } from '@/hooks/useStackPrefetch';
-import { useCornerstoneViewerTools } from '@/hooks/useCornerstoneViewerTools';
-import { useStackFrameNavigation } from '@/hooks/useStackFrameNavigation';
-import { useCornerstoneStackSetup } from '@/hooks/useCornerstoneStackSetup';
-import { useViewerReset } from '@/hooks/useViewerReset';
-import { useAnnotationMode } from '@/hooks/useAnnotationMode';
-import { ProgressOverlay } from './ProgressOverlay';
-import { DicomViewerToolbar } from './DicomViewerToolbar';
-import { DicomViewerStateOverlay } from './DicomViewerStateOverlay';
-import { DicomViewerFrameOverlays } from './DicomViewerFrameOverlays';
-import { ViewerEmptyState } from './ViewerEmptyState';
-import { AnnotationPanel } from './AnnotationPanel';
-import { AnnotationLabelDialog } from './AnnotationLabelDialog';
-import { AIFindingsOverlay } from './AIFindingsOverlay';
-import { exportAnnotations } from '@/services/annotations';
-import type { ViewportState } from '@/types/viewerSync';
-import type { AnnotationCategory, TrainingAnnotation } from '@/types/annotations';
-import { viewerTools, annotationTools, windowLevelPresets } from '@/config/viewer';
-import type { ViewerToolId } from '@/types/viewer';
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '@/components/ui/resizable';
-import { logger } from '@/lib/logger';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import type { AIStatus, FindingBox, ImageRef, QAStatus, Series } from "@/types/radiology";
+import type { AnnotationToolId, AllToolId } from "@/types/viewer";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { useDicomSeriesInstances } from "@/hooks/useDicomSeriesInstances";
+import { useCornerstoneStackViewport } from "@/hooks/useCornerstoneStackViewport";
+import { useApplyViewportSyncState } from "@/hooks/useApplyViewportSyncState";
+import { useStackPrefetch } from "@/hooks/useStackPrefetch";
+import { useCornerstoneViewerTools } from "@/hooks/useCornerstoneViewerTools";
+import { useStackFrameNavigation } from "@/hooks/useStackFrameNavigation";
+import { useCornerstoneStackSetup } from "@/hooks/useCornerstoneStackSetup";
+import { useViewerReset } from "@/hooks/useViewerReset";
+import { useAnnotationMode } from "@/hooks/useAnnotationMode";
+import { ProgressOverlay } from "./ProgressOverlay";
+import { DicomViewerToolbar } from "./DicomViewerToolbar";
+import { DicomViewerStateOverlay } from "./DicomViewerStateOverlay";
+import { DicomViewerFrameOverlays } from "./DicomViewerFrameOverlays";
+import { ViewerEmptyState } from "./ViewerEmptyState";
+import { AnnotationPanel } from "./AnnotationPanel";
+import { AnnotationLabelDialog } from "./AnnotationLabelDialog";
+import { AIFindingsOverlay } from "./AIFindingsOverlay";
+import { exportAnnotations } from "@/services/annotations";
+import type { ViewportState } from "@/types/viewerSync";
+import type { AnnotationCategory, TrainingAnnotation } from "@/types/annotations";
+import { viewerTools, annotationTools, windowLevelPresets } from "@/config/viewer";
+import type { ViewerToolId } from "@/types/viewer";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { logger } from "@/lib/logger";
 
 interface DicomViewerProps {
   series: Series | null;
@@ -55,7 +51,7 @@ interface DicomViewerProps {
 
 type Tool = ViewerToolId;
 
-type ASRStatus = 'idle' | 'listening' | 'processing';
+type ASRStatus = "idle" | "listening" | "processing";
 
 export interface ViewerProgress {
   asrStatus: ASRStatus;
@@ -77,7 +73,7 @@ export function DicomViewer({
   onAnalyzeFrame,
   isAnalyzingFrame = false,
 }: DicomViewerProps) {
-  const { t } = useTranslation('viewer');
+  const { t } = useTranslation("viewer");
   const { preferences, setPreference } = useUserPreferences();
   const [currentFrame, setCurrentFrame] = useState(0);
   const [activeTool, setActiveTool] = useState<AllToolId>(preferences.defaultTool as Tool);
@@ -108,7 +104,7 @@ export function DicomViewer({
         window.clearTimeout(wlPersistTimeoutRef.current);
       }
     },
-    []
+    [],
   );
 
   const handleViewportChange = useCallback(
@@ -126,14 +122,14 @@ export function DicomViewer({
           window.clearTimeout(wlPersistTimeoutRef.current);
         }
         wlPersistTimeoutRef.current = window.setTimeout(() => {
-          setPreference('viewportWL', {
+          setPreference("viewportWL", {
             ...preferencesRef.current.viewportWL,
             [modality]: { windowWidth: width, windowCenter: center },
           });
         }, 500);
       }
     },
-    [modality, onViewportChange, setPreference]
+    [modality, onViewportChange, setPreference],
   );
 
   const viewerInstanceIdRef = useRef<string | null>(null);
@@ -164,11 +160,12 @@ export function DicomViewer({
     onInitError: setViewerError,
   });
 
-  const { applyToolSelection, applyWindowLevelPreset, applyWindowLevel } = useCornerstoneViewerTools({
-    toolGroupRef,
-    stackViewportRef,
-    presets: windowLevelPresets,
-  });
+  const { applyToolSelection, applyWindowLevelPreset, applyWindowLevel } =
+    useCornerstoneViewerTools({
+      toolGroupRef,
+      stackViewportRef,
+      presets: windowLevelPresets,
+    });
 
   const persistedWL = modality ? preferences.viewportWL[modality] : undefined;
   const isDefaultPreset = selectedPresetId === windowLevelPresets[0].id;
@@ -254,7 +251,7 @@ export function DicomViewer({
     try {
       exportAnnotations({ element, series });
     } catch (err) {
-      logger.error('Annotation export failed', err);
+      logger.error("Annotation export failed", err);
     }
   }, [series, viewportRef]);
 
@@ -297,16 +294,19 @@ export function DicomViewer({
   });
 
   // Handle tool selection (navigation or annotation)
-  const handleToolSelect = useCallback((toolId: string) => {
-    const isAnnotationTool = annotationTools.some(t => t.id === toolId);
-    if (isAnnotationTool) {
-      setActiveAnnotationTool(toolId as AnnotationToolId);
-      setActiveTool(toolId as AllToolId);
-    } else {
-      setActiveAnnotationTool(null);
-      setActiveTool(toolId as AllToolId);
-    }
-  }, [setActiveAnnotationTool]);
+  const handleToolSelect = useCallback(
+    (toolId: string) => {
+      const isAnnotationTool = annotationTools.some((t) => t.id === toolId);
+      if (isAnnotationTool) {
+        setActiveAnnotationTool(toolId as AnnotationToolId);
+        setActiveTool(toolId as AllToolId);
+      } else {
+        setActiveAnnotationTool(null);
+        setActiveTool(toolId as AllToolId);
+      }
+    },
+    [setActiveAnnotationTool],
+  );
 
   // Handle annotation mode toggle
   const handleAnnotationModeToggle = useCallback(() => {
@@ -325,32 +325,36 @@ export function DicomViewer({
   }, [isAnnotationMode, setIsAnnotationMode, setActiveAnnotationTool, preferences.defaultTool]);
 
   // Handle saving pending annotation
-  const handleSaveAnnotation = useCallback(async (label: string, category: AnnotationCategory) => {
-    await savePendingAnnotation(label, category);
-  }, [savePendingAnnotation]);
+  const handleSaveAnnotation = useCallback(
+    async (label: string, category: AnnotationCategory) => {
+      await savePendingAnnotation(label, category);
+    },
+    [savePendingAnnotation],
+  );
 
   // Handle annotation selection from panel
-  const handleAnnotationSelect = useCallback((annotation: TrainingAnnotation) => {
-    // Jump to the frame where this annotation is
-    if (annotation.frameIndex !== currentFrame) {
-      setFrameIndex(annotation.frameIndex);
-    }
-  }, [currentFrame, setFrameIndex]);
+  const handleAnnotationSelect = useCallback(
+    (annotation: TrainingAnnotation) => {
+      // Jump to the frame where this annotation is
+      if (annotation.frameIndex !== currentFrame) {
+        setFrameIndex(annotation.frameIndex);
+      }
+    },
+    [currentFrame, setFrameIndex],
+  );
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onPrevFrame: handlePrevFrame,
     onNextFrame: handleNextFrame,
-    onZoomTool: () => handleToolSelect('zoom'),
-    onPanTool: () => handleToolSelect('pan'),
-    onMeasureTool: () => handleToolSelect('measure'),
+    onZoomTool: () => handleToolSelect("zoom"),
+    onPanTool: () => handleToolSelect("pan"),
+    onMeasureTool: () => handleToolSelect("measure"),
     onResetView: handleReset,
   });
 
   if (!series) {
-    return (
-      <ViewerEmptyState title={t('emptyState.selectSeries')} />
-    );
+    return <ViewerEmptyState title={t("emptyState.selectSeries")} />;
   }
 
   const viewerContent = (
@@ -381,7 +385,7 @@ export function DicomViewer({
       <div className="absolute top-4 right-4 z-10 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
         <p className="text-sm font-medium">{series.seriesDescription}</p>
         <p className="text-xs text-muted-foreground">
-          {series.modality} • {t('series.seriesNumber', { number: series.seriesNumber })}
+          {series.modality} • {t("series.seriesNumber", { number: series.seriesNumber })}
         </p>
       </div>
 
@@ -403,11 +407,7 @@ export function DicomViewer({
           <AIFindingsOverlay findings={findings} />
         )}
 
-        <DicomViewerStateOverlay
-          isLoading={isLoading}
-          hasStack={hasStack}
-          error={effectiveError}
-        />
+        <DicomViewerStateOverlay isLoading={isLoading} hasStack={hasStack} error={effectiveError} />
       </div>
 
       <DicomViewerFrameOverlays

@@ -1,8 +1,8 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import i18n from '@/i18n';
-import { logger } from '@/lib/logger';
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import i18n from "@/i18n";
+import { logger } from "@/lib/logger";
 
 interface ViewerErrorBoundaryProps {
   children: ReactNode;
@@ -17,12 +17,15 @@ interface ViewerErrorBoundaryState {
   resetKey: number;
 }
 
-const t = (key: string): string => i18n.t(key, { ns: 'errors' }) as string;
+const t = (key: string): string => i18n.t(key, { ns: "errors" }) as string;
 
 // Scoped boundary for a single viewer pane (Cornerstone/vtk.js), so a render
 // crash there (WebGL context loss, malformed DICOM data, mesh failure) can't
 // unmount the rest of the app - e.g. in-progress report text elsewhere on the page.
-export class ViewerErrorBoundary extends Component<ViewerErrorBoundaryProps, ViewerErrorBoundaryState> {
+export class ViewerErrorBoundary extends Component<
+  ViewerErrorBoundaryProps,
+  ViewerErrorBoundaryState
+> {
   constructor(props: ViewerErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null, resetKey: 0 };
@@ -33,8 +36,8 @@ export class ViewerErrorBoundary extends Component<ViewerErrorBoundaryProps, Vie
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    logger.error('[ViewerErrorBoundary] Caught error:', error);
-    logger.error('[ViewerErrorBoundary] Component stack:', errorInfo.componentStack);
+    logger.error("[ViewerErrorBoundary] Caught error:", error);
+    logger.error("[ViewerErrorBoundary] Component stack:", errorInfo.componentStack);
   }
 
   handleReload = (): void => {
@@ -56,10 +59,10 @@ export class ViewerErrorBoundary extends Component<ViewerErrorBoundaryProps, Vie
             <div>
               <p className="font-medium">
                 {this.props.label
-                  ? `${t('viewerBoundary.title')} (${this.props.label})`
-                  : t('viewerBoundary.title')}
+                  ? `${t("viewerBoundary.title")} (${this.props.label})`
+                  : t("viewerBoundary.title")}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">{t('viewerBoundary.message')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t("viewerBoundary.message")}</p>
               {this.state.error && (
                 <p className="mt-2 break-all font-mono text-xs text-muted-foreground">
                   {this.state.error.name}: {this.state.error.message}
@@ -68,13 +71,17 @@ export class ViewerErrorBoundary extends Component<ViewerErrorBoundaryProps, Vie
             </div>
             <Button variant="outline" size="sm" onClick={this.handleReload}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              {t('viewerBoundary.reload')}
+              {t("viewerBoundary.reload")}
             </Button>
           </div>
         </div>
       );
     }
 
-    return <div key={this.state.resetKey} className="contents">{this.props.children}</div>;
+    return (
+      <div key={this.state.resetKey} className="contents">
+        {this.props.children}
+      </div>
+    );
   }
 }

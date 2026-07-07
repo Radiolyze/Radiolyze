@@ -1,18 +1,18 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { annotation, Enums as ToolEnums } from '@cornerstonejs/tools';
-import type { AnnotationToolId, AllToolId } from '@/types/viewer';
-import type { 
-  TrainingAnnotation, 
+import { useState, useCallback, useEffect, useRef } from "react";
+import { annotation, Enums as ToolEnums } from "@cornerstonejs/tools";
+import type { AnnotationToolId, AllToolId } from "@/types/viewer";
+import type {
+  TrainingAnnotation,
   AnnotationCreateRequest,
   AnnotationToolType,
   AnnotationCategory,
   Point3D,
   BoundingBox,
-} from '@/types/annotations';
-import { createAnnotation, listAnnotationsForSeries } from '@/services/annotationClient';
-import { cornerstoneToolNames } from '@/services/cornerstone';
-import { useQueryClient } from '@tanstack/react-query';
-import { logger } from '@/lib/logger';
+} from "@/types/annotations";
+import { createAnnotation, listAnnotationsForSeries } from "@/services/annotationClient";
+import { cornerstoneToolNames } from "@/services/cornerstone";
+import { useQueryClient } from "@tanstack/react-query";
+import { logger } from "@/lib/logger";
 
 interface UseAnnotationModeOptions {
   studyId: string | null;
@@ -30,7 +30,10 @@ interface UseAnnotationModeReturn {
   setActiveAnnotationTool: (tool: AnnotationToolId | null) => void;
   pendingAnnotation: Partial<AnnotationCreateRequest> | null;
   setPendingAnnotation: (ann: Partial<AnnotationCreateRequest> | null) => void;
-  savePendingAnnotation: (label: string, category: AnnotationCategory) => Promise<TrainingAnnotation | null>;
+  savePendingAnnotation: (
+    label: string,
+    category: AnnotationCategory,
+  ) => Promise<TrainingAnnotation | null>;
   cancelPendingAnnotation: () => void;
   annotations: TrainingAnnotation[];
   isLoading: boolean;
@@ -39,12 +42,12 @@ interface UseAnnotationModeReturn {
 
 // Map Cornerstone tool names to our annotation tool types
 const toolNameToType: Record<string, AnnotationToolType> = {
-  [cornerstoneToolNames.rectangle]: 'rectangle',
-  [cornerstoneToolNames.ellipse]: 'ellipse',
-  [cornerstoneToolNames.freehand]: 'freehand',
-  [cornerstoneToolNames.bidirectional]: 'bidirectional',
-  [cornerstoneToolNames.arrow]: 'arrow',
-  [cornerstoneToolNames.length]: 'length',
+  [cornerstoneToolNames.rectangle]: "rectangle",
+  [cornerstoneToolNames.ellipse]: "ellipse",
+  [cornerstoneToolNames.freehand]: "freehand",
+  [cornerstoneToolNames.bidirectional]: "bidirectional",
+  [cornerstoneToolNames.arrow]: "arrow",
+  [cornerstoneToolNames.length]: "length",
 };
 
 // Map our tool IDs to Cornerstone tool names
@@ -67,10 +70,11 @@ export function useAnnotationMode({
   const queryClient = useQueryClient();
   const [isAnnotationMode, setIsAnnotationMode] = useState(false);
   const [activeAnnotationTool, setActiveAnnotationTool] = useState<AnnotationToolId | null>(null);
-  const [pendingAnnotation, setPendingAnnotation] = useState<Partial<AnnotationCreateRequest> | null>(null);
+  const [pendingAnnotation, setPendingAnnotation] =
+    useState<Partial<AnnotationCreateRequest> | null>(null);
   const [annotations, setAnnotations] = useState<TrainingAnnotation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const lastAnnotationUIDRef = useRef<string | null>(null);
 
   // Load annotations for current series
@@ -79,13 +83,13 @@ export function useAnnotationMode({
       setAnnotations([]);
       return;
     }
-    
+
     setIsLoading(true);
     try {
       const result = await listAnnotationsForSeries(studyId, seriesId);
       setAnnotations(result);
     } catch (error) {
-      logger.warn('Failed to load annotations:', error);
+      logger.warn("Failed to load annotations:", error);
       setAnnotations([]);
     } finally {
       setIsLoading(false);
@@ -106,16 +110,16 @@ export function useAnnotationMode({
     const handleAnnotationCompleted = (event: CustomEvent) => {
       const { annotation: ann } = event.detail;
       if (!ann || !ann.annotationUID) return;
-      
+
       // Prevent duplicate processing
       if (lastAnnotationUIDRef.current === ann.annotationUID) return;
       lastAnnotationUIDRef.current = ann.annotationUID;
 
-      const toolName = ann.metadata?.toolName || '';
+      const toolName = ann.metadata?.toolName || "";
       const toolType = toolNameToType[toolName];
-      
+
       if (!toolType) {
-        logger.warn('Unknown tool type for annotation:', toolName);
+        logger.warn("Unknown tool type for annotation:", toolName);
         return;
       }
 
@@ -131,8 +135,8 @@ export function useAnnotationMode({
       // Calculate bounding box from handles
       let boundingBox: BoundingBox | undefined;
       if (handles.length >= 2) {
-        const xs = handles.map(h => h.x);
-        const ys = handles.map(h => h.y);
+        const xs = handles.map((h) => h.x);
+        const ys = handles.map((h) => h.y);
         const minX = Math.min(...xs);
         const maxX = Math.max(...xs);
         const minY = Math.min(...ys);
@@ -149,7 +153,7 @@ export function useAnnotationMode({
       setPendingAnnotation({
         studyId: studyId!,
         seriesId: seriesId!,
-        instanceId: instanceId || 'unknown',
+        instanceId: instanceId || "unknown",
         frameIndex: currentFrameIndex,
         toolType,
         handles,
@@ -161,53 +165,61 @@ export function useAnnotationMode({
     // Subscribe to annotation events
     viewportElement.addEventListener(
       ToolEnums.Events.ANNOTATION_COMPLETED as string,
-      handleAnnotationCompleted as EventListener
+      handleAnnotationCompleted as EventListener,
     );
 
     return () => {
       viewportElement.removeEventListener(
         ToolEnums.Events.ANNOTATION_COMPLETED as string,
-        handleAnnotationCompleted as EventListener
+        handleAnnotationCompleted as EventListener,
       );
     };
-  }, [viewportElement, isAnnotationMode, enabled, studyId, seriesId, instanceId, currentFrameIndex]);
+  }, [
+    viewportElement,
+    isAnnotationMode,
+    enabled,
+    studyId,
+    seriesId,
+    instanceId,
+    currentFrameIndex,
+  ]);
 
   // Save pending annotation
-  const savePendingAnnotation = useCallback(async (
-    label: string,
-    category: AnnotationCategory
-  ): Promise<TrainingAnnotation | null> => {
-    if (!pendingAnnotation || !studyId || !seriesId) return null;
+  const savePendingAnnotation = useCallback(
+    async (label: string, category: AnnotationCategory): Promise<TrainingAnnotation | null> => {
+      if (!pendingAnnotation || !studyId || !seriesId) return null;
 
-    try {
-      const request: AnnotationCreateRequest = {
-        studyId: pendingAnnotation.studyId || studyId,
-        seriesId: pendingAnnotation.seriesId || seriesId,
-        instanceId: pendingAnnotation.instanceId || 'unknown',
-        frameIndex: pendingAnnotation.frameIndex ?? currentFrameIndex,
-        toolType: pendingAnnotation.toolType!,
-        handles: pendingAnnotation.handles || [],
-        boundingBox: pendingAnnotation.boundingBox,
-        label,
-        category,
-        cornerstoneAnnotationUID: pendingAnnotation.cornerstoneAnnotationUID,
-        actorId: 'current-user',
-      };
+      try {
+        const request: AnnotationCreateRequest = {
+          studyId: pendingAnnotation.studyId || studyId,
+          seriesId: pendingAnnotation.seriesId || seriesId,
+          instanceId: pendingAnnotation.instanceId || "unknown",
+          frameIndex: pendingAnnotation.frameIndex ?? currentFrameIndex,
+          toolType: pendingAnnotation.toolType!,
+          handles: pendingAnnotation.handles || [],
+          boundingBox: pendingAnnotation.boundingBox,
+          label,
+          category,
+          cornerstoneAnnotationUID: pendingAnnotation.cornerstoneAnnotationUID,
+          actorId: "current-user",
+        };
 
-      const saved = await createAnnotation(request);
-      setPendingAnnotation(null);
-      lastAnnotationUIDRef.current = null;
-      
-      // Refresh annotations list
-      await refreshAnnotations();
-      queryClient.invalidateQueries({ queryKey: ['annotations', studyId, seriesId] });
-      
-      return saved;
-    } catch (error) {
-      logger.error('Failed to save annotation:', error);
-      return null;
-    }
-  }, [pendingAnnotation, studyId, seriesId, currentFrameIndex, refreshAnnotations, queryClient]);
+        const saved = await createAnnotation(request);
+        setPendingAnnotation(null);
+        lastAnnotationUIDRef.current = null;
+
+        // Refresh annotations list
+        await refreshAnnotations();
+        queryClient.invalidateQueries({ queryKey: ["annotations", studyId, seriesId] });
+
+        return saved;
+      } catch (error) {
+        logger.error("Failed to save annotation:", error);
+        return null;
+      }
+    },
+    [pendingAnnotation, studyId, seriesId, currentFrameIndex, refreshAnnotations, queryClient],
+  );
 
   // Cancel pending annotation
   const cancelPendingAnnotation = useCallback(() => {
@@ -217,7 +229,7 @@ export function useAnnotationMode({
         const manager = annotation.state.getAnnotationManager();
         manager.removeAnnotation(pendingAnnotation.cornerstoneAnnotationUID);
       } catch (error) {
-        logger.warn('Failed to remove annotation:', error);
+        logger.warn("Failed to remove annotation:", error);
       }
     }
     setPendingAnnotation(null);

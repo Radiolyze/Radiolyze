@@ -1,20 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { 
-  Enums, 
-  RenderingEngine, 
-  volumeLoader,
-  cache,
-  VolumeViewport,
-} from '@cornerstonejs/core';
-import { 
-  ToolGroupManager, 
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Enums, RenderingEngine, volumeLoader, cache, VolumeViewport } from "@cornerstonejs/core";
+import {
+  ToolGroupManager,
   CrosshairsTool,
   addTool,
   Enums as ToolEnums,
-} from '@cornerstonejs/tools';
-import { initCornerstone, cornerstoneToolNames, getCornerstoneInitErrorMessage } from '@/services/cornerstone';
-import type { MPROrientation, MPRViewportState, SlabBlendMode, SlabSettings } from '@/types/mpr';
-import { logger } from '@/lib/logger';
+} from "@cornerstonejs/tools";
+import {
+  initCornerstone,
+  cornerstoneToolNames,
+  getCornerstoneInitErrorMessage,
+} from "@/services/cornerstone";
+import type { MPROrientation, MPRViewportState, SlabBlendMode, SlabSettings } from "@/types/mpr";
+import { logger } from "@/lib/logger";
 
 // Ensure CrosshairsTool is registered
 let crosshairsRegistered = false;
@@ -89,10 +87,10 @@ export const useMPRVolumeViewport = ({
   const axialRef = useRef<HTMLDivElement | null>(null);
   const sagittalRef = useRef<HTMLDivElement | null>(null);
   const coronalRef = useRef<HTMLDivElement | null>(null);
-  
+
   const renderingEngineRef = useRef<RenderingEngine | null>(null);
   const volumeIdRef = useRef<string | null>(null);
-  
+
   const [volumeViewports, setVolumeViewports] = useState<{
     axial: VolumeViewport | null;
     sagittal: VolumeViewport | null;
@@ -102,7 +100,7 @@ export const useMPRVolumeViewport = ({
     sagittal: null,
     coronal: null,
   });
-  
+
   const [isInitializing, setIsInitializing] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [sliceState, setSliceState] = useState<MPRViewportState>({
@@ -112,7 +110,7 @@ export const useMPRVolumeViewport = ({
   });
   const [slabSettings, setSlabSettingsState] = useState<SlabSettings>({
     thickness: 0,
-    blendMode: 'composite',
+    blendMode: "composite",
   });
 
   const onSliceChangeRef = useRef(onSliceChange);
@@ -127,25 +125,28 @@ export const useMPRVolumeViewport = ({
   }, [onInitError]);
 
   // Jump to specific slice
-  const jumpToSlice = useCallback((orientation: MPROrientation, sliceIndex: number) => {
-    const viewport = volumeViewports[orientation];
-    if (!viewport) return;
-    
-    try {
-      // Use scroll API for volume viewports
-      const camera = viewport.getCamera();
-      const imageData = viewport.getImageData();
-      if (imageData) {
-        const { dimensions } = imageData;
-        const maxIndex = dimensions[2] - 1;
-        const clampedIndex = Math.max(0, Math.min(sliceIndex, maxIndex));
-        viewport.scroll(clampedIndex - (viewport.getCurrentImageIdIndex?.() || 0));
-        viewport.render();
+  const jumpToSlice = useCallback(
+    (orientation: MPROrientation, sliceIndex: number) => {
+      const viewport = volumeViewports[orientation];
+      if (!viewport) return;
+
+      try {
+        // Use scroll API for volume viewports
+        const camera = viewport.getCamera();
+        const imageData = viewport.getImageData();
+        if (imageData) {
+          const { dimensions } = imageData;
+          const maxIndex = dimensions[2] - 1;
+          const clampedIndex = Math.max(0, Math.min(sliceIndex, maxIndex));
+          viewport.scroll(clampedIndex - (viewport.getCurrentImageIdIndex?.() || 0));
+          viewport.render();
+        }
+      } catch (e) {
+        logger.warn("Failed to jump to slice:", e);
       }
-    } catch (e) {
-      logger.warn('Failed to jump to slice:', e);
-    }
-  }, [volumeViewports]);
+    },
+    [volumeViewports],
+  );
 
   // Update slice state for all viewports
   const updateSliceState = useCallback(() => {
@@ -155,7 +156,7 @@ export const useMPRVolumeViewport = ({
       coronal: { sliceIndex: 0, totalSlices: 0 },
     };
 
-    (['axial', 'sagittal', 'coronal'] as MPROrientation[]).forEach((orientation) => {
+    (["axial", "sagittal", "coronal"] as MPROrientation[]).forEach((orientation) => {
       const vp = volumeViewports[orientation];
       if (vp) {
         try {
@@ -200,7 +201,7 @@ export const useMPRVolumeViewport = ({
 
         // Create and load volume
         const volume = await volumeLoader.createAndCacheVolume(volumeId, { imageIds });
-        
+
         if (!isActive) return;
 
         // Load volume data
@@ -247,7 +248,9 @@ export const useMPRVolumeViewport = ({
 
         // Get viewports
         const axialViewport = renderingEngine.getViewport(viewportIds.axial) as VolumeViewport;
-        const sagittalViewport = renderingEngine.getViewport(viewportIds.sagittal) as VolumeViewport;
+        const sagittalViewport = renderingEngine.getViewport(
+          viewportIds.sagittal,
+        ) as VolumeViewport;
         const coronalViewport = renderingEngine.getViewport(viewportIds.coronal) as VolumeViewport;
 
         // Set volume on viewports
@@ -266,10 +269,10 @@ export const useMPRVolumeViewport = ({
           toolGroup.addTool(cornerstoneToolNames.stackScroll);
           toolGroup.addTool(CrosshairsTool.toolName, {
             getReferenceLineColor: (viewportId: string) => {
-              if (viewportId === viewportIds.axial) return 'rgb(255, 99, 71)';
-              if (viewportId === viewportIds.sagittal) return 'rgb(50, 205, 50)';
-              if (viewportId === viewportIds.coronal) return 'rgb(30, 144, 255)';
-              return 'rgb(255, 255, 255)';
+              if (viewportId === viewportIds.axial) return "rgb(255, 99, 71)";
+              if (viewportId === viewportIds.sagittal) return "rgb(50, 205, 50)";
+              if (viewportId === viewportIds.coronal) return "rgb(30, 144, 255)";
+              return "rgb(255, 255, 255)";
             },
             getReferenceLineControllable: () => true,
             getReferenceLineDraggableRotatable: () => true,
@@ -309,12 +312,11 @@ export const useMPRVolumeViewport = ({
           coronal: coronalViewport,
         });
         setIsReady(true);
-
       } catch (error) {
-        logger.error('MPR initialization failed:', error);
+        logger.error("MPR initialization failed:", error);
         if (isActive) {
           onInitErrorRef.current?.(
-            getCornerstoneInitErrorMessage('MPR-Viewer konnte nicht initialisiert werden.', error)
+            getCornerstoneInitErrorMessage("MPR-Viewer konnte nicht initialisiert werden.", error),
           );
         }
       } finally {
@@ -360,40 +362,43 @@ export const useMPRVolumeViewport = ({
   }, [isReady, updateSliceState]);
 
   // Apply slab settings to all viewports
-  const setSlabSettings = useCallback((settings: SlabSettings) => {
-    setSlabSettingsState(settings);
-    
-    const viewports = [volumeViewports.axial, volumeViewports.sagittal, volumeViewports.coronal];
-    viewports.forEach((viewport) => {
-      if (!viewport) return;
-      
-      try {
-        // Set blend mode
-        const cornerstoneBlendMode = blendModeToCornerstone[settings.blendMode];
-        viewport.setBlendMode(cornerstoneBlendMode);
-        
-        // Set slab thickness
-        if (settings.thickness > 0) {
-          viewport.setSlabThickness(settings.thickness);
-        } else {
-          viewport.resetSlabThickness();
+  const setSlabSettings = useCallback(
+    (settings: SlabSettings) => {
+      setSlabSettingsState(settings);
+
+      const viewports = [volumeViewports.axial, volumeViewports.sagittal, volumeViewports.coronal];
+      viewports.forEach((viewport) => {
+        if (!viewport) return;
+
+        try {
+          // Set blend mode
+          const cornerstoneBlendMode = blendModeToCornerstone[settings.blendMode];
+          viewport.setBlendMode(cornerstoneBlendMode);
+
+          // Set slab thickness
+          if (settings.thickness > 0) {
+            viewport.setSlabThickness(settings.thickness);
+          } else {
+            viewport.resetSlabThickness();
+          }
+
+          viewport.render();
+        } catch (e) {
+          logger.warn("Failed to apply slab settings:", e);
         }
-        
-        viewport.render();
-      } catch (e) {
-        logger.warn('Failed to apply slab settings:', e);
+      });
+
+      // Trigger re-render of all viewports
+      if (renderingEngineRef.current) {
+        renderingEngineRef.current.renderViewports([
+          viewportIds.axial,
+          viewportIds.sagittal,
+          viewportIds.coronal,
+        ]);
       }
-    });
-    
-    // Trigger re-render of all viewports
-    if (renderingEngineRef.current) {
-      renderingEngineRef.current.renderViewports([
-        viewportIds.axial,
-        viewportIds.sagittal,
-        viewportIds.coronal,
-      ]);
-    }
-  }, [volumeViewports, viewportIds]);
+    },
+    [volumeViewports, viewportIds],
+  );
 
   return {
     viewportRefs: {

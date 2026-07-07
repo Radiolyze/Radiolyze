@@ -1,9 +1,9 @@
-import { apiClient } from './apiClient';
+import { apiClient } from "./apiClient";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
-const REPORTS_CREATE_ENDPOINT = import.meta.env.VITE_REPORTS_CREATE_URL ?? '/api/v1/reports/create';
-const REPORTS_ENDPOINT = import.meta.env.VITE_REPORTS_URL ?? '/api/v1/reports';
-const SR_EXPORT_ENDPOINT = import.meta.env.VITE_SR_EXPORT_URL ?? '/api/v1/reports';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const REPORTS_CREATE_ENDPOINT = import.meta.env.VITE_REPORTS_CREATE_URL ?? "/api/v1/reports/create";
+const REPORTS_ENDPOINT = import.meta.env.VITE_REPORTS_URL ?? "/api/v1/reports";
+const SR_EXPORT_ENDPOINT = import.meta.env.VITE_SR_EXPORT_URL ?? "/api/v1/reports";
 
 const buildUrl = (path: string) => new URL(path, API_BASE_URL || window.location.origin).toString();
 
@@ -13,7 +13,7 @@ const getFileNameFromDisposition = (value: string | null) => {
   return match?.[1] ?? null;
 };
 
-export type SrExportFormat = 'json' | 'dicom';
+export type SrExportFormat = "json" | "dicom";
 
 export interface SrExportResult {
   blob: Blob;
@@ -123,7 +123,10 @@ export const reportClient = {
       signature,
     });
   },
-  async updateReport(reportId: string, payload: ReportUpdatePayload): Promise<ReportResponsePayload> {
+  async updateReport(
+    reportId: string,
+    payload: ReportUpdatePayload,
+  ): Promise<ReportResponsePayload> {
     return apiClient.patch<ReportResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}`, {
       findings_text: payload.findingsText,
       impression_text: payload.impressionText,
@@ -131,26 +134,29 @@ export const reportClient = {
       actorId: payload.actorId,
     });
   },
-  async exportStructuredReport(reportId: string, format: SrExportFormat = 'dicom'): Promise<SrExportResult> {
+  async exportStructuredReport(
+    reportId: string,
+    format: SrExportFormat = "dicom",
+  ): Promise<SrExportResult> {
     const response = await fetch(
       buildUrl(`${SR_EXPORT_ENDPOINT}/${reportId}/export-sr?format=${format}`),
       {
-        method: 'GET',
-        credentials: 'include',
-      }
+        method: "GET",
+        credentials: "include",
+      },
     );
 
     if (!response.ok) {
       const message = await response.text();
-      throw new Error(message || 'DICOM SR export failed');
+      throw new Error(message || "DICOM SR export failed");
     }
 
     const blob = await response.blob();
-    const fallbackType = format === 'dicom' ? 'application/dicom' : 'application/dicom+json';
-    const contentType = response.headers.get('content-type') || fallbackType;
+    const fallbackType = format === "dicom" ? "application/dicom" : "application/dicom+json";
+    const contentType = response.headers.get("content-type") || fallbackType;
     const fileName =
-      getFileNameFromDisposition(response.headers.get('content-disposition')) ??
-      `report-${reportId}-sr.${format === 'dicom' ? 'dcm' : 'json'}`;
+      getFileNameFromDisposition(response.headers.get("content-disposition")) ??
+      `report-${reportId}-sr.${format === "dicom" ? "dcm" : "json"}`;
 
     return { blob, fileName, contentType };
   },
@@ -159,35 +165,39 @@ export const reportClient = {
   },
   async createComparison(
     reportId: string,
-    payload: ReportComparisonPayload
+    payload: ReportComparisonPayload,
   ): Promise<ReportComparisonResponsePayload> {
-    return apiClient.post<ReportComparisonResponsePayload>(`${REPORTS_ENDPOINT}/${reportId}/comparisons`, {
-      priorStudyUid: payload.priorStudyUid,
-      priorSeriesUid: payload.priorSeriesUid,
-      timeDeltaDays: payload.timeDeltaDays,
-    });
+    return apiClient.post<ReportComparisonResponsePayload>(
+      `${REPORTS_ENDPOINT}/${reportId}/comparisons`,
+      {
+        priorStudyUid: payload.priorStudyUid,
+        priorSeriesUid: payload.priorSeriesUid,
+        timeDeltaDays: payload.timeDeltaDays,
+      },
+    );
   },
   async getComparisons(reportId: string): Promise<ReportComparisonResponsePayload[]> {
-    return apiClient.get<ReportComparisonResponsePayload[]>(`${REPORTS_ENDPOINT}/${reportId}/comparisons`);
+    return apiClient.get<ReportComparisonResponsePayload[]>(
+      `${REPORTS_ENDPOINT}/${reportId}/comparisons`,
+    );
   },
   async getReportsByPatient(patientId: string, limit = 20): Promise<ReportResponsePayload[]> {
-    return apiClient.get<ReportResponsePayload[]>(
-      `${REPORTS_ENDPOINT}/by-patient/${patientId}`,
-      { query: { limit } },
-    );
+    return apiClient.get<ReportResponsePayload[]>(`${REPORTS_ENDPOINT}/by-patient/${patientId}`, {
+      query: { limit },
+    });
   },
   async exportPdf(reportId: string): Promise<PdfExportResult> {
-    const response = await fetch(
-      buildUrl(`${REPORTS_ENDPOINT}/${reportId}/export-pdf`),
-      { method: 'GET', credentials: 'include' }
-    );
+    const response = await fetch(buildUrl(`${REPORTS_ENDPOINT}/${reportId}/export-pdf`), {
+      method: "GET",
+      credentials: "include",
+    });
     if (!response.ok) {
       const message = await response.text();
-      throw new Error(message || 'PDF export failed');
+      throw new Error(message || "PDF export failed");
     }
     const blob = await response.blob();
     const fileName =
-      getFileNameFromDisposition(response.headers.get('content-disposition')) ??
+      getFileNameFromDisposition(response.headers.get("content-disposition")) ??
       `report-${reportId}.pdf`;
     return { blob, fileName };
   },
@@ -212,42 +222,42 @@ export const reportClient = {
     reportId?: string;
   }): AsyncGenerator<string> {
     const body = JSON.stringify({
-      findings_text: params.findingsText ?? '',
+      findings_text: params.findingsText ?? "",
       image_urls: params.imageUrls ?? [],
       report_id: params.reportId,
     });
 
-    const response = await fetch(buildUrl('/api/v1/reports/stream-impression'), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch(buildUrl("/api/v1/reports/stream-impression"), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body,
     });
 
     if (!response.ok || !response.body) {
-      const msg = await response.text().catch(() => 'Unknown error');
+      const msg = await response.text().catch(() => "Unknown error");
       throw new Error(`Stream impression failed (${response.status}): ${msg}`);
     }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
+    let buffer = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
 
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
-        const payload = trimmed.slice('data:'.length).trim();
-        if (payload === '[DONE]') return;
+        if (!trimmed.startsWith("data:")) continue;
+        const payload = trimmed.slice("data:".length).trim();
+        if (payload === "[DONE]") return;
         // Restore escaped newlines
-        yield payload.replace(/\\n/g, '\n');
+        yield payload.replace(/\\n/g, "\n");
       }
     }
   },

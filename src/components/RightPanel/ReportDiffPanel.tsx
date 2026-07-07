@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { GitCompare } from 'lucide-react';
-import type { ReportResponsePayload } from '@/services/reportClient';
-import { usePriorReports } from '@/hooks/usePriorReports';
+import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { GitCompare } from "lucide-react";
+import type { ReportResponsePayload } from "@/services/reportClient";
+import { usePriorReports } from "@/hooks/usePriorReports";
 
 interface ReportDiffPanelProps {
   patientId: string | undefined;
@@ -18,10 +18,10 @@ interface ReportDiffPanelProps {
 function computeWordDiff(
   oldText: string,
   newText: string,
-): Array<{ text: string; type: 'same' | 'added' | 'removed' }> {
+): Array<{ text: string; type: "same" | "added" | "removed" }> {
   const oldWords = oldText.split(/(\s+)/);
   const newWords = newText.split(/(\s+)/);
-  const result: Array<{ text: string; type: 'same' | 'added' | 'removed' }> = [];
+  const result: Array<{ text: string; type: "same" | "added" | "removed" }> = [];
 
   // Simple LCS-based diff for reasonable-length texts
   const m = oldWords.length;
@@ -42,18 +42,18 @@ function computeWordDiff(
   // Backtrack to produce diff
   let i = m;
   let j = n;
-  const segments: Array<{ text: string; type: 'same' | 'added' | 'removed' }> = [];
+  const segments: Array<{ text: string; type: "same" | "added" | "removed" }> = [];
 
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && oldWords[i - 1] === newWords[j - 1]) {
-      segments.unshift({ text: oldWords[i - 1], type: 'same' });
+      segments.unshift({ text: oldWords[i - 1], type: "same" });
       i--;
       j--;
     } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-      segments.unshift({ text: newWords[j - 1], type: 'added' });
+      segments.unshift({ text: newWords[j - 1], type: "added" });
       j--;
     } else {
-      segments.unshift({ text: oldWords[i - 1], type: 'removed' });
+      segments.unshift({ text: oldWords[i - 1], type: "removed" });
       i--;
     }
   }
@@ -80,14 +80,14 @@ function DiffView({ oldText, newText }: { oldText: string; newText: string }) {
   return (
     <div className="text-sm whitespace-pre-wrap font-mono leading-relaxed">
       {segments.map((seg, idx) => {
-        if (seg.type === 'removed') {
+        if (seg.type === "removed") {
           return (
             <span key={idx} className="bg-red-500/20 text-red-400 line-through">
               {seg.text}
             </span>
           );
         }
-        if (seg.type === 'added') {
+        if (seg.type === "added") {
           return (
             <span key={idx} className="bg-green-500/20 text-green-400">
               {seg.text}
@@ -106,7 +106,7 @@ export function ReportDiffPanel({
   currentFindings,
   currentImpression,
 }: ReportDiffPanelProps) {
-  const { t } = useTranslation('report');
+  const { t } = useTranslation("report");
   const { priorReports, isLoading } = usePriorReports(patientId, currentReportId);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
@@ -124,15 +124,13 @@ export function ReportDiffPanel({
         Vorbefund vergleichen
         {priorReports.length > 0 && (
           <span className="ml-auto text-xs text-muted-foreground">
-            {priorReports.length} Vorbefund{priorReports.length !== 1 ? 'e' : ''}
+            {priorReports.length} Vorbefund{priorReports.length !== 1 ? "e" : ""}
           </span>
         )}
       </summary>
 
       <div className="px-4 pb-4 space-y-3">
-        {isLoading && (
-          <p className="text-sm text-muted-foreground">Lade Vorbefunde…</p>
-        )}
+        {isLoading && <p className="text-sm text-muted-foreground">Lade Vorbefunde…</p>}
 
         {!isLoading && priorReports.length === 0 && (
           <p className="text-sm text-muted-foreground">Keine Vorbefunde vorhanden.</p>
@@ -141,13 +139,13 @@ export function ReportDiffPanel({
         {priorReports.length > 0 && (
           <select
             className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-            value={selectedReportId ?? ''}
+            value={selectedReportId ?? ""}
             onChange={(e) => setSelectedReportId(e.target.value || null)}
           >
             <option value="">Vorbefund auswählen…</option>
             {priorReports.map((r) => (
               <option key={r.id} value={r.id}>
-                {new Date(r.created_at).toLocaleDateString('de-DE')} – {r.status}
+                {new Date(r.created_at).toLocaleDateString("de-DE")} – {r.status}
               </option>
             ))}
           </select>
@@ -159,19 +157,13 @@ export function ReportDiffPanel({
               <h4 className="text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wider">
                 Befund (Diff)
               </h4>
-              <DiffView
-                oldText={selectedReport.findings_text}
-                newText={currentFindings}
-              />
+              <DiffView oldText={selectedReport.findings_text} newText={currentFindings} />
             </div>
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wider">
                 Beurteilung (Diff)
               </h4>
-              <DiffView
-                oldText={selectedReport.impression_text}
-                newText={currentImpression}
-              />
+              <DiffView oldText={selectedReport.impression_text} newText={currentImpression} />
             </div>
           </div>
         )}

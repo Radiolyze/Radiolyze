@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
-import { RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import type { ViewerToolConfig } from '@/types/viewer';
+import { useTranslation } from "react-i18next";
+import { RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import type { ViewerToolConfig } from "@/types/viewer";
 
 interface ImageControlsProps {
   tools: ViewerToolConfig[];
@@ -19,12 +19,12 @@ export function ImageControls({
   onReset,
   className,
 }: ImageControlsProps) {
-  const { t } = useTranslation('viewer');
+  const { t } = useTranslation("viewer");
   return (
     <div
       className={cn(
-        'flex gap-1 bg-card/90 backdrop-blur-sm rounded-lg p-1 border border-border',
-        className
+        "flex gap-1 bg-card/90 backdrop-blur-sm rounded-lg p-1 border border-border",
+        className,
       )}
     >
       {tools.map((tool) => (
@@ -33,8 +33,8 @@ export function ImageControls({
           variant="ghost"
           size="icon"
           className={cn(
-            'h-9 w-9',
-            activeToolId === tool.id && 'bg-primary text-primary-foreground'
+            "h-9 w-9",
+            activeToolId === tool.id && "bg-primary text-primary-foreground",
           )}
           onClick={() => onToolSelect(tool.id)}
           title={tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label}
@@ -49,8 +49,8 @@ export function ImageControls({
         size="icon"
         className="h-9 w-9"
         onClick={onReset}
-        title={`${t('tools.reset')} (R)`}
-        aria-label={`${t('tools.reset')} (R)`}
+        title={`${t("tools.reset")} (R)`}
+        aria-label={`${t("tools.reset")} (R)`}
       >
         <RotateCcw className="h-4 w-4" />
       </Button>

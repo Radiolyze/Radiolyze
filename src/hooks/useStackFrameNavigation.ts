@@ -1,7 +1,7 @@
-import { useCallback, useEffect } from 'react';
-import type { RefObject, Dispatch, SetStateAction } from 'react';
-import type { StackViewport } from '@cornerstonejs/core';
-import { logger } from '@/lib/logger';
+import { useCallback, useEffect } from "react";
+import type { RefObject, Dispatch, SetStateAction } from "react";
+import type { StackViewport } from "@cornerstonejs/core";
+import { logger } from "@/lib/logger";
 
 interface StackFrameNavigationOptions {
   currentFrame: number;
@@ -41,15 +41,15 @@ export const useStackFrameNavigation = ({
       const viewport = stackViewportRef.current;
       if (viewport) {
         viewport.setImageIdIndex(nextIndex).catch((error) => {
-          logger.warn('Failed to change frame', error);
+          logger.warn("Failed to change frame", error);
         });
       }
     },
-    [hasStack, stackViewportRef, totalFrames, setCurrentFrame]
+    [hasStack, stackViewportRef, totalFrames, setCurrentFrame],
   );
 
   useEffect(() => {
-    if (typeof requestedFrameIndex !== 'number') {
+    if (typeof requestedFrameIndex !== "number") {
       return;
     }
     if (requestedFrameIndex === currentFrame) {

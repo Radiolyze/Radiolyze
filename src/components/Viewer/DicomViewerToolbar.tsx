@@ -1,23 +1,19 @@
-import { Download, Eye, EyeOff, Scan, Tag, ToggleLeft, ToggleRight } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
+import { Download, Eye, EyeOff, Scan, Tag, ToggleLeft, ToggleRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import type { ImageRef } from '@/types/radiology';
-import type { ViewerToolConfig, AnnotationToolConfig, AllToolId } from '@/types/viewer';
-import type { WindowLevelPreset } from '@/config/viewer';
-import { ImageControls } from './ImageControls';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ImageRef } from "@/types/radiology";
+import type { ViewerToolConfig, AnnotationToolConfig, AllToolId } from "@/types/viewer";
+import type { WindowLevelPreset } from "@/config/viewer";
+import { ImageControls } from "./ImageControls";
+import { cn } from "@/lib/utils";
 
 interface DicomViewerToolbarProps {
   tools: ViewerToolConfig[];
@@ -63,7 +59,7 @@ export function DicomViewerToolbar({
   currentImageRef,
   isAnalyzingFrame = false,
 }: DicomViewerToolbarProps) {
-  const { t } = useTranslation('viewer');
+  const { t } = useTranslation("viewer");
   return (
     <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
       {/* Navigation tools */}
@@ -80,11 +76,18 @@ export function DicomViewerToolbar({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={annotationMode ? 'default' : 'ghost'}
+                variant={annotationMode ? "default" : "ghost"}
                 size="sm"
-                className={cn('h-8 px-2 gap-1.5', annotationMode && 'bg-primary text-primary-foreground')}
+                className={cn(
+                  "h-8 px-2 gap-1.5",
+                  annotationMode && "bg-primary text-primary-foreground",
+                )}
                 onClick={onAnnotationModeToggle}
-                aria-label={annotationMode ? t('tools.annotationModeActive') : t('tools.annotationModeActivate')}
+                aria-label={
+                  annotationMode
+                    ? t("tools.annotationModeActive")
+                    : t("tools.annotationModeActivate")
+                }
               >
                 <Tag className="h-4 w-4" />
                 {annotationMode ? (
@@ -95,7 +98,7 @@ export function DicomViewerToolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {annotationMode ? t('tools.annotationModeActive') : t('tools.annotationModeActivate')}
+              {annotationMode ? t("tools.annotationModeActive") : t("tools.annotationModeActivate")}
             </TooltipContent>
           </Tooltip>
 
@@ -109,8 +112,8 @@ export function DicomViewerToolbar({
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        'h-8 w-8',
-                        activeToolId === tool.id && 'bg-accent text-accent-foreground'
+                        "h-8 w-8",
+                        activeToolId === tool.id && "bg-accent text-accent-foreground",
                       )}
                       onClick={() => onToolSelect(tool.id)}
                       disabled={!hasStack}
@@ -131,13 +134,9 @@ export function DicomViewerToolbar({
 
       {/* Window/Level presets + Export */}
       <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-2 border border-border">
-        <Select
-          value={selectedPresetId}
-          onValueChange={onPresetChange}
-          disabled={!hasStack}
-        >
+        <Select value={selectedPresetId} onValueChange={onPresetChange} disabled={!hasStack}>
           <SelectTrigger className="h-8 w-[170px] text-xs">
-            <SelectValue placeholder={t('tools.window')} />
+            <SelectValue placeholder={t("tools.window")} />
           </SelectTrigger>
           <SelectContent>
             {presets.map((preset) => (
@@ -157,46 +156,41 @@ export function DicomViewerToolbar({
                 onClick={() => onAnalyzeFrame(currentImageRef)}
                 disabled={!hasStack || isAnalyzingFrame}
               >
-                <Scan className={cn('h-4 w-4', isAnalyzingFrame && 'animate-pulse')} />
+                <Scan className={cn("h-4 w-4", isAnalyzingFrame && "animate-pulse")} />
                 <span className="text-xs">
-                  {isAnalyzingFrame ? t('progress.ai.running') : t('tools.analyzeFrame')}
+                  {isAnalyzingFrame ? t("progress.ai.running") : t("tools.analyzeFrame")}
                 </span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              {t('tools.analyzeFrameHint')}
-            </TooltipContent>
+            <TooltipContent>{t("tools.analyzeFrameHint")}</TooltipContent>
           </Tooltip>
         )}
         {findingsCount > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={showFindingsOverlay ? 'default' : 'outline'}
+                variant={showFindingsOverlay ? "default" : "outline"}
                 size="sm"
                 className={cn(
-                  'h-8 px-2 gap-1.5 relative',
-                  showFindingsOverlay && 'bg-amber-600 hover:bg-amber-700 text-white border-amber-600'
+                  "h-8 px-2 gap-1.5 relative",
+                  showFindingsOverlay &&
+                    "bg-amber-600 hover:bg-amber-700 text-white border-amber-600",
                 )}
                 onClick={onFindingsOverlayToggle}
                 aria-label={
                   showFindingsOverlay
-                    ? t('overlays.hideFindings', { count: findingsCount })
-                    : t('overlays.showFindings', { count: findingsCount })
+                    ? t("overlays.hideFindings", { count: findingsCount })
+                    : t("overlays.showFindings", { count: findingsCount })
                 }
               >
-                {showFindingsOverlay ? (
-                  <Eye className="h-4 w-4" />
-                ) : (
-                  <EyeOff className="h-4 w-4" />
-                )}
+                {showFindingsOverlay ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 <span className="text-xs font-mono">{findingsCount}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
               {showFindingsOverlay
-                ? t('overlays.hideFindings', { count: findingsCount })
-                : t('overlays.showFindings', { count: findingsCount })}
+                ? t("overlays.hideFindings", { count: findingsCount })
+                : t("overlays.showFindings", { count: findingsCount })}
             </TooltipContent>
           </Tooltip>
         )}

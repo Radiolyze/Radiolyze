@@ -1,6 +1,6 @@
-import { apiClient } from './apiClient';
+import { apiClient } from "./apiClient";
 
-const TEMPLATES_ENDPOINT = '/api/v1/report-templates';
+const TEMPLATES_ENDPOINT = "/api/v1/report-templates";
 
 export interface TemplatePayload {
   id: string;

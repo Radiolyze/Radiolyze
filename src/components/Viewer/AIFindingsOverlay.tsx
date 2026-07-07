@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import type { FindingBox } from '@/types/radiology';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import type { FindingBox } from "@/types/radiology";
+import { cn } from "@/lib/utils";
 
 interface AIFindingsOverlayProps {
   findings: FindingBox[];
@@ -25,7 +25,7 @@ export function AIFindingsOverlay({ findings, className }: AIFindingsOverlayProp
 
   return (
     <svg
-      className={cn('absolute inset-0 w-full h-full pointer-events-none', className)}
+      className={cn("absolute inset-0 w-full h-full pointer-events-none", className)}
       viewBox="0 0 1000 1000"
       preserveAspectRatio="xMidYMid meet"
       aria-label={`${findings.length} KI-Befunde`}
@@ -82,7 +82,7 @@ export function AIFindingsOverlay({ findings, className }: AIFindingsOverlayProp
               fontFamily="ui-monospace, monospace"
               fontWeight="600"
               fill="white"
-              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}
+              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}
             >
               {finding.label}
               {finding.confidence !== undefined && (
@@ -98,9 +98,17 @@ export function AIFindingsOverlay({ findings, className }: AIFindingsOverlayProp
 
 /** Small L-shaped accents at the corners of the bounding box. */
 function CornerAccents({
-  x1, y1, x2, y2, stroke,
+  x1,
+  y1,
+  x2,
+  y2,
+  stroke,
 }: {
-  x1: number; y1: number; x2: number; y2: number; stroke: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  stroke: string;
 }) {
   const len = 12;
   const w = 3;
@@ -128,16 +136,51 @@ function CornerAccents({
 // ---------------------------------------------------------------------------
 
 const PATHOLOGICAL_KEYWORDS = [
-  'rundherd', 'nodule', 'mass', 'tumor', 'infiltrat', 'erguss', 'effusion',
-  'fraktur', 'fracture', 'atelektase', 'atelectasis', 'lesion', 'läsion',
-  'konsolidierung', 'consolidation', 'pneumonie', 'pneumonia', 'ödem', 'edema',
-  'vergrößer', 'enlarged', 'patholog',
+  "rundherd",
+  "nodule",
+  "mass",
+  "tumor",
+  "infiltrat",
+  "erguss",
+  "effusion",
+  "fraktur",
+  "fracture",
+  "atelektase",
+  "atelectasis",
+  "lesion",
+  "läsion",
+  "konsolidierung",
+  "consolidation",
+  "pneumonie",
+  "pneumonia",
+  "ödem",
+  "edema",
+  "vergrößer",
+  "enlarged",
+  "patholog",
 ];
 
 const ANATOMICAL_KEYWORDS = [
-  'lunge', 'lung', 'mediastinum', 'zwerchfell', 'diaphragm', 'herz', 'heart',
-  'herzsilhouette', 'rippe', 'rib', 'wirbel', 'vertebra', 'trachea', 'knochen',
-  'bone', 'hilus', 'hilum', 'aorta', 'gefäß', 'vessel',
+  "lunge",
+  "lung",
+  "mediastinum",
+  "zwerchfell",
+  "diaphragm",
+  "herz",
+  "heart",
+  "herzsilhouette",
+  "rippe",
+  "rib",
+  "wirbel",
+  "vertebra",
+  "trachea",
+  "knochen",
+  "bone",
+  "hilus",
+  "hilum",
+  "aorta",
+  "gefäß",
+  "vessel",
 ];
 
 type BoxColors = {
@@ -155,42 +198,40 @@ function getBoxColors(finding: FindingBox): BoxColors {
   if (isPathological) {
     // Red-orange for pathological findings
     return {
-      stroke: 'rgba(239, 68, 68, 0.95)',
+      stroke: "rgba(239, 68, 68, 0.95)",
       fill: {
-        normal: 'rgba(239, 68, 68, 0.08)',
-        hovered: 'rgba(239, 68, 68, 0.18)',
+        normal: "rgba(239, 68, 68, 0.08)",
+        hovered: "rgba(239, 68, 68, 0.18)",
       },
-      labelBg: 'rgba(185, 28, 28, 0.92)',
+      labelBg: "rgba(185, 28, 28, 0.92)",
     };
   }
 
   if (isAnatomical) {
     // Cyan-blue for anatomical structures
     return {
-      stroke: 'rgba(6, 182, 212, 0.90)',
+      stroke: "rgba(6, 182, 212, 0.90)",
       fill: {
-        normal: 'rgba(6, 182, 212, 0.06)',
-        hovered: 'rgba(6, 182, 212, 0.15)',
+        normal: "rgba(6, 182, 212, 0.06)",
+        hovered: "rgba(6, 182, 212, 0.15)",
       },
-      labelBg: 'rgba(8, 145, 178, 0.90)',
+      labelBg: "rgba(8, 145, 178, 0.90)",
     };
   }
 
   // Amber as default
   return {
-    stroke: 'rgba(245, 158, 11, 0.90)',
+    stroke: "rgba(245, 158, 11, 0.90)",
     fill: {
-      normal: 'rgba(245, 158, 11, 0.07)',
-      hovered: 'rgba(245, 158, 11, 0.16)',
+      normal: "rgba(245, 158, 11, 0.07)",
+      hovered: "rgba(245, 158, 11, 0.16)",
     },
-    labelBg: 'rgba(180, 83, 9, 0.90)',
+    labelBg: "rgba(180, 83, 9, 0.90)",
   };
 }
 
 /** Rough character-count-based width estimate for the label background rect. */
 function estimateLabelWidth(label: string, confidence?: number): number {
-  const text = confidence !== undefined
-    ? `${label} ${Math.round(confidence * 100)}%`
-    : label;
+  const text = confidence !== undefined ? `${label} ${Math.round(confidence * 100)}%` : label;
   return Math.min(text.length * 6.5 + 8, 400);
 }

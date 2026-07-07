@@ -5,4 +5,4 @@
  * (id/username/role) for the UI, shared between apiClient and authClient to
  * avoid two copies of the same magic string drifting apart.
  */
-export const AUTH_USER_KEY = 'radiolyze-auth-user';
+export const AUTH_USER_KEY = "radiolyze-auth-user";

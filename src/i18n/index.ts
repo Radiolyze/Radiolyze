@@ -1,25 +1,25 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import LanguageDetector from "i18next-browser-languagedetector";
 
 // German translations
-import deCommon from './locales/de/common.json';
-import deReport from './locales/de/report.json';
-import deViewer from './locales/de/viewer.json';
-import deBatch from './locales/de/batch.json';
-import deSettings from './locales/de/settings.json';
-import deErrors from './locales/de/errors.json';
+import deCommon from "./locales/de/common.json";
+import deReport from "./locales/de/report.json";
+import deViewer from "./locales/de/viewer.json";
+import deBatch from "./locales/de/batch.json";
+import deSettings from "./locales/de/settings.json";
+import deErrors from "./locales/de/errors.json";
 
 // English translations
-import enCommon from './locales/en/common.json';
-import enReport from './locales/en/report.json';
-import enViewer from './locales/en/viewer.json';
-import enBatch from './locales/en/batch.json';
-import enSettings from './locales/en/settings.json';
-import enErrors from './locales/en/errors.json';
-import { logger } from '@/lib/logger';
+import enCommon from "./locales/en/common.json";
+import enReport from "./locales/en/report.json";
+import enViewer from "./locales/en/viewer.json";
+import enBatch from "./locales/en/batch.json";
+import enSettings from "./locales/en/settings.json";
+import enErrors from "./locales/en/errors.json";
+import { logger } from "@/lib/logger";
 
-export const defaultNS = 'common';
+export const defaultNS = "common";
 export const resources = {
   de: {
     common: deCommon,
@@ -42,7 +42,7 @@ export const resources = {
 // Get stored language preference or detect from browser
 const getInitialLanguage = (): string => {
   try {
-    const stored = localStorage.getItem('radiolyze-user-preferences');
+    const stored = localStorage.getItem("radiolyze-user-preferences");
     if (stored) {
       const prefs = JSON.parse(stored);
       if (prefs.uiLanguage) {
@@ -50,9 +50,9 @@ const getInitialLanguage = (): string => {
       }
     }
   } catch (e) {
-    logger.warn('Failed to read language preference:', e);
+    logger.warn("Failed to read language preference:", e);
   }
-  return 'en'; // Default to English
+  return "en"; // Default to English
 };
 
 i18n
@@ -61,18 +61,18 @@ i18n
   .init({
     resources,
     lng: getInitialLanguage(),
-    fallbackLng: 'en',
+    fallbackLng: "en",
     defaultNS,
-    ns: ['common', 'report', 'viewer', 'batch', 'settings', 'errors'],
-    
+    ns: ["common", "report", "viewer", "batch", "settings", "errors"],
+
     interpolation: {
       escapeValue: false, // React already escapes
     },
-    
+
     detection: {
-      order: ['localStorage', 'navigator'],
-      lookupLocalStorage: 'i18nextLng',
-      caches: ['localStorage'],
+      order: ["localStorage", "navigator"],
+      lookupLocalStorage: "i18nextLng",
+      caches: ["localStorage"],
     },
 
     // Debug mode in development

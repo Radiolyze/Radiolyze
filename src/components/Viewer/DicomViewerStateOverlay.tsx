@@ -1,4 +1,4 @@
-import { ViewerEmptyState } from './ViewerEmptyState';
+import { ViewerEmptyState } from "./ViewerEmptyState";
 
 interface DicomViewerStateOverlayProps {
   isLoading: boolean;
@@ -26,7 +26,7 @@ export function DicomViewerStateOverlay({
     return (
       <ViewerEmptyState
         variant="overlay"
-        title={error ?? 'Keine DICOM-Bilder geladen'}
+        title={error ?? "Keine DICOM-Bilder geladen"}
         subtitle="Prüfen Sie DICOMweb-Verbindung und Serien-ID."
       />
     );

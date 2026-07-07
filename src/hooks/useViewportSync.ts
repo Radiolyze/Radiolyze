@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react';
-import type { SyncOptions, ViewportState } from '@/types/viewerSync';
+import { useCallback, useEffect, useRef } from "react";
+import type { SyncOptions, ViewportState } from "@/types/viewerSync";
 
 type SyncHandler = (state: Partial<ViewportState>) => void;
 
@@ -12,7 +12,7 @@ export const useViewportSync = (syncOptions: SyncOptions) => {
         window.clearTimeout(debounceRef.current);
       }
     },
-    []
+    [],
   );
 
   return useCallback(
@@ -37,6 +37,6 @@ export const useViewportSync = (syncOptions: SyncOptions) => {
         }
       }, 16);
     },
-    [syncOptions]
+    [syncOptions],
   );
 };

@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Activity,
@@ -11,7 +11,7 @@ import {
   TrendingUp,
   Minus,
   Save,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -21,45 +21,51 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-} from 'recharts';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+} from "recharts";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { monitoringClient, type DriftReport, type DriftSnapshot } from '@/services/monitoringClient';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import {
+  monitoringClient,
+  type DriftReport,
+  type DriftSnapshot,
+} from "@/services/monitoringClient";
+import { cn } from "@/lib/utils";
 
 function fmt(value: number | null | undefined, decimals = 3): string {
-  if (value == null) return '—';
+  if (value == null) return "—";
   return value.toFixed(decimals);
 }
 
 function fmtPct(value: number | null | undefined): string {
-  if (value == null) return '—';
+  if (value == null) return "—";
   return `${(value * 100).toFixed(1)} %`;
 }
 
 function DeltaBadge({ delta }: { delta: number | null | undefined }) {
   if (delta == null) return <span className="text-muted-foreground">—</span>;
   const abs = Math.abs(delta);
-  if (abs < 0.001) return (
-    <Badge variant="outline" className="gap-1 text-xs">
-      <Minus className="h-3 w-3" /> {fmt(delta)}
-    </Badge>
-  );
-  if (delta > 0) return (
-    <Badge variant="default" className="gap-1 text-xs bg-green-600">
-      <TrendingUp className="h-3 w-3" /> +{fmt(delta)}
-    </Badge>
-  );
+  if (abs < 0.001)
+    return (
+      <Badge variant="outline" className="gap-1 text-xs">
+        <Minus className="h-3 w-3" /> {fmt(delta)}
+      </Badge>
+    );
+  if (delta > 0)
+    return (
+      <Badge variant="default" className="gap-1 text-xs bg-green-600">
+        <TrendingUp className="h-3 w-3" /> +{fmt(delta)}
+      </Badge>
+    );
   return (
     <Badge variant="destructive" className="gap-1 text-xs">
       <TrendingDown className="h-3 w-3" /> {fmt(delta)}
@@ -101,7 +107,8 @@ function AlertCard({ alert }: { alert: { metric: string; delta: number; threshol
       <div className="text-sm">
         <span className="font-medium text-yellow-300">{alert.metric}</span>
         <span className="text-muted-foreground ml-2">
-          delta {alert.delta > 0 ? '+' : ''}{fmt(alert.delta)} (threshold ±{fmt(alert.threshold)})
+          delta {alert.delta > 0 ? "+" : ""}
+          {fmt(alert.delta)} (threshold ±{fmt(alert.threshold)})
         </span>
       </div>
     </div>
@@ -109,19 +116,18 @@ function AlertCard({ alert }: { alert: { metric: string; delta: number; threshol
 }
 
 function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
-  const data = [...snapshots]
-    .reverse()
-    .map((s) => ({
-      date: new Date(s.created_at).toLocaleDateString('de-DE', { month: 'short', day: 'numeric' }),
-      confidence: s.payload.current.inference.confidence_avg,
-      passRate: s.payload.current.qa.pass_rate != null ? s.payload.current.qa.pass_rate * 100 : null,
-      alerts: s.payload.alerts.length,
-    }));
+  const data = [...snapshots].reverse().map((s) => ({
+    date: new Date(s.created_at).toLocaleDateString("de-DE", { month: "short", day: "numeric" }),
+    confidence: s.payload.current.inference.confidence_avg,
+    passRate: s.payload.current.qa.pass_rate != null ? s.payload.current.qa.pass_rate * 100 : null,
+    alerts: s.payload.alerts.length,
+  }));
 
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
-        Keine Snapshots vorhanden. Klicke auf &ldquo;Snapshot speichern&rdquo;, um Verlaufsdaten zu erzeugen.
+        Keine Snapshots vorhanden. Klicke auf &ldquo;Snapshot speichern&rdquo;, um Verlaufsdaten zu
+        erzeugen.
       </div>
     );
   }
@@ -134,8 +140,12 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-            <YAxis domain={[0, 1]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`} />
-            <Tooltip formatter={(v: number) => [`${(v * 100).toFixed(1)}%`, 'Konfidenz']} />
+            <YAxis
+              domain={[0, 1]}
+              tick={{ fontSize: 11 }}
+              tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+            />
+            <Tooltip formatter={(v: number) => [`${(v * 100).toFixed(1)}%`, "Konfidenz"]} />
             <ReferenceLine y={0.7} stroke="hsl(var(--warning))" strokeDasharray="4 4" />
             <Line
               type="monotone"
@@ -155,7 +165,7 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
             <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
-            <Tooltip formatter={(v: number) => [`${v.toFixed(1)}%`, 'Pass-Rate']} />
+            <Tooltip formatter={(v: number) => [`${v.toFixed(1)}%`, "Pass-Rate"]} />
             <ReferenceLine y={80} stroke="hsl(var(--warning))" strokeDasharray="4 4" />
             <Line
               type="monotone"
@@ -173,7 +183,7 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
 }
 
 export default function Monitoring() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation("common");
   const [windowDays, setWindowDays] = useState(7);
   const [saving, setSaving] = useState(false);
 
@@ -183,12 +193,12 @@ export default function Monitoring() {
     error,
     refetch,
   } = useQuery<DriftReport>({
-    queryKey: ['drift', windowDays],
+    queryKey: ["drift", windowDays],
     queryFn: () => monitoringClient.getDriftReport(windowDays),
   });
 
   const { data: snapshots = [], refetch: refetchSnapshots } = useQuery<DriftSnapshot[]>({
-    queryKey: ['drift-snapshots'],
+    queryKey: ["drift-snapshots"],
     queryFn: () => monitoringClient.listDriftSnapshots(30),
   });
 
@@ -209,7 +219,7 @@ export default function Monitoring() {
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
-              {t('actions.back')}
+              {t("actions.back")}
             </Button>
           </Link>
           <Separator orientation="vertical" className="h-6" />
@@ -219,18 +229,15 @@ export default function Monitoring() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Select
-            value={String(windowDays)}
-            onValueChange={(v) => setWindowDays(Number(v))}
-          >
+          <Select value={String(windowDays)} onValueChange={(v) => setWindowDays(Number(v))}>
             <SelectTrigger className="w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="3">{t('time.lastNDays', { count: 3 })}</SelectItem>
-              <SelectItem value="7">{t('time.lastNDays', { count: 7 })}</SelectItem>
-              <SelectItem value="14">{t('time.lastNDays', { count: 14 })}</SelectItem>
-              <SelectItem value="30">{t('time.lastNDays', { count: 30 })}</SelectItem>
+              <SelectItem value="3">{t("time.lastNDays", { count: 3 })}</SelectItem>
+              <SelectItem value="7">{t("time.lastNDays", { count: 7 })}</SelectItem>
+              <SelectItem value="14">{t("time.lastNDays", { count: 14 })}</SelectItem>
+              <SelectItem value="30">{t("time.lastNDays", { count: 30 })}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" className="gap-2" onClick={() => refetch()}>
@@ -270,14 +277,14 @@ export default function Monitoring() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Inferenz-Metriken</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Zeitfenster vs. Baseline
-              </p>
+              <p className="text-xs text-muted-foreground">Zeitfenster vs. Baseline</p>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-8 w-full" />
+                  ))}
                 </div>
               ) : error ? (
                 <p className="text-sm text-destructive">Fehler beim Laden.</p>
@@ -296,7 +303,7 @@ export default function Monitoring() {
                     current={drift.current.inference.count}
                     baseline={drift.baseline.inference.count}
                     delta={null}
-                    format={(v) => v == null ? '—' : String(v)}
+                    format={(v) => (v == null ? "—" : String(v))}
                   />
                   <MetricRow
                     label="Ø Konfidenz"
@@ -322,7 +329,7 @@ export default function Monitoring() {
                     current={drift.current.inference.latency_avg_ms}
                     baseline={drift.baseline.inference.latency_avg_ms}
                     delta={null}
-                    format={(v) => v == null ? '—' : `${Math.round(v as number)} ms`}
+                    format={(v) => (v == null ? "—" : `${Math.round(v as number)} ms`)}
                   />
                 </div>
               ) : null}
@@ -333,14 +340,14 @@ export default function Monitoring() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">QA-Metriken</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Zeitfenster vs. Baseline
-              </p>
+              <p className="text-xs text-muted-foreground">Zeitfenster vs. Baseline</p>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-8 w-full" />
+                  ))}
                 </div>
               ) : error ? (
                 <p className="text-sm text-destructive">Fehler beim Laden.</p>
@@ -359,7 +366,7 @@ export default function Monitoring() {
                     current={drift.current.qa.count}
                     baseline={drift.baseline.qa.count}
                     delta={null}
-                    format={(v) => v == null ? '—' : String(v)}
+                    format={(v) => (v == null ? "—" : String(v))}
                   />
                   <MetricRow
                     label="Pass-Rate"
@@ -379,14 +386,14 @@ export default function Monitoring() {
                     current={drift.current.qa.warn_count}
                     baseline={drift.baseline.qa.warn_count}
                     delta={null}
-                    format={(v) => v == null ? '—' : String(v)}
+                    format={(v) => (v == null ? "—" : String(v))}
                   />
                   <MetricRow
                     label="Fehler"
                     current={drift.current.qa.fail_count}
                     baseline={drift.baseline.qa.fail_count}
                     delta={null}
-                    format={(v) => v == null ? '—' : String(v)}
+                    format={(v) => (v == null ? "—" : String(v))}
                   />
                 </div>
               ) : null}
@@ -427,12 +434,15 @@ export default function Monitoring() {
                   </thead>
                   <tbody>
                     {snapshots.map((s) => (
-                      <tr key={s.id} className={cn(
-                        "border-b border-border/40 hover:bg-accent/30 transition-colors",
-                        s.payload.alerts.length > 0 && "text-yellow-400"
-                      )}>
+                      <tr
+                        key={s.id}
+                        className={cn(
+                          "border-b border-border/40 hover:bg-accent/30 transition-colors",
+                          s.payload.alerts.length > 0 && "text-yellow-400",
+                        )}
+                      >
                         <td className="py-2 pr-4 font-mono">
-                          {new Date(s.created_at).toLocaleString('de-DE')}
+                          {new Date(s.created_at).toLocaleString("de-DE")}
                         </td>
                         <td className="text-right py-2 px-4">{s.window_days}d</td>
                         <td className="text-right py-2 px-4 font-mono">
@@ -443,7 +453,10 @@ export default function Monitoring() {
                         </td>
                         <td className="text-right py-2 pl-4">
                           {s.payload.alerts.length > 0 ? (
-                            <Badge variant="outline" className="text-yellow-400 border-yellow-500/50 text-[10px]">
+                            <Badge
+                              variant="outline"
+                              className="text-yellow-400 border-yellow-500/50 text-[10px]"
+                            >
                               {s.payload.alerts.length}
                             </Badge>
                           ) : (

@@ -1,8 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Bell, Settings, User, Activity, Sun, Moon, Monitor, History, LayoutGrid, GraduationCap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import {
+  Bell,
+  Settings,
+  User,
+  Activity,
+  Sun,
+  Moon,
+  Monitor,
+  History,
+  LayoutGrid,
+  GraduationCap,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,22 +21,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { KeyboardShortcutsSheet } from '@/components/Common/KeyboardShortcutsSheet';
-import { NotificationsSheet } from '@/components/Common/NotificationsSheet';
-import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { useNotifications } from '@/hooks/useNotifications';
-import { authClient } from '@/services/authClient';
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { KeyboardShortcutsSheet } from "@/components/Common/KeyboardShortcutsSheet";
+import { NotificationsSheet } from "@/components/Common/NotificationsSheet";
+import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { useNotifications } from "@/hooks/useNotifications";
+import { authClient } from "@/services/authClient";
 
 export function Header() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation("common");
   const location = useLocation();
   const navigate = useNavigate();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -47,14 +53,14 @@ export function Header() {
   const currentUser = authClient.getUser();
 
   const handleLogout = () => {
-    void authClient.logout().finally(() => navigate('/login'));
+    void authClient.logout().finally(() => navigate("/login"));
   };
   const displayName = currentUser?.username
     ? `Dr. ${currentUser.username.charAt(0).toUpperCase()}${currentUser.username.slice(1)}`
-    : 'Dr. Radiologe';
+    : "Dr. Radiologe";
   const displayEmail = currentUser?.username
     ? `${currentUser.username}@klinik.de`
-    : 'radiologe@klinik.de';
+    : "radiologe@klinik.de";
 
   // Bounce badge when new notifications arrive
   useEffect(() => {
@@ -65,22 +71,24 @@ export function Header() {
     prevUnreadCount.current = unreadCount;
   }, [unreadCount]);
 
-  const themeIcon = preferences.theme === 'dark' ? Moon : preferences.theme === 'light' ? Sun : Monitor;
+  const themeIcon =
+    preferences.theme === "dark" ? Moon : preferences.theme === "light" ? Sun : Monitor;
   const ThemeIcon = themeIcon;
-  const themeLabel = preferences.theme === 'dark' ? 'Dunkel' : preferences.theme === 'light' ? 'Hell' : 'System';
+  const themeLabel =
+    preferences.theme === "dark" ? "Dunkel" : preferences.theme === "light" ? "Hell" : "System";
 
   const cycleTheme = () => {
-    const themes: Array<'dark' | 'light' | 'system'> = ['dark', 'light', 'system'];
+    const themes: Array<"dark" | "light" | "system"> = ["dark", "light", "system"];
     const currentIndex = themes.indexOf(preferences.theme);
     const nextTheme = themes[(currentIndex + 1) % themes.length];
-    setPreference('theme', nextTheme);
+    setPreference("theme", nextTheme);
   };
 
   const isActive = (path: string) =>
-    location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
+    location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
 
   const navLinkClass = (path: string) =>
-    `transition-colors ${isActive(path) ? 'bg-accent text-accent-foreground' : ''}`;
+    `transition-colors ${isActive(path) ? "bg-accent text-accent-foreground" : ""}`;
 
   return (
     <TooltipProvider delayDuration={400}>
@@ -90,17 +98,20 @@ export function Header() {
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Activity className="h-6 w-6 text-primary" />
-              <span className="text-lg font-semibold tracking-tight">{t('app.name')}</span>
+              <span className="text-lg font-semibold tracking-tight">{t("app.name")}</span>
             </Link>
-            <Badge variant="outline" className="text-xs font-normal text-muted-foreground hidden sm:flex">
-              {t('app.tagline')}
+            <Badge
+              variant="outline"
+              className="text-xs font-normal text-muted-foreground hidden sm:flex"
+            >
+              {t("app.tagline")}
             </Badge>
           </div>
 
           {/* Center - Status */}
           <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
             <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            <span>{t('header.systemOnline')}</span>
+            <span>{t("header.systemOnline")}</span>
           </div>
 
           {/* Right - Actions */}
@@ -128,36 +139,48 @@ export function Header() {
                   size="icon"
                   className="relative"
                   onClick={() => setNotificationsOpen(true)}
-                  aria-label={t('header.notifications')}
+                  aria-label={t("header.notifications")}
                 >
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
-                    <span className={`absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center ${badgeBounce ? 'animate-bounce' : ''}`}>
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                    <span
+                      className={`absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center ${badgeBounce ? "animate-bounce" : ""}`}
+                    >
+                      {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{t('header.notifications')}</TooltipContent>
+              <TooltipContent>{t("header.notifications")}</TooltipContent>
             </Tooltip>
 
             {/* Batch Dashboard */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/batch">
-                  <Button variant="ghost" size="icon" className={navLinkClass('/batch')} aria-label={t('navigation.batch')}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={navLinkClass("/batch")}
+                    aria-label={t("navigation.batch")}
+                  >
                     <LayoutGrid className="h-5 w-5" />
                   </Button>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent>{t('navigation.batch')}</TooltipContent>
+              <TooltipContent>{t("navigation.batch")}</TooltipContent>
             </Tooltip>
 
             {/* Training */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/training">
-                  <Button variant="ghost" size="icon" className={navLinkClass('/training')} aria-label="Training Export">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={navLinkClass("/training")}
+                    aria-label="Training Export"
+                  >
                     <GraduationCap className="h-5 w-5" />
                   </Button>
                 </Link>
@@ -169,30 +192,45 @@ export function Header() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/history">
-                  <Button variant="ghost" size="icon" className={navLinkClass('/history')} aria-label={t('navigation.history')}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={navLinkClass("/history")}
+                    aria-label={t("navigation.history")}
+                  >
                     <History className="h-5 w-5" />
                   </Button>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent>{t('navigation.history')}</TooltipContent>
+              <TooltipContent>{t("navigation.history")}</TooltipContent>
             </Tooltip>
 
             {/* Settings */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/settings">
-                  <Button variant="ghost" size="icon" className={navLinkClass('/settings')} aria-label={t('navigation.settings')}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={navLinkClass("/settings")}
+                    aria-label={t("navigation.settings")}
+                  >
                     <Settings className="h-5 w-5" />
                   </Button>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent>{t('navigation.settings')}</TooltipContent>
+              <TooltipContent>{t("navigation.settings")}</TooltipContent>
             </Tooltip>
 
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full" aria-label={displayName}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  aria-label={displayName}
+                >
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center ring-1 ring-primary/20 hover:ring-primary/40 transition-all">
                     <User className="h-4 w-4 text-primary" />
                   </div>
@@ -208,16 +246,18 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>{t('header.profile')}</DropdownMenuItem>
+                <DropdownMenuItem>{t("header.profile")}</DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link to="/settings" className="w-full">{t('navigation.settings')}</Link>
+                  <Link to="/settings" className="w-full">
+                    {t("navigation.settings")}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShortcutsOpen(true)}>
-                  {t('header.keyboardShortcuts')}
+                  {t("header.keyboardShortcuts")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
-                  {t('header.logout')}
+                  {t("header.logout")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

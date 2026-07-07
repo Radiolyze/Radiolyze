@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { GitCompare, Plus, Minus } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { GitCompare, Plus, Minus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Revision {
   id: string;
@@ -18,13 +18,13 @@ interface ReportDiffViewerProps {
 }
 
 interface DiffLine {
-  type: 'added' | 'removed' | 'unchanged';
+  type: "added" | "removed" | "unchanged";
   text: string;
 }
 
 function computeLineDiff(textA: string, textB: string): DiffLine[] {
-  const linesA = textA.split('\n');
-  const linesB = textB.split('\n');
+  const linesA = textA.split("\n");
+  const linesB = textB.split("\n");
   const result: DiffLine[] = [];
 
   // Simple LCS-based diff
@@ -49,14 +49,14 @@ function computeLineDiff(textA: string, textB: string): DiffLine[] {
 
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && linesA[i - 1] === linesB[j - 1]) {
-      stack.push({ type: 'unchanged', text: linesA[i - 1] });
+      stack.push({ type: "unchanged", text: linesA[i - 1] });
       i--;
       j--;
     } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-      stack.push({ type: 'added', text: linesB[j - 1] });
+      stack.push({ type: "added", text: linesB[j - 1] });
       j--;
     } else {
-      stack.push({ type: 'removed', text: linesA[i - 1] });
+      stack.push({ type: "removed", text: linesA[i - 1] });
       i--;
     }
   }
@@ -66,8 +66,8 @@ function computeLineDiff(textA: string, textB: string): DiffLine[] {
 }
 
 function DiffBlock({ label, diff }: { label: string; diff: DiffLine[] }) {
-  const added = diff.filter((d) => d.type === 'added').length;
-  const removed = diff.filter((d) => d.type === 'removed').length;
+  const added = diff.filter((d) => d.type === "added").length;
+  const removed = diff.filter((d) => d.type === "removed").length;
 
   return (
     <div className="space-y-1">
@@ -75,12 +75,14 @@ function DiffBlock({ label, diff }: { label: string; diff: DiffLine[] }) {
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {added > 0 && (
           <Badge variant="outline" className="text-green-400 border-green-700 text-xs px-1">
-            <Plus className="h-3 w-3 mr-0.5" />{added}
+            <Plus className="h-3 w-3 mr-0.5" />
+            {added}
           </Badge>
         )}
         {removed > 0 && (
           <Badge variant="outline" className="text-red-400 border-red-700 text-xs px-1">
-            <Minus className="h-3 w-3 mr-0.5" />{removed}
+            <Minus className="h-3 w-3 mr-0.5" />
+            {removed}
           </Badge>
         )}
       </div>
@@ -89,17 +91,17 @@ function DiffBlock({ label, diff }: { label: string; diff: DiffLine[] }) {
           <div
             key={idx}
             className={
-              line.type === 'added'
-                ? 'bg-green-950/40 text-green-300 px-2 py-0.5'
-                : line.type === 'removed'
-                  ? 'bg-red-950/40 text-red-300 px-2 py-0.5 line-through'
-                  : 'text-muted-foreground px-2 py-0.5'
+              line.type === "added"
+                ? "bg-green-950/40 text-green-300 px-2 py-0.5"
+                : line.type === "removed"
+                  ? "bg-red-950/40 text-red-300 px-2 py-0.5 line-through"
+                  : "text-muted-foreground px-2 py-0.5"
             }
           >
             <span className="inline-block w-4 text-muted-foreground/50 select-none">
-              {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}
+              {line.type === "added" ? "+" : line.type === "removed" ? "-" : " "}
             </span>
-            {line.text || '\u00A0'}
+            {line.text || "\u00A0"}
           </div>
         ))}
         {diff.length === 0 && (
@@ -111,16 +113,16 @@ function DiffBlock({ label, diff }: { label: string; diff: DiffLine[] }) {
 }
 
 export function ReportDiffViewer({ revisionA, revisionB }: ReportDiffViewerProps) {
-  const { t } = useTranslation('report');
+  const { t } = useTranslation("report");
 
   const findingsDiff = useMemo(
     () => computeLineDiff(revisionA.findings_text, revisionB.findings_text),
-    [revisionA.findings_text, revisionB.findings_text]
+    [revisionA.findings_text, revisionB.findings_text],
   );
 
   const impressionDiff = useMemo(
     () => computeLineDiff(revisionA.impression_text, revisionB.impression_text),
-    [revisionA.impression_text, revisionB.impression_text]
+    [revisionA.impression_text, revisionB.impression_text],
   );
 
   return (
@@ -137,14 +139,8 @@ export function ReportDiffViewer({ revisionA, revisionB }: ReportDiffViewerProps
       </div>
       <ScrollArea className="max-h-[500px]">
         <div className="space-y-4 pr-2">
-          <DiffBlock
-            label={t('findings.title', 'Befund')}
-            diff={findingsDiff}
-          />
-          <DiffBlock
-            label={t('impression.title', 'Beurteilung')}
-            diff={impressionDiff}
-          />
+          <DiffBlock label={t("findings.title", "Befund")} diff={findingsDiff} />
+          <DiffBlock label={t("impression.title", "Beurteilung")} diff={impressionDiff} />
         </div>
       </ScrollArea>
     </div>

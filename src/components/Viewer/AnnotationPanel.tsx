@@ -1,32 +1,32 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Loader2, Trash2, Edit3, Tag } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Loader2, Trash2, Edit3, Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   listAnnotationsForSeries,
   createAnnotation,
   updateAnnotation,
   deleteAnnotation,
   verifyAnnotation,
-} from '@/services/annotationClient';
+} from "@/services/annotationClient";
 import type {
   TrainingAnnotation,
   AnnotationCategory,
   AnnotationCreateRequest,
-} from '@/types/annotations';
-import { ANNOTATION_CATEGORIES, ANNOTATION_SEVERITIES } from '@/types/annotations';
+} from "@/types/annotations";
+import { ANNOTATION_CATEGORIES, ANNOTATION_SEVERITIES } from "@/types/annotations";
 
 interface AnnotationPanelProps {
   studyId: string | null;
@@ -45,15 +45,12 @@ export function AnnotationPanel({
 }: AnnotationPanelProps) {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editLabel, setEditLabel] = useState('');
-  const [editCategory, setEditCategory] = useState<AnnotationCategory>('other');
-  const [editNotes, setEditNotes] = useState('');
+  const [editLabel, setEditLabel] = useState("");
+  const [editCategory, setEditCategory] = useState<AnnotationCategory>("other");
+  const [editNotes, setEditNotes] = useState("");
 
-  const {
-    data: annotations = [],
-    isLoading,
-  } = useQuery({
-    queryKey: ['annotations', studyId, seriesId],
+  const { data: annotations = [], isLoading } = useQuery({
+    queryKey: ["annotations", studyId, seriesId],
     queryFn: () => listAnnotationsForSeries(studyId!, seriesId!),
     enabled: Boolean(studyId && seriesId),
   });
@@ -61,15 +58,20 @@ export function AnnotationPanel({
   const deleteMutation = useMutation({
     mutationFn: deleteAnnotation,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['annotations', studyId, seriesId] });
+      queryClient.invalidateQueries({ queryKey: ["annotations", studyId, seriesId] });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof updateAnnotation>[1] }) =>
-      updateAnnotation(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Parameters<typeof updateAnnotation>[1];
+    }) => updateAnnotation(id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['annotations', studyId, seriesId] });
+      queryClient.invalidateQueries({ queryKey: ["annotations", studyId, seriesId] });
       setEditingId(null);
     },
   });
@@ -78,7 +80,7 @@ export function AnnotationPanel({
     mutationFn: ({ id, actorId }: { id: string; actorId: string }) =>
       verifyAnnotation(id, { actorId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['annotations', studyId, seriesId] });
+      queryClient.invalidateQueries({ queryKey: ["annotations", studyId, seriesId] });
     },
   });
 
@@ -86,7 +88,7 @@ export function AnnotationPanel({
     setEditingId(ann.id);
     setEditLabel(ann.label);
     setEditCategory(ann.category);
-    setEditNotes(ann.notes || '');
+    setEditNotes(ann.notes || "");
   }, []);
 
   const handleSaveEdit = useCallback(() => {
@@ -101,34 +103,36 @@ export function AnnotationPanel({
     });
   }, [editingId, editLabel, editCategory, editNotes, updateMutation]);
 
-  const handleVerify = useCallback((ann: TrainingAnnotation) => {
-    verifyMutation.mutate({ id: ann.id, actorId: 'current-user' });
-  }, [verifyMutation]);
+  const handleVerify = useCallback(
+    (ann: TrainingAnnotation) => {
+      verifyMutation.mutate({ id: ann.id, actorId: "current-user" });
+    },
+    [verifyMutation],
+  );
 
-  const handleDelete = useCallback((ann: TrainingAnnotation) => {
-    if (confirm(`Annotation "${ann.label}" löschen?`)) {
-      deleteMutation.mutate(ann.id);
-    }
-  }, [deleteMutation]);
+  const handleDelete = useCallback(
+    (ann: TrainingAnnotation) => {
+      if (confirm(`Annotation "${ann.label}" löschen?`)) {
+        deleteMutation.mutate(ann.id);
+      }
+    },
+    [deleteMutation],
+  );
 
   // Filter annotations for current frame
-  const currentFrameAnnotations = annotations.filter(
-    (ann) => ann.frameIndex === currentFrameIndex
-  );
-  const otherAnnotations = annotations.filter(
-    (ann) => ann.frameIndex !== currentFrameIndex
-  );
+  const currentFrameAnnotations = annotations.filter((ann) => ann.frameIndex === currentFrameIndex);
+  const otherAnnotations = annotations.filter((ann) => ann.frameIndex !== currentFrameIndex);
 
   if (!studyId || !seriesId) {
     return (
-      <div className={cn('p-4 text-center text-muted-foreground', className)}>
+      <div className={cn("p-4 text-center text-muted-foreground", className)}>
         Wählen Sie eine Serie aus
       </div>
     );
   }
 
   return (
-    <div className={cn('flex flex-col h-full', className)}>
+    <div className={cn("flex flex-col h-full", className)}>
       <div className="p-3 border-b border-border">
         <h3 className="font-semibold text-sm flex items-center gap-2">
           <Tag className="h-4 w-4" />
@@ -184,9 +188,7 @@ export function AnnotationPanel({
             {/* Other frames */}
             {otherAnnotations.length > 0 && (
               <div className="space-y-1">
-                <div className="text-xs text-muted-foreground px-2 py-1">
-                  Andere Frames
-                </div>
+                <div className="text-xs text-muted-foreground px-2 py-1">Andere Frames</div>
                 {otherAnnotations.map((ann) => (
                   <AnnotationItem
                     key={ann.id}
@@ -291,7 +293,7 @@ function AnnotationItem({
         />
         <div className="flex gap-1">
           <Button size="sm" className="flex-1 h-7 text-xs" onClick={onSaveEdit} disabled={isSaving}>
-            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Speichern'}
+            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Speichern"}
           </Button>
           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onCancelEdit}>
             Abbrechen
@@ -305,8 +307,8 @@ function AnnotationItem({
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- pre-existing click-only selection pattern, keyboard support tracked separately
     <div
       className={cn(
-        'p-2 bg-card rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors group',
-        dimmed && 'opacity-60'
+        "p-2 bg-card rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors group",
+        dimmed && "opacity-60",
       )}
       onClick={onClick}
     >
@@ -322,9 +324,7 @@ function AnnotationItem({
             <Badge variant="outline" className="text-[10px] h-4 px-1">
               {ANNOTATION_CATEGORIES[annotation.category] || annotation.category}
             </Badge>
-            <span className="text-[10px] text-muted-foreground">
-              {annotation.toolType}
-            </span>
+            <span className="text-[10px] text-muted-foreground">{annotation.toolType}</span>
             {!dimmed && (
               <span className="text-[10px] text-muted-foreground">
                 • F{annotation.frameIndex + 1}
@@ -373,9 +373,7 @@ function AnnotationItem({
       </div>
 
       {annotation.notes && (
-        <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
-          {annotation.notes}
-        </p>
+        <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{annotation.notes}</p>
       )}
     </div>
   );

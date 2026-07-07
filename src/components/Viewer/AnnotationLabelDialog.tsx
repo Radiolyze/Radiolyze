@@ -1,15 +1,15 @@
-import { useState, useCallback } from 'react';
-import { Check, X, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState, useCallback } from "react";
+import { Check, X, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +17,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import type { AnnotationCategory, AnnotationCreateRequest } from '@/types/annotations';
-import { ANNOTATION_CATEGORIES } from '@/types/annotations';
+} from "@/components/ui/dialog";
+import type { AnnotationCategory, AnnotationCreateRequest } from "@/types/annotations";
+import { ANNOTATION_CATEGORIES } from "@/types/annotations";
 
 interface AnnotationLabelDialogProps {
   open: boolean;
@@ -36,35 +36,38 @@ export function AnnotationLabelDialog({
   onSave,
   onCancel,
 }: AnnotationLabelDialogProps) {
-  const [label, setLabel] = useState('');
-  const [category, setCategory] = useState<AnnotationCategory>('other');
+  const [label, setLabel] = useState("");
+  const [category, setCategory] = useState<AnnotationCategory>("other");
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = useCallback(async () => {
     if (!label.trim()) return;
-    
+
     setIsSaving(true);
     try {
       await onSave(label.trim(), category);
-      setLabel('');
-      setCategory('other');
+      setLabel("");
+      setCategory("other");
     } finally {
       setIsSaving(false);
     }
   }, [label, category, onSave]);
 
   const handleCancel = useCallback(() => {
-    setLabel('');
-    setCategory('other');
+    setLabel("");
+    setCategory("other");
     onCancel();
   }, [onCancel]);
 
-  const handleOpenChange = useCallback((isOpen: boolean) => {
-    if (!isOpen) {
-      handleCancel();
-    }
-    onOpenChange(isOpen);
-  }, [handleCancel, onOpenChange]);
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (!isOpen) {
+        handleCancel();
+      }
+      onOpenChange(isOpen);
+    },
+    [handleCancel, onOpenChange],
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -87,7 +90,7 @@ export function AnnotationLabelDialog({
               // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional: focuses the label input when the dialog opens
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && label.trim()) {
+                if (e.key === "Enter" && label.trim()) {
                   handleSave();
                 }
               }}

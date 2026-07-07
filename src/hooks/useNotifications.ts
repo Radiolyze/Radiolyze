@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
-import { auditClient, type AuditEventResponse } from '@/services/auditClient';
-import { useStudyLookup } from '@/hooks/useStudyLookup';
-import { useWebSocket } from '@/hooks/useWebSocket';
-import { logger } from '@/lib/logger';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
+import { auditClient, type AuditEventResponse } from "@/services/auditClient";
+import { useStudyLookup } from "@/hooks/useStudyLookup";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { logger } from "@/lib/logger";
 
-export type NotificationType = 'report' | 'urgent' | 'system' | 'success';
+export type NotificationType = "report" | "urgent" | "system" | "success";
 
 export interface Notification {
   id: string;
@@ -22,30 +22,30 @@ interface UseNotificationsOptions {
 }
 
 const DEFAULT_LIMIT = 20;
-const STORAGE_READ_KEY = 'radiolyze.notifications.read';
-const STORAGE_DISMISS_KEY = 'radiolyze.notifications.dismissed';
+const STORAGE_READ_KEY = "radiolyze.notifications.read";
+const STORAGE_DISMISS_KEY = "radiolyze.notifications.dismissed";
 
 const loadIdSet = (key: string): Set<string> => {
-  if (typeof window === 'undefined') return new Set();
+  if (typeof window === "undefined") return new Set();
   try {
     const raw = window.localStorage.getItem(key);
     if (!raw) return new Set();
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.filter((id) => typeof id === 'string'));
+    return new Set(parsed.filter((id) => typeof id === "string"));
   } catch (err) {
-    logger.debug('[useNotifications] Failed to read stored id set', key, err);
+    logger.debug("[useNotifications] Failed to read stored id set", key, err);
     return new Set();
   }
 };
 
 const saveIdSet = (key: string, value: Set<string>) => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(key, JSON.stringify(Array.from(value)));
   } catch (err) {
     // Ignore persistence errors.
-    logger.debug('[useNotifications] Failed to persist id set', key, err);
+    logger.debug("[useNotifications] Failed to persist id set", key, err);
   }
 };
 
@@ -57,80 +57,87 @@ const formatRelativeTime = (t: TFunction, timestamp: string): string => {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffMins < 1) return t('time.justNow', { ns: 'common' });
+  if (diffMins < 1) return t("time.justNow", { ns: "common" });
   if (diffMins < 60) return `${diffMins} min`;
   if (diffHours < 24) return `${diffHours} h`;
-  if (diffDays < 7) return t('time.daysAgo', { ns: 'common', count: diffDays });
+  if (diffDays < 7) return t("time.daysAgo", { ns: "common", count: diffDays });
   return date.toLocaleDateString();
 };
 
 const EVENT_TYPES_WITH_TITLES = [
-  'report_created',
-  'report_opened',
-  'findings_saved',
-  'impression_generated',
-  'asr_transcription',
-  'qa_check_run',
-  'report_approved',
-  'report_amended',
-  'report_exported',
-  'inference_queued',
-  'inference_started',
-  'inference_completed',
-  'inference_failed',
+  "report_created",
+  "report_opened",
+  "findings_saved",
+  "impression_generated",
+  "asr_transcription",
+  "qa_check_run",
+  "report_approved",
+  "report_amended",
+  "report_exported",
+  "inference_queued",
+  "inference_started",
+  "inference_completed",
+  "inference_failed",
 ] as const;
 
 const getEventTitle = (t: TFunction, eventType: string): string => {
   if ((EVENT_TYPES_WITH_TITLES as readonly string[]).includes(eventType)) {
-    return t(`notifications.events.${eventType}`, { ns: 'common' });
+    return t(`notifications.events.${eventType}`, { ns: "common" });
   }
-  return t('notifications.events.systemMessage', { ns: 'common' });
+  return t("notifications.events.systemMessage", { ns: "common" });
 };
 
 const resolveNotificationType = (event: AuditEventResponse): NotificationType => {
   const metadata = event.metadata ?? {};
-  if (event.event_type === 'qa_check_run') {
+  if (event.event_type === "qa_check_run") {
     const status = metadata.status;
-    if (status === 'fail' || status === 'warn') return 'urgent';
-    if (status === 'pass') return 'success';
+    if (status === "fail" || status === "warn") return "urgent";
+    if (status === "pass") return "success";
   }
-  if (event.event_type === 'report_approved' || event.event_type === 'report_exported') return 'success';
-  if (event.event_type === 'inference_failed') return 'urgent';
+  if (event.event_type === "report_approved" || event.event_type === "report_exported")
+    return "success";
+  if (event.event_type === "inference_failed") return "urgent";
   if (
-    event.event_type === 'report_created' ||
-    event.event_type === 'impression_generated' ||
-    event.event_type === 'asr_transcription' ||
-    event.event_type === 'findings_saved' ||
-    event.event_type === 'report_amended'
+    event.event_type === "report_created" ||
+    event.event_type === "impression_generated" ||
+    event.event_type === "asr_transcription" ||
+    event.event_type === "findings_saved" ||
+    event.event_type === "report_amended"
   ) {
-    return 'report';
+    return "report";
   }
-  return 'system';
+  return "system";
 };
 
 const getMetadataString = (metadata: Record<string, unknown>, key: string) => {
   const value = metadata[key];
-  return typeof value === 'string' && value.trim() ? value.trim() : '';
+  return typeof value === "string" && value.trim() ? value.trim() : "";
 };
 
-const buildMessage = (t: TFunction, event: AuditEventResponse, studyInfo?: { patientName: string; accessionNumber: string; studyDescription: string }) => {
+const buildMessage = (
+  t: TFunction,
+  event: AuditEventResponse,
+  studyInfo?: { patientName: string; accessionNumber: string; studyDescription: string },
+) => {
   const metadata = event.metadata ?? {};
   const studyDescription =
-    getMetadataString(metadata, 'study_description') || studyInfo?.studyDescription || '';
-  const patientName = getMetadataString(metadata, 'patient_name') || studyInfo?.patientName || '';
+    getMetadataString(metadata, "study_description") || studyInfo?.studyDescription || "";
+  const patientName = getMetadataString(metadata, "patient_name") || studyInfo?.patientName || "";
   const accessionNumber =
-    getMetadataString(metadata, 'accession_number') || studyInfo?.accessionNumber || '';
+    getMetadataString(metadata, "accession_number") || studyInfo?.accessionNumber || "";
 
   const parts = [studyDescription, patientName].filter(Boolean);
-  let message = parts.join(' • ');
+  let message = parts.join(" • ");
   if (accessionNumber) {
     message = message ? `${message} (${accessionNumber})` : accessionNumber;
   }
 
   if (!message) {
-    if (event.report_id) return t('notifications.reportPrefix', { ns: 'common', id: event.report_id.slice(0, 8) });
-    if (event.study_id) return t('notifications.studyPrefix', { ns: 'common', id: event.study_id.slice(0, 8) });
-    return t('notifications.newEvent', { ns: 'common' });
+    if (event.report_id)
+      return t("notifications.reportPrefix", { ns: "common", id: event.report_id.slice(0, 8) });
+    if (event.study_id)
+      return t("notifications.studyPrefix", { ns: "common", id: event.study_id.slice(0, 8) });
+    return t("notifications.newEvent", { ns: "common" });
   }
 
   return message;
@@ -143,12 +150,19 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(() => loadIdSet(STORAGE_READ_KEY));
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => loadIdSet(STORAGE_DISMISS_KEY));
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() =>
+    loadIdSet(STORAGE_DISMISS_KEY),
+  );
   const refreshTimeoutRef = useRef<number | null>(null);
 
   const studyIds = useMemo(
-    () => Array.from(new Set((Array.isArray(events) ? events : []).map((event) => event.study_id).filter(Boolean))) as string[],
-    [events]
+    () =>
+      Array.from(
+        new Set(
+          (Array.isArray(events) ? events : []).map((event) => event.study_id).filter(Boolean),
+        ),
+      ) as string[],
+    [events],
   );
   const { studyMap } = useStudyLookup(studyIds);
 
@@ -159,8 +173,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       const response = await auditClient.listEvents({ limit });
       setEvents(response);
     } catch (error) {
-      logger.warn('Failed to load notifications', error);
-      setErrorMessage(t('notifications.loadFailed', { ns: 'errors' }));
+      logger.warn("Failed to load notifications", error);
+      setErrorMessage(t("notifications.loadFailed", { ns: "errors" }));
       setEvents([]);
     } finally {
       setIsLoading(false);
@@ -217,7 +231,10 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       });
   }, [events, dismissedIds, readIds, studyMap, t]);
 
-  const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications]);
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.read).length,
+    [notifications],
+  );
 
   const markAsRead = useCallback((id: string) => {
     setReadIds((prev) => new Set(prev).add(id));

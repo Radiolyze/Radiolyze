@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { orthancClient } from '@/services/orthancClient';
-import type { DicomJsonRecord } from '@/services/dicomWebMapping';
-import { mapStudyRecordToPatient, mapStudyRecordToStudy } from '@/services/dicomWebMapping';
-import { logger } from '@/lib/logger';
+import { useEffect, useMemo, useState } from "react";
+import { orthancClient } from "@/services/orthancClient";
+import type { DicomJsonRecord } from "@/services/dicomWebMapping";
+import { mapStudyRecordToPatient, mapStudyRecordToStudy } from "@/services/dicomWebMapping";
+import { logger } from "@/lib/logger";
 
 export interface StudyLookupEntry {
   studyId: string;
@@ -19,17 +19,17 @@ export interface StudyLookupEntry {
 const buildFallbackEntry = (studyId: string): StudyLookupEntry => ({
   studyId,
   patientId: `patient-${studyId}`,
-  patientName: 'Unbekannt',
+  patientName: "Unbekannt",
   mrn: `MRN-${studyId.slice(0, 8)}`,
   accessionNumber: `ACC-${studyId.slice(0, 8)}`,
-  modality: 'CT',
-  studyDescription: 'Unbekannte Studie',
+  modality: "CT",
+  studyDescription: "Unbekannte Studie",
   studyDate: new Date().toISOString().slice(0, 10),
-  referringPhysician: 'Unbekannt',
+  referringPhysician: "Unbekannt",
 });
 
 const resolveStudyId = (record: DicomJsonRecord, fallback: string) =>
-  (record['0020000D']?.Value?.[0] as string | undefined) ||
+  (record["0020000D"]?.Value?.[0] as string | undefined) ||
   (record.StudyInstanceUID as string | undefined) ||
   fallback;
 
@@ -38,10 +38,7 @@ export function useStudyLookup(studyIds: string[]) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const uniqueIds = useMemo(
-    () => Array.from(new Set(studyIds.filter(Boolean))),
-    [studyIds]
-  );
+  const uniqueIds = useMemo(() => Array.from(new Set(studyIds.filter(Boolean))), [studyIds]);
 
   useEffect(() => {
     let isActive = true;
@@ -69,7 +66,7 @@ export function useStudyLookup(studyIds: string[]) {
               return { id: studyId, entry: buildFallbackEntry(studyId) };
             }
 
-            if (typeof record === 'string') {
+            if (typeof record === "string") {
               return { id: studyId, entry: buildFallbackEntry(record) };
             }
 
@@ -92,7 +89,7 @@ export function useStudyLookup(studyIds: string[]) {
                 referringPhysician: study.referringPhysician,
               },
             };
-          })
+          }),
         );
 
         if (!isActive) return;
@@ -105,9 +102,9 @@ export function useStudyLookup(studyIds: string[]) {
           return next;
         });
       } catch (err) {
-        logger.warn('Failed to load study lookup', err);
+        logger.warn("Failed to load study lookup", err);
         if (isActive) {
-          setError('Studieninformationen konnten nicht geladen werden.');
+          setError("Studieninformationen konnten nicht geladen werden.");
         }
       } finally {
         if (isActive) {

@@ -30,20 +30,20 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           // Add auth headers for Orthanc DICOMweb requests and CORP headers for COEP compatibility
           configure: (proxy) => {
-            proxy.on('proxyReq', (proxyReq) => {
+            proxy.on("proxyReq", (proxyReq) => {
               // Deliberately NOT read from VITE_-prefixed vars: Vite exposes any
               // VITE_* env var to client bundles via import.meta.env, which would
               // ship the DICOMweb credentials to every browser. These vars are
               // Node-only and only ever used here, server-side, to inject the
               // Basic Auth header on the dev-server proxy.
-              const username = env.DICOM_WEB_PROXY_USERNAME || 'orthanc';
-              const password = env.DICOM_WEB_PROXY_PASSWORD || 'orthanc';
-              const auth = Buffer.from(`${username}:${password}`).toString('base64');
-              proxyReq.setHeader('Authorization', `Basic ${auth}`);
+              const username = env.DICOM_WEB_PROXY_USERNAME || "orthanc";
+              const password = env.DICOM_WEB_PROXY_PASSWORD || "orthanc";
+              const auth = Buffer.from(`${username}:${password}`).toString("base64");
+              proxyReq.setHeader("Authorization", `Basic ${auth}`);
             });
             // Add CORP header to response for COEP compatibility
-            proxy.on('proxyRes', (proxyRes) => {
-              proxyRes.headers['cross-origin-resource-policy'] = 'cross-origin';
+            proxy.on("proxyRes", (proxyRes) => {
+              proxyRes.headers["cross-origin-resource-policy"] = "cross-origin";
             });
           },
         },
@@ -53,17 +53,14 @@ export default defineConfig(({ mode }) => {
           ws: true,
           // Add CORP header to response for COEP compatibility
           configure: (proxy) => {
-            proxy.on('proxyRes', (proxyRes) => {
-              proxyRes.headers['cross-origin-resource-policy'] = 'cross-origin';
+            proxy.on("proxyRes", (proxyRes) => {
+              proxyRes.headers["cross-origin-resource-policy"] = "cross-origin";
             });
           },
         },
       },
     },
-    plugins: [
-      react(),
-      mode === "development" && componentTagger(),
-    ].filter(Boolean),
+    plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),

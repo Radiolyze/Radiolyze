@@ -1,14 +1,14 @@
-import { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { SyncOptions, ViewportState } from '@/types/viewerSync';
-import type { FindingBox, ImageRef, Series, Study } from '@/types/radiology';
-import { useViewportSync } from '@/hooks/useViewportSync';
-import type { ViewerProgress } from './DicomViewer';
-import type { PriorStudy } from './comparisonTypes';
-import { ComparisonToolbar } from './ComparisonToolbar';
-import { ComparisonPane } from './ComparisonPane';
-import { ComparisonSyncIndicator } from './ComparisonSyncIndicator';
-import { ComparisonSingleView } from './ComparisonSingleView';
+import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import type { SyncOptions, ViewportState } from "@/types/viewerSync";
+import type { FindingBox, ImageRef, Series, Study } from "@/types/radiology";
+import { useViewportSync } from "@/hooks/useViewportSync";
+import type { ViewerProgress } from "./DicomViewer";
+import type { PriorStudy } from "./comparisonTypes";
+import { ComparisonToolbar } from "./ComparisonToolbar";
+import { ComparisonPane } from "./ComparisonPane";
+import { ComparisonSyncIndicator } from "./ComparisonSyncIndicator";
+import { ComparisonSingleView } from "./ComparisonSingleView";
 
 interface ComparisonViewerProps {
   currentSeries: Series | null;
@@ -40,7 +40,7 @@ export function ComparisonViewer({
   onAnalyzeFrame,
   isAnalyzingFrame = false,
 }: ComparisonViewerProps) {
-  const { t } = useTranslation('viewer');
+  const { t } = useTranslation("viewer");
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [isSwapped, setIsSwapped] = useState(false);
   const [selectedPriorStudyId, setSelectedPriorStudyId] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export function ComparisonViewer({
   // Get selected prior study and series
   const selectedPriorStudy = priorStudies.find((p) => p.study.id === selectedPriorStudyId);
   const selectedPriorSeries = selectedPriorStudy?.study.series.find(
-    (s) => s.id === selectedPriorSeriesId
+    (s) => s.id === selectedPriorSeriesId,
   );
 
   const hasSyncEnabled = syncOptions.zoom || syncOptions.pan || syncOptions.windowLevel;
@@ -85,7 +85,7 @@ export function ComparisonViewer({
       }
       onFrameChange?.(frame, total);
     },
-    [syncOptions.frames, selectedPriorSeries, onFrameChange]
+    [syncOptions.frames, selectedPriorSeries, onFrameChange],
   );
 
   const handlePriorFrameChange = useCallback(
@@ -98,7 +98,7 @@ export function ComparisonViewer({
         setCurrentFrame(Math.min(syncedFrame, currentTotal - 1));
       }
     },
-    [syncOptions.frames, currentSeries]
+    [syncOptions.frames, currentSeries],
   );
 
   // Handle viewport state changes from current viewer and sync to prior
@@ -106,7 +106,7 @@ export function ComparisonViewer({
     (state: Partial<ViewportState>) => {
       syncViewportChange(state, setPriorViewerSyncState);
     },
-    [syncViewportChange]
+    [syncViewportChange],
   );
 
   // Handle viewport state changes from prior viewer and sync to current
@@ -114,7 +114,7 @@ export function ComparisonViewer({
     (state: Partial<ViewportState>) => {
       syncViewportChange(state, setCurrentViewerSyncState);
     },
-    [syncViewportChange]
+    [syncViewportChange],
   );
 
   const handleEnableCompare = useCallback(() => {
@@ -150,23 +150,23 @@ export function ComparisonViewer({
       const study = priorStudies.find((p) => p.study.id === studyId);
       if (study && study.study.series.length > 0) {
         // Try to find matching series by description
-        const currentDesc = currentSeries?.seriesDescription?.toLowerCase() || '';
+        const currentDesc = currentSeries?.seriesDescription?.toLowerCase() || "";
         const matchingSeries = study.study.series.find(
           (s) =>
             s.seriesDescription?.toLowerCase().includes(currentDesc) ||
-            currentDesc.includes(s.seriesDescription?.toLowerCase() || '')
+            currentDesc.includes(s.seriesDescription?.toLowerCase() || ""),
         );
         setSelectedPriorSeriesId(matchingSeries?.id || study.study.series[0].id);
       }
     },
-    [priorStudies, currentSeries]
+    [priorStudies, currentSeries],
   );
 
   // Determine which series goes where based on swap state
   const leftSeries = isSwapped ? selectedPriorSeries : currentSeries;
   const rightSeries = isSwapped ? currentSeries : selectedPriorSeries;
-  const leftLabel = isSwapped ? selectedPriorStudy?.label : t('comparison.current');
-  const rightLabel = isSwapped ? t('comparison.current') : selectedPriorStudy?.label;
+  const leftLabel = isSwapped ? selectedPriorStudy?.label : t("comparison.current");
+  const rightLabel = isSwapped ? t("comparison.current") : selectedPriorStudy?.label;
   const leftDate = isSwapped ? selectedPriorStudy?.date : undefined;
   const rightDate = isSwapped ? undefined : selectedPriorStudy?.date;
   const leftProgress = isSwapped ? undefined : progress;
@@ -189,8 +189,8 @@ export function ComparisonViewer({
   const rightImageRefsChange = isSwapped ? onImageRefsChange : undefined;
   const leftPriorImageRefsChange = isSwapped ? onPriorImageRefsChange : undefined;
   const rightPriorImageRefsChange = !isSwapped ? onPriorImageRefsChange : undefined;
-  const leftBadgeVariant = isSwapped ? 'secondary' : 'primary';
-  const rightBadgeVariant = isSwapped ? 'primary' : 'secondary';
+  const leftBadgeVariant = isSwapped ? "secondary" : "primary";
+  const rightBadgeVariant = isSwapped ? "primary" : "secondary";
   const showSyncIndicator = Boolean(selectedPriorSeries) && (syncOptions.frames || hasSyncEnabled);
   // Findings apply to current series: left when not swapped, right when swapped
   const leftFindings = !isSwapped ? findings : [];
@@ -240,7 +240,7 @@ export function ComparisonViewer({
         <ComparisonPane
           className="border-r border-border"
           series={leftSeries || null}
-          label={leftLabel || t('comparison.prior')}
+          label={leftLabel || t("comparison.prior")}
           date={leftDate}
           badgeVariant={leftBadgeVariant}
           progress={leftProgress}
@@ -249,7 +249,7 @@ export function ComparisonViewer({
           syncState={leftSyncState}
           onImageRefsChange={leftImageRefsChange ?? leftPriorImageRefsChange}
           requestedFrameIndex={leftEvidenceFrame}
-          emptyMessage={t('comparison.noStudySelected')}
+          emptyMessage={t("comparison.noStudySelected")}
           findings={leftFindings}
           onAnalyzeFrame={!isSwapped ? onAnalyzeFrame : undefined}
           isAnalyzingFrame={isAnalyzingFrame}
@@ -258,7 +258,7 @@ export function ComparisonViewer({
         {/* Right Panel */}
         <ComparisonPane
           series={rightSeries || null}
-          label={rightLabel || t('comparison.prior')}
+          label={rightLabel || t("comparison.prior")}
           date={rightDate}
           badgeVariant={rightBadgeVariant}
           progress={rightProgress}
@@ -267,7 +267,7 @@ export function ComparisonViewer({
           syncState={rightSyncState}
           onImageRefsChange={rightImageRefsChange ?? rightPriorImageRefsChange}
           requestedFrameIndex={rightEvidenceFrame}
-          emptyMessage={t('comparison.noStudySelected')}
+          emptyMessage={t("comparison.noStudySelected")}
           findings={rightFindings}
           onAnalyzeFrame={isSwapped ? onAnalyzeFrame : undefined}
           isAnalyzingFrame={isAnalyzingFrame}

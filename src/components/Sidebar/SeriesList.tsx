@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { Layers, Image } from 'lucide-react';
-import type { Series } from '@/types/radiology';
-import { cn } from '@/lib/utils';
+import { useTranslation } from "react-i18next";
+import { Layers, Image } from "lucide-react";
+import type { Series } from "@/types/radiology";
+import { cn } from "@/lib/utils";
 
 interface SeriesListProps {
   series: Series[];
@@ -10,14 +10,16 @@ interface SeriesListProps {
 }
 
 export function SeriesList({ series, selectedSeriesId, onSelectSeries }: SeriesListProps) {
-  const { t } = useTranslation('viewer');
+  const { t } = useTranslation("viewer");
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
       <div className="px-4 py-3 border-b border-sidebar-border">
         <div className="flex items-center gap-2 text-sm font-medium text-sidebar-foreground">
           <Layers className="h-4 w-4" />
-          <span>{t('series.title')} ({series.length})</span>
+          <span>
+            {t("series.title")} ({series.length})
+          </span>
         </div>
       </div>
 
@@ -27,12 +29,12 @@ export function SeriesList({ series, selectedSeriesId, onSelectSeries }: SeriesL
             key={s.id}
             onClick={() => onSelectSeries(s)}
             className={cn(
-              'w-full p-3 rounded-lg text-left transition-colors',
-              'hover:bg-sidebar-accent',
-              'focus:outline-none focus:ring-2 focus:ring-sidebar-ring',
+              "w-full p-3 rounded-lg text-left transition-colors",
+              "hover:bg-sidebar-accent",
+              "focus:outline-none focus:ring-2 focus:ring-sidebar-ring",
               selectedSeriesId === s.id
-                ? 'bg-sidebar-accent border border-primary/50'
-                : 'bg-transparent'
+                ? "bg-sidebar-accent border border-primary/50"
+                : "bg-transparent",
             )}
           >
             <div className="flex items-start gap-3">
@@ -46,10 +48,10 @@ export function SeriesList({ series, selectedSeriesId, onSelectSeries }: SeriesL
                   {s.seriesDescription}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {t('series.seriesNumber', { number: s.seriesNumber })} • {s.modality}
+                  {t("series.seriesNumber", { number: s.seriesNumber })} • {s.modality}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {t('series.images', { count: s.frameCount })}
+                  {t("series.images", { count: s.frameCount })}
                 </p>
               </div>
             </div>

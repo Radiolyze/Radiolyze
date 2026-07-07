@@ -1,10 +1,10 @@
-import { useTranslation } from 'react-i18next';
-import { Mic, Sparkles, ShieldCheck, ShieldAlert, ShieldX, Timer } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import type { AIStatus, QAStatus } from '@/types/radiology';
+import { useTranslation } from "react-i18next";
+import { Mic, Sparkles, ShieldCheck, ShieldAlert, ShieldX, Timer } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import type { AIStatus, QAStatus } from "@/types/radiology";
 
-type ASRStatus = 'idle' | 'listening' | 'processing';
+type ASRStatus = "idle" | "listening" | "processing";
 
 interface ProgressOverlayProps {
   asrStatus?: ASRStatus;
@@ -14,26 +14,45 @@ interface ProgressOverlayProps {
   className?: string;
 }
 
-const qaConfig: Record<QAStatus, { icon: typeof ShieldCheck; labelKey: string; className: string }> = {
-  pending: { icon: Timer, labelKey: 'progress.qa.idle', className: 'bg-muted text-muted-foreground' },
-  checking: { icon: Timer, labelKey: 'progress.qa.checking', className: 'bg-info/20 text-info' },
-  pass: { icon: ShieldCheck, labelKey: 'progress.qa.passed', className: 'bg-success/20 text-success' },
-  warn: { icon: ShieldAlert, labelKey: 'progress.qa.warnings', className: 'bg-warning/20 text-warning' },
-  fail: { icon: ShieldX, labelKey: 'progress.qa.warnings', className: 'bg-destructive/20 text-destructive' },
+const qaConfig: Record<
+  QAStatus,
+  { icon: typeof ShieldCheck; labelKey: string; className: string }
+> = {
+  pending: {
+    icon: Timer,
+    labelKey: "progress.qa.idle",
+    className: "bg-muted text-muted-foreground",
+  },
+  checking: { icon: Timer, labelKey: "progress.qa.checking", className: "bg-info/20 text-info" },
+  pass: {
+    icon: ShieldCheck,
+    labelKey: "progress.qa.passed",
+    className: "bg-success/20 text-success",
+  },
+  warn: {
+    icon: ShieldAlert,
+    labelKey: "progress.qa.warnings",
+    className: "bg-warning/20 text-warning",
+  },
+  fail: {
+    icon: ShieldX,
+    labelKey: "progress.qa.warnings",
+    className: "bg-destructive/20 text-destructive",
+  },
 };
 
 export function ProgressOverlay({
-  asrStatus = 'idle',
+  asrStatus = "idle",
   asrConfidence,
-  aiStatus = 'idle',
-  qaStatus = 'pending',
+  aiStatus = "idle",
+  qaStatus = "pending",
   className,
 }: ProgressOverlayProps) {
-  const { t } = useTranslation('viewer');
+  const { t } = useTranslation("viewer");
   const shouldShow =
-    asrStatus !== 'idle' ||
-    aiStatus !== 'idle' ||
-    qaStatus !== 'pending' ||
+    asrStatus !== "idle" ||
+    aiStatus !== "idle" ||
+    qaStatus !== "pending" ||
     (asrConfidence !== undefined && asrConfidence > 0);
 
   if (!shouldShow) {
@@ -46,8 +65,8 @@ export function ProgressOverlay({
   return (
     <div
       className={cn(
-        'flex flex-col gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-3 min-w-[220px] shadow-sm',
-        className
+        "flex flex-col gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-3 min-w-[220px] shadow-sm",
+        className,
       )}
     >
       <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -63,10 +82,10 @@ export function ProgressOverlay({
         <Badge
           variant="outline"
           className={cn(
-            'text-[10px]',
-            asrStatus === 'listening' && 'bg-warning/20 text-warning border-warning/30',
-            asrStatus === 'processing' && 'bg-info/20 text-info border-info/30',
-            asrStatus === 'idle' && 'bg-muted text-muted-foreground'
+            "text-[10px]",
+            asrStatus === "listening" && "bg-warning/20 text-warning border-warning/30",
+            asrStatus === "processing" && "bg-info/20 text-info border-info/30",
+            asrStatus === "idle" && "bg-muted text-muted-foreground",
           )}
         >
           {t(`progress.asr.${asrStatus}`)}
@@ -88,20 +107,20 @@ export function ProgressOverlay({
         <Badge
           variant="outline"
           className={cn(
-            'text-[10px]',
-            aiStatus === 'queued' && 'bg-warning/20 text-warning border-warning/30',
-            aiStatus === 'processing' && 'bg-info/20 text-info border-info/30',
-            aiStatus === 'error' && 'bg-destructive/20 text-destructive border-destructive/30',
-            aiStatus === 'idle' && 'bg-muted text-muted-foreground'
+            "text-[10px]",
+            aiStatus === "queued" && "bg-warning/20 text-warning border-warning/30",
+            aiStatus === "processing" && "bg-info/20 text-info border-info/30",
+            aiStatus === "error" && "bg-destructive/20 text-destructive border-destructive/30",
+            aiStatus === "idle" && "bg-muted text-muted-foreground",
           )}
         >
-          {aiStatus === 'queued'
-            ? t('progress.ai.running')
-            : aiStatus === 'processing'
-              ? t('progress.ai.running')
-              : aiStatus === 'error'
-                ? t('progress.ai.idle')
-                : t('progress.ai.idle')}
+          {aiStatus === "queued"
+            ? t("progress.ai.running")
+            : aiStatus === "processing"
+              ? t("progress.ai.running")
+              : aiStatus === "error"
+                ? t("progress.ai.idle")
+                : t("progress.ai.idle")}
         </Badge>
       </div>
 
@@ -110,7 +129,7 @@ export function ProgressOverlay({
           <QaIcon className="h-4 w-4" />
           <span>QA</span>
         </div>
-        <Badge variant="outline" className={cn('text-[10px]', qa.className)}>
+        <Badge variant="outline" className={cn("text-[10px]", qa.className)}>
           {t(qa.labelKey)}
         </Badge>
       </div>
