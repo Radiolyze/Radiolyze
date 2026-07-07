@@ -41,12 +41,17 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Proxy DICOMweb requests to Orthanc
+    # Proxy DICOMweb requests to Orthanc. The Authorization header is
+    # injected here (Basic Auth computed from DICOM_WEB_PROXY_USERNAME/
+    # DICOM_WEB_PROXY_PASSWORD by docker-entrypoint.d/dicom-web-auth.sh at
+    # container startup) so the browser never needs to know Orthanc's
+    # credentials — same approach as the Vite dev-server proxy.
     location /dicom-web/ {
         proxy_pass http://orthanc:8042/dicom-web/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Authorization "Basic ${DICOM_WEB_PROXY_AUTH_B64}";
     }
 
     # Health check

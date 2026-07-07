@@ -155,13 +155,17 @@ services:
       - "4242:4242"
     volumes:
       - orthanc-data:/var/lib/orthanc/db
-      # NOTE: Access-Control-Allow-Origin in orthanc.json is a static value
-      # (Orthanc doesn't support env-var templating of this file) — update it
-      # to match your real frontend origin for any non-default deployment.
-      - ./orthanc/orthanc.json:/etc/orthanc/orthanc.json:ro
+      # orthanc.json is generated from this template at container startup
+      # (see entrypoint.sh) so RegisteredUsers/CORS origin actually track
+      # ORTHANC_USERNAME/ORTHANC_PASSWORD/ORTHANC_CORS_ORIGIN below, instead
+      # of the hardcoded orthanc/orthanc dev creds and localhost CORS origin.
+      - ./orthanc/orthanc.json.template:/etc/orthanc/orthanc.json.template:ro
+      - ./orthanc/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
     environment:
       ORTHANC_USERNAME: ${ORTHANC_USERNAME:-orthanc}
       ORTHANC_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
+      ORTHANC_CORS_ORIGIN: ${ORTHANC_CORS_ORIGIN:-http://localhost:5173}
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8042/system"]
       interval: 30s
