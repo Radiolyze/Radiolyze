@@ -11,3 +11,19 @@ backend/.venv
 **/__pycache__
 **/*.pyc
 **/*.pyo
+
+# Not needed by the frontend image build context (docker/Dockerfile.frontend,
+# docker/Dockerfile.dev use `.` as their context) — keeps builds fast and
+# avoids invalidating the `COPY . .` layer cache on unrelated changes.
+backend
+services
+docs
+docs-internal
+.github
+*.md
+bun.lockb
+mkdocs.yml
+docker-compose.yml
+docker/compose
+orthanc
+env.example

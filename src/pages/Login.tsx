@@ -65,6 +65,7 @@ export default function Login() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional: focuses the username field on the login page
                 autoFocus
                 required
                 disabled={loading}

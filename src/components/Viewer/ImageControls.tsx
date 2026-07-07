@@ -38,6 +38,7 @@ export function ImageControls({
           )}
           onClick={() => onToolSelect(tool.id)}
           title={tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label}
+          aria-label={tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label}
         >
           <tool.icon className="h-4 w-4" />
         </Button>
@@ -49,6 +50,7 @@ export function ImageControls({
         className="h-9 w-9"
         onClick={onReset}
         title={`${t('tools.reset')} (R)`}
+        aria-label={`${t('tools.reset')} (R)`}
       >
         <RotateCcw className="h-4 w-4" />
       </Button>

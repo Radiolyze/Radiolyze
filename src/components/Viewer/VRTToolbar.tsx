@@ -94,6 +94,7 @@ export function VRTToolbar({
                 size="icon" 
                 className="h-8 w-8"
                 onClick={() => onViewAngle('anterior')}
+                aria-label="Anterior (A)"
               >
                 <Eye className="h-4 w-4" />
               </Button>
@@ -108,6 +109,7 @@ export function VRTToolbar({
                 size="icon" 
                 className="h-8 w-8"
                 onClick={() => onViewAngle('posterior')}
+                aria-label="Posterior (P)"
               >
                 <Scan className="h-4 w-4" />
               </Button>
@@ -122,6 +124,7 @@ export function VRTToolbar({
                 size="icon" 
                 className="h-8 w-8"
                 onClick={() => onViewAngle('left')}
+                aria-label="Left (L)"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -136,6 +139,7 @@ export function VRTToolbar({
                 size="icon" 
                 className="h-8 w-8"
                 onClick={() => onViewAngle('right')}
+                aria-label="Right (R)"
               >
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -150,6 +154,7 @@ export function VRTToolbar({
                 size="icon" 
                 className="h-8 w-8"
                 onClick={() => onViewAngle('superior')}
+                aria-label="Superior (S)"
               >
                 <ArrowUp className="h-4 w-4" />
               </Button>
@@ -164,6 +169,7 @@ export function VRTToolbar({
                 size="icon" 
                 className="h-8 w-8"
                 onClick={() => onViewAngle('inferior')}
+                aria-label="Inferior (I)"
               >
                 <ArrowDown className="h-4 w-4" />
               </Button>
@@ -281,6 +287,7 @@ export function VRTToolbar({
               size="icon" 
               className="h-8 w-8"
               onClick={onReset}
+              aria-label="Kamera zurücksetzen"
             >
               <RotateCcw className="h-4 w-4" />
             </Button>

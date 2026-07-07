@@ -7,7 +7,15 @@
 
 services:
   whisper-asr:
-    image: hwdsl2/whisper-server:latest
+    # hwdsl2/whisper-server doesn't publish version tags, only latest/cuda —
+    # pinned to today's `latest` digest for reproducibility. Bump periodically
+    # via `docker manifest inspect hwdsl2/whisper-server:latest`.
+    image: hwdsl2/whisper-server@sha256:d0186ddb720613fff1bcaf47cd83337f1bbcd7f461a92c2c4c634b51e572a8e6
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
     ports:
       - "9000:9000"
     volumes:

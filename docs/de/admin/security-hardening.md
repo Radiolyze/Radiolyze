@@ -24,20 +24,22 @@ Das Standard-Docker-Compose-Setup ist **nicht sicher** für klinische Umgebungen
 `.env` bearbeiten:
 
 ```bash
-VITE_DICOM_WEB_USERNAME=radiologie_benutzer
-VITE_DICOM_WEB_PASSWORD=<generieren: openssl rand -base64 24>
+ORTHANC_USERNAME=radiologie_benutzer
+ORTHANC_PASSWORD=<generieren: openssl rand -base64 24>
+ORTHANC_CORS_ORIGIN=https://ihr-frontend-host
 ```
 
-Orthanc-Konfiguration mit passendem Passwort-Hash aktualisieren:
+`orthanc/orthanc.json` wird beim Container-Start aus `orthanc/orthanc.json.template`
+generiert (siehe `orthanc/entrypoint.sh`) — diese drei Variablen genügen, `RegisteredUsers`
+und der CORS-Origin werden automatisch befüllt und bleiben mit `.env` synchron. Keine
+statische `orthanc.json` über den Container mounten; sie wird bei jedem Start neu erzeugt,
+ein eingebundenes File an dieser Stelle würde entweder überschrieben (falls beschreibbar)
+oder den Containerstart verhindern (falls read-only). Für Anpassungen über diese drei
+Variablen hinaus stattdessen eine eigene `orthanc.json.template` einbinden.
 
-```json
-{
-  "AuthenticationEnabled": true,
-  "RegisteredUsers": {
-    "radiologie_benutzer": "ihr_bcrypt_gehashtes_passwort"
-  }
-}
-```
+Hinweis: `RegisteredUsers` erwartet bei Orthanc das Passwort im Klartext (kein
+bcrypt-Hashing) — deshalb muss das Passwort aus `.env` kommen und darf nicht ins
+Repository committet werden.
 
 ### PostgreSQL
 

@@ -18,6 +18,7 @@ export const MPRViewport = forwardRef<HTMLDivElement, MPRViewportProps>(
     const isSlabActive = slabSettings && slabSettings.thickness > 0;
     
     return (
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- pre-existing click-only viewport selection, keyboard support tracked separately
       <div
         className={cn(
           'relative bg-black rounded-lg overflow-hidden border-2 transition-colors',
