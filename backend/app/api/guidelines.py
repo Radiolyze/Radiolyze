@@ -8,6 +8,7 @@ Provides two search modes:
 
 On create/update a background RQ job generates and stores the embedding.
 """
+
 from __future__ import annotations
 
 import logging
@@ -59,9 +60,7 @@ class GuidelineUpdate(BaseModel):
     is_active: bool | None = None
 
 
-def _like_search(
-    db: Session, q: str, category: str | None, limit: int
-) -> list[GuidelineResponse]:
+def _like_search(db: Session, q: str, category: str | None, limit: int) -> list[GuidelineResponse]:
     query = db.query(Guideline).filter(Guideline.is_active.is_(True))
     if category:
         query = query.filter(Guideline.category == category)
@@ -88,16 +87,20 @@ def _pgvector_search(
     params: dict = {"vec": str(query_vec), "limit": limit}
     if category:
         params["cat"] = category
-    rows = db.execute(
-        text(
-            "SELECT id, 1 - (embedding <=> CAST(:vec AS vector)) AS score"
-            " FROM guidelines"
-            " WHERE is_active = true AND embedding IS NOT NULL "
-            + cat_filter
-            + "ORDER BY embedding <=> CAST(:vec AS vector) LIMIT :limit"
-        ),
-        params,
-    ).mappings().all()
+    rows = (
+        db.execute(
+            text(
+                "SELECT id, 1 - (embedding <=> CAST(:vec AS vector)) AS score"
+                " FROM guidelines"
+                " WHERE is_active = true AND embedding IS NOT NULL "
+                + cat_filter
+                + "ORDER BY embedding <=> CAST(:vec AS vector) LIMIT :limit"
+            ),
+            params,
+        )
+        .mappings()
+        .all()
+    )
     ids = [r["id"] for r in rows]
     scores = {r["id"]: float(r["score"]) for r in rows}
     guidelines = db.query(Guideline).filter(Guideline.id.in_(ids)).all()

@@ -1,0 +1,48 @@
+name: Trivy image scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * 1"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: radiolyze-frontend
+            context: .
+            dockerfile: docker/Dockerfile.frontend
+          - image: radiolyze-backend
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+          - image: radiolyze-segmenter
+            context: ./services/segmenter
+            dockerfile: ./services/segmenter/Dockerfile
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build ${{ matrix.image }}
+        run: docker build -f ${{ matrix.dockerfile }} -t ${{ matrix.image }} ${{ matrix.context }}
+      - name: Scan ${{ matrix.image }} with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ matrix.image }}
+          format: sarif
+          output: trivy-${{ matrix.image }}.sarif
+          severity: "CRITICAL,HIGH"
+          # Report-only for now: image scanning is new, so we surface
+          # findings in the Security tab without blocking merges yet.
+          exit-code: "0"
+      - name: Upload Trivy results to the Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-${{ matrix.image }}.sarif
+          category: trivy-${{ matrix.image }}

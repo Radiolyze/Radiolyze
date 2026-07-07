@@ -956,16 +956,12 @@ def embed_guideline(guideline_id: str) -> None:
 
         if vec is not None and DATABASE_URL.startswith("postgresql"):
             db.execute(
-                sa_text(
-                    "UPDATE guidelines SET embedding = CAST(:vec AS vector) WHERE id = :id"
-                ),
+                sa_text("UPDATE guidelines SET embedding = CAST(:vec AS vector) WHERE id = :id"),
                 {"vec": str(vec), "id": guideline_id},
             )
             db.commit()
 
-        logger.info(
-            "embed_guideline: %s → status=%s", guideline_id, guideline.embedding_status
-        )
+        logger.info("embed_guideline: %s → status=%s", guideline_id, guideline.embedding_status)
     except Exception:
         logger.exception("embed_guideline failed for %s", guideline_id)
         try:

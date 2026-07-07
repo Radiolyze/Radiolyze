@@ -7,7 +7,7 @@ tests run without a network or GPU.
 from __future__ import annotations
 
 import json
-from typing import Iterable
+from collections.abc import Iterable
 from unittest.mock import patch
 
 import httpx
@@ -74,14 +74,8 @@ def test_create_bone_job_persists_row_and_audit(client, db):
     assert record.status == "queued"
     assert record.study_uid == "1.2.3"
 
-    audit_rows = (
-        db.query(AuditEvent)
-        .filter(AuditEvent.event_type == "segmentation_queued")
-        .all()
-    )
-    assert any(
-        (event.metadata_json or {}).get("job_id") == job_id for event in audit_rows
-    )
+    audit_rows = db.query(AuditEvent).filter(AuditEvent.event_type == "segmentation_queued").all()
+    assert any((event.metadata_json or {}).get("job_id") == job_id for event in audit_rows)
 
 
 def test_total_preset_is_accepted(client, db):
@@ -112,7 +106,12 @@ def test_get_job_returns_running_then_finished(client, db, monkeypatch):
         "job_id": job_id,
         "preset": "bone",
         "source": {"study_uid": "uid-1", "series_uid": "uid-1.1", "modality": "CT"},
-        "volume": {"spacing": [1, 1, 1], "origin": [0, 0, 0], "direction": [1, 0, 0, 0, 1, 0, 0, 0, 1], "shape": [10, 10, 10]},
+        "volume": {
+            "spacing": [1, 1, 1],
+            "origin": [0, 0, 0],
+            "direction": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+            "shape": [10, 10, 10],
+        },
         "labels": [
             {
                 "id": 1,
@@ -248,17 +247,11 @@ def test_mesh_access_audit_disabled_by_default(client, db, tmp_path, monkeypatch
 
     from app.models import AuditEvent
 
-    rows = (
-        db.query(AuditEvent)
-        .filter(AuditEvent.event_type == "segmentation_mesh_accessed")
-        .all()
-    )
+    rows = db.query(AuditEvent).filter(AuditEvent.event_type == "segmentation_mesh_accessed").all()
     assert rows == []
 
 
-def test_mesh_access_audit_emitted_when_enabled(
-    client, db, tmp_path, monkeypatch
-):
+def test_mesh_access_audit_emitted_when_enabled(client, db, tmp_path, monkeypatch):
     """SEGMENTATION_AUDIT_MESH_DOWNLOADS=true → exactly one event per mesh GET."""
     monkeypatch.setenv("SEGMENTATION_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("SEGMENTATION_AUDIT_MESH_DOWNLOADS", "true")
@@ -303,9 +296,7 @@ def test_mesh_access_audit_emitted_when_enabled(
     assert all(meta["preset"] == "total" for meta in metadata)
 
 
-def _seed_finished_job(
-    client, db, *, study_uid: str, with_seg: bool = True
-) -> str:
+def _seed_finished_job(client, db, *, study_uid: str, with_seg: bool = True) -> str:
     """Helper: create a job, then mutate the row into a finished state."""
     create = client.post(
         "/api/v1/segmentation/jobs",
@@ -389,9 +380,7 @@ def test_push_to_pacs_succeeds_and_persists_url(client, db, monkeypatch):
     assert refreshed.dicom_seg_orthanc_url == fake_orthanc_url
 
     audit_rows = (
-        db.query(AuditEvent)
-        .filter(AuditEvent.event_type == "segmentation_pushed_to_pacs")
-        .all()
+        db.query(AuditEvent).filter(AuditEvent.event_type == "segmentation_pushed_to_pacs").all()
     )
     assert len(audit_rows) == 1
     metadata = audit_rows[0].metadata_json
@@ -418,14 +407,13 @@ def test_push_to_pacs_rejects_jobs_without_dicom_seg(client, db):
     assert "DICOM SEG" in response.json()["detail"]
 
 
-def test_push_to_pacs_records_failure_audit_when_orthanc_errors(
-    client, db, monkeypatch
-):
+def test_push_to_pacs_records_failure_audit_when_orthanc_errors(client, db, monkeypatch):
     job_id = _seed_finished_job(client, db, study_uid="push-4")
     monkeypatch.setattr(
         "app.api.segmentation.download_dicom_seg",
         lambda jid: b"FAKE-SEG",
     )
+
     def _boom(*_a, **_kw):
         raise RuntimeError("orthanc rejected")
 
@@ -437,9 +425,7 @@ def test_push_to_pacs_records_failure_audit_when_orthanc_errors(
     from app.models import AuditEvent
 
     audit_rows = (
-        db.query(AuditEvent)
-        .filter(AuditEvent.event_type == "segmentation_push_failed")
-        .all()
+        db.query(AuditEvent).filter(AuditEvent.event_type == "segmentation_push_failed").all()
     )
     assert len(audit_rows) == 1
     assert audit_rows[0].metadata_json["stage"] == "stow_rs"

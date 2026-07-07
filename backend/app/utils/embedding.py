@@ -7,6 +7,7 @@ Calls an OpenAI-compatible embeddings endpoint configured via:
 
 Returns None when unconfigured or on failure; callers fall back to LIKE search.
 """
+
 from __future__ import annotations
 
 import logging

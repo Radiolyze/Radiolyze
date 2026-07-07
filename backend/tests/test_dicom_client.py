@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # retrieve_rendered_frame
 # ---------------------------------------------------------------------------
@@ -41,7 +40,9 @@ def test_retrieve_rendered_frame_success(mock_client_cls):
 
     assert result == fake_jpeg
     call_kwargs = mock_get.call_args
-    assert "/studies/study1/series/series1/instances/instance1/frames/1/rendered" in call_kwargs[0][0]
+    assert (
+        "/studies/study1/series/series1/instances/instance1/frames/1/rendered" in call_kwargs[0][0]
+    )
     assert call_kwargs[1]["headers"]["Accept"] == "image/jpeg"
 
 
@@ -83,9 +84,8 @@ def test_retrieve_and_cache_frame_miss(mock_retrieve):
 
 @patch("app.dicom_client.retrieve_rendered_frame", return_value=FAKE_JPEG)
 def test_retrieve_and_cache_frame_hit(mock_retrieve):
-    from app.queue import get_redis
-
     from app.dicom_client import retrieve_and_cache_frame
+    from app.queue import get_redis
 
     # Pre-populate cache
     redis_client = get_redis()
