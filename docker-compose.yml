@@ -4,6 +4,11 @@ services:
       context: ./backend
     ports:
       - "8000:8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
       interval: 30s
@@ -73,6 +78,11 @@ services:
     build:
       context: ./backend
     command: ["python", "-m", "app.worker"]
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
       REDIS_URL: redis://redis:6379/0
@@ -149,10 +159,15 @@ services:
       - orthanc
 
   orthanc:
-    image: jodogne/orthanc-plugins
+    image: jodogne/orthanc-plugins:1.12.11
     ports:
       - "8042:8042"
       - "4242:4242"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
     volumes:
       - orthanc-data:/var/lib/orthanc/db
       # orthanc.json is generated from this template at container startup
@@ -194,7 +209,16 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
     ports:
-      - "${POSTGRES_HOST_PORT:-5433}:5432"
+      # Dev-only: bound to loopback so the DB port isn't reachable from
+      # outside the host. Not used by any service in this compose file
+      # (backend/worker/migrate reach it over the compose network) — it's
+      # exposed only for local `psql`/admin-tool access.
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -206,7 +230,13 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      # Dev-only: bound to loopback, see the `db` port comment above.
+      - "127.0.0.1:6379:6379"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 15s
@@ -222,8 +252,11 @@ services:
       COLLECTOR_OTLP_ENABLED: "true"
 
   vllm-medgemma:
-    image: vllm/vllm-openai:nightly
-    pull_policy: always
+    # Pinned to a specific `nightly` digest rather than the mutable tag so
+    # the GPU stack is reproducible; vLLM's nightly channel is required here
+    # for medgemma-1.5 support. Bump this digest periodically — see
+    # `docker manifest inspect vllm/vllm-openai:nightly` for the current one.
+    image: vllm/vllm-openai@sha256:184914ac7c32e4aa7789bb686bfaa0817dd56dbdc8ee05fc0ec671aa0b1792f0
     profiles: ["gpu"]
     gpus: all
     ports:
@@ -262,8 +295,8 @@ services:
       retries: 3
 
   medasr:
-    image: vllm/vllm-openai:nightly
-    pull_policy: always
+    # See the vllm-medgemma comment above re: pinning nightly to a digest.
+    image: vllm/vllm-openai@sha256:184914ac7c32e4aa7789bb686bfaa0817dd56dbdc8ee05fc0ec671aa0b1792f0
     profiles: ["gpu"]
     gpus: all
     ports:
@@ -304,6 +337,11 @@ services:
     # No host port mapping: only backend/worker (same compose network) call
     # this service. It carries no auth of its own beyond SEGMENTER_API_KEY,
     # so it must not be reachable directly from the host/internet.
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4g
     environment:
       SEGMENTATION_DATA_DIR: /data/segmentations
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web

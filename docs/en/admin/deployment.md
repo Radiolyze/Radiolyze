@@ -264,6 +264,22 @@ For GPU deployments, include the same overlay files used during initial deployme
 
 Database migrations run automatically on backend startup.
 
+**Upgrading from a pre-hardening deployment:** the backend/worker/segmenter
+images now run as a non-root `appuser` (uid 1000) instead of root. If your
+`seg-data` (and, for GPU segmenter deployments, `totalseg-models`) named
+volumes were created by an older version of these images, they're still
+owned by root and need a one-time ownership fix after pulling the new
+images, before starting the containers:
+
+```bash
+docker compose run --rm --user root backend chown -R 1000:1000 /data/segmentations
+# GPU segmenter only:
+docker compose -f docker-compose.yml -f docker/compose/gpu.yml run --rm --user root segmenter chown -R 1000:1000 /models
+```
+
+Freshly created volumes on a new deployment don't need this — they're
+populated with the correct ownership automatically.
+
 ---
 
 ## Uninstalling
