@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@cornerstonejs/core": "^4.15.12",
-    "@cornerstonejs/dicom-image-loader": "^4.15.12",
+    "@cornerstonejs/dicom-image-loader": "^5.4.17",
     "@cornerstonejs/tools": "^4.15.12",
     "@hookform/resolvers": "^3.10.0",
     "@kitware/vtk.js": "^34.15.1",
