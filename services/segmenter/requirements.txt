@@ -16,4 +16,4 @@ pydicom-seg>=0.4.1
 # torch is pulled transitively but pinned here so docker rebuilds do not
 # silently switch the CUDA build channel out from under us.
 torch>=2.12.1
-totalsegmentator>=2.15.0
+totalsegmentator>=2.16.0
