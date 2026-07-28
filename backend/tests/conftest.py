@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from unittest.mock import patch
 
 import fakeredis
@@ -17,6 +18,12 @@ os.environ["VLLM_ENABLED"] = "false"
 os.environ["VLLM_FALLBACK_TO_MOCK"] = "true"
 os.environ["MEDASR_FALLBACK_TO_MOCK"] = "true"
 os.environ["ENVIRONMENT"] = "development"
+
+# Segmentation artefacts: default is /data/segmentations, which only exists inside
+# the container. `segmentation_data_dir()` mkdir's it, so without an override the
+# segmentation tests pass for anyone running as root and fail everywhere else
+# (notably on CI runners) with PermissionError: '/data'.
+os.environ.setdefault("SEGMENTATION_DATA_DIR", tempfile.mkdtemp(prefix="radiolyze-seg-test-"))
 
 # RQ/Redis: in-memory fake so CI and local pytest need no Redis daemon
 _fake_redis = fakeredis.FakeStrictRedis(decode_responses=False)

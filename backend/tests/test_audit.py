@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from unittest.mock import patch
 
+from app.auth import AUTH_COOKIE_NAME
+
 
 def test_create_audit_event(client):
     response = client.post(
@@ -36,12 +38,13 @@ def test_create_audit_event_uses_authenticated_actor(client, seed_radiologist):
             json={"username": "testradiologist", "password": "radiopass"},
         )
         assert login_resp.status_code == 200
-        token = login_resp.json()["access_token"]
+        # The token is delivered as an HttpOnly cookie, not in the response body;
+        # the TestClient carries it on subsequent requests automatically.
+        assert AUTH_COOKIE_NAME in login_resp.cookies
 
         response = client.post(
             "/api/v1/audit-log",
             json={"eventType": "test_event", "actorId": "spoofed-actor"},
-            headers={"Authorization": f"Bearer {token}"},
         )
     assert response.status_code == 200
     assert response.json()["actor_id"] == seed_radiologist

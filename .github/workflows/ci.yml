@@ -62,7 +62,19 @@ jobs:
       - name: pip-audit
         run: |
           pip install pip-audit
-          pip-audit -r requirements.txt -r requirements-dev.txt
+          # PYSEC-2026-1325 (ecdsa): Minerva timing attack on the P-256 curve.
+          # Ignored deliberately, not overlooked:
+          #   * No fixed release exists -- upstream python-ecdsa treats side
+          #     channel attacks as out of scope and has no planned fix.
+          #   * ecdsa is not a direct dependency; it is pulled in transitively
+          #     by python-jose[cryptography], which requires ecdsa!=0.15.
+          #   * The affected paths (SigningKey.sign_digest, EC key generation,
+          #     ECDH) are unreachable here -- JWTs are signed with HS256
+          #     (symmetric HMAC), see backend/app/auth.py.
+          # Revisit if the JWT algorithm ever moves to an EC curve, or if
+          # python-jose is replaced by a library that drops ecdsa entirely.
+          pip-audit -r requirements.txt -r requirements-dev.txt \
+            --ignore-vuln PYSEC-2026-1325
 
   frontend-lint-test:
     runs-on: ubuntu-latest

@@ -1,12 +1,15 @@
 """performance indexes on reports and audit_events filter/sort columns
 
 Revision ID: 0004_perf_indexes
-Revises: 0003
+Revises: 0004
 Create Date: 2026-07-07 05:00:00.000000
 
-NOTE: another in-flight branch also adds a "0004" migration
-(``ReportComparison``, down_revision "0003"). Whichever of the two merges
-second will need `alembic merge heads` to reconcile the resulting fork.
+NOTE: this migration and "0004" (``ReportComparison``) were developed in
+parallel and both originally declared down_revision "0003", which left the
+history with two heads and made `alembic upgrade head` fail outright. This one
+merged second, so the fork is reconciled by chaining it after "0004".
+The two migrations touch disjoint tables, so the order between them is
+arbitrary; what matters is that the history stays linear.
 
 """
 
@@ -16,7 +19,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "0004_perf_indexes"
-down_revision: str | Sequence[str] | None = "0003"
+down_revision: str | Sequence[str] | None = "0004"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
