@@ -5,7 +5,39 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    # Lowered from 10 while the existing backlog is drained; raise again once
+    # the open-PR count is back to single digits.
+    open-pull-requests-limit: 5
+    groups:
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+      # The three Cornerstone packages share a version line and only resolve
+      # when bumped together (core/tools/dicom-image-loader).
+      cornerstone:
+        patterns:
+          - "@cornerstonejs/*"
+    ignore:
+      # Majors that are deliberately held back. Each one has a tracking issue;
+      # remove the entry when the corresponding migration lands.
+      - dependency-name: "tailwind-merge"
+        # v3 drops Tailwind CSS v3 support and must land together with a
+        # Tailwind 4 migration. It declares no peerDependencies, so a bump
+        # installs cleanly and silently mis-resolves classes in cn().
+        versions: [">=3"]
+      - dependency-name: "eslint"
+        # Blocked upstream: eslint-plugin-jsx-a11y has no ESLint 10 support yet.
+        versions: [">=10"]
+      - dependency-name: "vite"
+        # Blocked by lovable-tagger, whose peer range is >=5.0.0 <8.0.0.
+        versions: [">=8"]
+      - dependency-name: "react-resizable-panels"
+        # v3+ renamed the named exports that src/components/ui/resizable.tsx uses.
+        versions: [">=3"]
+      - dependency-name: "@cornerstonejs/*"
+        # Needs a coordinated 4 -> 5 migration incl. vite.config.ts and
+        # scripts/bundle-cornerstone-worker.mjs.
+        versions: [">=5"]
 
   # Backend (pip)
   - package-ecosystem: pip
@@ -13,6 +45,18 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    groups:
+      # The SDK/exporter (1.4x) and instrumentation (0.6xb0) version lines are
+      # pinned to each other. Split across separate PRs every one of them is an
+      # unresolvable pip conflict, so they must move as a set.
+      opentelemetry:
+        patterns:
+          - "opentelemetry-*"
+      python-dev-tools:
+        patterns:
+          - "ruff"
+          - "mypy"
+          - "pytest*"
 
   # Segmenter microservice (pip)
   - package-ecosystem: pip
@@ -20,6 +64,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "pydicom"
+        # Pinned <3 on purpose: pydicom-seg (used by app/dicom_seg.py) imports
+        # SegmentationStorage via a pre-3.0 path and has no 3.0-compatible
+        # release. Blocked until pydicom-seg is replaced.
+        versions: [">=3"]
 
   # Documentation toolchain (pip)
   - package-ecosystem: pip
@@ -34,3 +84,7 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"

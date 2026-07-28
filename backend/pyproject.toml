@@ -6,6 +6,11 @@ target-version = "py311"
 select = ["E", "F", "W", "I", "UP"]
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+# Alembic generates every new revision from a template that imports `sqlalchemy as sa`
+# whether or not the revision body uses it. Without this, each new migration breaks CI.
+"migrations/versions/*" = ["F401"]
+
 [tool.ruff.format]
 quote-style = "double"
 
