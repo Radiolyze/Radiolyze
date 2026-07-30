@@ -42,6 +42,14 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt -r requirements-dev.txt
+      # ruff is pinned twice -- requirements-dev.txt and .pre-commit-config.yaml
+      # -- and Dependabot updates each from a different ecosystem, so the two
+      # bumps arrive as separate PRs and can land days apart. While they
+      # disagree, the hook reformats locally and CI rejects it (or vice versa)
+      # -- confusing enough that it is worth failing loudly here instead.
+      - name: Verify the ruff pin matches .pre-commit-config.yaml
+        working-directory: .
+        run: scripts/check-ruff-pin-sync.sh
       - run: ruff check .
       - run: ruff format --check .
       # mypy backlog (~96 pre-existing errors) predates this gate; report only

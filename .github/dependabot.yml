@@ -1,3 +1,6 @@
+# Review process, held-back majors and the pins that live outside Dependabot
+# are documented in docs/en/development/dependencies.md. Every `ignore` entry
+# below has a tracking issue; remove the entry in the PR that migrates it.
 version: 2
 updates:
   # Frontend (npm)
@@ -5,9 +8,9 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
-    # Lowered from 10 while the existing backlog is drained; raise again once
-    # the open-PR count is back to single digits.
-    open-pull-requests-limit: 5
+    # Was lowered to 5 while the backlog was drained. The backlog is drained,
+    # so this is back at the default width.
+    open-pull-requests-limit: 10
     groups:
       radix-ui:
         patterns:
@@ -86,5 +89,22 @@ updates:
     open-pull-requests-limit: 5
     groups:
       github-actions:
+        patterns:
+          - "*"
+
+  # Pre-commit hook revisions (.pre-commit-config.yaml)
+  #
+  # ruff is pinned twice -- here and in backend/requirements-dev.txt (the pip
+  # entry above) -- and the two arrive as separate PRs that can land days
+  # apart. A formatter skew between the hook and CI means the hook writes a
+  # file the pipeline then rejects, so scripts/check-ruff-pin-sync.sh fails the
+  # build while they disagree. Merge the two ruff PRs together.
+  - package-ecosystem: pre-commit
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      pre-commit:
         patterns:
           - "*"

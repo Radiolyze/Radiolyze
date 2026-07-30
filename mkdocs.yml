@@ -114,6 +114,7 @@ plugins:
             Development: Entwicklung
             Setup: Setup
             Contributing: Contributing
+            Dependencies: Dependency-Policy
             Testing: Testing
             Style Guide: Styleguide
             i18n: i18n
@@ -224,6 +225,7 @@ nav:
   - Development:
       - Setup: development/setup.md
       - Contributing: development/contributing.md
+      - Dependencies: development/dependencies.md
       - Testing: development/testing.md
       - Style Guide: development/styleguide.md
       - i18n: development/i18n.md
