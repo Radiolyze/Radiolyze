@@ -68,7 +68,7 @@ docs(compliance): FMEA-Tabelle zu risk-management.md hinzufügen
 ### TypeScript / Frontend
 
 - **Striktes TypeScript** — `strict: true`; kein `any` ohne Begründung
-- **Keine neuen Abhängigkeiten** ohne Team-Review
+- **Keine neuen Abhängigkeiten** ohne Team-Review. Für das *Upgrade* einer bestehenden Abhängigkeit siehe [Dependency-Policy](dependencies.md)
 - **Dark-Mode-kompatibel** — alle UI-Änderungen in hellem und dunklem Modus testen
 - **Barrierefreiheit** — Tastaturfokus muss sichtbar sein; interaktive Elemente müssen zugängliche Labels haben
 - **Kein PHI in Console-Logs** — `console.log(patientName)` ist niemals akzeptabel
@@ -148,6 +148,7 @@ python3 -m mkdocs build --strict
 
 - [Entwicklungssetup](setup.md)
 - [Styleguide](styleguide.md)
+- [Dependency-Policy](dependencies.md)
 - [Testing-Leitfaden](testing.md)
 - [ASR-Provider-Leitfaden](asr-providers.md)
 - [QA-Regeln-Leitfaden](qa-rules.md)

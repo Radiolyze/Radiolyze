@@ -81,7 +81,7 @@ Scope is optional but helpful: `viewer`, `reporting`, `qa`, `asr`, `inference`, 
 ### TypeScript / Frontend
 
 - **Strict TypeScript** — `strict: true` in `tsconfig.json`; no `any` without justification
-- **No new dependencies without team review** — check bundle size impact; prefer built-in or already-used libraries
+- **No new dependencies without team review** — check bundle size impact; prefer built-in or already-used libraries. For *upgrading* an existing dependency, see the [Dependency Policy](dependencies.md)
 - **Dark mode compatible** — test all UI changes in both light and dark mode
 - **Accessibility** — keyboard focus must be visible; interactive elements must have accessible labels
 - **No PHI in console logs** — `console.log(patientName)` is never acceptable
@@ -223,6 +223,7 @@ See [i18n Guide](i18n.md) for translation workflow.
 
 - [Development Setup](setup.md)
 - [Style Guide](styleguide.md)
+- [Dependency Policy](dependencies.md)
 - [Testing Guide](testing.md)
 - [i18n Guide](i18n.md)
 - [ASR Provider Guide](asr-providers.md)
