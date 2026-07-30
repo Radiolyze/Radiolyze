@@ -5,7 +5,7 @@ alembic==1.18.5
 pydantic==2.13.4
 python-multipart==0.0.32
 psycopg[binary]==3.3.4
-redis==8.0.1
+redis==8.1.0
 rq==2.10.0
 httpx==0.28.1
 pydicom==3.0.2
