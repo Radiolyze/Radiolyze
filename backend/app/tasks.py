@@ -15,11 +15,11 @@ from .inference_clients import (
     generate_localize_findings,
     generate_volume_inference_summary,
 )
-from .mock_logic import utc_now
 from .models import InferenceJob, Report, SegmentationJob
 from .queue import get_dead_letter_queue, get_queue_name
 from .tracing import get_tracer, traced_task
 from .utils.inference import build_image_metadata
+from .utils.time import format_datetime, utc_now
 from .ws_events import publish_report_status
 
 logger = logging.getLogger(__name__)
@@ -377,7 +377,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "summary": summary,
             "confidence": confidence,
             "model_version": resolved_model,
-            "completed_at": completed_at,
+            "completed_at": format_datetime(completed_at),
         }
     except Exception as exc:
         _handle_inference_failure(
@@ -503,7 +503,7 @@ def run_localize_job(payload: dict[str, Any]) -> dict[str, Any]:
             "summary": summary,
             "findings": findings,
             "model_version": resolved_model,
-            "completed_at": completed_at,
+            "completed_at": format_datetime(completed_at),
         }
     except Exception as exc:
         _handle_inference_failure(
@@ -649,7 +649,7 @@ def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "summary": summary,
             "confidence": confidence,
             "model_version": resolved_model,
-            "completed_at": completed_at,
+            "completed_at": format_datetime(completed_at),
         }
     except Exception as exc:
         _handle_inference_failure(
@@ -790,7 +790,7 @@ def run_comparison_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
             "summary": summary,
             "confidence": confidence,
             "model_version": resolved_model,
-            "completed_at": completed_at,
+            "completed_at": format_datetime(completed_at),
         }
     except Exception as exc:
         _handle_inference_failure(

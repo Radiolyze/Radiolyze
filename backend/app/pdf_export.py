@@ -27,6 +27,17 @@ except ImportError:
     _HAS_REPORTLAB = False
 
 
+def _short_timestamp(value: datetime | None) -> str:
+    """Second-precision ISO timestamp for the metadata table, or an em dash.
+
+    Keeps the ``YYYY-MM-DDTHH:MM:SS`` rendering the table had when the columns
+    were ISO strings sliced at 19 characters, so exported PDFs are unchanged.
+    """
+    if value is None:
+        return "—"
+    return value.isoformat()[:19]
+
+
 def build_pdf_export(report: Report) -> tuple[bytes, str]:
     """Generate a PDF document for a radiology report.
 
@@ -97,13 +108,13 @@ def build_pdf_export(report: Report) -> tuple[bytes, str]:
             "Status:",
             report.status.upper(),
             "Erstellt:",
-            report.created_at[:19] if report.created_at else "—",
+            _short_timestamp(report.created_at),
         ],
         [
             "Genehmigt von:",
             report.approved_by or "—",
             "Genehmigt am:",
-            report.approved_at[:19] if report.approved_at else "—",
+            _short_timestamp(report.approved_at),
         ],
         ["QA-Status:", report.qa_status.upper(), "Exportiert:", now_str],
     ]
@@ -161,7 +172,8 @@ def build_pdf_export(report: Report) -> tuple[bytes, str]:
         elements.append(Paragraph(f"Digital signiert von: {report.approved_by}", meta_style))
         elements.append(
             Paragraph(
-                f"Datum: {report.approved_at[:19] if report.approved_at else now_str}", meta_style
+                f"Datum: {_short_timestamp(report.approved_at) if report.approved_at else now_str}",
+                meta_style,
             )
         )
 

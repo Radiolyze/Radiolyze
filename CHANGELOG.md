@@ -51,6 +51,18 @@ for the full history.
 
 ### Changed
 
+- Every timestamp column is `timestamptz` instead of a `String` holding ISO
+  text (migration `0005_timestamps`, #102). Range queries and `ORDER BY` are
+  now temporal rather than lexicographic — the old comparison only agreed with
+  chronological order while every value was UTC, zero-padded and
+  same-precision, so a single row written with a `+02:00` offset sorted wrong
+  and drift windows counted it in the wrong period. Values are written with
+  `app.utils.time.utc_now()` and read back timezone-aware in UTC on both
+  PostgreSQL and SQLite. The API contract is unchanged: response timestamps
+  are still ISO-8601 strings with an explicit `+00:00` offset.
+- `utc_now()` moved from `app/mock_logic.py` to `app/utils/time.py` and returns
+  a `datetime` rather than a string. Every timestamp write in the backend goes
+  through it (#102).
 - Dates and times are no longer formatted with a hardcoded `de-DE` locale in
   `FindingsPanel`, `ReportDiffPanel`, `Dashboard`, `Monitoring` (chart axis and
   snapshot table) and the former `mockData` helpers — they follow the selected
@@ -74,6 +86,13 @@ for the full history.
   drained.
 - Renamed the package from the `vite_react_shadcn_ts` scaffold name to
   `radiolyze` and set an initial `0.1.0` version (was `0.0.0`).
+
+### Fixed
+
+- `GET /api/v1/inference/status/{job_id}` returned 500 for every job still
+  queued or started. The stuck-job check read `.tzinfo` off `queued_at`, which
+  was a `str`, so it raised `AttributeError` before it could compare anything.
+  Fixed by the timestamp migration above, and pinned by a test (#102).
 
 ### Security
 

@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 from ..audit import add_audit_event
 from ..deps import get_current_user, get_db, require_radiologist_or_admin
 from ..dicom_client import store_dicom_object
-from ..mock_logic import utc_now
 from ..models import SegmentationJob, User
 from ..schemas_segmentation import (
     PushToPacsResponse,
@@ -28,6 +27,7 @@ from ..segmentation_client import (
     stream_mesh,
 )
 from ..services import SegmentationService
+from ..utils.time import utc_now
 
 logger = logging.getLogger(__name__)
 

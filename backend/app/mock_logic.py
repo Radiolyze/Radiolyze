@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import random
-from datetime import UTC, datetime
 
 from .schemas import QACheck
 
@@ -18,10 +17,6 @@ INFERENCE_SUMMARIES = [
     "Rundherd rechts apikal, Verlaufskontrolle empfohlen.",
     "Hinweis auf degenerative Veraenderungen ohne Frakturzeichen.",
 ]
-
-
-def utc_now() -> str:
-    return datetime.now(UTC).isoformat()
 
 
 def generate_asr_transcript() -> tuple[str, float]:

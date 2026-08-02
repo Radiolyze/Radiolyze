@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from .utils.time import IsoDateTime
+
 SegmentationPreset = Literal["bone", "total"]
 SegmentationStatus = Literal["queued", "started", "running", "finished", "failed"]
 
@@ -18,7 +20,7 @@ class SegmentationCreateRequest(BaseModel):
 class SegmentationCreateResponse(BaseModel):
     job_id: str
     status: SegmentationStatus
-    queued_at: str
+    queued_at: IsoDateTime
     study_uid: str
     series_uid: str
     preset: SegmentationPreset
@@ -43,7 +45,7 @@ class SegmentationManifest(BaseModel):
     source: dict
     volume: dict
     labels: list[SegmentationLabel]
-    created_at: str | None = None
+    created_at: IsoDateTime | None = None
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -54,8 +56,8 @@ class SegmentationStatusResponse(BaseModel):
     preset: SegmentationPreset
     study_uid: str
     series_uid: str
-    queued_at: str | None = None
-    updated_at: str | None = None
+    queued_at: IsoDateTime | None = None
+    updated_at: IsoDateTime | None = None
     manifest: SegmentationManifest | None = None
     error: str | None = None
     dicom_seg_orthanc_url: str | None = None
@@ -64,4 +66,4 @@ class SegmentationStatusResponse(BaseModel):
 class PushToPacsResponse(BaseModel):
     job_id: str
     dicom_seg_orthanc_url: str
-    pushed_at: str
+    pushed_at: IsoDateTime

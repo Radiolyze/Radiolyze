@@ -59,3 +59,24 @@ Complete current list: [API Endpoints](../api/endpoints.md).
 
 - PostgreSQL for reports, audit events, and inference jobs
 - Redis for queuing and WebSocket events
+
+### Timestamps
+
+Every timestamp column is `timestamptz`, written and read through
+`app.utils.sqltypes.UTCDateTime`. Two rules follow from that:
+
+- **Write with `app.utils.time.utc_now()`**, which returns an aware UTC
+  `datetime`. Assigning a string to a timestamp column raises. `now_iso()` is
+  for payloads that are *not* columns — WebSocket envelopes, JSON metadata,
+  response fields with no model behind them.
+- **Values read back are always aware and always UTC**, on PostgreSQL and on
+  SQLite alike, so they can be compared and subtracted without re-tagging.
+
+The API contract is unaffected: response fields are declared
+`app.utils.time.IsoDateTime`, which serializes to an ISO-8601 string with an
+explicit `+00:00` offset — the same text these fields carried when the columns
+were `String`.
+
+These columns held ISO strings until #102. Comparisons were lexicographic,
+which matches chronological order only while every value is UTC, zero-padded
+and same-precision; date arithmetic and date-based indexes were unavailable.

@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..deps import get_db, require_admin
-from ..mock_logic import utc_now
 from ..models import QARule
+from ..utils.time import IsoDateTime, utc_now
 
 router = APIRouter()
 
@@ -44,8 +44,8 @@ class QARuleResponse(BaseModel):
     is_active: bool
     severity: str
     description: str | None = None
-    created_at: str
-    updated_at: str
+    created_at: IsoDateTime
+    updated_at: IsoDateTime
 
     class Config:
         populate_by_name = True

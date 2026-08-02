@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime
 from typing import Any
+
+from .time import ensure_utc
 
 
 def compute_input_hash(
@@ -78,7 +81,7 @@ def compute_audit_event_hash(
     actor_id: str | None,
     report_id: str | None,
     study_id: str | None,
-    timestamp: str,
+    timestamp: datetime | str,
     metadata: dict[str, Any] | None,
 ) -> str:
     """Hash-chain link for one audit event, binding it to its predecessor.
@@ -86,6 +89,15 @@ def compute_audit_event_hash(
     Any later change to a stored row (including its ``prev_hash``/``event_hash``
     themselves) makes this no longer reproduce the stored ``event_hash``, which
     is how ``app.audit.verify_audit_chain`` detects tampering.
+
+    ``timestamp`` is canonicalised as ``ensure_utc(...).isoformat()``, which is
+    exactly the string the column used to hold back when it was a ``String``
+    (every writer went through ``utc_now()``, so every value carried a
+    ``+00:00`` offset). That is what lets events written before the
+    ``timestamptz`` migration keep verifying afterwards — the migration
+    changes the storage type, not the hashed bytes. A ``str`` is still
+    accepted and hashed verbatim so a caller holding a raw stored value can
+    reproduce a hash without a parse step.
     """
     canonical = json.dumps(
         {
@@ -95,7 +107,9 @@ def compute_audit_event_hash(
             "actor_id": actor_id,
             "report_id": report_id,
             "study_id": study_id,
-            "timestamp": timestamp,
+            "timestamp": timestamp
+            if isinstance(timestamp, str)
+            else ensure_utc(timestamp).isoformat(),
             "metadata": metadata or {},
         },
         sort_keys=True,

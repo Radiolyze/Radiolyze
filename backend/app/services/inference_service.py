@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 from rq.exceptions import NoSuchJobError
@@ -98,7 +99,7 @@ class InferenceService:
         requested_by: str,
         model_version: str,
         input_hash: str | None,
-        queued_at: str,
+        queued_at: datetime,
         job_metadata: dict[str, Any],
         audit_event_type: str,
         audit_metadata: dict[str, Any],
@@ -176,7 +177,7 @@ class InferenceService:
     def build_response(
         job: Job,
         *,
-        queued_at: str,
+        queued_at: datetime,
         report_id: str | None,
         study_id: str | None,
         model_version: str,

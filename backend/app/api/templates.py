@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..deps import get_db, require_radiologist_or_admin
-from ..mock_logic import utc_now
 from ..models import PromptTemplate as ReportTemplateModel
+from ..utils.time import IsoDateTime, utc_now
 
 router = APIRouter()
 
@@ -51,8 +51,8 @@ class TemplateResponse(BaseModel):
     template_text: str = Field(alias="templateText")
     sections: list[str]
     is_active: bool
-    created_at: str
-    updated_at: str
+    created_at: IsoDateTime
+    updated_at: IsoDateTime
     fields_schema: dict | None = Field(default=None, alias="fieldsSchema")
 
     class Config:

@@ -1,9 +1,11 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
+from .utils.sqltypes import UTCDateTime
 
 
 def _new_uuid() -> str:
@@ -18,7 +20,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False, default="radiologist")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
 
 class Report(Base):
@@ -30,9 +32,9 @@ class Report(Base):
     status: Mapped[str] = mapped_column(String, nullable=False, default="pending", index=True)
     findings_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     impression_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
-    updated_at: Mapped[str] = mapped_column(String, nullable=False)
-    approved_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    approved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     approved_by: Mapped[str | None] = mapped_column(String, nullable=True)
     qa_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
     qa_warnings: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
@@ -50,7 +52,7 @@ class ReportRevision(Base):
     findings_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     impression_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     changed_by: Mapped[str | None] = mapped_column(String, nullable=True)
-    changed_at: Mapped[str] = mapped_column(String, nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     change_reason: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
@@ -64,7 +66,7 @@ class ReportComparison(Base):
     prior_study_uid: Mapped[str] = mapped_column(String, nullable=False)
     prior_series_uid: Mapped[str | None] = mapped_column(String, nullable=True)
     time_delta_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
 
 class QACheckResult(Base):
@@ -77,7 +79,7 @@ class QACheckResult(Base):
     warnings: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     failures: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     quality_score: Mapped[float | None] = mapped_column(nullable=True)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
 
 class QARule(Base):
@@ -90,8 +92,8 @@ class QARule(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     severity: Mapped[str] = mapped_column(String, nullable=False, default="warn")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
-    updated_at: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
 
 class AuditEvent(Base):
@@ -110,7 +112,7 @@ class AuditEvent(Base):
     actor_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     report_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     study_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
-    timestamp: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, index=True)
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
     prev_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     event_hash: Mapped[str] = mapped_column(String, nullable=False)
@@ -128,9 +130,9 @@ class InferenceJob(Base):
     summary_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    queued_at: Mapped[str] = mapped_column(String, nullable=False)
-    started_at: Mapped[str | None] = mapped_column(String, nullable=True)
-    completed_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    queued_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
 
 
@@ -148,8 +150,8 @@ class SegmentationJob(Base):
     manifest_json: Mapped[dict | None] = mapped_column("manifest", JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[str | None] = mapped_column(String, nullable=True)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
-    updated_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    updated_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     data_dir: Mapped[str | None] = mapped_column(String, nullable=True)
     # Orthanc URL of the archived DICOM SEG object (set after a successful
     # POST /api/v1/segmentation/jobs/{id}/push-to-pacs).
@@ -166,9 +168,9 @@ class CriticalFindingAlert(Base):
     finding_type: Mapped[str] = mapped_column(String, nullable=False)
     severity: Mapped[str] = mapped_column(String, nullable=False, default="critical")
     matched_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    notified_at: Mapped[str] = mapped_column(String, nullable=False)
+    notified_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     acknowledged_by: Mapped[str | None] = mapped_column(String, nullable=True)
-    acknowledged_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class PeerReview(Base):
@@ -184,15 +186,15 @@ class PeerReview(Base):
     review_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="requested")
     decision: Mapped[str | None] = mapped_column(String, nullable=True)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
-    completed_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class DriftSnapshot(Base):
     __tablename__ = "drift_snapshots"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_new_uuid)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     window_days: Mapped[int] = mapped_column(Integer, nullable=False)
     baseline_days: Mapped[int] = mapped_column(Integer, nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
@@ -209,8 +211,8 @@ class PromptTemplate(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_by: Mapped[str | None] = mapped_column(String, nullable=True)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
-    updated_at: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     # JSON Schema for structured reporting fields (optional)
     fields_schema: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     # Modality filter (e.g. "CT", "MR", "CR") for template selection
@@ -236,8 +238,8 @@ class Guideline(Base):
     # Comma-separated tags/keywords for FTS boosting
     keywords: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
-    updated_at: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     # Semantic embedding stored as JSON list[float].  Populated by embed_guideline task.
     embedding_vec: Mapped[list[float] | None] = mapped_column(JSON, nullable=True)
     # pending | done | failed | skip  (skip = no EMBEDDING_BASE_URL configured)
@@ -267,10 +269,10 @@ class Annotation(Base):
 
     # Metadata
     created_by: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
-    updated_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    updated_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     verified_by: Mapped[str | None] = mapped_column(String, nullable=True)
-    verified_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # DICOM context

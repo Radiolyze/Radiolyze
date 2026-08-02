@@ -14,7 +14,6 @@ import uuid
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..mock_logic import utc_now
 from ..models import InferenceJob, Report, ReportRevision
 from ..schemas import (
     ReportCreateRequest,
@@ -22,6 +21,7 @@ from ..schemas import (
     ReportResponse,
     ReportUpdateRequest,
 )
+from ..utils.time import utc_now
 from .exceptions import ConflictError, NotFoundError
 
 
@@ -101,7 +101,7 @@ class ReportService:
     @staticmethod
     def compute_etag(report: Report) -> str:
         """Compute an ETag from the report's updated_at timestamp."""
-        return hashlib.sha256(report.updated_at.encode()).hexdigest()[:16]
+        return hashlib.sha256(report.updated_at.isoformat().encode()).hexdigest()[:16]
 
     # ------------------------------------------------------------------
     # Queries

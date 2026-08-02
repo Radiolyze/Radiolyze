@@ -300,8 +300,8 @@ async def _run_startup(app: FastAPI) -> None:
     # Seed default admin user if none exists
     from .auth import hash_password, verify_password
     from .db import SessionLocal
-    from .mock_logic import utc_now
     from .models import User
+    from .utils.time import utc_now
 
     db = SessionLocal()
     try:

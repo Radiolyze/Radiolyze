@@ -25,7 +25,7 @@ from ..inference_clients import (
     generate_impression_text,
     transcribe_audio,
 )
-from ..mock_logic import run_qa_checks, utc_now
+from ..mock_logic import run_qa_checks
 from ..models import (
     CriticalFindingAlert,
     InferenceJob,
@@ -60,6 +60,7 @@ from ..services.exceptions import ConflictError, NotFoundError
 from ..sr import build_sr_export
 from ..utils.hashing import compute_bytes_hash, compute_input_hash, compute_text_hash
 from ..utils.inference import build_image_metadata, build_output_summary
+from ..utils.time import utc_now
 from ..ws_manager import broadcast_status
 
 router = APIRouter()

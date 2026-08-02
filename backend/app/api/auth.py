@@ -12,8 +12,8 @@ from ..auth import (
     verify_password,
 )
 from ..deps import get_current_user, get_db
-from ..mock_logic import utc_now
 from ..models import User
+from ..utils.time import IsoDateTime, utc_now
 
 router = APIRouter()
 
@@ -38,7 +38,7 @@ class UserResponse(BaseModel):
     username: str
     role: str
     is_active: bool
-    created_at: str
+    created_at: IsoDateTime
 
 
 class UserCreateRequest(BaseModel):

@@ -10,6 +10,7 @@ from .utils.sanitize import (
     MAX_IMPRESSION_LENGTH,
     sanitize_medical_text,
 )
+from .utils.time import IsoDateTime
 
 
 class ApiBaseModel(BaseModel):
@@ -73,9 +74,9 @@ class ReportResponse(ApiBaseModel):
     status: str
     findings_text: str
     impression_text: str
-    created_at: str
-    updated_at: str
-    approved_at: str | None = None
+    created_at: IsoDateTime
+    updated_at: IsoDateTime
+    approved_at: IsoDateTime | None = None
     approved_by: str | None = None
     qa_status: str
     qa_warnings: list[str]
@@ -85,13 +86,13 @@ class ReportResponse(ApiBaseModel):
     inference_confidence: float | None = None
     inference_model_version: str | None = None
     inference_job_id: str | None = None
-    inference_completed_at: str | None = None
+    inference_completed_at: IsoDateTime | None = None
 
 
 class ASRResponse(ApiBaseModel):
     text: str
     confidence: float
-    timestamp: str
+    timestamp: IsoDateTime
 
 
 class ImpressionRequest(ApiBaseModel):
@@ -105,7 +106,7 @@ class ImpressionResponse(ApiBaseModel):
     text: str
     confidence: float
     model: str
-    generated_at: str
+    generated_at: IsoDateTime
     metadata: dict[str, Any] | None = None
 
 
@@ -165,7 +166,7 @@ class InferenceQueueRequest(ApiBaseModel):
 class InferenceQueueResponse(ApiBaseModel):
     job_id: str
     status: str
-    queued_at: str
+    queued_at: IsoDateTime
     report_id: str | None = None
     study_id: str | None = None
     model_version: str
@@ -174,9 +175,9 @@ class InferenceQueueResponse(ApiBaseModel):
 class InferenceStatusResponse(ApiBaseModel):
     job_id: str
     status: str
-    queued_at: str | None = None
-    started_at: str | None = None
-    ended_at: str | None = None
+    queued_at: IsoDateTime | None = None
+    started_at: IsoDateTime | None = None
+    ended_at: IsoDateTime | None = None
     result: dict[str, Any] | None = None
     error: str | None = None
 
@@ -236,8 +237,8 @@ class PromptTemplateResponse(ApiBaseModel):
     is_active: bool = Field(alias="isActive")
     variables: list[str]
     created_by: str | None = Field(default=None, alias="createdBy")
-    created_at: str | None = Field(default=None, alias="createdAt")
-    updated_at: str | None = Field(default=None, alias="updatedAt")
+    created_at: IsoDateTime | None = Field(default=None, alias="createdAt")
+    updated_at: IsoDateTime | None = Field(default=None, alias="updatedAt")
     source: Literal["db", "env", "default"]
     default_text: str = Field(alias="defaultText")
     editable: bool
@@ -264,7 +265,7 @@ class ReportRevisionResponse(ApiBaseModel):
     findings_text: str
     impression_text: str
     changed_by: str | None = None
-    changed_at: str
+    changed_at: IsoDateTime
     change_reason: str | None = None
 
 
@@ -285,7 +286,7 @@ class ReportComparisonResponse(ApiBaseModel):
     prior_study_uid: str
     prior_series_uid: str | None = None
     time_delta_days: int | None = None
-    created_at: str
+    created_at: IsoDateTime
 
 
 # ---------------------------------------------------------------------------
@@ -299,9 +300,9 @@ class CriticalFindingAlertResponse(ApiBaseModel):
     finding_type: str
     severity: str
     matched_text: str | None = None
-    notified_at: str
+    notified_at: IsoDateTime
     acknowledged_by: str | None = None
-    acknowledged_at: str | None = None
+    acknowledged_at: IsoDateTime | None = None
 
 
 class CriticalFindingAcknowledgeRequest(ApiBaseModel):
@@ -342,8 +343,8 @@ class PeerReviewResponse(ApiBaseModel):
     review_comment: str | None = None
     status: str
     decision: str | None = None
-    created_at: str
-    completed_at: str | None = None
+    created_at: IsoDateTime
+    completed_at: IsoDateTime | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -360,7 +361,7 @@ class AuditEventRequest(ApiBaseModel):
     actor_id: str | None = Field(default=None, alias="actorId")
     report_id: str | None = Field(default=None, alias="reportId")
     study_id: str | None = Field(default=None, alias="studyId")
-    timestamp: str | None = None
+    timestamp: IsoDateTime | None = None
     metadata: dict[str, Any] | None = None
 
 
@@ -371,7 +372,7 @@ class AuditEventResponse(ApiBaseModel):
     actor_id: str | None = None
     report_id: str | None = None
     study_id: str | None = None
-    timestamp: str
+    timestamp: IsoDateTime
     metadata: dict[str, Any] | None = None
     prev_hash: str | None = None
     event_hash: str

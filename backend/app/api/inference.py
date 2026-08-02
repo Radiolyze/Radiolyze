@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import UTC
 
 from fastapi import APIRouter, Depends, HTTPException
 from rq.exceptions import NoSuchJobError
@@ -12,7 +11,6 @@ from starlette.concurrency import run_in_threadpool
 
 from ..audit import add_audit_event
 from ..deps import get_db, require_radiologist_or_admin
-from ..mock_logic import utc_now
 from ..models import InferenceJob, Report
 from ..queue import get_redis
 from ..schemas import (
@@ -38,7 +36,7 @@ from ..utils.hashing import (
     compute_volume_hash,
 )
 from ..utils.inference import build_image_metadata
-from ..utils.time import format_datetime
+from ..utils.time import format_datetime, utc_now
 from ..ws_manager import broadcast_status
 
 # Allowed base directories for image_paths (prevents path traversal)
@@ -551,16 +549,10 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
     if job_record:
         # Detect stuck jobs: started but no completion within timeout
         if job_record.status in ("queued", "started") and job_record.queued_at:
-            from datetime import datetime
-
             timeout_seconds = InferenceService.job_timeout()
-            now = datetime.now(UTC)
-            queued_at = (
-                job_record.queued_at
-                if job_record.queued_at.tzinfo
-                else job_record.queued_at.replace(tzinfo=UTC)
-            )
-            elapsed = (now - queued_at).total_seconds()
+            # queued_at is loaded through UTCDateTime, so it is always aware
+            # and always UTC — no re-tagging needed before subtracting.
+            elapsed = (utc_now() - job_record.queued_at).total_seconds()
             if elapsed > timeout_seconds:
                 job_record.status = "failed"
                 job_record.error_message = f"Job timed out after {timeout_seconds}s"
@@ -582,7 +574,7 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
                 "summary": job_record.summary_text,
                 "confidence": job_record.confidence,
                 "model_version": job_record.model_version,
-                "completed_at": job_record.completed_at,
+                "completed_at": format_datetime(job_record.completed_at),
                 "image_refs": image_refs,
                 "evidence_indices": evidence_indices,
                 "findings": findings,
@@ -591,9 +583,9 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
         return InferenceStatusResponse(
             job_id=job_record.id,
             status=job_record.status,
-            queued_at=format_datetime(job_record.queued_at),
-            started_at=format_datetime(job_record.started_at),
-            ended_at=format_datetime(job_record.completed_at),
+            queued_at=job_record.queued_at,
+            started_at=job_record.started_at,
+            ended_at=job_record.completed_at,
             result=result,
             error=job_record.error_message,
         )
@@ -615,9 +607,9 @@ def inference_status(job_id: str, db: Session = Depends(get_db)) -> InferenceSta
     return InferenceStatusResponse(
         job_id=job.id,
         status=job.get_status(),
-        queued_at=format_datetime(job.enqueued_at),
-        started_at=format_datetime(job.started_at),
-        ended_at=format_datetime(job.ended_at),
+        queued_at=job.enqueued_at,
+        started_at=job.started_at,
+        ended_at=job.ended_at,
         result=result,
         error=error,
     )
