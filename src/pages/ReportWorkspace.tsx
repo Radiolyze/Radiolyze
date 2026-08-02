@@ -13,7 +13,7 @@ import { ReportWorkspaceView } from "./ReportWorkspaceView";
 import { toast } from "sonner";
 import { auditLogger } from "@/services/auditLogger";
 import { reportClient } from "@/services/reportClient";
-import { formatDate } from "@/data/mockData";
+import { useDateFormat } from "@/hooks/useDateFormat";
 import { inferenceClient } from "@/services/inferenceClient";
 import { extractInferenceFindings, pollInferenceResult } from "@/hooks/reporting/inferenceHelpers";
 import { logger } from "@/lib/logger";
@@ -50,6 +50,7 @@ const computeDeltaDays = (currentDate?: string, priorDate?: string) => {
 };
 
 export const ReportWorkspace = () => {
+  const { formatDate } = useDateFormat();
   const { items: queueItemsRaw, isLoading: isQueueLoading, error: queueError } = useDicomWebQueue();
   // Defensive: when DICOMweb requests fail, ensure we never call .map on non-arrays.
   const queueItems = useMemo(
@@ -444,7 +445,7 @@ export const ReportWorkspace = () => {
         label: study.studyDescription,
         date: formatDate(study.studyDate),
       })),
-    [priorStudies],
+    [priorStudies, formatDate],
   );
 
   if (!report || !selectedQueueItem) {

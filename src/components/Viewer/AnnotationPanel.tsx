@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Trash2, Edit3, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export function AnnotationPanel({
   onAnnotationSelect,
   className,
 }: AnnotationPanelProps) {
+  const { t } = useTranslation("viewer");
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
@@ -112,11 +114,11 @@ export function AnnotationPanel({
 
   const handleDelete = useCallback(
     (ann: TrainingAnnotation) => {
-      if (confirm(`Annotation "${ann.label}" löschen?`)) {
+      if (confirm(t("annotations.confirmDelete", { label: ann.label }))) {
         deleteMutation.mutate(ann.id);
       }
     },
-    [deleteMutation],
+    [deleteMutation, t],
   );
 
   // Filter annotations for current frame
@@ -126,7 +128,7 @@ export function AnnotationPanel({
   if (!studyId || !seriesId) {
     return (
       <div className={cn("p-4 text-center text-muted-foreground", className)}>
-        Wählen Sie eine Serie aus
+        {t("annotations.selectSeries")}
       </div>
     );
   }

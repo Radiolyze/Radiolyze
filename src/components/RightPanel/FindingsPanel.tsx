@@ -7,6 +7,7 @@ import { useASR } from "@/hooks/useASR";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { ReportEditor } from "@/components/Forms/ReportEditor";
 import { cn } from "@/lib/utils";
+import { useDateFormat } from "@/hooks/useDateFormat";
 
 interface FindingsPanelProps {
   reportId?: string;
@@ -31,6 +32,7 @@ export function FindingsPanel({
 }: FindingsPanelProps) {
   const { t } = useTranslation("report");
   const { t: tCommon } = useTranslation("common");
+  const { formatTime } = useDateFormat();
   const [isEditing, setIsEditing] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,10 +45,7 @@ export function FindingsPanel({
     if (isRecording) {
       const result = await stopRecording();
       if (result) {
-        const timestamp = new Date().toLocaleTimeString("de-DE", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        const timestamp = formatTime(new Date());
         const newText = findings
           ? `${findings}\n\n[${timestamp}] ${result.text}`
           : `[${timestamp}] ${result.text}`;
@@ -55,7 +54,7 @@ export function FindingsPanel({
     } else {
       await startRecording();
     }
-  }, [isRecording, startRecording, stopRecording, findings, onFindingsChange]);
+  }, [isRecording, startRecording, stopRecording, findings, onFindingsChange, formatTime]);
 
   useKeyboardShortcuts({
     onToggleMic: handleMicClick,

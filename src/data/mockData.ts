@@ -329,39 +329,3 @@ export const mockGuidelines: Guideline[] = [
     source: "RSNA",
   },
 ];
-
-// Helper function to get age from date of birth
-export function getAge(dateOfBirth: string): number | null {
-  const birthDate = new Date(dateOfBirth);
-  if (Number.isNaN(birthDate.getTime())) {
-    return null;
-  }
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-}
-
-// Helper to format date
-export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-  return date.toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-// Helper to format time
-export function formatTime(dateString: string): string {
-  return new Date(dateString).toLocaleTimeString("de-DE", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}

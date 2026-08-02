@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { User, Calendar, Hash, Stethoscope } from "lucide-react";
 import type { Patient, Study } from "@/types/radiology";
-import { getAge, formatDate } from "@/data/mockData";
+import { getAge } from "@/lib/date";
+import { useDateFormat } from "@/hooks/useDateFormat";
 import { Badge } from "@/components/ui/badge";
 
 interface PatientCardProps {
@@ -11,6 +12,7 @@ interface PatientCardProps {
 
 export function PatientCard({ patient, study }: PatientCardProps) {
   const { t } = useTranslation("common");
+  const { formatDate } = useDateFormat();
   const age = getAge(patient.dateOfBirth);
 
   const genderLabel =

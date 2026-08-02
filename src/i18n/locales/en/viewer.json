@@ -141,5 +141,9 @@
       "finished": "Done",
       "failed": "Failed"
     }
+  },
+  "annotations": {
+    "selectSeries": "Select a series",
+    "confirmDelete": "Delete annotation \"{{label}}\"?"
   }
 }
