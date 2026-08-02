@@ -1,0 +1,79 @@
+{
+  "header": {
+    "title": "Training Data Export",
+    "badge": "Radiolyze Fine-Tuning",
+    "subtitle": "Export your annotations for Radiolyze fine-tuning"
+  },
+  "stats": {
+    "annotations": "Annotations",
+    "verifiedPercentage": "{{percent}}% verified",
+    "studiesAndSeries": "Studies & series",
+    "studies": "Studies",
+    "series": "Series",
+    "split": "Train/val split",
+    "training": "Training",
+    "validation": "Validation"
+  },
+  "formats": {
+    "title": "Export format",
+    "description": "Choose the format that suits your fine-tuning framework",
+    "coco": "Standard object detection format. Compatible with detectron2, MMDetection, YOLO.",
+    "huggingface": "JSONL dataset format for 🤗 Transformers and the datasets library.",
+    "radiolyze": "Radiolyze format for multimodal fine-tuning with LoRA."
+  },
+  "settings": {
+    "title": "Export settings",
+    "verifiedOnly": "Verified annotations only",
+    "verifiedOnlyHint": "Recommended for higher data quality",
+    "splitMin": "50% train",
+    "splitMax": "95% train",
+    "categories": "Filter categories (optional)",
+    "resetFilter": "Reset filter"
+  },
+  "dataCapture": {
+    "includeImages": "Include rendered images",
+    "includeImagesHint": "Adds PNGs and a manifest for data capture (larger ZIP file).",
+    "generateManifest": "Generate manifest",
+    "generatingManifest": "Generating manifest…",
+    "checkImages": "Check rendered images",
+    "downloadManifest": "Download manifest",
+    "downloadingManifest": "Downloading…",
+    "catalogCount_one": "{{count}} image in the catalogue",
+    "catalogCount_other": "{{count}} images in the catalogue",
+    "previewCount": "(preview: {{count}})",
+    "statusOk": "OK: {{count}}",
+    "statusError": "Errors: {{count}}",
+    "entryError": "error",
+    "moreEntries_one": "+ {{count}} more entry in the preview",
+    "moreEntries_other": "+ {{count}} more entries in the preview",
+    "errorListTitle": "Error list (preview)",
+    "fetchFailed": "Fetch failed",
+    "moreErrors_one": "+ {{count}} more error",
+    "moreErrors_other": "+ {{count}} more errors",
+    "manifestHint": "The ZIP contains images/manifest.json including hashes and status."
+  },
+  "export": {
+    "readyTitle": "Ready to export",
+    "readySummary_one": "{{count}} annotation in {{format}} format",
+    "readySummary_other": "{{count}} annotations in {{format}} format",
+    "action": "Export dataset",
+    "inProgress": "Exporting…",
+    "zipHint": "Note: the export ZIP contains a manifest at <code>images/manifest.json</code>."
+  },
+  "empty": {
+    "title": "No annotations yet",
+    "description": "Use the annotation tools in the viewer to create training data."
+  },
+  "toast": {
+    "exportSuccess": "Export successful",
+    "exportSuccessDescription": "The training dataset has been downloaded.",
+    "exportError": "Export failed",
+    "manifestReady": "Manifest generated",
+    "manifestReadyDescription_one": "{{count}} image in the data capture catalogue.",
+    "manifestReadyDescription_other": "{{count}} images in the data capture catalogue.",
+    "manifestError": "Manifest failed",
+    "manifestDownloaded": "Manifest downloaded",
+    "manifestDownloadError": "Manifest download failed",
+    "unknownError": "Unknown error"
+  }
+}

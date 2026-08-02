@@ -9,6 +9,7 @@ import deViewer from "./locales/de/viewer.json";
 import deBatch from "./locales/de/batch.json";
 import deSettings from "./locales/de/settings.json";
 import deErrors from "./locales/de/errors.json";
+import deTraining from "./locales/de/training.json";
 
 // English translations
 import enCommon from "./locales/en/common.json";
@@ -17,6 +18,7 @@ import enViewer from "./locales/en/viewer.json";
 import enBatch from "./locales/en/batch.json";
 import enSettings from "./locales/en/settings.json";
 import enErrors from "./locales/en/errors.json";
+import enTraining from "./locales/en/training.json";
 import { logger } from "@/lib/logger";
 
 export const defaultNS = "common";
@@ -28,6 +30,7 @@ export const resources = {
     batch: deBatch,
     settings: deSettings,
     errors: deErrors,
+    training: deTraining,
   },
   en: {
     common: enCommon,
@@ -36,6 +39,7 @@ export const resources = {
     batch: enBatch,
     settings: enSettings,
     errors: enErrors,
+    training: enTraining,
   },
 } as const;
 
@@ -63,7 +67,7 @@ i18n
     lng: getInitialLanguage(),
     fallbackLng: "en",
     defaultNS,
-    ns: ["common", "report", "viewer", "batch", "settings", "errors"],
+    ns: ["common", "report", "viewer", "batch", "settings", "errors", "training"],
 
     interpolation: {
       escapeValue: false, // React already escapes
