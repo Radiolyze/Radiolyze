@@ -10,7 +10,8 @@
     "unsavedChanges": "Unsaved changes",
     "analyzeImages": "AI Analysis",
     "analyzeImagesHint": "Analyze images and generate findings",
-    "analyzing": "Analyzing images..."
+    "analyzing": "Analyzing images...",
+    "recording": "Recording …"
   },
   "impression": {
     "title": "Impression",
@@ -148,5 +149,29 @@
     "findingsDiff": "Findings (diff)",
     "impressionDiff": "Impression (diff)",
     "noText": "No text available"
+  },
+  "comparisonAnalysis": {
+    "title": "Comparison with prior study",
+    "run": "Compare",
+    "running": "Running …",
+    "noPrior": "No prior study available.",
+    "confidence": "Confidence",
+    "evidence": {
+      "current": "C{{idx}}",
+      "prior": "P{{idx}}"
+    },
+    "trend": {
+      "worsened": "Worsened",
+      "improved": "Improved",
+      "mixed": "Mixed",
+      "stable": "Stable"
+    },
+    "status": {
+      "new": "New",
+      "progressed": "Progressed",
+      "stable": "Stable",
+      "regressed": "Regressed",
+      "resolved": "Resolved"
+    }
   }
 }

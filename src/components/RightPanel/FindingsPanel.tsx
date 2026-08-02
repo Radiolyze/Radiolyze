@@ -150,7 +150,7 @@ export function FindingsPanel({
       {isRecording && (
         <div className="px-4 py-2 bg-destructive/10 border-b border-destructive/20 flex items-center gap-2 text-sm text-destructive animate-fade-in">
           <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-          {t("findings.recording", "Aufnahme läuft...")}
+          {t("findings.recording")}
         </div>
       )}
 

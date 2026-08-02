@@ -10,7 +10,8 @@
     "unsavedChanges": "Ungespeicherte Änderungen",
     "analyzeImages": "KI-Analyse",
     "analyzeImagesHint": "Bilder analysieren und Befund generieren",
-    "analyzing": "Analysiere Bilder..."
+    "analyzing": "Analysiere Bilder...",
+    "recording": "Aufnahme läuft …"
   },
   "impression": {
     "title": "Beurteilung",
@@ -148,5 +149,29 @@
     "findingsDiff": "Befund (Diff)",
     "impressionDiff": "Beurteilung (Diff)",
     "noText": "Kein Text vorhanden"
+  },
+  "comparisonAnalysis": {
+    "title": "Vergleich mit Voruntersuchung",
+    "run": "Vergleichen",
+    "running": "Läuft …",
+    "noPrior": "Keine Voruntersuchung verfügbar.",
+    "confidence": "Konfidenz",
+    "evidence": {
+      "current": "A{{idx}}",
+      "prior": "V{{idx}}"
+    },
+    "trend": {
+      "worsened": "Verschlechtert",
+      "improved": "Verbessert",
+      "mixed": "Gemischt",
+      "stable": "Stabil"
+    },
+    "status": {
+      "new": "Neu",
+      "progressed": "Progredient",
+      "stable": "Stabil",
+      "regressed": "Regredient",
+      "resolved": "Rückgebildet"
+    }
   }
 }
