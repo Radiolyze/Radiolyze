@@ -110,9 +110,10 @@ jobs:
 
   e2e-frontend:
     runs-on: ubuntu-latest
-    # Non-blocking for now: only the mocked-network auth flow exists so far
-    # (see #116) - the real docker-stack-backed core workflow (study load ->
-    # AI findings -> QA -> finalize) is a separate, larger follow-up.
+    # Non-blocking for now: the suite covers auth and the core workflow
+    # (study load -> AI findings -> QA -> finalize) against a mocked network.
+    # Flip to blocking once it has proven stable over a few runs; the
+    # docker-stack-backed variant with real DICOM data stays open in #116.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
