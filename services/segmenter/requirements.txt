@@ -2,16 +2,16 @@ fastapi
 uvicorn[standard]
 httpx
 pydantic
-# pydicom-seg pulls SegmentationStorage from a pre-3.0 import path; pin
-# to the 2.x line until pydicom-seg ships a 3.0-compatible release.
-pydicom>=2.4.5,<3.0
+pydicom>=3.0.2,<4
 numpy<3
 SimpleITK>=2.5.5
 scikit-image>=0.26.0
 Pillow>=12.3.0
 trimesh>=4.12.2
 pygltflib>=1.16.5
-pydicom-seg>=0.4.1
+# DICOM SEG writer (app/dicom_seg.py). Replaced pydicom-seg, which is
+# unmaintained and never gained a pydicom 3 release.
+highdicom>=0.28.1
 # --- M2: TotalSegmentator (multi-organ) ---
 # torch arrives transitively via totalsegmentator; it is named here only to
 # hold a floor, NOT to pin. This is a lower bound, so two rebuilds a month

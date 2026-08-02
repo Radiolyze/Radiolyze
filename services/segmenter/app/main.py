@@ -100,11 +100,11 @@ def _totalseg_version() -> str | None:
         return None
 
 
-def _pydicom_seg_version() -> str | None:
+def _highdicom_version() -> str | None:
     try:
         from importlib.metadata import version
 
-        return version("pydicom-seg")
+        return version("highdicom")
     except Exception:
         return None
 
@@ -119,7 +119,7 @@ def health() -> dict:
         "status": "ok",
         "gpu": gpu_available(),
         "totalseg_version": version,
-        "pydicom_seg_version": _pydicom_seg_version(),
+        "highdicom_version": _highdicom_version(),
         "dicom_seg_enabled": dicom_seg_enabled(),
         "presets": presets,
     }
@@ -521,7 +521,7 @@ def dicom_seg_file(job_id: str, _: None = Depends(require_api_key)) -> FileRespo
         raise HTTPException(
             status_code=404,
             detail="DICOM SEG not available (job still running, "
-            "pydicom-seg missing, or SEG export disabled)",
+            "highdicom missing, or SEG export disabled)",
         )
     return FileResponse(
         candidate,

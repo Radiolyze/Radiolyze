@@ -159,10 +159,15 @@ bytes in glTF-encoded form ≈ 1 MB for the default settings.
 ## DICOM SEG export (M4)
 
 After the meshing pass the segmenter additionally writes a multi-class
-DICOM Segmentation IOD (`segmentation.dcm`) using `pydicom-seg`. The SEG
-references the original CT slices by SOP Instance UID, so any DICOM SEG-
-aware viewer (3D Slicer, OHIF, MITK, …) can overlay it on the source
+DICOM Segmentation IOD (`segmentation.dcm`) using [`highdicom`](https://github.com/ImagingDataCommons/highdicom).
+The SEG references the original CT slices by SOP Instance UID, so any DICOM
+SEG-aware viewer (3D Slicer, OHIF, MITK, …) can overlay it on the source
 study without re-running the pipeline.
+
+Segments are written as a mutually exclusive label map: where two labels
+overlap, the smaller structure wins (`app/dicom_seg.py:_order_masks`). Each
+segment carries its SNOMED CT type code and a recommended display colour
+derived from the label palette.
 
 The export is **opt-in at the user level**: the viewer's "An PACS senden" /
 "Send to PACS" button (visible only after a successful run with a manifest

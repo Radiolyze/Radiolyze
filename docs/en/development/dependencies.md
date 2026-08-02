@@ -56,7 +56,6 @@ issue, and the entry is removed when the migration lands. See the next section.
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` has no ESLint 10 support | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
 | `vite` | `<8` | `lovable-tagger` peer range caps Vite at `<8` | [#194](https://github.com/Radiolyze/Radiolyze/issues/194) |
 | `@cornerstonejs/*` | `<5` | Needs `vite.config.ts` and `scripts/bundle-cornerstone-worker.mjs` changes | [#195](https://github.com/Radiolyze/Radiolyze/issues/195) |
-| `pydicom` (segmenter) | `<3` | `pydicom-seg` imports `SegmentationStorage` from a pre-3.0 path and is unmaintained | [#199](https://github.com/Radiolyze/Radiolyze/issues/199) |
 
 `tailwind-merge` is the instructive one. Its v3 release drops Tailwind 3
 support, but it declares no `peerDependencies`, nothing about it is type-level,
@@ -65,9 +64,13 @@ green, and `cn()` starts mis-resolving class conflicts across the whole
 component library — visual regressions with no obvious culprit. That is why the
 ignore entry exists rather than a "be careful when reviewing" note.
 
-`pydicom` is the same shape in the segmenter: the import is lazy and the writer
-is stubbed in tests via `_set_writer_for_testing`, so a pydicom 3 bump breaks
-DICOM-SEG export at runtime while every test still passes.
+`pydicom` in the segmenter used to be the same shape, and is worth keeping in
+mind as a pattern even though the entry is gone: `pydicom-seg` capped it at
+`<3`, the writer import was lazy, and the tests stubbed the writer out — so a
+pydicom 3 bump would have broken DICOM SEG export at runtime with every test
+still green. Resolved in [#199](https://github.com/Radiolyze/Radiolyze/issues/199)
+by migrating to `highdicom`; the test now writes a real SEG and reads it back,
+so the same class of breakage fails a test instead.
 
 ---
 
