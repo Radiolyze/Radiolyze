@@ -34,9 +34,15 @@ npm run test
 # Watch mode (re-runs on file change)
 npm run test -- --watch
 
-# Coverage report
-npm run test -- --coverage
+# Coverage report, checked against the thresholds in vitest.config.ts
+npm run test:coverage
 ```
+
+Coverage counts every file under `src/` — not only the ones a test imports —
+excluding the vendored shadcn-ui primitives, mock fixtures and translation
+resources. The thresholds in `vitest.config.ts` are a **floor, not a target**:
+they sit just under current coverage so that CI fails when it slides back
+(see #115). Raise them as coverage grows.
 
 Tests live next to their source files (`*.test.ts` or `*.test.tsx`). Focus areas:
 
@@ -266,7 +272,7 @@ jobs:
         run: |
           npm ci
           npm run build
-          npm run test
+          npm run test:coverage
 
       - name: Backend unit tests
         run: |
