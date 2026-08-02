@@ -31,3 +31,53 @@ describe("translation resources", () => {
     expect(i18n.t("report:priorComparison.count", { count: 3 })).toBe("3 prior reports");
   });
 });
+
+describe("drift alert metric labels", () => {
+  // The identifiers the backend puts on each alert (backend/app/api/monitoring.py).
+  // They are dotted, so they resolve straight through the nesting under
+  // monitoring.alerts.metrics — a rename on either side breaks this test rather
+  // than silently rendering a raw identifier to the user.
+  const metrics = [
+    "inference.confidence_avg",
+    "inference.failure_rate",
+    "qa.pass_rate",
+    "qa.quality_score_avg",
+  ];
+
+  it.each(["de", "en"])("labels every backend drift metric in %s", async (lng) => {
+    await i18n.changeLanguage(lng);
+    for (const metric of metrics) {
+      const label = i18n.t(`common:monitoring.alerts.metrics.${metric}`, {
+        defaultValue: metric,
+      });
+      expect(label).not.toBe(metric);
+    }
+  });
+
+  it("falls back to the raw identifier for an unknown metric", async () => {
+    await i18n.changeLanguage("en");
+    expect(
+      i18n.t("common:monitoring.alerts.metrics.inference.made_up", {
+        defaultValue: "inference.made_up",
+      }),
+    ).toBe("inference.made_up");
+  });
+
+  it("resolves monitoring plurals in both languages", async () => {
+    await i18n.changeLanguage("de");
+    expect(i18n.t("common:monitoring.alerts.title", { count: 1 })).toBe("Aktive Drift-Warnung (1)");
+    expect(i18n.t("common:monitoring.alerts.title", { count: 2 })).toBe(
+      "Aktive Drift-Warnungen (2)",
+    );
+    expect(i18n.t("common:monitoring.history.subtitle", { count: 1 })).toBe(
+      "Basierend auf 1 gespeicherten Snapshot",
+    );
+
+    await i18n.changeLanguage("en");
+    expect(i18n.t("common:monitoring.alerts.title", { count: 1 })).toBe("Active drift alert (1)");
+    expect(i18n.t("common:monitoring.alerts.title", { count: 2 })).toBe("Active drift alerts (2)");
+    expect(i18n.t("common:monitoring.history.subtitle", { count: 2 })).toBe(
+      "Based on 2 saved snapshots",
+    );
+  });
+});
