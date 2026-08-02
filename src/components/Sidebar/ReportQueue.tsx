@@ -3,7 +3,7 @@ import { FileText, Clock, CheckCircle, Sparkles } from "lucide-react";
 import type { AIStatus, QueueItem } from "@/types/radiology";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { formatTime } from "@/data/mockData";
+import { useDateFormat } from "@/hooks/useDateFormat";
 
 interface ReportQueueProps {
   items: QueueItem[];
@@ -14,6 +14,7 @@ interface ReportQueueProps {
 export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueueProps) {
   const { t } = useTranslation("common");
   const { t: tReport } = useTranslation("report");
+  const { formatTime } = useDateFormat();
 
   const pendingCount = items.filter(
     (i) => i.report.status === "pending" || i.report.status === "in_progress",

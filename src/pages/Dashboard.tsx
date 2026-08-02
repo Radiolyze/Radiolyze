@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/services/apiClient";
+import { useDateFormat } from "@/hooks/useDateFormat";
 
 interface ServiceStatus {
   status: "ok" | "degraded" | "error" | "disabled";
@@ -97,6 +98,7 @@ function MetricCardSkeleton() {
 
 export default function Dashboard() {
   const { t } = useTranslation("common");
+  const { formatTime } = useDateFormat();
   const { data, isFetching, dataUpdatedAt, refetch } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
@@ -113,9 +115,6 @@ export default function Dashboard() {
   const metrics = data?.metrics ?? null;
   const loading = isFetching;
   const lastRefreshed = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
-
-  const formatTime = (date: Date) =>
-    date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="min-h-screen bg-background text-foreground p-6">
@@ -137,7 +136,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             {lastRefreshed && !loading && (
               <span className="text-xs text-muted-foreground animate-fade-in">
-                Aktualisiert um {formatTime(lastRefreshed)}
+                {t("time.updatedAt", { time: formatTime(lastRefreshed) })}
               </span>
             )}
             <Link to="/monitoring">

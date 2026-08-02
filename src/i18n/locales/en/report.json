@@ -132,5 +132,16 @@
     "promptSystem": "Prompt (system)",
     "promptTask": "Prompt (task)",
     "evidenceMissing": "Evidence missing"
+  },
+  "priorComparison": {
+    "title": "Compare prior report",
+    "count_one": "{{count}} prior report",
+    "count_other": "{{count}} prior reports",
+    "loading": "Loading prior reports…",
+    "empty": "No prior reports available.",
+    "select": "Select a prior report…",
+    "findingsDiff": "Findings (diff)",
+    "impressionDiff": "Impression (diff)",
+    "noText": "No text available"
   }
 }

@@ -69,7 +69,8 @@
     "monthsAgo": "{{count}} months ago",
     "yearsAgo": "{{count}} years ago",
     "justNow": "Just now",
-    "lastNDays": "Last {{count}} days"
+    "lastNDays": "Last {{count}} days",
+    "updatedAt": "Updated at {{time}}"
   },
   "patient": {
     "name": "Name",

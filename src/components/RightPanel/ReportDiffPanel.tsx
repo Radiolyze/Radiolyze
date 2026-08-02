@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { GitCompare } from "lucide-react";
 import type { ReportResponsePayload } from "@/services/reportClient";
 import { usePriorReports } from "@/hooks/usePriorReports";
+import { useDateFormat } from "@/hooks/useDateFormat";
 
 interface ReportDiffPanelProps {
   patientId: string | undefined;
@@ -71,10 +72,13 @@ function computeWordDiff(
 }
 
 function DiffView({ oldText, newText }: { oldText: string; newText: string }) {
+  const { t } = useTranslation("report");
   const segments = useMemo(() => computeWordDiff(oldText, newText), [oldText, newText]);
 
   if (!oldText && !newText) {
-    return <span className="text-muted-foreground text-sm italic">Kein Text vorhanden</span>;
+    return (
+      <span className="text-muted-foreground text-sm italic">{t("priorComparison.noText")}</span>
+    );
   }
 
   return (
@@ -107,6 +111,7 @@ export function ReportDiffPanel({
   currentImpression,
 }: ReportDiffPanelProps) {
   const { t } = useTranslation("report");
+  const { formatDate } = useDateFormat();
   const { priorReports, isLoading } = usePriorReports(patientId, currentReportId);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
@@ -121,19 +126,21 @@ export function ReportDiffPanel({
     <details className="border-t border-border">
       <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-accent/50 text-sm font-medium">
         <GitCompare className="w-4 h-4" />
-        Vorbefund vergleichen
+        {t("priorComparison.title")}
         {priorReports.length > 0 && (
           <span className="ml-auto text-xs text-muted-foreground">
-            {priorReports.length} Vorbefund{priorReports.length !== 1 ? "e" : ""}
+            {t("priorComparison.count", { count: priorReports.length })}
           </span>
         )}
       </summary>
 
       <div className="px-4 pb-4 space-y-3">
-        {isLoading && <p className="text-sm text-muted-foreground">Lade Vorbefunde…</p>}
+        {isLoading && (
+          <p className="text-sm text-muted-foreground">{t("priorComparison.loading")}</p>
+        )}
 
         {!isLoading && priorReports.length === 0 && (
-          <p className="text-sm text-muted-foreground">Keine Vorbefunde vorhanden.</p>
+          <p className="text-sm text-muted-foreground">{t("priorComparison.empty")}</p>
         )}
 
         {priorReports.length > 0 && (
@@ -142,10 +149,10 @@ export function ReportDiffPanel({
             value={selectedReportId ?? ""}
             onChange={(e) => setSelectedReportId(e.target.value || null)}
           >
-            <option value="">Vorbefund auswählen…</option>
+            <option value="">{t("priorComparison.select")}</option>
             {priorReports.map((r) => (
               <option key={r.id} value={r.id}>
-                {new Date(r.created_at).toLocaleDateString("de-DE")} – {r.status}
+                {formatDate(r.created_at)} – {r.status}
               </option>
             ))}
           </select>
@@ -155,13 +162,13 @@ export function ReportDiffPanel({
           <div className="space-y-4">
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wider">
-                Befund (Diff)
+                {t("priorComparison.findingsDiff")}
               </h4>
               <DiffView oldText={selectedReport.findings_text} newText={currentFindings} />
             </div>
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wider">
-                Beurteilung (Diff)
+                {t("priorComparison.impressionDiff")}
               </h4>
               <DiffView oldText={selectedReport.impression_text} newText={currentImpression} />
             </div>

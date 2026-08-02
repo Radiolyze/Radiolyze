@@ -30,8 +30,26 @@ for the full history.
   with, and its `JWT_SECRET_KEY` is deliberately the literal the backend
   rejects in production/staging.
 
+- `src/lib/date.ts`: the date and time formatting helpers, moved out of
+  `src/data/mockData.ts` (which is mock fixtures, not utilities) and extended
+  with `formatShortDate`/`formatDateTime`. Every helper formats in the language
+  the UI is currently showing and returns `—` for unparseable input (#117).
+- `src/hooks/useDateFormat.ts`: those helpers bound to the active language, so a
+  component re-renders and reformats its dates when the language changes.
+- `src/i18n/__tests__/resources.test.ts`: asserts that the German and English
+  resources carry the same keys in every namespace, so a translation added to
+  one language cannot silently go missing in the other.
+
 ### Changed
 
+- Dates and times are no longer formatted with a hardcoded `de-DE` locale in
+  `FindingsPanel`, `ReportDiffPanel`, `Dashboard`, `Monitoring` (chart axis and
+  snapshot table) and the former `mockData` helpers — they follow the selected
+  UI language, which previously stayed German whatever the language setting
+  said (#117).
+- `ReportDiffPanel` and `AnnotationPanel` render their user-facing text through
+  i18n instead of German literals; `ReportDiffPanel` held a `useTranslation`
+  handle it never used (#117).
 - `react-resizable-panels` 2.1.9 → 4.12.2 and the `src/components/ui/resizable.tsx`
   wrapper adapted to it: `PanelGroup` → `Group`, `PanelResizeHandle` →
   `Separator`, the group's `direction` prop → `orientation`, and the

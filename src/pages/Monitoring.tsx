@@ -40,6 +40,7 @@ import {
   type DriftSnapshot,
 } from "@/services/monitoringClient";
 import { cn } from "@/lib/utils";
+import { useDateFormat } from "@/hooks/useDateFormat";
 
 function fmt(value: number | null | undefined, decimals = 3): string {
   if (value == null) return "—";
@@ -116,8 +117,9 @@ function AlertCard({ alert }: { alert: { metric: string; delta: number; threshol
 }
 
 function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
+  const { formatShortDate } = useDateFormat();
   const data = [...snapshots].reverse().map((s) => ({
-    date: new Date(s.created_at).toLocaleDateString("de-DE", { month: "short", day: "numeric" }),
+    date: formatShortDate(s.created_at),
     confidence: s.payload.current.inference.confidence_avg,
     passRate: s.payload.current.qa.pass_rate != null ? s.payload.current.qa.pass_rate * 100 : null,
     alerts: s.payload.alerts.length,
@@ -184,6 +186,7 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
 
 export default function Monitoring() {
   const { t } = useTranslation("common");
+  const { formatDateTime } = useDateFormat();
   const [windowDays, setWindowDays] = useState(7);
   const [saving, setSaving] = useState(false);
 
@@ -441,9 +444,7 @@ export default function Monitoring() {
                           s.payload.alerts.length > 0 && "text-yellow-400",
                         )}
                       >
-                        <td className="py-2 pr-4 font-mono">
-                          {new Date(s.created_at).toLocaleString("de-DE")}
-                        </td>
+                        <td className="py-2 pr-4 font-mono">{formatDateTime(s.created_at)}</td>
                         <td className="text-right py-2 px-4">{s.window_days}d</td>
                         <td className="text-right py-2 px-4 font-mono">
                           {fmt(s.payload.current.inference.confidence_avg)}
