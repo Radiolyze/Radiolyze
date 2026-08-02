@@ -141,8 +141,22 @@ python3 -m mkdocs build --strict
 
 End-to-End-Tests steuern einen echten Browser. Zwei Stile leben nebeneinander in `e2e/`:
 
-- **Gemockte Flows** (z. B. `e2e/auth.spec.ts`) täuschen Backend-Antworten per `page.route(...)` vor, statt einen laufenden Stack vorauszusetzen. Schnell, deterministisch, laufen non-blocking in CI (`e2e-frontend`-Job) bei jedem Push/PR.
-- **Full-Stack-Flows** (geplant — siehe Szenarien unten) steuern das echte Backend/DB/Orthanc über `docker compose`, für Workflows, die echte Daten brauchen (DICOM-Viewer, ASR, KI-Inferenz, QA).
+- **Gemockte Flows** (`e2e/auth.spec.ts`, `e2e/workflow.spec.ts`) täuschen Backend-Antworten per `page.route(...)` vor, statt einen laufenden Stack vorauszusetzen. Schnell, deterministisch, laufen als blockierender CI-Job (`e2e-frontend`) bei jedem Push/PR.
+- **Full-Stack-Flows** (geplant — siehe Szenarien unten) steuern das echte Backend/DB/Orthanc über `docker compose`, für Workflows, die echte Pixeldaten brauchen (DICOM-Viewer-Scrolling und -Windowing, ASR).
+
+### Gemockte Specs
+
+`e2e/support/` enthält die gemeinsame Basis der gemockten Specs:
+
+- `fixtures.ts` — DICOM-JSON-Datensätze für Studien/Serien/Instanzen sowie Report-Payloads. Die Formen bilden ab, was Orthancs DICOMweb-Endpunkte und `/api/v1/reports` liefern, sodass `dicomWebMapping.ts` und `reportMapping.ts` unverändert darauf laufen.
+- `mockBackend.ts` — `mockWorkflowBackend(page, options)` installiert die Routen für DICOMweb, Reports, QA und Inferenz. Der Mock hält lebenden Report-Zustand (verändert durch `PATCH` und Finalize) und protokolliert die abgesetzten Requests, sodass eine Spec sowohl auf das Gerenderte als auch auf den erzeugten Request prüfen kann.
+
+Das Report-Wire-Format ist bewusst in `fixtures.ts` deklariert und nicht aus `src/services/reportClient.ts` importiert: Diese Specs sind Black-Box-Clients des HTTP-Vertrags und sollen fehlschlagen, wenn sich das *Wire-Format* ändert — nicht, wenn ein interner Typ umbenannt wird.
+
+Zwei Verhaltensweisen sind beim Lesen der Specs wichtig:
+
+- **Inferenz dauert einige Sekunden.** Unter `page.route` ist kein WebSocket verbunden, daher fällt `awaitInferenceResult` nach ~4 s auf HTTP-Polling zurück — derselbe Pfad, den ein echtes Deployment bei ausgefallenem Socket nimmt. Wegen dieses Fallbacks hebt `playwright.config.ts` das Test-Timeout über Playwrights 30-s-Default.
+- **Pixeldaten werden nicht ausgeliefert.** WADO-RS-Frame-Requests antworten mit 404. Der Workflow braucht die Instanz*liste* (daraus entstehen die an die Inferenz gesendeten Image-Referenzen), und Cornerstone toleriert die fehlenden Pixel.
 
 ### Einrichtung
 
@@ -164,21 +178,63 @@ E2E_BASE_URL=http://localhost:5173 npm run e2e
 
 # Mit UI (headed mode für Debugging)
 npx playwright test --headed
+
+# Eine einzelne Spec ausführen
+npx playwright test e2e/workflow.spec.ts
 ```
 
-### Wichtige zu abdeckende Szenarien
+### Heute abgedeckt
 
-`e2e/auth.spec.ts` deckt heute das Login-Formular, ungültige Zugangsdaten und den 401-Redirect-Routenschutz ab. Die folgenden Szenarien brauchen ein echtes Backend (mit Orthanc geseedete Studiendaten, Inferenz-/QA-Pipeline) und sind Folgearbeit:
-
-| Testszenario | Warum |
+| Testszenario | Spec |
 |---|---|
-| Login → Studie öffnen → Bericht freigeben | Golden Path — muss immer bestehen |
-| ASR auslösen → Transkript in Befund sehen | Kern-Diktat-Workflow |
-| KI-Impression generieren → Evidence-Indices leuchten auf | KI-Integration |
-| QA-Fehler blockiert Freigabe | Sicherheitskritisch |
-| Kritischer-Befund-Alarm erscheint | Sicherheitskritisch |
-| Tastaturkürzel `Ctrl+Enter` öffnet Freigabe-Dialog | Kern-UX |
-| Batch-Warteschlange: Freigabe → automatisch nächste Studie | Batch-Workflow |
+| Login-Formular, ungültige Zugangsdaten, 401-Redirect-Routenschutz | `e2e/auth.spec.ts` |
+| Studienauswahl lädt Serien, Report und Viewer-Stack | `e2e/workflow.spec.ts` |
+| KI-Analyse füllt Befund und Impression, danach QA | `e2e/workflow.spec.ts` |
+| Bearbeitete Befunde werden persistiert und speisen die Impression | `e2e/workflow.spec.ts` |
+| QA-Warnungen erscheinen, ohne die Freigabe zu blockieren | `e2e/workflow.spec.ts` |
+| Freigabe finalisiert den Report mit Unterschrift | `e2e/workflow.spec.ts` |
+| Fehlgeschlagener Inferenz-Job lässt den Report nicht freigebbar | `e2e/workflow.spec.ts` |
+
+### Noch offen
+
+Diese Szenarien brauchen echte Pixeldaten oder Dienste, für die der gemockte Aufbau bewusst nicht einspringt:
+
+| Testszenario | Warum | Voraussetzung |
+|---|---|---|
+| DICOM-Viewer: Stack scrollen, Window/Level | Kern-Viewing-UX | Orthanc mit echten DICOM-Daten |
+| ASR auslösen → Transkript in Befund sehen | Kern-Diktat-Workflow | ASR-Dienst |
+| QA-*Fehler* blockiert Freigabe | Sicherheitskritisch | Backend-QA-Regeln, die fehlschlagen können |
+| Kritischer-Befund-Alarm erscheint | Sicherheitskritisch | Inferenz-Ausgabe mit kritischem Label |
+| Tastaturkürzel `Ctrl+Enter` öffnet Freigabe-Dialog | Kern-UX | — |
+| Batch-Warteschlange: Freigabe → automatisch nächste Studie | Batch-Workflow | — |
+
+### Eine neue gemockte Spec schreiben
+
+```typescript
+import { test, expect } from "@playwright/test";
+import { STUDY_CT, reportIdForStudy } from "./support/fixtures";
+import { mockWorkflowBackend, pinEnglishLocale } from "./support/mockBackend";
+
+test("stellt Inferenz für die gewählte Studie in die Queue", async ({ page }) => {
+  await pinEnglishLocale(page);
+  const backend = await mockWorkflowBackend(page, {
+    inference: { summary: "Small left pleural effusion." },
+    qa: { passes: true },
+  });
+
+  await page.goto("/");
+  await page.getByRole("complementary").nth(1).getByRole("button", { name: "AI Analysis" }).click();
+
+  // Prüfen, was der Nutzer sieht ...
+  await expect(page.getByText("Passed")).toBeVisible();
+  // ... und welchen Request die UI tatsächlich erzeugt hat.
+  expect(backend.calls.inferenceQueue[0].body?.report_id).toBe(reportIdForStudy(STUDY_CT));
+});
+```
+
+`pinEnglishLocale` ist wichtig: `useUserPreferences` setzt `uiLanguage` per Default auf `de` und wendet das beim Mount an — ohne den Aufruf hinge die Sprache in den Assertions von der Navigationsreihenfolge ab.
+
+Am stabilsten lassen sich Locator über die Layout-Landmarks eingrenzen: `getByRole("main")` ist der Viewer, `getByRole("complementary").first()` die linke Sidebar, `.nth(1)` das Report-Panel.
 
 ---
 
