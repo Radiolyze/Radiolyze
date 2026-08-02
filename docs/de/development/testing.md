@@ -34,9 +34,16 @@ npm run test
 # Watch-Modus
 npm run test -- --watch
 
-# Coverage-Bericht
-npm run test -- --coverage
+# Coverage-Bericht, geprüft gegen die Schwellwerte in vitest.config.ts
+npm run test:coverage
 ```
+
+Die Coverage erfasst alle Dateien unter `src/` — nicht nur die, die ein Test
+importiert — ausgenommen die vendorten shadcn-ui-Primitives, Mock-Fixtures und
+Übersetzungsressourcen. Die Schwellwerte in `vitest.config.ts` sind eine
+**Untergrenze, kein Ziel**: Sie liegen knapp unter der aktuellen Coverage, damit
+CI fehlschlägt, wenn sie zurückfällt (siehe #115). Mit wachsender Abdeckung
+sollten sie angehoben werden.
 
 Tests liegen neben ihren Quelldateien (`*.test.ts` oder `*.test.tsx`). Schwerpunktbereiche:
 
