@@ -21,9 +21,19 @@ for the full history.
   separate PRs, so they have to be merged together.
 - A `pre-commit` Dependabot ecosystem, so hook revisions in
   `.pre-commit-config.yaml` are kept current instead of silently rotting.
+- `src/components/ui/__tests__/resizable.test.tsx`: pins the
+  react-resizable-panels contract the resizable wrapper is built on, so a
+  future rename fails a test instead of silently dropping the handle.
 
 ### Changed
 
+- `react-resizable-panels` 2.1.9 → 4.12.2 and the `src/components/ui/resizable.tsx`
+  wrapper adapted to it: `PanelGroup` → `Group`, `PanelResizeHandle` →
+  `Separator`, the group's `direction` prop → `orientation`, and the
+  orientation-dependent handle styles moved from the removed
+  `data-panel-group-direction` attribute to `aria-orientation`. Panel sizes in
+  `DicomViewer` are now percentage strings — v4 reads bare numbers as pixels.
+  The Dependabot ignore entry for the package is gone (#198).
 - Drained the Dependabot backlog: the Radix UI set, lucide-react,
   @hookform/resolvers, esbuild, the Cornerstone 4.x set, FastAPI, uvicorn,
   ruff, mypy, fakeredis, mkdocs-material, the segmenter version floors, and

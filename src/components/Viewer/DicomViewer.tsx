@@ -437,12 +437,14 @@ export function DicomViewer({
   // If annotation panel is enabled, show it in a resizable layout
   if (showAnnotationPanel && isAnnotationMode) {
     return (
-      <ResizablePanelGroup direction="horizontal" className="h-full">
-        <ResizablePanel defaultSize={75} minSize={50}>
+      <ResizablePanelGroup orientation="horizontal" className="h-full">
+        {/* Sizes are strings so they stay percentages — react-resizable-panels v4
+            interprets bare numbers as pixels. */}
+        <ResizablePanel defaultSize="75%" minSize="50%">
           {viewerContent}
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
+        <ResizablePanel defaultSize="25%" minSize="15%" maxSize="40%">
           <AnnotationPanel
             studyId={series.studyId}
             seriesId={series.id}
