@@ -49,8 +49,23 @@ for the full history.
   so a regression fails the build; they count every file under `src/` rather
   than only the ones a test imports (#115).
 
+- `src/components/RightPanel/__tests__/GuidelinesPanel.test.tsx`: pins the
+  panel's search behaviour — nothing fetched while collapsed, the findings
+  context used as the opening search, one request per settled search term
+  rather than one per keystroke, and previous hits kept on screen while the
+  next search is in flight (#113).
+
 ### Changed
 
+- `GuidelinesPanel` and `PromptSettings` fetch through `@tanstack/react-query`
+  instead of `useEffect` plus hand-rolled loading/error state, so both get the
+  retry, caching and request dedup the rest of the app already had (#113).
+  `GuidelinesPanel` no longer fires a second search immediately after the first
+  one lands, and `PromptSettings` keeps unsaved edits as overrides on top of
+  the server state, so a background refetch cannot overwrite what someone is
+  typing.
+- The user-facing text in `GuidelinesPanel` goes through i18n rather than German
+  literals (#117).
 - Dates and times are no longer formatted with a hardcoded `de-DE` locale in
   `FindingsPanel`, `ReportDiffPanel`, `Dashboard`, `Monitoring` (chart axis and
   snapshot table) and the former `mockData` helpers — they follow the selected

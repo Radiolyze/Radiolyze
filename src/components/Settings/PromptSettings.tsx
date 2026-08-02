@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw, Save, Sparkles, RotateCcw, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,43 +20,34 @@ const promptOrder: PromptType[] = ["system", "summary", "impression"];
 const renderPreview = (templateText: string, findingsSample: string) =>
   templateText.replace(/{{\s*findings_text\s*}}/g, findingsSample || "");
 
+const PROMPTS_QUERY_KEY = ["prompts"] as const;
+
 export function PromptSettings() {
   const { t } = useTranslation("settings");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState<PromptType | null>(null);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<PromptType>("summary");
-  const [promptData, setPromptData] = useState<PromptList | null>(null);
-  const [drafts, setDrafts] = useState<Record<PromptType, string>>({
-    system: "",
-    summary: "",
-    impression: "",
-  });
+  // Unsaved edits only. Anything not in here shows the server's text, so a
+  // refetch cannot silently overwrite what someone is typing.
+  const [drafts, setDrafts] = useState<Partial<Record<PromptType, string>>>({});
   const [sampleFindings, setSampleFindings] = useState(t("prompts.sampleFindingsDefault"));
 
-  const loadPrompts = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await promptClient.listPrompts();
-      setPromptData(response);
-      setDrafts({
-        system:
-          response.prompts.find((prompt) => prompt.promptType === "system")?.templateText ?? "",
-        summary:
-          response.prompts.find((prompt) => prompt.promptType === "summary")?.templateText ?? "",
-        impression:
-          response.prompts.find((prompt) => prompt.promptType === "impression")?.templateText ?? "",
-      });
-    } catch (error) {
-      logger.warn("Failed to load prompt templates", error);
-      toast.error(t("prompts.loadError"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [t]);
+  const {
+    data: promptData,
+    isPending: isLoading,
+    error,
+  } = useQuery({
+    queryKey: PROMPTS_QUERY_KEY,
+    queryFn: () => promptClient.listPrompts(),
+  });
 
+  // Reporting the failure is a side effect of it happening, so it belongs in an
+  // effect — keyed on the error object so a retry that fails again re-reports,
+  // while a re-render for any other reason does not.
   useEffect(() => {
-    loadPrompts();
-  }, [loadPrompts]);
+    if (!error) return;
+    logger.warn("Failed to load prompt templates", error);
+    toast.error(t("prompts.loadError"));
+  }, [error, t]);
 
   const promptsByType = useMemo(() => {
     const map: Record<PromptType, PromptTemplate | null> = {
@@ -69,10 +61,50 @@ export function PromptSettings() {
     return map;
   }, [promptData]);
 
+  const textFor = useCallback(
+    (promptType: PromptType) => drafts[promptType] ?? promptsByType[promptType]?.templateText ?? "",
+    [drafts, promptsByType],
+  );
+
   const currentPrompt = promptsByType[activeTab];
-  const currentDraft = drafts[activeTab];
+  const currentDraft = textFor(activeTab);
   const editable = promptData?.editable ?? false;
   const maxLength = promptData?.maxLength ?? currentPrompt?.maxLength ?? 4000;
+
+  const saveMutation = useMutation({
+    mutationFn: (promptType: PromptType) => {
+      const prompt = promptsByType[promptType];
+      return promptClient.updatePrompt(promptType, {
+        templateText: textFor(promptType),
+        name: prompt?.name ?? "",
+      });
+    },
+    onSuccess: (updated, promptType) => {
+      queryClient.setQueryData<PromptList>(PROMPTS_QUERY_KEY, (previous) =>
+        previous
+          ? {
+              ...previous,
+              prompts: previous.prompts.map((prompt) =>
+                prompt.promptType === promptType ? updated : prompt,
+              ),
+            }
+          : previous,
+      );
+      // The draft has landed on the server — drop it and show the stored text.
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[promptType];
+        return next;
+      });
+      toast.success(t("prompts.saveSuccess"));
+    },
+    onError: (error) => {
+      logger.warn("Prompt update failed", error);
+      toast.error(t("prompts.saveError"));
+    },
+  });
+
+  const isSaving = saveMutation.isPending ? saveMutation.variables : null;
 
   const isDirty = currentPrompt ? currentDraft !== currentPrompt.templateText : false;
   const hasValidLength = currentDraft.length > 0 && currentDraft.length <= maxLength;
@@ -83,34 +115,16 @@ export function PromptSettings() {
     setDrafts((prev) => ({ ...prev, [activeTab]: currentPrompt.defaultText }));
   }, [activeTab, currentPrompt]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     if (!currentPrompt) return;
-    setIsSaving(activeTab);
-    try {
-      const updated = await promptClient.updatePrompt(activeTab, {
-        templateText: currentDraft,
-        name: currentPrompt.name,
-      });
-      setPromptData((prev) => {
-        if (!prev) return prev;
-        const prompts = prev.prompts.map((prompt) =>
-          prompt.promptType === activeTab ? updated : prompt,
-        );
-        return { ...prev, prompts };
-      });
-      setDrafts((prev) => ({ ...prev, [activeTab]: updated.templateText }));
-      toast.success(t("prompts.saveSuccess"));
-    } catch (error) {
-      logger.warn("Prompt update failed", error);
-      toast.error(t("prompts.saveError"));
-    } finally {
-      setIsSaving(null);
-    }
-  }, [activeTab, currentDraft, currentPrompt, t]);
+    saveMutation.mutate(activeTab);
+  }, [activeTab, currentPrompt, saveMutation]);
 
   const handleReload = useCallback(() => {
-    loadPrompts();
-  }, [loadPrompts]);
+    // An explicit reload discards unsaved edits, as it did before.
+    setDrafts({});
+    queryClient.invalidateQueries({ queryKey: PROMPTS_QUERY_KEY });
+  }, [queryClient]);
 
   return (
     <Card>
@@ -171,7 +185,7 @@ export function PromptSettings() {
                   <div className="space-y-2">
                     <Label>{t("prompts.promptLabel")}</Label>
                     <Textarea
-                      value={drafts[promptType]}
+                      value={textFor(promptType)}
                       onChange={(event) =>
                         setDrafts((prev) => ({ ...prev, [promptType]: event.target.value }))
                       }
@@ -179,7 +193,7 @@ export function PromptSettings() {
                       disabled={!editable || isLoading}
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{t("prompts.length", { count: drafts[promptType].length })}</span>
+                      <span>{t("prompts.length", { count: textFor(promptType).length })}</span>
                       {(promptData?.allowedVariables?.[promptType]?.length ?? 0) > 0 && (
                         <span>
                           {t("prompts.allowedVariables")}:{" "}
@@ -224,7 +238,7 @@ export function PromptSettings() {
                       placeholder={t("prompts.sampleFindingsPlaceholder")}
                     />
                     <div className="rounded-md border border-border bg-muted/30 p-3 text-xs whitespace-pre-wrap">
-                      {renderPreview(drafts[promptType], sampleFindings)}
+                      {renderPreview(textFor(promptType), sampleFindings)}
                     </div>
                   </div>
                 </>
