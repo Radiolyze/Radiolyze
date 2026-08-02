@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..audit import add_audit_event
 from ..deps import get_db, require_radiologist_or_admin
 from ..models import Annotation
-from ..utils.time import now_iso
+from ..utils.time import IsoDateTime, utc_now
 
 router = APIRouter()
 
@@ -96,10 +96,10 @@ class AnnotationResponse(BaseModel):
     anatomical_region: str | None = Field(default=None, alias="anatomicalRegion")
     laterality: str | None = None
     created_by: str = Field(alias="createdBy")
-    created_at: str = Field(alias="createdAt")
-    updated_at: str | None = Field(default=None, alias="updatedAt")
+    created_at: IsoDateTime = Field(alias="createdAt")
+    updated_at: IsoDateTime | None = Field(default=None, alias="updatedAt")
     verified_by: str | None = Field(default=None, alias="verifiedBy")
-    verified_at: str | None = Field(default=None, alias="verifiedAt")
+    verified_at: IsoDateTime | None = Field(default=None, alias="verifiedAt")
     cornerstone_annotation_uid: str | None = Field(default=None, alias="cornerstoneAnnotationUID")
 
     class Config:
@@ -143,7 +143,7 @@ def create_annotation(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> AnnotationResponse:
-    now = now_iso()
+    now = utc_now()
     geometry = {
         "handles": [h.model_dump() for h in payload.handles],
     }
@@ -250,7 +250,7 @@ def update_annotation(
             geometry["bounding_box"] = payload.bounding_box.model_dump()
         ann.geometry_json = geometry
 
-    ann.updated_at = now_iso()
+    ann.updated_at = utc_now()
     db.commit()
     db.refresh(ann)
 
@@ -302,7 +302,7 @@ def verify_annotation(
     if not ann:
         raise HTTPException(status_code=404, detail="Annotation not found")
 
-    now = now_iso()
+    now = utc_now()
     ann.verified_by = payload.actor_id
     ann.verified_at = now
     ann.updated_at = now

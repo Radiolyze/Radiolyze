@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from .mock_logic import utc_now
 from .models import AuditEvent
 from .utils.hashing import compute_audit_event_hash
+from .utils.time import parse_datetime, utc_now
 
 
 def add_audit_event(
@@ -18,7 +19,7 @@ def add_audit_event(
     report_id: str | None = None,
     study_id: str | None = None,
     metadata: dict[str, Any] | None = None,
-    timestamp: str | None = None,
+    timestamp: datetime | str | None = None,
     source: str | None = None,
 ) -> AuditEvent:
     """Append a new tamper-evident audit event.
@@ -37,7 +38,10 @@ def add_audit_event(
     if source and "source" not in metadata_payload:
         metadata_payload["source"] = source
 
-    event_timestamp = timestamp or utc_now()
+    # A caller may still hand in an ISO string (the audit-log endpoint takes
+    # one from the client); parse it so the column always receives a datetime,
+    # and fall back to now for anything unparseable rather than 500.
+    event_timestamp = parse_datetime(timestamp) or utc_now()
 
     last_event = db.query(AuditEvent).order_by(AuditEvent.seq.desc()).first()
     seq = (last_event.seq + 1) if last_event else 1

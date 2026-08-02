@@ -8,8 +8,8 @@ from typing import Any
 
 import redis.asyncio as redis_async
 
-from .mock_logic import utc_now
 from .queue import get_redis, get_redis_url
+from .utils.time import now_iso
 from .ws import ConnectionManager
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,9 @@ def publish_report_status(report_id: str | None, payload: dict[str, Any]) -> Non
         "type": "report_status",
         "reportId": report_id,
         "payload": payload,
-        "timestamp": utc_now(),
+        # An envelope field, not a column — this goes straight through
+        # json.dumps, so it has to be a string.
+        "timestamp": now_iso(),
     }
     try:
         get_redis().publish(get_ws_channel(), json.dumps(message))

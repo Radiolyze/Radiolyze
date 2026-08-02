@@ -59,3 +59,27 @@ Vollstaendige aktuelle Liste: [API Endpunkte](../api/endpoints.md).
 
 - PostgreSQL fuer Reports, Audit Events und Inference Jobs
 - Redis fuer Queueing und WebSocket Events
+
+### Zeitstempel
+
+Alle Zeitstempel-Spalten sind `timestamptz` und werden ueber
+`app.utils.sqltypes.UTCDateTime` geschrieben und gelesen. Daraus folgen zwei
+Regeln:
+
+- **Schreiben mit `app.utils.time.utc_now()`** — liefert ein `datetime` mit
+  Zeitzone in UTC. Ein String in einer Zeitstempel-Spalte loest einen Fehler
+  aus. `now_iso()` ist fuer Payloads, die *keine* Spalten sind: WebSocket-
+  Envelopes, JSON-Metadaten, Response-Felder ohne Modell dahinter.
+- **Gelesene Werte sind immer zeitzonenbehaftet und immer UTC** — unter
+  PostgreSQL wie unter SQLite. Sie lassen sich ohne Nachbearbeitung
+  vergleichen und subtrahieren.
+
+Der API-Vertrag bleibt unveraendert: Response-Felder sind als
+`app.utils.time.IsoDateTime` deklariert und werden als ISO-8601-String mit
+explizitem `+00:00`-Offset serialisiert — derselbe Text wie zu der Zeit, als
+die Spalten `String` waren.
+
+Bis #102 enthielten diese Spalten ISO-Strings. Vergleiche waren damit
+lexikografisch, was nur solange der chronologischen Reihenfolge entspricht,
+wie alle Werte in UTC, nullpadded und gleich praezise vorliegen;
+Datumsarithmetik und datumsbasierte Indexe waren nicht moeglich.

@@ -10,17 +10,18 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event
-from ..mock_logic import utc_now
 from ..models import SegmentationJob
 from ..queue import default_retry, get_queue
 from ..schemas_segmentation import SegmentationCreateRequest
 from ..segmentation_client import get_job_status as segmenter_status
 from ..segmentation_client import segmentation_data_dir
 from ..tasks import run_segmentation_job
+from ..utils.time import utc_now
 
 
 class SegmentationService:
@@ -41,7 +42,7 @@ class SegmentationService:
         except ValueError:
             return 3600
 
-    def create_job(self, payload: SegmentationCreateRequest) -> tuple[str, str]:
+    def create_job(self, payload: SegmentationCreateRequest) -> tuple[str, datetime]:
         """Persist a queued job row + audit event and enqueue the worker task.
 
         Returns ``(job_id, queued_at)``.

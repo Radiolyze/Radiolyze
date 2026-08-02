@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_db, require_admin
 from ..models import Annotation
-from ..utils.time import now_iso
+from ..utils.time import IsoDateTime, now_iso
 
 router = APIRouter()
 
@@ -54,7 +54,7 @@ class ExportStats(BaseModel):
 class ExportResponse(BaseModel):
     export_id: str = Field(alias="exportId")
     format: str
-    created_at: str = Field(alias="createdAt")
+    created_at: IsoDateTime = Field(alias="createdAt")
     stats: ExportStats
     download_url: str = Field(alias="downloadUrl")
 
@@ -553,6 +553,7 @@ Each sample contains:
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model
 import json
+from ..utils.time import IsoDateTime
 
 # Load model
 model = AutoModelForCausalLM.from_pretrained(

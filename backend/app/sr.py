@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from .models import Report
+from .utils.time import format_datetime
 
 SR_SOP_CLASS_UID = "1.2.840.10008.5.1.4.1.1.88.11"
 SR_MEDIA_TYPE_JSON = "application/dicom+json"
@@ -129,9 +130,9 @@ def build_sr_payload(report: Report) -> dict[str, Any]:
         "reportId": report.id,
         "reportStatus": report.status,
         "reportTimestamps": {
-            "createdAt": report.created_at,
-            "updatedAt": report.updated_at,
-            "approvedAt": report.approved_at,
+            "createdAt": format_datetime(report.created_at),
+            "updatedAt": format_datetime(report.updated_at),
+            "approvedAt": format_datetime(report.approved_at),
         },
         "author": report.approved_by,
         "sections": [

@@ -80,8 +80,8 @@ def db():
 def seed_admin():
     """Create a default admin user and return its ID."""
     from app.auth import hash_password
-    from app.mock_logic import utc_now
     from app.models import User
+    from app.utils.time import utc_now
 
     session = TestSession()
     try:
@@ -104,8 +104,8 @@ def seed_admin():
 def seed_radiologist():
     """Create a radiologist user and return its ID."""
     from app.auth import hash_password
-    from app.mock_logic import utc_now
     from app.models import User
+    from app.utils.time import utc_now
 
     session = TestSession()
     try:

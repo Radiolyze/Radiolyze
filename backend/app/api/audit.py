@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from ..audit import add_audit_event, verify_audit_chain
 from ..deps import get_current_user, get_db, require_admin, require_radiologist_or_admin
-from ..mock_logic import utc_now
 from ..models import AuditEvent
 from ..schemas import AuditChainVerificationResponse, AuditEventRequest, AuditEventResponse
+from ..utils.time import utc_now
 
 router = APIRouter()
 

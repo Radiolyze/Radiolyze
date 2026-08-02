@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -19,7 +19,7 @@ from ..utils.metrics import (
     summarize_inference_jobs,
     summarize_qa_results,
 )
-from ..utils.time import now_iso
+from ..utils.time import format_datetime, now_iso, utc_now
 
 router = APIRouter()
 
@@ -35,45 +35,46 @@ def compute_drift_snapshot(
     Extracted from the HTTP handler so it can be called by the scheduler
     without an HTTP request context.
     """
-    now = datetime.now(UTC)
+    now = utc_now()
     baseline_days = baseline_days or window_days
     window_start = now - timedelta(days=window_days)
     baseline_start = window_start - timedelta(days=baseline_days)
+    baseline_end = window_start
 
-    window_start_iso = window_start.isoformat()
-    window_end_iso = now.isoformat()
-    baseline_start_iso = baseline_start.isoformat()
-    baseline_end_iso = window_start_iso
-
+    # These are real temporal comparisons now that the columns are
+    # ``timestamptz``. They used to compare ISO strings lexicographically,
+    # which happens to agree with chronological order only while every value
+    # is UTC, zero-padded and same-precision — one row written with a
+    # ``+02:00`` offset silently landed in the wrong window.
     current_jobs = (
         db.query(InferenceJob)
         .filter(
-            InferenceJob.completed_at >= window_start_iso,
-            InferenceJob.completed_at < window_end_iso,
+            InferenceJob.completed_at >= window_start,
+            InferenceJob.completed_at < now,
         )
         .all()
     )
     baseline_jobs = (
         db.query(InferenceJob)
         .filter(
-            InferenceJob.completed_at >= baseline_start_iso,
-            InferenceJob.completed_at < baseline_end_iso,
+            InferenceJob.completed_at >= baseline_start,
+            InferenceJob.completed_at < baseline_end,
         )
         .all()
     )
     current_qa = (
         db.query(QACheckResult)
         .filter(
-            QACheckResult.created_at >= window_start_iso,
-            QACheckResult.created_at < window_end_iso,
+            QACheckResult.created_at >= window_start,
+            QACheckResult.created_at < now,
         )
         .all()
     )
     baseline_qa = (
         db.query(QACheckResult)
         .filter(
-            QACheckResult.created_at >= baseline_start_iso,
-            QACheckResult.created_at < baseline_end_iso,
+            QACheckResult.created_at >= baseline_start,
+            QACheckResult.created_at < baseline_end,
         )
         .all()
     )
@@ -142,8 +143,11 @@ def compute_drift_snapshot(
     response_payload = {
         "window_days": window_days,
         "baseline_days": baseline_days,
-        "window": {"start": window_start_iso, "end": window_end_iso},
-        "baseline_window": {"start": baseline_start_iso, "end": baseline_end_iso},
+        "window": {"start": window_start.isoformat(), "end": now.isoformat()},
+        "baseline_window": {
+            "start": baseline_start.isoformat(),
+            "end": baseline_end.isoformat(),
+        },
         "current": {"inference": current_inference, "qa": current_qa_summary},
         "baseline": {"inference": baseline_inference, "qa": baseline_qa_summary},
         "delta": {"inference": inference_deltas, "qa": qa_deltas},
@@ -154,7 +158,7 @@ def compute_drift_snapshot(
         snapshot_id = str(uuid.uuid4())
         snapshot = DriftSnapshot(
             id=snapshot_id,
-            created_at=now_iso(),
+            created_at=utc_now(),
             window_days=window_days,
             baseline_days=baseline_days,
             payload=response_payload,
@@ -252,7 +256,9 @@ def list_drift_snapshots(
     return [
         {
             "id": snapshot.id,
-            "created_at": snapshot.created_at,
+            # An untyped dict response, so serialize explicitly rather than
+            # leaving it to FastAPI's encoder.
+            "created_at": format_datetime(snapshot.created_at),
             "window_days": snapshot.window_days,
             "baseline_days": snapshot.baseline_days,
             "payload": snapshot.payload,

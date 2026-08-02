@@ -20,8 +20,8 @@ from sqlalchemy.orm import Session
 
 from ..db import DATABASE_URL
 from ..deps import get_db, require_admin
-from ..mock_logic import utc_now
 from ..models import Guideline
+from ..utils.time import IsoDateTime, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +36,8 @@ class GuidelineResponse(BaseModel):
     source: str | None = None
     keywords: str | None = None
     is_active: bool
-    created_at: str
-    updated_at: str
+    created_at: IsoDateTime
+    updated_at: IsoDateTime
 
     class Config:
         from_attributes = True

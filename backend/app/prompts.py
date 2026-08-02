@@ -10,8 +10,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal
-from .mock_logic import utc_now
 from .models import PromptTemplate
+from .utils.time import utc_now
 
 PromptType = Literal["system", "summary", "impression", "comparison"]
 PromptSource = Literal["db", "env", "default"]

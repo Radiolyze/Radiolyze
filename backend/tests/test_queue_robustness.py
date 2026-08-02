@@ -23,7 +23,7 @@ class _FakeJob:
 
 
 def _seed_inference_job(db, *, job_id: str, status: str = "started", report_id=None, study_id=None):
-    from app.mock_logic import utc_now
+    from app.utils.time import utc_now
 
     job = InferenceJob(
         id=job_id,
@@ -180,8 +180,8 @@ def test_segmentation_enqueue_configures_retry_policy(client):
 
 def test_handle_segmentation_failure_final_attempt_marks_failed_and_dead_letters(db, monkeypatch):
     from app import tasks
-    from app.mock_logic import utc_now
     from app.models import SegmentationJob
+    from app.utils.time import utc_now
 
     monkeypatch.setattr(tasks, "get_current_job", lambda: None)
 
@@ -222,8 +222,8 @@ def test_handle_segmentation_failure_final_attempt_marks_failed_and_dead_letters
 
 def test_handle_segmentation_failure_retries_left_resets_to_queued(db, monkeypatch):
     from app import tasks
-    from app.mock_logic import utc_now
     from app.models import SegmentationJob
+    from app.utils.time import utc_now
 
     monkeypatch.setattr(tasks, "get_current_job", lambda: _FakeJob(retries_left=1))
 
