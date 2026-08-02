@@ -33,8 +33,15 @@ cd radiolyze
 ## Step 2: Start the Stack
 
 ```bash
+cp env.dev .env
 docker compose up --build
 ```
+
+`docker-compose.yml` declares every credential as a required variable — without
+a value it refuses to start and names the missing variable instead of quietly
+falling back to well-known defaults. `env.dev` supplies those values for a
+local sandbox; every one of them is public in this repository, so for anything
+reachable by someone else write your own `.env` from `env.example`.
 
 This starts five services: **Frontend** (React), **Backend** (FastAPI), **Orthanc** (mini-PACS), **PostgreSQL**, and **Redis**.
 

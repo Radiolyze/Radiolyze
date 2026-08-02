@@ -19,7 +19,13 @@ Radiolyze processes protected health information (PHI). The primary threats are:
 
 ---
 
-## Step 1: Change All Default Credentials
+## Step 1: Set All Credentials
+
+There are no default credentials to change: `docker-compose.yml` declares
+`ORTHANC_PASSWORD`, `POSTGRES_PASSWORD`, `SEGMENTER_API_KEY` and
+`JWT_SECRET_KEY` as required variables, so the stack refuses to start until
+each one has a value in `.env`. (`env.dev` exists only for local sandboxes —
+its values are public in this repository and must never reach a deployment.)
 
 ### Orthanc
 
@@ -45,7 +51,8 @@ not be committed to the repository.
 
 ### PostgreSQL
 
-Set a strong database password in `.env` and ensure it matches `docker-compose.yml`:
+Set a strong database password in `.env`; `docker-compose.yml` builds
+`DATABASE_URL` for backend, worker and migrations from it:
 
 ```bash
 POSTGRES_PASSWORD=<generate-with: openssl rand -base64 32>
@@ -55,6 +62,20 @@ POSTGRES_PASSWORD=<generate-with: openssl rand -base64 32>
 
 ```bash
 JWT_SECRET_KEY=<generate-with: openssl rand -hex 32>
+ENVIRONMENT=production
+```
+
+`ENVIRONMENT=production` makes the backend reject a short or default
+`JWT_SECRET_KEY` at startup instead of only warning (see
+`backend/app/auth.py`).
+
+### Segmenter
+
+Shared secret between backend/worker and the segmenter service; without it
+every segmenter route but `/health` is unauthenticated:
+
+```bash
+SEGMENTER_API_KEY=<generate-with: openssl rand -hex 32>
 ```
 
 ---

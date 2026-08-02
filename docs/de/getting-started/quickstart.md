@@ -33,8 +33,15 @@ cd radiolyze
 ## Schritt 2: Stack starten
 
 ```bash
+cp env.dev .env
 docker compose up --build
 ```
+
+`docker-compose.yml` deklariert alle Zugangsdaten als Pflichtvariablen — ohne
+Wert startet der Stack nicht, sondern nennt die fehlende Variable, statt still
+auf bekannte Standardwerte zurückzufallen. `env.dev` liefert diese Werte für
+eine lokale Sandbox; sie sind alle in diesem Repository öffentlich. Für alles,
+was von anderen erreichbar ist, ein eigenes `.env` aus `env.example` schreiben.
 
 Dies startet fünf Dienste: **Frontend** (React), **Backend** (FastAPI), **Orthanc** (Mini-PACS), **PostgreSQL** und **Redis**.
 
