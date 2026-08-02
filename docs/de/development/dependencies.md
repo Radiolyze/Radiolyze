@@ -58,7 +58,6 @@ nächster Abschnitt.
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` unterstützt ESLint 10 nicht | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
 | `vite` | `<8` | Peer-Range von `lovable-tagger` deckelt Vite auf `<8` | [#194](https://github.com/Radiolyze/Radiolyze/issues/194) |
 | `@cornerstonejs/*` | `<5` | Braucht Änderungen an `vite.config.ts` und `scripts/bundle-cornerstone-worker.mjs` | [#195](https://github.com/Radiolyze/Radiolyze/issues/195) |
-| `pydicom` (Segmenter) | `<3` | `pydicom-seg` importiert `SegmentationStorage` über einen Pre-3.0-Pfad und ist unmaintained | [#199](https://github.com/Radiolyze/Radiolyze/issues/199) |
 
 `tailwind-merge` ist der lehrreiche Fall. Das v3-Release lässt den
 Tailwind-3-Support fallen, deklariert aber keine `peerDependencies`, ist an
@@ -68,9 +67,13 @@ in der gesamten Komponentenbibliothek falsch auf: visuelle Regressionen ohne
 erkennbaren Verursacher. Deshalb existiert ein Ignore-Eintrag und nicht bloß
 eine Notiz „beim Review aufpassen".
 
-`pydicom` hat im Segmenter dieselbe Form: Der Import ist lazy und der Writer ist
-in Tests über `_set_writer_for_testing` gestubbt — ein pydicom-3-Bump zerlegt
-also den DICOM-SEG-Export zur Laufzeit, während alle Tests weiter grün sind.
+`pydicom` hatte im Segmenter dieselbe Form — als Muster weiterhin lehrreich,
+auch wenn der Eintrag entfallen ist: `pydicom-seg` deckelte es auf `<3`, der
+Writer-Import war lazy, und die Tests stubbten den Writer — ein pydicom-3-Bump
+hätte den DICOM-SEG-Export zur Laufzeit zerlegt, während alle Tests grün
+blieben. Gelöst in [#199](https://github.com/Radiolyze/Radiolyze/issues/199)
+durch die Migration auf `highdicom`; der Test schreibt jetzt ein echtes SEG und
+liest es zurück, sodass dieselbe Fehlerklasse einen Test bricht.
 
 ---
 

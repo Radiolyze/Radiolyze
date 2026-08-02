@@ -132,8 +132,13 @@ Tuning über `MESH_MAX_FACES` (Default `20000`) möglich.
 ## DICOM SEG Export (Push-to-PACS)
 
 Nach dem Meshing schreibt der Segmenter optional eine multi-class DICOM Segmentation IOD (`segmentation.dcm`)
-mittels `pydicom-seg`. Das SEG referenziert die Original-CT-Slices (SOP Instance UIDs), sodass DICOM-SEG-fähige
-Viewer (z.B. 3D Slicer, OHIF, MITK) die Segmentierung als Overlay darstellen können.
+mittels [`highdicom`](https://github.com/ImagingDataCommons/highdicom). Das SEG referenziert die
+Original-CT-Slices (SOP Instance UIDs), sodass DICOM-SEG-fähige Viewer (z.B. 3D Slicer, OHIF, MITK)
+die Segmentierung als Overlay darstellen können.
+
+Die Segmente bilden eine sich gegenseitig ausschließende Label-Map: Bei Überlappung gewinnt die
+kleinere Struktur (`app/dicom_seg.py:_order_masks`). Jedes Segment trägt seinen SNOMED-CT-Type-Code
+und eine aus der Label-Palette abgeleitete Anzeigefarbe.
 
 Der Export ist **opt-in**: Der UI-Button „An PACS senden“ erscheint nur nach erfolgreichem Run und nur wenn
 das Manifest `dicom_seg` enthält. Der Backend-Call ist `POST /api/v1/segmentation/jobs/{id}/push-to-pacs`.
