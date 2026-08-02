@@ -25,8 +25,7 @@
     "title": "Export settings",
     "verifiedOnly": "Verified annotations only",
     "verifiedOnlyHint": "Recommended for higher data quality",
-    "splitMin": "50% train",
-    "splitMax": "95% train",
+    "splitBound": "{{percent}}% train",
     "categories": "Filter categories (optional)",
     "resetFilter": "Reset filter"
   },

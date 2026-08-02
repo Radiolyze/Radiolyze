@@ -24,6 +24,14 @@ for the full history.
 - `src/components/ui/__tests__/resizable.test.tsx`: pins the
   react-resizable-panels contract the resizable wrapper is built on, so a
   future rename fails a test instead of silently dropping the handle.
+- `src/pages/__tests__/Training.test.tsx`: renders the training export page in
+  both languages and across a language switch. It also asserts the export
+  hint's manifest path reaches the DOM inside a `<code>` element — `<Trans>`
+  resolves tag names against its `components` map, and a name with no match
+  renders as literal text, which a test on the resource string cannot see.
+- The i18n guide documents `<Trans>` for markup inside a sentence, and how to
+  pin a dynamic key with a test over every possible value. Its namespace table
+  and file listing now include the `training` namespace.
 - The DICOM SEG round-trip test writes a real SEG and reads it back through
   highdicom, comparing the decoded label map voxel-for-voxel with the input,
   plus cases for a slice-count mismatch and a source series stripped of the
@@ -102,7 +110,9 @@ for the full history.
   literals — it had no `useTranslation` at all: page and card headings, every
   form label, the export and manifest toasts, the manifest preview with its
   error list, and the empty state. Its keys live in a new `training` namespace
-  (#117).
+  (#117). The split slider's bound labels are interpolated from the same
+  constants the slider's `min`/`max` are given, rather than spelling the
+  percentages out a second time in each locale file.
 - The Monitoring page renders through i18n instead of German literals — page
   title, actions, drift-warning headings, both metric cards with their row
   labels and column headers, the history charts and tooltips, the empty state
