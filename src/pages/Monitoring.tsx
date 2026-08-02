@@ -101,15 +101,38 @@ function MetricRow({
   );
 }
 
+/** Column headers shared by the inference and QA metric tables. */
+function MetricHeader() {
+  const { t } = useTranslation("common");
+  return (
+    <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
+      <span />
+      <div className="flex gap-4">
+        <span className="w-20 text-right">{t("monitoring.columns.baseline")}</span>
+        <span className="w-20 text-right">{t("monitoring.columns.current")}</span>
+        <span className="w-24 text-right">{t("monitoring.columns.delta")}</span>
+      </div>
+    </div>
+  );
+}
+
 function AlertCard({ alert }: { alert: { metric: string; delta: number; threshold: number } }) {
+  const { t } = useTranslation("common");
+  // The backend sends dotted metric identifiers ("inference.confidence_avg"), which
+  // line up with the nesting under monitoring.alerts.metrics. An identifier we have
+  // no label for falls back to the raw string rather than rendering an empty span.
+  const label = t(`monitoring.alerts.metrics.${alert.metric}`, { defaultValue: alert.metric });
+
   return (
     <div className="flex items-start gap-3 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
       <AlertTriangle className="h-4 w-4 text-yellow-400 mt-0.5 shrink-0" />
       <div className="text-sm">
-        <span className="font-medium text-yellow-300">{alert.metric}</span>
+        <span className="font-medium text-yellow-300">{label}</span>
         <span className="text-muted-foreground ml-2">
-          delta {alert.delta > 0 ? "+" : ""}
-          {fmt(alert.delta)} (threshold ±{fmt(alert.threshold)})
+          {t("monitoring.alerts.detail", {
+            delta: `${alert.delta > 0 ? "+" : ""}${fmt(alert.delta)}`,
+            threshold: fmt(alert.threshold),
+          })}
         </span>
       </div>
     </div>
@@ -117,6 +140,7 @@ function AlertCard({ alert }: { alert: { metric: string; delta: number; threshol
 }
 
 function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
+  const { t } = useTranslation("common");
   const { formatShortDate } = useDateFormat();
   const data = [...snapshots].reverse().map((s) => ({
     date: formatShortDate(s.created_at),
@@ -128,8 +152,7 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
-        Keine Snapshots vorhanden. Klicke auf &ldquo;Snapshot speichern&rdquo;, um Verlaufsdaten zu
-        erzeugen.
+        {t("monitoring.history.empty", { action: t("monitoring.saveSnapshot") })}
       </div>
     );
   }
@@ -137,7 +160,9 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs text-muted-foreground mb-2">Ø Konfidenz (Inferenz)</p>
+        <p className="text-xs text-muted-foreground mb-2">
+          {t("monitoring.history.confidenceChart")}
+        </p>
         <ResponsiveContainer width="100%" height={160}>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -147,7 +172,12 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
             />
-            <Tooltip formatter={(v: number) => [`${(v * 100).toFixed(1)}%`, "Konfidenz"]} />
+            <Tooltip
+              formatter={(v: number) => [
+                `${(v * 100).toFixed(1)}%`,
+                t("monitoring.metrics.confidenceAvg"),
+              ]}
+            />
             <ReferenceLine y={0.7} stroke="hsl(var(--warning))" strokeDasharray="4 4" />
             <Line
               type="monotone"
@@ -161,13 +191,17 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
         </ResponsiveContainer>
       </div>
       <div>
-        <p className="text-xs text-muted-foreground mb-2">QA Pass-Rate (%)</p>
+        <p className="text-xs text-muted-foreground mb-2">
+          {t("monitoring.history.passRateChart")}
+        </p>
         <ResponsiveContainer width="100%" height={160}>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
             <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
-            <Tooltip formatter={(v: number) => [`${v.toFixed(1)}%`, "Pass-Rate"]} />
+            <Tooltip
+              formatter={(v: number) => [`${v.toFixed(1)}%`, t("monitoring.metrics.passRate")]}
+            />
             <ReferenceLine y={80} stroke="hsl(var(--warning))" strokeDasharray="4 4" />
             <Line
               type="monotone"
@@ -228,7 +262,7 @@ export default function Monitoring() {
           <Separator orientation="vertical" className="h-6" />
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">Drift-Monitoring</h1>
+            <h1 className="text-lg font-semibold">{t("monitoring.title")}</h1>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -245,11 +279,11 @@ export default function Monitoring() {
           </Select>
           <Button variant="outline" size="sm" className="gap-2" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4" />
-            Aktualisieren
+            {t("actions.refresh")}
           </Button>
           <Button size="sm" className="gap-2" onClick={handleSaveSnapshot} disabled={saving}>
             <Save className="h-4 w-4" />
-            Snapshot speichern
+            {t("monitoring.saveSnapshot")}
           </Button>
         </div>
       </div>
@@ -260,7 +294,7 @@ export default function Monitoring() {
           <div className="space-y-2">
             <h2 className="text-sm font-semibold text-yellow-400 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
-              Aktive Drift-Warnungen ({drift.alerts.length})
+              {t("monitoring.alerts.title", { count: drift.alerts.length })}
             </h2>
             {drift.alerts.map((alert, i) => (
               <AlertCard key={i} alert={alert} />
@@ -271,7 +305,7 @@ export default function Monitoring() {
         {!isLoading && drift && drift.alerts.length === 0 && (
           <div className="flex items-center gap-2 text-sm text-green-400">
             <span className="h-2 w-2 rounded-full bg-green-400 inline-block" />
-            Kein Drift detektiert im aktuellen Zeitfenster.
+            {t("monitoring.alerts.none")}
           </div>
         )}
 
@@ -279,8 +313,10 @@ export default function Monitoring() {
           {/* Inferenz-Metriken */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Inferenz-Metriken</CardTitle>
-              <p className="text-xs text-muted-foreground">Zeitfenster vs. Baseline</p>
+              <CardTitle className="text-sm font-medium">
+                {t("monitoring.cards.inference")}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">{t("monitoring.cards.subtitle")}</p>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -290,45 +326,38 @@ export default function Monitoring() {
                   ))}
                 </div>
               ) : error ? (
-                <p className="text-sm text-destructive">Fehler beim Laden.</p>
+                <p className="text-sm text-destructive">{t("monitoring.loadError")}</p>
               ) : drift ? (
                 <div>
-                  <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
-                    <span />
-                    <div className="flex gap-4">
-                      <span className="w-20 text-right">Baseline</span>
-                      <span className="w-20 text-right">Aktuell</span>
-                      <span className="w-24 text-right">Delta</span>
-                    </div>
-                  </div>
+                  <MetricHeader />
                   <MetricRow
-                    label="Anzahl Jobs"
+                    label={t("monitoring.metrics.jobCount")}
                     current={drift.current.inference.count}
                     baseline={drift.baseline.inference.count}
                     delta={null}
                     format={(v) => (v == null ? "—" : String(v))}
                   />
                   <MetricRow
-                    label="Ø Konfidenz"
+                    label={t("monitoring.metrics.confidenceAvg")}
                     current={drift.current.inference.confidence_avg}
                     baseline={drift.baseline.inference.confidence_avg}
                     delta={drift.delta.inference.confidence_avg}
                   />
                   <MetricRow
-                    label="Median Konfidenz"
+                    label={t("monitoring.metrics.confidenceMedian")}
                     current={drift.current.inference.confidence_median}
                     baseline={drift.baseline.inference.confidence_median}
                     delta={drift.delta.inference.confidence_median}
                   />
                   <MetricRow
-                    label="Fehlerrate"
+                    label={t("monitoring.metrics.failureRate")}
                     current={drift.current.inference.failure_rate}
                     baseline={drift.baseline.inference.failure_rate}
                     delta={drift.delta.inference.failure_rate}
                     format={fmtPct}
                   />
                   <MetricRow
-                    label="Ø Latenz (ms)"
+                    label={t("monitoring.metrics.latencyAvgMs")}
                     current={drift.current.inference.latency_avg_ms}
                     baseline={drift.baseline.inference.latency_avg_ms}
                     delta={null}
@@ -342,8 +371,8 @@ export default function Monitoring() {
           {/* QA-Metriken */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">QA-Metriken</CardTitle>
-              <p className="text-xs text-muted-foreground">Zeitfenster vs. Baseline</p>
+              <CardTitle className="text-sm font-medium">{t("monitoring.cards.qa")}</CardTitle>
+              <p className="text-xs text-muted-foreground">{t("monitoring.cards.subtitle")}</p>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -353,46 +382,39 @@ export default function Monitoring() {
                   ))}
                 </div>
               ) : error ? (
-                <p className="text-sm text-destructive">Fehler beim Laden.</p>
+                <p className="text-sm text-destructive">{t("monitoring.loadError")}</p>
               ) : drift ? (
                 <div>
-                  <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
-                    <span />
-                    <div className="flex gap-4">
-                      <span className="w-20 text-right">Baseline</span>
-                      <span className="w-20 text-right">Aktuell</span>
-                      <span className="w-24 text-right">Delta</span>
-                    </div>
-                  </div>
+                  <MetricHeader />
                   <MetricRow
-                    label="Anzahl Checks"
+                    label={t("monitoring.metrics.checkCount")}
                     current={drift.current.qa.count}
                     baseline={drift.baseline.qa.count}
                     delta={null}
                     format={(v) => (v == null ? "—" : String(v))}
                   />
                   <MetricRow
-                    label="Pass-Rate"
+                    label={t("monitoring.metrics.passRate")}
                     current={drift.current.qa.pass_rate}
                     baseline={drift.baseline.qa.pass_rate}
                     delta={drift.delta.qa.pass_rate}
                     format={fmtPct}
                   />
                   <MetricRow
-                    label="Ø Quality-Score"
+                    label={t("monitoring.metrics.qualityScoreAvg")}
                     current={drift.current.qa.quality_score_avg}
                     baseline={drift.baseline.qa.quality_score_avg}
                     delta={drift.delta.qa.quality_score_avg}
                   />
                   <MetricRow
-                    label="Warnungen"
+                    label={t("monitoring.metrics.warnCount")}
                     current={drift.current.qa.warn_count}
                     baseline={drift.baseline.qa.warn_count}
                     delta={null}
                     format={(v) => (v == null ? "—" : String(v))}
                   />
                   <MetricRow
-                    label="Fehler"
+                    label={t("monitoring.metrics.failCount")}
                     current={drift.current.qa.fail_count}
                     baseline={drift.baseline.qa.fail_count}
                     delta={null}
@@ -407,9 +429,9 @@ export default function Monitoring() {
         {/* Verlaufs-Charts */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Historischer Verlauf</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("monitoring.history.title")}</CardTitle>
             <p className="text-xs text-muted-foreground">
-              Basierend auf {snapshots.length} gespeicherten Snapshots
+              {t("monitoring.history.subtitle", { count: snapshots.length })}
             </p>
           </CardHeader>
           <CardContent>
@@ -421,18 +443,22 @@ export default function Monitoring() {
         {snapshots.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Snapshot-Verlauf</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {t("monitoring.snapshots.title")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
-                      <th className="text-left py-2 pr-4">Datum</th>
-                      <th className="text-right py-2 px-4">Fenster</th>
-                      <th className="text-right py-2 px-4">Ø Konfidenz</th>
-                      <th className="text-right py-2 px-4">Pass-Rate</th>
-                      <th className="text-right py-2 pl-4">Warnungen</th>
+                      <th className="text-left py-2 pr-4">{t("monitoring.snapshots.date")}</th>
+                      <th className="text-right py-2 px-4">{t("monitoring.snapshots.window")}</th>
+                      <th className="text-right py-2 px-4">
+                        {t("monitoring.snapshots.confidence")}
+                      </th>
+                      <th className="text-right py-2 px-4">{t("monitoring.snapshots.passRate")}</th>
+                      <th className="text-right py-2 pl-4">{t("monitoring.snapshots.warnings")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -445,7 +471,9 @@ export default function Monitoring() {
                         )}
                       >
                         <td className="py-2 pr-4 font-mono">{formatDateTime(s.created_at)}</td>
-                        <td className="text-right py-2 px-4">{s.window_days}d</td>
+                        <td className="text-right py-2 px-4">
+                          {t("monitoring.snapshots.windowDays", { days: s.window_days })}
+                        </td>
                         <td className="text-right py-2 px-4 font-mono">
                           {fmt(s.payload.current.inference.confidence_avg)}
                         </td>
