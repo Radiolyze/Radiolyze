@@ -3,7 +3,7 @@ import { CalendarClock, Sparkles } from "lucide-react";
 import type { Study } from "@/types/radiology";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { formatDate } from "@/data/mockData";
+import { useDateFormat } from "@/hooks/useDateFormat";
 
 interface PriorStudiesTimelineProps {
   currentStudy: Study;
@@ -66,6 +66,7 @@ const getStudyDateValue = (study: Study) => {
 export function PriorStudiesTimeline({ currentStudy, priorStudies }: PriorStudiesTimelineProps) {
   const { t } = useTranslation("common");
   const { t: tViewer } = useTranslation("viewer");
+  const { formatDate } = useDateFormat();
 
   const filtered = priorStudies.filter((study) => study.id !== currentStudy.id);
   const sorted = [...filtered].sort((a, b) => getStudyDateValue(b) - getStudyDateValue(a));

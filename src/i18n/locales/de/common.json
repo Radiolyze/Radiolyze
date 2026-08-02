@@ -69,7 +69,8 @@
     "monthsAgo": "vor {{count}} Monaten",
     "yearsAgo": "vor {{count}} Jahren",
     "justNow": "Gerade eben",
-    "lastNDays": "Letzte {{count}} Tage"
+    "lastNDays": "Letzte {{count}} Tage",
+    "updatedAt": "Aktualisiert um {{time}}"
   },
   "patient": {
     "name": "Name",
