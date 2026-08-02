@@ -241,7 +241,7 @@ def push_to_pacs(
             status_code=409,
             detail=(
                 "DICOM SEG was not generated for this job (segmenter rebuild "
-                "with pydicom-seg required, or SEGMENTATION_GENERATE_DICOM_SEG=false)."
+                "with highdicom required, or SEGMENTATION_GENERATE_DICOM_SEG=false)."
             ),
         )
 

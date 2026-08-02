@@ -126,7 +126,7 @@ def download_dicom_seg(job_id: str) -> bytes:
 
     The segmenter writes ``segmentation.dcm`` next to the manifest after
     meshing. Reading it back over HTTP keeps the orchestrator free from
-    pydicom-seg + ITK on its hot path.
+    highdicom + ITK on its hot path.
     """
     url = f"{segmenter_base_url()}/jobs/{job_id}/dicom-seg"
     with httpx.Client(timeout=segmenter_timeout(), headers=_auth_headers()) as client:

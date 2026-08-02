@@ -55,7 +55,12 @@
       "warn": "Warnung",
       "info": "Info",
       "critical": "Kritisch"
-    }
+    },
+    "showMore": "Mehr anzeigen",
+    "showLess": "Weniger anzeigen",
+    "searchPlaceholder": "Leitlinien durchsuchen…",
+    "loadError": "Leitlinien konnten nicht geladen werden.",
+    "empty": "Keine Leitlinien gefunden."
   },
   "export": {
     "title": "Exportieren",

@@ -55,7 +55,12 @@
       "warn": "Warning",
       "info": "Info",
       "critical": "Critical"
-    }
+    },
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "searchPlaceholder": "Search guidelines…",
+    "loadError": "Guidelines could not be loaded.",
+    "empty": "No guidelines found."
   },
   "export": {
     "title": "Export",

@@ -24,6 +24,11 @@ for the full history.
 - `src/components/ui/__tests__/resizable.test.tsx`: pins the
   react-resizable-panels contract the resizable wrapper is built on, so a
   future rename fails a test instead of silently dropping the handle.
+- The DICOM SEG round-trip test writes a real SEG and reads it back through
+  highdicom, comparing the decoded label map voxel-for-voxel with the input,
+  plus cases for a slice-count mismatch and a source series stripped of the
+  type 2 attributes highdicom requires. The previous test stubbed the writer or
+  skipped when it was missing — the exact shape of failure #199 describes.
 - `env.dev`: the local-sandbox credentials that used to be compose defaults.
   `cp env.dev .env` restores the flag-free `docker compose up --build` flow for
   development; the values match what existing dev volumes were initialised
@@ -49,6 +54,12 @@ for the full history.
   so a regression fails the build; they count every file under `src/` rather
   than only the ones a test imports (#115).
 
+- `src/components/RightPanel/__tests__/GuidelinesPanel.test.tsx`: pins the
+  panel's search behaviour — nothing fetched while collapsed, the findings
+  context used as the opening search, one request per settled search term
+  rather than one per keystroke, and previous hits kept on screen while the
+  next search is in flight (#113).
+
 ### Changed
 
 - Every timestamp column is `timestamptz` instead of a `String` holding ISO
@@ -63,6 +74,22 @@ for the full history.
 - `utc_now()` moved from `app/mock_logic.py` to `app/utils/time.py` and returns
   a `datetime` rather than a string. Every timestamp write in the backend goes
   through it (#102).
+- `GuidelinesPanel` and `PromptSettings` fetch through `@tanstack/react-query`
+  instead of `useEffect` plus hand-rolled loading/error state, so both get the
+  retry, caching and request dedup the rest of the app already had (#113).
+  `GuidelinesPanel` no longer fires a second search immediately after the first
+  one lands, and `PromptSettings` keeps unsaved edits as overrides on top of
+  the server state, so a background refetch cannot overwrite what someone is
+  typing.
+- The user-facing text in `GuidelinesPanel` goes through i18n rather than German
+  literals (#117).
+- The segmenter's DICOM SEG writer moved from the unmaintained `pydicom-seg`
+  to `highdicom`, lifting the `pydicom<3.0` ceiling (now `>=3.0.2,<4`) and
+  removing the matching Dependabot `ignore` entry (#199). The public surface of
+  `app/dicom_seg.py` is unchanged; the dcmqi-style JSON template gave way to
+  `SegmentDescription` objects, and the retired SRT codes (`T-62000` and
+  friends) are now current SCT codes. The segmenter's `/health` payload reports
+  `highdicom_version` in place of `pydicom_seg_version`.
 - Dates and times are no longer formatted with a hardcoded `de-DE` locale in
   `FindingsPanel`, `ReportDiffPanel`, `Dashboard`, `Monitoring` (chart axis and
   snapshot table) and the former `mockData` helpers — they follow the selected
@@ -71,6 +98,11 @@ for the full history.
 - `ReportDiffPanel` and `AnnotationPanel` render their user-facing text through
   i18n instead of German literals; `ReportDiffPanel` held a `useTranslation`
   handle it never used (#117).
+- The Monitoring page renders through i18n instead of German literals — page
+  title, actions, drift-warning headings, both metric cards with their row
+  labels and column headers, the history charts and tooltips, the empty state
+  and the snapshot table (#117). Drift alerts now show a readable metric name
+  rather than the backend's raw `inference.confidence_avg` identifier.
 - `react-resizable-panels` 2.1.9 → 4.12.2 and the `src/components/ui/resizable.tsx`
   wrapper adapted to it: `PanelGroup` → `Group`, `PanelResizeHandle` →
   `Separator`, the group's `direction` prop → `orientation`, and the

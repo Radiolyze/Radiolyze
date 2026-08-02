@@ -64,12 +64,6 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
-    ignore:
-      - dependency-name: "pydicom"
-        # Pinned <3 on purpose: pydicom-seg (used by app/dicom_seg.py) imports
-        # SegmentationStorage via a pre-3.0 path and has no 3.0-compatible
-        # release. Blocked until pydicom-seg is replaced.
-        versions: [">=3"]
 
   # Documentation toolchain (pip)
   - package-ecosystem: pip
