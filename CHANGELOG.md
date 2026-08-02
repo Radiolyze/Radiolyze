@@ -12,6 +12,12 @@ for the full history.
 
 ### Added
 
+- `e2e/core-workflow.spec.ts`: an end-to-end pass over the core clinical
+  workflow — study selection out of the DICOMweb queue, series loading,
+  findings entry, AI impression generation, the QA result, and finalizing with
+  a signature. The backend is stubbed through the new `e2e/fixtures/backend.ts`
+  (locale pinning, QIDO-RS study/series/instance responses, and the
+  report/inference/QA endpoints), which `e2e/auth.spec.ts` now shares.
 - `docs/en/development/dependencies.md` (and the DE mirror): the dependency
   policy — which majors are held back and why, how a bump is reviewed, and the
   pins that live outside Dependabot's reach.

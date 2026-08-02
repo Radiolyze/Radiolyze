@@ -141,8 +141,8 @@ python3 -m mkdocs build --strict
 
 End-to-End-Tests steuern einen echten Browser. Zwei Stile leben nebeneinander in `e2e/`:
 
-- **Gemockte Flows** (z. B. `e2e/auth.spec.ts`) täuschen Backend-Antworten per `page.route(...)` vor, statt einen laufenden Stack vorauszusetzen. Schnell, deterministisch, laufen non-blocking in CI (`e2e-frontend`-Job) bei jedem Push/PR.
-- **Full-Stack-Flows** (geplant — siehe Szenarien unten) steuern das echte Backend/DB/Orthanc über `docker compose`, für Workflows, die echte Daten brauchen (DICOM-Viewer, ASR, KI-Inferenz, QA).
+- **Gemockte Flows** (`e2e/auth.spec.ts`, `e2e/core-workflow.spec.ts`) täuschen Backend-Antworten per `page.route(...)` vor, statt einen laufenden Stack vorauszusetzen. Schnell, deterministisch, laufen non-blocking in CI (`e2e-frontend`-Job) bei jedem Push/PR. Die gemeinsamen Stubs — Locale-Fixierung, DICOMweb-QIDO-RS-Antworten sowie die Report-/Inferenz-/QA-Endpunkte — liegen in `e2e/fixtures/backend.ts`; neue Specs bauen darauf auf, statt eigene `page.route(...)`-Handler zu schreiben.
+- **Full-Stack-Flows** (geplant — siehe Szenarien unten) steuern das echte Backend/DB/Orthanc über `docker compose`, für Workflows, die echte Daten brauchen (Pixel-Darstellung im DICOM-Viewer, ASR, echte KI-Inferenz).
 
 ### Einrichtung
 
@@ -168,17 +168,22 @@ npx playwright test --headed
 
 ### Wichtige zu abdeckende Szenarien
 
-`e2e/auth.spec.ts` deckt heute das Login-Formular, ungültige Zugangsdaten und den 401-Redirect-Routenschutz ab. Die folgenden Szenarien brauchen ein echtes Backend (mit Orthanc geseedete Studiendaten, Inferenz-/QA-Pipeline) und sind Folgearbeit:
+Heute abgedeckt:
+
+- `e2e/auth.spec.ts` — Login-Formular, ungültige Zugangsdaten, 401-Redirect-Routenschutz.
+- `e2e/core-workflow.spec.ts` — der Golden Path: Studien erscheinen in der Warteschlange, die ausgewählte lädt ihre Serien, Befund wird geschrieben und gespeichert, die KI-Impression wird generiert, das QA-Ergebnis erscheint, und der Bericht wird mit Unterschrift freigegeben.
+
+Die folgenden Szenarien brauchen weiterhin Arbeit — entweder ein echtes Backend (mit Orthanc geseedete Studiendaten, Inferenz-/QA-Pipeline) oder App-seitige Anknüpfungspunkte, die es noch nicht gibt:
 
 | Testszenario | Warum |
 |---|---|
-| Login → Studie öffnen → Bericht freigeben | Golden Path — muss immer bestehen |
 | ASR auslösen → Transkript in Befund sehen | Kern-Diktat-Workflow |
 | KI-Impression generieren → Evidence-Indices leuchten auf | KI-Integration |
 | QA-Fehler blockiert Freigabe | Sicherheitskritisch |
 | Kritischer-Befund-Alarm erscheint | Sicherheitskritisch |
 | Tastaturkürzel `Ctrl+Enter` öffnet Freigabe-Dialog | Kern-UX |
 | Batch-Warteschlange: Freigabe → automatisch nächste Studie | Batch-Workflow |
+| DICOM-Viewer: Serien-Scrolling, Windowing, Messung | Braucht echte Pixeldaten |
 
 ---
 

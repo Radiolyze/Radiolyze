@@ -1,20 +1,15 @@
 import { test, expect, type Page } from "@playwright/test";
+import { pinPreferences } from "./fixtures/backend";
 
 /**
  * Auth flow E2E. The backend is stubbed via network mocking rather than a
  * live docker-compose stack, so these run fast and deterministically in CI
- * without requiring Postgres/Redis/Orthanc/vLLM. See docs/en/development/testing.md
- * for the full docker-stack-backed E2E flows (study load -> AI findings ->
- * QA -> finalize) this is a first step towards.
+ * without requiring Postgres/Redis/Orthanc/vLLM. The core clinical workflow
+ * (study load -> AI findings -> QA -> finalize) lives in core-workflow.spec.ts.
  */
 
 test.beforeEach(async ({ page }) => {
-  // `useUserPreferences` defaults `uiLanguage` to 'de' and applies it once
-  // any page mounting that hook loads, overriding i18n's own 'en' default -
-  // pin the locale up front so assertions don't depend on navigation order.
-  await page.addInitScript(() => {
-    window.localStorage.setItem("radiolyze-user-preferences", JSON.stringify({ uiLanguage: "en" }));
-  });
+  await pinPreferences(page);
 });
 
 async function mockBackend(page: Page, login: { status: number; body?: unknown }) {

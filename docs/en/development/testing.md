@@ -177,8 +177,8 @@ Always run this before merging documentation changes.
 
 End-to-end tests drive a real browser. Two styles live side by side in `e2e/`:
 
-- **Mocked-network flows** (e.g. `e2e/auth.spec.ts`) stub backend responses with `page.route(...)` instead of requiring a live stack. These are fast, deterministic, and run non-blocking in CI (`e2e-frontend` job) on every push/PR.
-- **Full-stack flows** (planned — see the scenarios below) drive the real backend/DB/Orthanc via `docker compose`, for the workflows that actually need real data (DICOM viewer, ASR, AI inference, QA).
+- **Mocked-network flows** (`e2e/auth.spec.ts`, `e2e/core-workflow.spec.ts`) stub backend responses with `page.route(...)` instead of requiring a live stack. These are fast, deterministic, and run non-blocking in CI (`e2e-frontend` job) on every push/PR. The shared stubs — locale pinning, DICOMweb QIDO-RS responses, and the report/inference/QA endpoints — live in `e2e/fixtures/backend.ts`; add new specs against those rather than re-rolling `page.route(...)` handlers.
+- **Full-stack flows** (planned — see the scenarios below) drive the real backend/DB/Orthanc via `docker compose`, for the workflows that actually need real data (DICOM viewer pixel rendering, ASR, real AI inference).
 
 ### Setup
 
@@ -207,21 +207,26 @@ npx playwright test e2e/auth.spec.ts
 
 ### Key Scenarios to Cover
 
-`e2e/auth.spec.ts` covers the login form, invalid-credential handling, and the 401-redirect route guard today. The remaining scenarios below need a real backend (Orthanc-seeded study data, inference/QA pipeline) and are follow-up work:
+Covered today:
+
+- `e2e/auth.spec.ts` — login form, invalid-credential handling, 401-redirect route guard.
+- `e2e/core-workflow.spec.ts` — the golden path: studies appear in the queue, selecting one loads its series, findings are written and saved, the AI impression is generated, the QA result renders, and the report is finalized with a signature.
+
+The remaining scenarios below still need work — either a real backend (Orthanc-seeded study data, inference/QA pipeline) or app-side hooks that don't exist yet:
 
 | Test scenario | Why |
 |---|---|
-| Login → open study → approve report | Golden path — must always pass |
 | Trigger ASR → see transcript in findings | Core dictation workflow |
 | Generate AI impression → verify evidence indices light up | AI integration |
 | QA failure blocks approval | Safety-critical — must block |
 | Critical finding alert appears | Safety-critical |
 | Keyboard shortcut `Ctrl+Enter` opens approval dialog | Core UX |
 | Batch queue: approve → auto-advance to next study | Batch workflow |
+| DICOM viewer: series scroll, windowing, measurement | Needs real pixel data |
 
 ### Example Spec (target shape for a full-stack flow)
 
-The selectors below (`.study-row`, `[data-testid="impression-textarea"]`, ...) don't all exist in the app yet — this illustrates the shape a full-stack spec should take once written, not a spec that runs today. See `e2e/auth.spec.ts` for a real, currently-passing example.
+The selectors below (`.study-row`, `[data-testid="impression-textarea"]`, ...) don't all exist in the app yet — this illustrates the shape a full-stack spec should take once written, not a spec that runs today. See `e2e/core-workflow.spec.ts` for a real, currently-passing example of the same workflow against mocked network responses.
 
 ```typescript
 // e2e/report-workflow.spec.ts
