@@ -80,6 +80,12 @@ Radiology workflow system with AI-assisted report generation, DICOM viewer, spee
 ### Docker (recommended)
 
 ```bash
+# Once: local dev credentials. docker-compose.yml declares every credential as
+# a required variable, so it refuses to start rather than falling back to
+# well-known defaults. For a real deployment write your own .env from
+# env.example instead — the values in env.dev are public.
+cp env.dev .env
+
 docker compose up --build
 ```
 

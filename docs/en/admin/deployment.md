@@ -61,20 +61,30 @@ cd radiolyze
 cp env.example .env
 ```
 
-Edit `.env` with your settings:
+Edit `.env` with your settings. The four secrets below are **required** —
+`docker-compose.yml` has no defaults for them and refuses to start (naming the
+missing variable) rather than bringing the stack up on credentials that are
+public in this repository:
 
 ```bash
+# Required secrets — generate real values, e.g. `openssl rand -hex 32`
+POSTGRES_PASSWORD=...
+ORTHANC_PASSWORD=...          # also the DICOMweb credentials for backend/worker/segmenter
+SEGMENTER_API_KEY=...         # shared secret between backend/worker and the segmenter
+JWT_SECRET_KEY=...            # >= 32 chars; signs the auth cookie
+
+# Production hardening
+ENVIRONMENT=production        # makes the backend reject a weak JWT_SECRET_KEY at startup
+CORS_ORIGINS=https://radiolyze.example.com
+ORTHANC_CORS_ORIGIN=https://radiolyze.example.com
+
 # Required for MedGemma (obtain at huggingface.co)
 HUGGINGFACE_HUB_TOKEN=hf_xxxxxxxxxxxxxxxx
-
-# Change these in production!
-VITE_DICOM_WEB_USERNAME=your_orthanc_user
-VITE_DICOM_WEB_PASSWORD=your_strong_password
-
-# Leave these for Docker deployments:
-VITE_API_PROXY_TARGET=http://backend:8000
-VITE_DICOM_WEB_PROXY_TARGET=http://orthanc:8042
 ```
+
+DICOMweb credentials are never handed to the browser: the frontend reaches
+Orthanc through the nginx `/dicom-web/` proxy, which injects Basic Auth from
+`DICOM_WEB_PROXY_USERNAME` / `DICOM_WEB_PROXY_PASSWORD` server-side.
 
 ---
 

@@ -1,3 +1,16 @@
+# Credentials and shared secrets are REQUIRED variables here (`${VAR:?...}`),
+# never defaulted. A missing value makes compose refuse to start with a named
+# variable instead of silently bringing the stack up on well-known credentials
+# — which is what a copy-paste of this file into a non-local environment used
+# to do.
+#
+# Local development: copy the ready-made dev credentials once, then use compose
+# as usual (it auto-loads `.env` for every command):
+#
+#   cp env.dev .env
+#   docker compose up --build
+#
+# Anything beyond a throwaway sandbox: write your own `.env` from `env.example`.
 services:
   backend:
     build:
@@ -15,8 +28,14 @@ services:
       timeout: 10s
       retries: 3
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
-      CORS_ORIGINS: http://localhost:5173
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD - see env.example}@db:5432/${POSTGRES_DB:-app}
+      # Signs the auth cookie. Never defaulted here: backend/app/auth.py only
+      # refuses to start on a weak secret when ENVIRONMENT is production or
+      # staging, so a default would leave a development-mode deployment
+      # silently signing tokens with a value that is public in this repo.
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY - 32+ chars, see env.example}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       REDIS_URL: redis://redis:6379/0
       INFERENCE_QUEUE_NAME: inference
       INFERENCE_MODEL_VERSION: medgemma-radiology
@@ -40,12 +59,12 @@ services:
       MEDASR_DEFAULT_CONFIDENCE: "0.0"
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
       DICOM_WEB_USERNAME: ${ORTHANC_USERNAME:-orthanc}
-      DICOM_WEB_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
+      DICOM_WEB_PASSWORD: ${ORTHANC_PASSWORD:?set ORTHANC_PASSWORD - see env.example}
       DRIFT_SCHEDULE_HOURS: "24"
       DRIFT_WINDOW_DAYS: "7"
       DRIFT_BASELINE_DAYS: "7"
       SEGMENTER_URL: http://segmenter:8200
-      SEGMENTER_API_KEY: ${SEGMENTER_API_KEY:-dev-segmenter-key-change-in-production}
+      SEGMENTER_API_KEY: ${SEGMENTER_API_KEY:?set SEGMENTER_API_KEY - see env.example}
       SEGMENTATION_DATA_DIR: /data/segmentations
       SEGMENTATION_JOB_TIMEOUT: "1800"
       ENABLE_TRACING: "true"
@@ -69,7 +88,7 @@ services:
       context: ./backend
     command: ["alembic", "upgrade", "head"]
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD - see env.example}@db:5432/${POSTGRES_DB:-app}
     depends_on:
       db:
         condition: service_healthy
@@ -84,7 +103,7 @@ services:
           cpus: "2"
           memory: 2g
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD - see env.example}@db:5432/${POSTGRES_DB:-app}
       REDIS_URL: redis://redis:6379/0
       INFERENCE_QUEUE_NAME: inference
       INFERENCE_MODEL_VERSION: medgemma-radiology
@@ -108,9 +127,9 @@ services:
       MEDASR_DEFAULT_CONFIDENCE: "0.0"
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
       DICOM_WEB_USERNAME: ${ORTHANC_USERNAME:-orthanc}
-      DICOM_WEB_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
+      DICOM_WEB_PASSWORD: ${ORTHANC_PASSWORD:?set ORTHANC_PASSWORD - see env.example}
       SEGMENTER_URL: http://segmenter:8200
-      SEGMENTER_API_KEY: ${SEGMENTER_API_KEY:-dev-segmenter-key-change-in-production}
+      SEGMENTER_API_KEY: ${SEGMENTER_API_KEY:?set SEGMENTER_API_KEY - see env.example}
       SEGMENTATION_DATA_DIR: /data/segmentations
       SEGMENTATION_JOB_TIMEOUT: "1800"
       ENABLE_TRACING: "true"
@@ -147,7 +166,7 @@ services:
       # vite.config.ts) reads these Node-side and injects the Authorization
       # header itself, so the browser never needs to know them.
       DICOM_WEB_PROXY_USERNAME: ${ORTHANC_USERNAME:-orthanc}
-      DICOM_WEB_PROXY_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
+      DICOM_WEB_PROXY_PASSWORD: ${ORTHANC_PASSWORD:?set ORTHANC_PASSWORD - see env.example}
       # API endpoints (relative, go through proxy)
       VITE_ASR_ENDPOINT: /api/v1/reports/asr-transcript
       VITE_QA_CHECK_URL: /api/v1/reports/qa-check
@@ -179,7 +198,7 @@ services:
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
     environment:
       ORTHANC_USERNAME: ${ORTHANC_USERNAME:-orthanc}
-      ORTHANC_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
+      ORTHANC_PASSWORD: ${ORTHANC_PASSWORD:?set ORTHANC_PASSWORD - see env.example}
       ORTHANC_CORS_ORIGIN: ${ORTHANC_CORS_ORIGIN:-http://localhost:5173}
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8042/system"]
@@ -196,7 +215,7 @@ services:
     environment:
       ORTHANC_URL: http://orthanc:8042
       ORTHANC_USERNAME: ${ORTHANC_USERNAME:-orthanc}
-      ORTHANC_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
+      ORTHANC_PASSWORD: ${ORTHANC_PASSWORD:?set ORTHANC_PASSWORD - see env.example}
       ORTHANC_SEED_ENABLED: "true"
       # Seed modes: minimal, mri, ct, multiframe, us, rg, compression, color, full
       ORTHANC_SEED_MODE: "full"
@@ -207,7 +226,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-app}
       POSTGRES_USER: ${POSTGRES_USER:-app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD - see env.example}
     ports:
       # Dev-only: bound to loopback so the DB port isn't reachable from
       # outside the host. Not used by any service in this compose file
@@ -346,10 +365,10 @@ services:
       SEGMENTATION_DATA_DIR: /data/segmentations
       DICOM_WEB_BASE_URL: http://orthanc:8042/dicom-web
       DICOM_WEB_USERNAME: ${ORTHANC_USERNAME:-orthanc}
-      DICOM_WEB_PASSWORD: ${ORTHANC_PASSWORD:-orthanc}
+      DICOM_WEB_PASSWORD: ${ORTHANC_PASSWORD:?set ORTHANC_PASSWORD - see env.example}
       BONE_HU_THRESHOLD: "300"
       SEGMENTER_MAX_PARALLEL_WADO: "8"
-      SEGMENTER_API_KEY: ${SEGMENTER_API_KEY:-dev-segmenter-key-change-in-production}
+      SEGMENTER_API_KEY: ${SEGMENTER_API_KEY:?set SEGMENTER_API_KEY - see env.example}
     volumes:
       - seg-data:/data/segmentations
     depends_on:

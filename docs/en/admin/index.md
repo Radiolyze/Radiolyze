@@ -44,6 +44,12 @@ in a hospital or private cloud environment.
 
 ## Key Configuration (Environment Variables)
 
+All commands above require a configured `.env` first — `docker-compose.yml`
+declares `POSTGRES_PASSWORD`, `ORTHANC_PASSWORD`, `SEGMENTER_API_KEY` and
+`JWT_SECRET_KEY` as required variables and refuses to start without them, so
+that no deployment ever comes up on credentials that are public in this
+repository. (`cp env.dev .env` covers a throwaway local sandbox.)
+
 Copy `env.example` to `.env` and adjust:
 
 ```bash

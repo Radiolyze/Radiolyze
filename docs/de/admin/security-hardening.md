@@ -17,7 +17,14 @@ Das Standard-Docker-Compose-Setup ist **nicht sicher** für klinische Umgebungen
 
 ---
 
-## Schritt 1: Alle Standard-Zugangsdaten ändern
+## Schritt 1: Alle Zugangsdaten setzen
+
+Es gibt keine Standard-Zugangsdaten mehr zu ändern: `docker-compose.yml`
+deklariert `ORTHANC_PASSWORD`, `POSTGRES_PASSWORD`, `SEGMENTER_API_KEY` und
+`JWT_SECRET_KEY` als Pflichtvariablen — der Stack startet nicht, solange einer
+dieser Werte in `.env` fehlt. (`env.dev` dient ausschließlich lokalen Sandboxes;
+seine Werte sind in diesem Repository öffentlich und dürfen nie in eine
+Installation gelangen.)
 
 ### Orthanc
 
@@ -43,6 +50,9 @@ Repository committet werden.
 
 ### PostgreSQL
 
+Starkes Datenbank-Passwort in `.env` setzen; `docker-compose.yml` baut daraus
+die `DATABASE_URL` für Backend, Worker und Migrationen:
+
 ```bash
 POSTGRES_PASSWORD=<generieren: openssl rand -base64 32>
 ```
@@ -51,6 +61,20 @@ POSTGRES_PASSWORD=<generieren: openssl rand -base64 32>
 
 ```bash
 JWT_SECRET_KEY=<generieren: openssl rand -hex 32>
+ENVIRONMENT=production
+```
+
+Mit `ENVIRONMENT=production` weist das Backend ein zu kurzes oder das
+Default-`JWT_SECRET_KEY` beim Start zurück, statt nur zu warnen (siehe
+`backend/app/auth.py`).
+
+### Segmenter
+
+Gemeinsames Secret zwischen Backend/Worker und Segmenter-Service; ohne es sind
+alle Segmenter-Routen außer `/health` unauthentifiziert:
+
+```bash
+SEGMENTER_API_KEY=<generieren: openssl rand -hex 32>
 ```
 
 ---

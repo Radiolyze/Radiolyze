@@ -12,7 +12,14 @@
 set -eu
 
 : "${DICOM_WEB_PROXY_USERNAME:=orthanc}"
-: "${DICOM_WEB_PROXY_PASSWORD:=orthanc}"
+
+# No default for the password: this image is the production frontend, and a
+# fallback would silently proxy DICOMweb with the well-known orthanc/orthanc
+# credentials on any deployment that forgot to configure them.
+if [ -z "${DICOM_WEB_PROXY_PASSWORD:-}" ]; then
+  echo "FATAL: DICOM_WEB_PROXY_PASSWORD is not set - refusing to start nginx with unconfigured DICOMweb credentials." >&2
+  exit 1
+fi
 
 DICOM_WEB_PROXY_AUTH_B64=$(printf '%s:%s' "$DICOM_WEB_PROXY_USERNAME" "$DICOM_WEB_PROXY_PASSWORD" | base64 | tr -d '\n')
 export DICOM_WEB_PROXY_AUTH_B64

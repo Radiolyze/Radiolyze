@@ -9,8 +9,15 @@
 set -eu
 
 : "${ORTHANC_USERNAME:=orthanc}"
-: "${ORTHANC_PASSWORD:=orthanc}"
 : "${ORTHANC_CORS_ORIGIN:=http://localhost:5173}"
+
+# No default for the password: a fallback here would re-introduce the
+# well-known orthanc/orthanc credentials for anyone running this image
+# outside docker-compose.yml (which requires ORTHANC_PASSWORD itself).
+if [ -z "${ORTHANC_PASSWORD:-}" ]; then
+  echo "FATAL: ORTHANC_PASSWORD is not set - refusing to start Orthanc with no configured password." >&2
+  exit 1
+fi
 
 # Escape for the JSON string context first (backslash, double quote), then
 # escape the result for sed's replacement-text syntax (backslash, the `|`

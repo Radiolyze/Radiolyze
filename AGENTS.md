@@ -26,6 +26,7 @@
 ## Development Setup
 ### Docker (recommended)
 ```
+cp env.dev .env          # once: credentials are required variables, not defaults
 docker compose up --build
 ```
 

@@ -24,6 +24,11 @@ for the full history.
 - `src/components/ui/__tests__/resizable.test.tsx`: pins the
   react-resizable-panels contract the resizable wrapper is built on, so a
   future rename fails a test instead of silently dropping the handle.
+- `env.dev`: the local-sandbox credentials that used to be compose defaults.
+  `cp env.dev .env` restores the flag-free `docker compose up --build` flow for
+  development; the values match what existing dev volumes were initialised
+  with, and its `JWT_SECRET_KEY` is deliberately the literal the backend
+  rejects in production/staging.
 
 ### Changed
 
@@ -42,3 +47,20 @@ for the full history.
   drained.
 - Renamed the package from the `vite_react_shadcn_ts` scaffold name to
   `radiolyze` and set an initial `0.1.0` version (was `0.0.0`).
+
+### Security
+
+- `docker-compose.yml` no longer defaults any credential: `POSTGRES_PASSWORD`,
+  `ORTHANC_PASSWORD`, `SEGMENTER_API_KEY` and the newly forwarded
+  `JWT_SECRET_KEY` are required variables (`${VAR:?…}`), so compose refuses to
+  start and names the missing variable instead of silently bringing the stack
+  up on the well-known `app`/`orthanc` dev credentials (#99).
+- `JWT_SECRET_KEY`, `ENVIRONMENT` and `CORS_ORIGINS` now actually reach the
+  backend container. Setting them in `.env` previously had no effect — compose
+  read `.env` for interpolation only and never passed them through, so a
+  deployment that followed `env.example` still signed auth cookies with the
+  development secret (#99).
+- `orthanc/entrypoint.sh` and `docker/docker-entrypoint.d/dicom-web-auth.sh`
+  (the production nginx image) fail loudly on a missing password instead of
+  falling back to `orthanc`/`orthanc`, so the guarantee also holds for images
+  started outside compose.
