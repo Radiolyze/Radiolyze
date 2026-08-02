@@ -34,9 +34,6 @@ updates:
       - dependency-name: "vite"
         # Blocked by lovable-tagger, whose peer range is >=5.0.0 <8.0.0.
         versions: [">=8"]
-      - dependency-name: "react-resizable-panels"
-        # v3+ renamed the named exports that src/components/ui/resizable.tsx uses.
-        versions: [">=3"]
       - dependency-name: "@cornerstonejs/*"
         # Needs a coordinated 4 -> 5 migration incl. vite.config.ts and
         # scripts/bundle-cornerstone-worker.mjs.

@@ -57,7 +57,6 @@ nächster Abschnitt.
 | `tailwind-merge` | `<3` | v3 lässt Tailwind-3-Support fallen; muss zusammen mit einer Tailwind-4-Migration landen | [#197](https://github.com/Radiolyze/Radiolyze/issues/197) |
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` unterstützt ESLint 10 nicht | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
 | `vite` | `<8` | Peer-Range von `lovable-tagger` deckelt Vite auf `<8` | [#194](https://github.com/Radiolyze/Radiolyze/issues/194) |
-| `react-resizable-panels` | `<3` | v3+ hat die Exports umbenannt, die `src/components/ui/resizable.tsx` nutzt | [#198](https://github.com/Radiolyze/Radiolyze/issues/198) |
 | `@cornerstonejs/*` | `<5` | Braucht Änderungen an `vite.config.ts` und `scripts/bundle-cornerstone-worker.mjs` | [#195](https://github.com/Radiolyze/Radiolyze/issues/195) |
 | `pydicom` (Segmenter) | `<3` | `pydicom-seg` importiert `SegmentationStorage` über einen Pre-3.0-Pfad und ist unmaintained | [#199](https://github.com/Radiolyze/Radiolyze/issues/199) |
 
