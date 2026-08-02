@@ -28,6 +28,7 @@
     "approve": "Freigeben",
     "export": "Exportieren",
     "reload": "Neu laden",
+    "refresh": "Aktualisieren",
     "retry": "Wiederholen",
     "apply": "Anwenden",
     "close": "Schließen",
@@ -224,5 +225,65 @@
     "passed": "Bestanden",
     "warnings": "Warnungen",
     "failed": "Fehler"
+  },
+  "monitoring": {
+    "title": "Drift-Monitoring",
+    "saveSnapshot": "Snapshot speichern",
+    "loadError": "Fehler beim Laden.",
+    "alerts": {
+      "title_one": "Aktive Drift-Warnung ({{count}})",
+      "title_other": "Aktive Drift-Warnungen ({{count}})",
+      "none": "Kein Drift detektiert im aktuellen Zeitfenster.",
+      "detail": "Delta {{delta}} (Schwelle ±{{threshold}})",
+      "metrics": {
+        "inference": {
+          "confidence_avg": "Ø Konfidenz (Inferenz)",
+          "failure_rate": "Fehlerrate (Inferenz)"
+        },
+        "qa": {
+          "pass_rate": "Pass-Rate (QA)",
+          "quality_score_avg": "Ø Quality-Score (QA)"
+        }
+      }
+    },
+    "cards": {
+      "inference": "Inferenz-Metriken",
+      "qa": "QA-Metriken",
+      "subtitle": "Zeitfenster vs. Baseline"
+    },
+    "columns": {
+      "baseline": "Baseline",
+      "current": "Aktuell",
+      "delta": "Delta"
+    },
+    "metrics": {
+      "jobCount": "Anzahl Jobs",
+      "confidenceAvg": "Ø Konfidenz",
+      "confidenceMedian": "Median Konfidenz",
+      "failureRate": "Fehlerrate",
+      "latencyAvgMs": "Ø Latenz (ms)",
+      "checkCount": "Anzahl Checks",
+      "passRate": "Pass-Rate",
+      "qualityScoreAvg": "Ø Quality-Score",
+      "warnCount": "Warnungen",
+      "failCount": "Fehler"
+    },
+    "history": {
+      "title": "Historischer Verlauf",
+      "subtitle_one": "Basierend auf {{count}} gespeicherten Snapshot",
+      "subtitle_other": "Basierend auf {{count}} gespeicherten Snapshots",
+      "confidenceChart": "Ø Konfidenz (Inferenz)",
+      "passRateChart": "QA Pass-Rate (%)",
+      "empty": "Keine Snapshots vorhanden. Klicke auf „{{action}}“, um Verlaufsdaten zu erzeugen."
+    },
+    "snapshots": {
+      "title": "Snapshot-Verlauf",
+      "date": "Datum",
+      "window": "Fenster",
+      "windowDays": "{{days}} T",
+      "confidence": "Ø Konfidenz",
+      "passRate": "Pass-Rate",
+      "warnings": "Warnungen"
+    }
   }
 }

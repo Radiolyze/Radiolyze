@@ -28,6 +28,7 @@
     "approve": "Approve",
     "export": "Export",
     "reload": "Reload",
+    "refresh": "Refresh",
     "retry": "Retry",
     "apply": "Apply",
     "close": "Close",
@@ -224,5 +225,65 @@
     "passed": "Passed",
     "warnings": "Warnings",
     "failed": "Failed"
+  },
+  "monitoring": {
+    "title": "Drift monitoring",
+    "saveSnapshot": "Save snapshot",
+    "loadError": "Failed to load.",
+    "alerts": {
+      "title_one": "Active drift alert ({{count}})",
+      "title_other": "Active drift alerts ({{count}})",
+      "none": "No drift detected in the current window.",
+      "detail": "delta {{delta}} (threshold ±{{threshold}})",
+      "metrics": {
+        "inference": {
+          "confidence_avg": "Avg. confidence (inference)",
+          "failure_rate": "Failure rate (inference)"
+        },
+        "qa": {
+          "pass_rate": "Pass rate (QA)",
+          "quality_score_avg": "Avg. quality score (QA)"
+        }
+      }
+    },
+    "cards": {
+      "inference": "Inference metrics",
+      "qa": "QA metrics",
+      "subtitle": "Window vs. baseline"
+    },
+    "columns": {
+      "baseline": "Baseline",
+      "current": "Current",
+      "delta": "Delta"
+    },
+    "metrics": {
+      "jobCount": "Jobs",
+      "confidenceAvg": "Avg. confidence",
+      "confidenceMedian": "Median confidence",
+      "failureRate": "Failure rate",
+      "latencyAvgMs": "Avg. latency (ms)",
+      "checkCount": "Checks",
+      "passRate": "Pass rate",
+      "qualityScoreAvg": "Avg. quality score",
+      "warnCount": "Warnings",
+      "failCount": "Failures"
+    },
+    "history": {
+      "title": "History",
+      "subtitle_one": "Based on {{count}} saved snapshot",
+      "subtitle_other": "Based on {{count}} saved snapshots",
+      "confidenceChart": "Avg. confidence (inference)",
+      "passRateChart": "QA pass rate (%)",
+      "empty": "No snapshots yet. Click “{{action}}” to start collecting history."
+    },
+    "snapshots": {
+      "title": "Snapshot history",
+      "date": "Date",
+      "window": "Window",
+      "windowDays": "{{days}}d",
+      "confidence": "Avg. confidence",
+      "passRate": "Pass rate",
+      "warnings": "Warnings"
+    }
   }
 }
