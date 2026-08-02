@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BookOpen, ChevronDown, Search, Loader2, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { guidelinesClient, type GuidelinePayload } from "@/services/guidelinesClient";
-import { logger } from "@/lib/logger";
 
 interface GuidelinesPanelProps {
   /** Pre-populate the search with findings context (e.g. extracted keywords). */
@@ -24,6 +24,7 @@ function useDebounce<T>(value: T, delayMs: number): T {
 }
 
 function GuidelineCard({ guideline }: { guideline: GuidelinePayload }) {
+  const { t } = useTranslation("report");
   const [expanded, setExpanded] = useState(false);
   const snippet = guideline.body.slice(0, 160);
   const hasMore = guideline.body.length > 160;
@@ -52,7 +53,7 @@ function GuidelineCard({ guideline }: { guideline: GuidelinePayload }) {
           className="text-[10px] text-primary hover:underline"
           onClick={() => setExpanded((v) => !v)}
         >
-          {expanded ? "Weniger anzeigen" : "Mehr anzeigen"}
+          {expanded ? t("guidelines.showLess") : t("guidelines.showMore")}
         </button>
       )}
 
@@ -80,42 +81,26 @@ export function GuidelinesPanel({
   const { t } = useTranslation("report");
   const [isOpen, setIsOpen] = useState(isOpenByDefault);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<GuidelinePayload[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
 
   const debouncedQuery = useDebounce(query, 350);
+  // With an empty search box the panel searches for what the report is about.
+  const searchTerm = debouncedQuery.trim() || findingsContext.slice(0, 100);
 
-  const doSearch = useCallback(async (q: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await guidelinesClient.semanticSearch(q);
-      setResults(data);
-      setHasLoaded(true);
-    } catch (err) {
-      logger.debug("[GuidelinesPanel] Semantic search failed", err);
-      setError("Leitlinien konnten nicht geladen werden.");
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Trigger initial load when panel opens for the first time
-  useEffect(() => {
-    if (isOpen && !hasLoaded) {
-      doSearch(findingsContext.slice(0, 100));
-    }
-  }, [isOpen, hasLoaded, findingsContext, doSearch]);
-
-  // Re-search when debounced query changes
-  useEffect(() => {
-    if (isOpen && hasLoaded) {
-      doSearch(debouncedQuery);
-    }
-  }, [debouncedQuery, isOpen, hasLoaded, doSearch]);
+  const {
+    data: results = [],
+    isFetching,
+    isError,
+    isSuccess,
+  } = useQuery({
+    queryKey: ["guidelines", "search", searchTerm],
+    queryFn: () => guidelinesClient.semanticSearch(searchTerm),
+    // Nothing is fetched until the panel is open; results survive a close/open
+    // cycle through the cache instead of being refetched.
+    enabled: isOpen,
+    // Keep the previous hits on screen while a new term is in flight, so the
+    // list does not blank out on every keystroke.
+    placeholderData: keepPreviousData,
+  });
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -123,7 +108,7 @@ export function GuidelinesPanel({
         <div className="px-4 py-3 border-t border-border flex items-center justify-between hover:bg-accent/50 transition-colors">
           <div className="flex items-center gap-2 text-sm font-medium">
             <BookOpen className="h-4 w-4" />
-            <span>{t("guidelines.title", "Leitlinien")}</span>
+            <span>{t("guidelines.title")}</span>
             {results.length > 0 && (
               <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
                 {results.length}
@@ -146,27 +131,27 @@ export function GuidelinesPanel({
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
               className="pl-8 h-8 text-xs"
-              placeholder="Leitlinien durchsuchen…"
+              placeholder={t("guidelines.searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            {loading && (
+            {isFetching && (
               <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
             )}
           </div>
 
           {/* Error state */}
-          {error && (
+          {isError && (
             <div className="flex items-center gap-2 text-xs text-destructive">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              {error}
+              {t("guidelines.loadError")}
             </div>
           )}
 
           {/* Empty state */}
-          {!loading && !error && hasLoaded && results.length === 0 && (
+          {!isFetching && isSuccess && results.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-4">
-              Keine Leitlinien gefunden.
+              {t("guidelines.empty")}
             </p>
           )}
 

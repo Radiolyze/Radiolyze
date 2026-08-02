@@ -54,8 +54,23 @@ for the full history.
   so a regression fails the build; they count every file under `src/` rather
   than only the ones a test imports (#115).
 
+- `src/components/RightPanel/__tests__/GuidelinesPanel.test.tsx`: pins the
+  panel's search behaviour — nothing fetched while collapsed, the findings
+  context used as the opening search, one request per settled search term
+  rather than one per keystroke, and previous hits kept on screen while the
+  next search is in flight (#113).
+
 ### Changed
 
+- `GuidelinesPanel` and `PromptSettings` fetch through `@tanstack/react-query`
+  instead of `useEffect` plus hand-rolled loading/error state, so both get the
+  retry, caching and request dedup the rest of the app already had (#113).
+  `GuidelinesPanel` no longer fires a second search immediately after the first
+  one lands, and `PromptSettings` keeps unsaved edits as overrides on top of
+  the server state, so a background refetch cannot overwrite what someone is
+  typing.
+- The user-facing text in `GuidelinesPanel` goes through i18n rather than German
+  literals (#117).
 - The segmenter's DICOM SEG writer moved from the unmaintained `pydicom-seg`
   to `highdicom`, lifting the `pydicom<3.0` ceiling (now `>=3.0.2,<4`) and
   removing the matching Dependabot `ignore` entry (#199). The public surface of
