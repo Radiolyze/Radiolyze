@@ -86,6 +86,11 @@ for the full history.
 - `ReportDiffPanel` and `AnnotationPanel` render their user-facing text through
   i18n instead of German literals; `ReportDiffPanel` held a `useTranslation`
   handle it never used (#117).
+- The Training data export page renders through i18n instead of German
+  literals — it had no `useTranslation` at all: page and card headings, every
+  form label, the export and manifest toasts, the manifest preview with its
+  error list, and the empty state. Its keys live in a new `training` namespace
+  (#117).
 - The Monitoring page renders through i18n instead of German literals — page
   title, actions, drift-warning headings, both metric cards with their row
   labels and column headers, the history charts and tooltips, the empty state

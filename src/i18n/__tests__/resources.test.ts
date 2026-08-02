@@ -32,6 +32,33 @@ describe("translation resources", () => {
   });
 });
 
+describe("training export resources", () => {
+  it("resolves the counted strings in both languages", async () => {
+    await i18n.changeLanguage("de");
+    expect(i18n.t("training:dataCapture.catalogCount", { count: 1 })).toBe("1 Bild im Katalog");
+    expect(i18n.t("training:dataCapture.catalogCount", { count: 4 })).toBe("4 Bilder im Katalog");
+    expect(i18n.t("training:export.readySummary", { count: 1, format: "COCO" })).toBe(
+      "1 Annotation im Format COCO",
+    );
+
+    await i18n.changeLanguage("en");
+    expect(i18n.t("training:dataCapture.catalogCount", { count: 1 })).toBe(
+      "1 image in the catalogue",
+    );
+    expect(i18n.t("training:export.readySummary", { count: 4, format: "COCO" })).toBe(
+      "4 annotations in COCO format",
+    );
+  });
+
+  it("keeps the markup the export hint renders through <Trans>", () => {
+    // Rendered with components={{ code: <code /> }} — a translation that loses
+    // the tag would silently drop the file path from the sentence.
+    for (const lng of ["de", "en"] as const) {
+      expect(resources[lng].training.export.zipHint).toContain("<code>images/manifest.json</code>");
+    }
+  });
+});
+
 describe("drift alert metric labels", () => {
   // The identifiers the backend puts on each alert (backend/app/api/monitoring.py).
   // They are dotted, so they resolve straight through the nesting under
