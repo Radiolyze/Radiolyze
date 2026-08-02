@@ -29,7 +29,6 @@ for the full history.
   development; the values match what existing dev volumes were initialised
   with, and its `JWT_SECRET_KEY` is deliberately the literal the backend
   rejects in production/staging.
-
 - `src/lib/date.ts`: the date and time formatting helpers, moved out of
   `src/data/mockData.ts` (which is mock fixtures, not utilities) and extended
   with `formatShortDate`/`formatDateTime`. Every helper formats in the language
@@ -39,6 +38,16 @@ for the full history.
 - `src/i18n/__tests__/resources.test.ts`: asserts that the German and English
   resources carry the same keys in every namespace, so a translation added to
   one language cannot silently go missing in the other.
+- `src/services/__tests__/apiClient.test.ts`, `reportClient.test.ts` and
+  `authClient.test.ts`: the first tests for the service clients — request and
+  query building, the retry/backoff on 502/503/504, the 401 path that clears
+  the cached user and redirects, `content-disposition` filename parsing in the
+  export paths, and the SSE parsing behind `streamImpression` (#115).
+- A coverage gate: `npm run test:coverage` runs the frontend suite with
+  `--coverage` and the frontend CI job now runs it instead of a bare `vitest`.
+  The thresholds in `vitest.config.ts` are a floor just under current coverage,
+  so a regression fails the build; they count every file under `src/` rather
+  than only the ones a test imports (#115).
 
 ### Changed
 

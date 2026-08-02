@@ -35,6 +35,9 @@ public/workers
 __pycache__/
 *.pyc
 
+# Vitest coverage
+/coverage/
+
 # MkDocs
 site/
 
