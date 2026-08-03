@@ -68,6 +68,11 @@ for the full history.
   so a regression fails the build; they count every file under `src/` rather
   than only the ones a test imports (#115).
 
+- `src/hooks/reporting/__tests__/`: 43 tests for the three hooks split out of
+  `useReport` — the persisted-vs-in-memory edit paths, the inference runner's
+  status transitions and failure handling (including that a 4xx is not masked by
+  the impression fallback), and that a failed QA run warns rather than breaking
+  the editor. The report lifecycle had no tests at all before (#115, #120).
 - `src/components/RightPanel/__tests__/GuidelinesPanel.test.tsx`: pins the
   panel's search behaviour — nothing fetched while collapsed, the findings
   context used as the opening search, one request per settled search term
@@ -76,6 +81,17 @@ for the full history.
 
 ### Changed
 
+- `useReport` (556 lines) is split into three focused hooks — `useReportMutations`
+  (findings/impression/approval round trips), `useInference` (queue an AI job and
+  merge its result) and `useQaChecks` — with `useReport` left as their
+  composition (#120). Its return type is unchanged, so `ReportWorkspace` and
+  every other caller is untouched. `generateImpression` and `analyzeImages` were
+  ~110 lines of near-identical code and now share one runner. This is the split
+  #113 and #115 both defer their remaining work to.
+- A failed inference marks the report `inferenceStatus: "failed"` on a 4xx as
+  well, where `generateImpression` previously left the previous status in place
+  because the early-return for client errors sat above the status write.
+  `analyzeImages` already behaved this way; both paths now agree.
 - The `e2e-frontend` CI job blocks instead of running with
   `continue-on-error` (#116). It was advisory while the suite only proved that
   Playwright starts; now that it covers the core workflow and stubs every
