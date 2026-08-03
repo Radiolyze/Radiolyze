@@ -43,6 +43,11 @@ const FORMAT_INFO: Record<ExportFormat, { name: string; icon: typeof FileJson }>
   radiolyze: { name: "Radiolyze", icon: Sparkles },
 };
 
+// Slider bounds, shared with the labels underneath it. Keeping the percentages
+// out of the resources means a bound can only be changed in one place.
+const SPLIT_MIN = 0.5;
+const SPLIT_MAX = 0.95;
+
 export default function Training() {
   const { t } = useTranslation("training");
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("radiolyze");
@@ -335,14 +340,14 @@ export default function Training() {
                 <Slider
                   value={splitRatio}
                   onValueChange={setSplitRatio}
-                  min={0.5}
-                  max={0.95}
+                  min={SPLIT_MIN}
+                  max={SPLIT_MAX}
                   step={0.05}
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{t("settings.splitMin")}</span>
-                  <span>{t("settings.splitMax")}</span>
+                  <span>{t("settings.splitBound", { percent: Math.round(SPLIT_MIN * 100) })}</span>
+                  <span>{t("settings.splitBound", { percent: Math.round(SPLIT_MAX * 100) })}</span>
                 </div>
               </div>
 
