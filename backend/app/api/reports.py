@@ -27,9 +27,7 @@ from ..inference_clients import (
 )
 from ..mock_logic import run_qa_checks
 from ..models import (
-    CriticalFindingAlert,
     InferenceJob,
-    PeerReview,
     QACheckResult,
     Report,
     ReportComparison,
@@ -55,7 +53,7 @@ from ..schemas import (
     ReportRevisionResponse,
     ReportUpdateRequest,
 )
-from ..services import ReportService
+from ..services import CriticalFindingService, PeerReviewService, ReportService
 from ..services.exceptions import ConflictError, NotFoundError
 from ..sr import build_sr_export
 from ..utils.hashing import compute_bytes_hash, compute_input_hash, compute_text_hash
@@ -700,55 +698,12 @@ async def check_critical_findings(
     db: Session = Depends(get_db),
 ) -> list[CriticalFindingAlertResponse]:
     """Scan a report for critical findings and create alerts."""
-    from ..models import QARule
-    from ..qa_engine import detect_critical_findings
+    try:
+        created = CriticalFindingService(db).detect_and_record(report_id)
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Report not found") from None
 
-    report = db.get(Report, report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
-
-    rules = db.query(QARule).filter(QARule.is_active).all()
-    detected = detect_critical_findings(report.findings_text, report.impression_text, rules)
-
-    alerts: list[CriticalFindingAlertResponse] = []
-    now = utc_now()
-
-    for item in detected:
-        alert = CriticalFindingAlert(
-            report_id=report_id,
-            finding_type=item["finding_type"],
-            severity=item["severity"],
-            matched_text=item.get("matched_text"),
-            notified_at=now,
-        )
-        db.add(alert)
-        db.flush()
-        add_audit_event(
-            db,
-            event_type="critical_finding_detected",
-            actor_id="system",
-            report_id=report_id,
-            study_id=report.study_id,
-            metadata={
-                "alert_id": alert.id,
-                "finding_type": item["finding_type"],
-                "severity": item["severity"],
-            },
-            timestamp=now,
-            source="api",
-        )
-        alerts.append(
-            CriticalFindingAlertResponse(
-                id=alert.id,
-                report_id=report_id,
-                finding_type=alert.finding_type,
-                severity=alert.severity,
-                matched_text=alert.matched_text,
-                notified_at=now,
-            )
-        )
-
-    db.commit()
+    alerts = [CriticalFindingService.serialize(a) for a in created]
 
     if alerts:
         await broadcast_status(
@@ -768,25 +723,8 @@ def list_critical_alerts(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[CriticalFindingAlertResponse]:
-    alerts = (
-        db.query(CriticalFindingAlert)
-        .filter(CriticalFindingAlert.report_id == report_id)
-        .order_by(CriticalFindingAlert.notified_at.desc())
-        .all()
-    )
-    return [
-        CriticalFindingAlertResponse(
-            id=a.id,
-            report_id=a.report_id,
-            finding_type=a.finding_type,
-            severity=a.severity,
-            matched_text=a.matched_text,
-            notified_at=a.notified_at,
-            acknowledged_by=a.acknowledged_by,
-            acknowledged_at=a.acknowledged_at,
-        )
-        for a in alerts
-    ]
+    service = CriticalFindingService(db)
+    return [service.serialize(a) for a in service.list_for_report(report_id)]
 
 
 @router.patch(
@@ -801,40 +739,22 @@ def acknowledge_critical_alert(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user),
 ) -> CriticalFindingAlertResponse:
-    alert = db.get(CriticalFindingAlert, alert_id)
-    if not alert or alert.report_id != report_id:
-        raise HTTPException(status_code=404, detail="Alert not found")
-    if alert.acknowledged_at:
-        raise HTTPException(status_code=409, detail="Alert already acknowledged")
+    try:
+        alert = CriticalFindingService(db).acknowledge(
+            report_id,
+            alert_id,
+            acknowledged_by=payload.acknowledged_by,
+            # Audit actor is the authenticated caller; payload.acknowledged_by
+            # (stored on the alert itself) is a separate, client-supplied
+            # display name and isn't trusted as the audit identity.
+            actor_id=current_user.id if current_user is not None else None,
+        )
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Alert not found") from None
+    except ConflictError:
+        raise HTTPException(status_code=409, detail="Alert already acknowledged") from None
 
-    now = utc_now()
-    alert.acknowledged_by = payload.acknowledged_by
-    alert.acknowledged_at = now
-
-    add_audit_event(
-        db,
-        event_type="critical_finding_acknowledged",
-        # Audit actor is the authenticated caller; payload.acknowledged_by
-        # (stored above on the alert itself) is a separate, client-supplied
-        # display name and isn't trusted as the audit identity.
-        actor_id=current_user.id if current_user is not None else payload.acknowledged_by,
-        report_id=report_id,
-        metadata={"alert_id": alert_id, "finding_type": alert.finding_type},
-        timestamp=now,
-        source="api",
-    )
-    db.commit()
-
-    return CriticalFindingAlertResponse(
-        id=alert.id,
-        report_id=alert.report_id,
-        finding_type=alert.finding_type,
-        severity=alert.severity,
-        matched_text=alert.matched_text,
-        notified_at=alert.notified_at,
-        acknowledged_by=alert.acknowledged_by,
-        acknowledged_at=alert.acknowledged_at,
-    )
+    return CriticalFindingService.serialize(alert)
 
 
 # ---------------------------------------------------------------------------
@@ -852,47 +772,14 @@ async def request_peer_review(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> PeerReviewResponse:
-    report = db.get(Report, report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
-
-    now = utc_now()
-    review = PeerReview(
-        report_id=report_id,
-        requested_by="system",
-        assigned_to=payload.assigned_to,
-        comment=payload.comment,
-        status="requested",
-        created_at=now,
-    )
-    db.add(review)
-    add_audit_event(
-        db,
-        event_type="peer_review_requested",
-        actor_id="system",
-        report_id=report_id,
-        study_id=report.study_id,
-        metadata={
-            "assigned_to": payload.assigned_to,
-            "comment": payload.comment,
-        },
-        timestamp=now,
-        source="api",
-    )
-    db.commit()
-    db.refresh(review)
+    try:
+        review = PeerReviewService(db).request(report_id, payload)
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Report not found") from None
 
     await broadcast_status(report_id, {"peerReviewStatus": "requested"})
 
-    return PeerReviewResponse(
-        id=review.id,
-        report_id=review.report_id,
-        requested_by=review.requested_by,
-        assigned_to=review.assigned_to,
-        comment=review.comment,
-        status=review.status,
-        created_at=review.created_at,
-    )
+    return PeerReviewService.serialize(review)
 
 
 @router.get(
@@ -904,27 +791,8 @@ def list_peer_reviews(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[PeerReviewResponse]:
-    reviews = (
-        db.query(PeerReview)
-        .filter(PeerReview.report_id == report_id)
-        .order_by(PeerReview.created_at.desc())
-        .all()
-    )
-    return [
-        PeerReviewResponse(
-            id=r.id,
-            report_id=r.report_id,
-            requested_by=r.requested_by,
-            assigned_to=r.assigned_to,
-            comment=r.comment,
-            review_comment=r.review_comment,
-            status=r.status,
-            decision=r.decision,
-            created_at=r.created_at,
-            completed_at=r.completed_at,
-        )
-        for r in reviews
-    ]
+    service = PeerReviewService(db)
+    return [service.serialize(r) for r in service.list_for_report(report_id)]
 
 
 @router.post(
@@ -938,47 +806,15 @@ async def submit_peer_review(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> PeerReviewResponse:
-    review = db.get(PeerReview, review_id)
-    if not review or review.report_id != report_id:
-        raise HTTPException(status_code=404, detail="Review not found")
-    if review.status == "completed":
-        raise HTTPException(status_code=409, detail="Review already completed")
-
-    now = utc_now()
-    review.review_comment = payload.review_comment
-    review.decision = payload.decision
-    review.status = "completed"
-    review.completed_at = now
-
-    report = db.get(Report, report_id)
-    add_audit_event(
-        db,
-        event_type="peer_review_submitted",
-        actor_id=review.assigned_to,
-        report_id=report_id,
-        study_id=report.study_id if report else None,
-        metadata={
-            "review_id": review_id,
-            "decision": payload.decision,
-        },
-        timestamp=now,
-        source="api",
-    )
-    db.commit()
+    try:
+        review = PeerReviewService(db).submit(report_id, review_id, payload)
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Review not found") from None
+    except ConflictError:
+        raise HTTPException(status_code=409, detail="Review already completed") from None
 
     await broadcast_status(
         report_id, {"peerReviewStatus": "completed", "peerReviewDecision": payload.decision}
     )
 
-    return PeerReviewResponse(
-        id=review.id,
-        report_id=review.report_id,
-        requested_by=review.requested_by,
-        assigned_to=review.assigned_to,
-        comment=review.comment,
-        review_comment=review.review_comment,
-        status=review.status,
-        decision=review.decision,
-        created_at=review.created_at,
-        completed_at=review.completed_at,
-    )
+    return PeerReviewService.serialize(review)
