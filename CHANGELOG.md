@@ -110,6 +110,16 @@ for the full history.
 - `ReportDiffPanel` and `AnnotationPanel` render their user-facing text through
   i18n instead of German literals; `ReportDiffPanel` held a `useTranslation`
   handle it never used (#117).
+- `src/i18n/__tests__/fallbacks.test.ts`: resolves every `t("key", "German
+  fallback")` call site against the resources, so a key that exists nowhere
+  fails a test instead of silently rendering German to English users (#117).
+- `ComparisonPanel` and the recording banner in `FindingsPanel` now resolve
+  their translations instead of falling through to the inline German defaults:
+  the panel read `comparison.*` from the default `common` namespace, where
+  those keys never existed (the `comparison` section lives in `viewer` and
+  means something else), so its heading, buttons, evidence chips and trend and
+  status badges rendered German — or a raw `progressed`/`worsened` identifier —
+  in every language (#117).
 - The Training data export page renders through i18n instead of German
   literals — it had no `useTranslation` at all: page and card headings, every
   form label, the export and manifest toasts, the manifest preview with its
