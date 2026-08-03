@@ -81,6 +81,16 @@ describe("training export resources", () => {
   });
 });
 
+describe("DICOMweb settings resources", () => {
+  it("keeps the markup the url hint renders through <Trans>", () => {
+    // Rendered with components={{ path: <span className="font-mono" /> }} — a
+    // translation that loses the tag would drop the path out of the sentence.
+    for (const lng of ["de", "en"] as const) {
+      expect(resources[lng].settings.dicomweb.urlHint).toContain("<path>/dicom-web</path>");
+    }
+  });
+});
+
 describe("drift alert metric labels", () => {
   // The identifiers the backend puts on each alert (backend/app/api/monitoring.py).
   // They are dotted, so they resolve straight through the nesting under
