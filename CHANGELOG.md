@@ -12,6 +12,12 @@ for the full history.
 
 ### Added
 
+- `e2e/workflow.spec.ts`: end-to-end coverage of the core clinical workflow —
+  study selection, AI findings, QA and finalize (#116). Eight specs drive the
+  real workspace through a network-level backend stub (`e2e/support/`), so the
+  app's DICOMweb mapping, inference polling and report state all run unmodified
+  without Postgres/Redis/Orthanc/vLLM. Each spec asserts both what the user
+  sees and the request the UI produced.
 - `docs/en/development/dependencies.md` (and the DE mirror): the dependency
   policy — which majors are held back and why, how a bump is reviewed, and the
   pins that live outside Dependabot's reach.
@@ -24,6 +30,14 @@ for the full history.
 - `src/components/ui/__tests__/resizable.test.tsx`: pins the
   react-resizable-panels contract the resizable wrapper is built on, so a
   future rename fails a test instead of silently dropping the handle.
+- `src/pages/__tests__/Training.test.tsx`: renders the training export page in
+  both languages and across a language switch. It also asserts the export
+  hint's manifest path reaches the DOM inside a `<code>` element — `<Trans>`
+  resolves tag names against its `components` map, and a name with no match
+  renders as literal text, which a test on the resource string cannot see.
+- The i18n guide documents `<Trans>` for markup inside a sentence, and how to
+  pin a dynamic key with a test over every possible value. Its namespace table
+  and file listing now include the `training` namespace.
 - The DICOM SEG round-trip test writes a real SEG and reads it back through
   highdicom, comparing the decoded label map voxel-for-voxel with the input,
   plus cases for a slice-count mismatch and a source series stripped of the
@@ -78,6 +92,12 @@ for the full history.
   well, where `generateImpression` previously left the previous status in place
   because the early-return for client errors sat above the status write.
   `analyzeImages` already behaved this way; both paths now agree.
+- The `e2e-frontend` CI job blocks instead of running with
+  `continue-on-error` (#116). It was advisory while the suite only proved that
+  Playwright starts; now that it covers the core workflow and stubs every
+  backend response, a failure is a regression rather than an unavailable
+  service. The per-test timeout moves to 60s, since the inference specs wait
+  out the WebSocket-to-polling fallback.
 - Every timestamp column is `timestamptz` instead of a `String` holding ISO
   text (migration `0005_timestamps`, #102). Range queries and `ORDER BY` are
   now temporal rather than lexicographic — the old comparison only agreed with
@@ -114,6 +134,23 @@ for the full history.
 - `ReportDiffPanel` and `AnnotationPanel` render their user-facing text through
   i18n instead of German literals; `ReportDiffPanel` held a `useTranslation`
   handle it never used (#117).
+- `src/i18n/__tests__/fallbacks.test.ts`: resolves every `t("key", "German
+  fallback")` call site against the resources, so a key that exists nowhere
+  fails a test instead of silently rendering German to English users (#117).
+- `ComparisonPanel` and the recording banner in `FindingsPanel` now resolve
+  their translations instead of falling through to the inline German defaults:
+  the panel read `comparison.*` from the default `common` namespace, where
+  those keys never existed (the `comparison` section lives in `viewer` and
+  means something else), so its heading, buttons, evidence chips and trend and
+  status badges rendered German — or a raw `progressed`/`worsened` identifier —
+  in every language (#117).
+- The Training data export page renders through i18n instead of German
+  literals — it had no `useTranslation` at all: page and card headings, every
+  form label, the export and manifest toasts, the manifest preview with its
+  error list, and the empty state. Its keys live in a new `training` namespace
+  (#117). The split slider's bound labels are interpolated from the same
+  constants the slider's `min`/`max` are given, rather than spelling the
+  percentages out a second time in each locale file.
 - The Monitoring page renders through i18n instead of German literals — page
   title, actions, drift-warning headings, both metric cards with their row
   labels and column headers, the history charts and tooltips, the empty state

@@ -57,7 +57,7 @@ export function ComparisonPanel({
   onEvidenceSelect,
   priorAvailable = true,
 }: ComparisonPanelProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("report");
 
   const sortedChanges = useMemo(() => {
     if (!result?.changes) return [];
@@ -67,13 +67,13 @@ export function ComparisonPanel({
 
   return (
     <section
-      aria-label={t("comparison.title", "Vergleich mit Voruntersuchung")}
+      aria-label={t("comparisonAnalysis.title")}
       className="flex flex-col gap-3 rounded-lg border bg-background p-4"
     >
       <header className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <Sparkles className="h-4 w-4 text-primary" />
-          {t("comparison.title", "Vergleich mit Voruntersuchung")}
+          {t("comparisonAnalysis.title")}
         </h3>
         {onRun && (
           <Button
@@ -83,15 +83,13 @@ export function ComparisonPanel({
             onClick={onRun}
             disabled={isRunning || !priorAvailable}
           >
-            {isRunning ? t("comparison.running", "Läuft …") : t("comparison.run", "Vergleichen")}
+            {isRunning ? t("comparisonAnalysis.running") : t("comparisonAnalysis.run")}
           </Button>
         )}
       </header>
 
       {!priorAvailable && (
-        <p className="text-xs text-muted-foreground">
-          {t("comparison.noPrior", "Keine Voruntersuchung verfügbar.")}
-        </p>
+        <p className="text-xs text-muted-foreground">{t("comparisonAnalysis.noPrior")}</p>
       )}
 
       {error && (
@@ -112,7 +110,7 @@ export function ComparisonPanel({
                 result.overallTrend === "mixed" && "bg-amber-50 text-amber-900 border-amber-300",
                 result.overallTrend === "stable" && "bg-slate-50 text-slate-800 border-slate-300",
               )}
-              aria-label={t("comparison.trend." + result.overallTrend, result.overallTrend)}
+              aria-label={t(`comparisonAnalysis.trend.${result.overallTrend}`)}
             >
               {TREND_ICON[result.overallTrend]}
             </span>
@@ -132,7 +130,7 @@ export function ComparisonPanel({
                       variant="outline"
                       className={cn("text-xs uppercase", STATUS_VARIANT[change.status])}
                     >
-                      {t("comparison.status." + change.status, change.status)}
+                      {t(`comparisonAnalysis.status.${change.status}`)}
                     </Badge>
                   </div>
                   {change.quantitativeChange && (
@@ -148,7 +146,7 @@ export function ComparisonPanel({
                         className="rounded border border-primary/40 bg-primary/10 px-2 py-0.5 text-primary hover:bg-primary/20"
                         onClick={() => onEvidenceSelect?.({ role: "current", index: idx })}
                       >
-                        {t("comparison.evidence.current", "C{{idx}}", { idx })}
+                        {t("comparisonAnalysis.evidence.current", { idx })}
                       </button>
                     ))}
                     {(change.evidenceIndicesPrior ?? []).map((idx) => (
@@ -158,7 +156,7 @@ export function ComparisonPanel({
                         className="rounded border border-muted-foreground/40 bg-muted px-2 py-0.5 hover:bg-muted-foreground/10"
                         onClick={() => onEvidenceSelect?.({ role: "prior", index: idx })}
                       >
-                        {t("comparison.evidence.prior", "P{{idx}}", { idx })}
+                        {t("comparisonAnalysis.evidence.prior", { idx })}
                       </button>
                     ))}
                   </div>
@@ -169,7 +167,7 @@ export function ComparisonPanel({
 
           {result.confidence && (
             <p className="text-xs text-muted-foreground">
-              {t("comparison.confidence", "Konfidenz")}: {result.confidence}
+              {t("comparisonAnalysis.confidence")}: {result.confidence}
             </p>
           )}
         </>

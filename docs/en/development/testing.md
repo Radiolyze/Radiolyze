@@ -177,8 +177,22 @@ Always run this before merging documentation changes.
 
 End-to-end tests drive a real browser. Two styles live side by side in `e2e/`:
 
-- **Mocked-network flows** (e.g. `e2e/auth.spec.ts`) stub backend responses with `page.route(...)` instead of requiring a live stack. These are fast, deterministic, and run non-blocking in CI (`e2e-frontend` job) on every push/PR.
-- **Full-stack flows** (planned — see the scenarios below) drive the real backend/DB/Orthanc via `docker compose`, for the workflows that actually need real data (DICOM viewer, ASR, AI inference, QA).
+- **Mocked-network flows** (`e2e/auth.spec.ts`, `e2e/workflow.spec.ts`) stub backend responses with `page.route(...)` instead of requiring a live stack. These are fast, deterministic, and run as a blocking CI job (`e2e-frontend`) on every push/PR.
+- **Full-stack flows** (planned — see the scenarios below) drive the real backend/DB/Orthanc via `docker compose`, for the workflows that need real pixel data (DICOM viewer scrolling and windowing, ASR).
+
+### Mocked-network specs
+
+`e2e/support/` holds the shared harness the mocked specs build on:
+
+- `fixtures.ts` — DICOM JSON study/series/instance records and report payloads. The record shapes mirror what Orthanc's DICOMweb endpoints and `/api/v1/reports` return, so the app's own `dicomWebMapping.ts` and `reportMapping.ts` run unmodified against them.
+- `mockBackend.ts` — `mockWorkflowBackend(page, options)` installs the routes for DICOMweb, reports, QA and inference. It keeps live report state (mutated by `PATCH` and finalize) and records the calls the app made, so a spec can assert on the request the UI produced as well as on what it rendered.
+
+The report wire format is declared in `fixtures.ts` rather than imported from `src/services/reportClient.ts` on purpose: these specs are black-box clients of the HTTP contract and should fail when the *wire format* changes, not when an internal type is refactored.
+
+Two behaviours are worth knowing when reading the specs:
+
+- **Inference takes a few seconds.** No WebSocket is connected under `page.route`, so `awaitInferenceResult` falls through to its HTTP polling fallback after ~4s — the same path a real deployment takes when the socket is down. That fallback is why `playwright.config.ts` raises the per-test timeout above Playwright's 30s default.
+- **Pixel data is not served.** WADO-RS frame requests return 404. The instance *list* is what the workflow needs (it builds the image references sent to inference), and Cornerstone tolerates the missing pixels.
 
 ### Setup
 
@@ -202,59 +216,68 @@ E2E_BASE_URL=http://localhost:5173 npm run e2e
 npx playwright test --headed
 
 # Run a specific spec
-npx playwright test e2e/auth.spec.ts
+npx playwright test e2e/workflow.spec.ts
 ```
 
-### Key Scenarios to Cover
+### Covered Today
 
-`e2e/auth.spec.ts` covers the login form, invalid-credential handling, and the 401-redirect route guard today. The remaining scenarios below need a real backend (Orthanc-seeded study data, inference/QA pipeline) and are follow-up work:
-
-| Test scenario | Why |
+| Test scenario | Spec |
 |---|---|
-| Login → open study → approve report | Golden path — must always pass |
-| Trigger ASR → see transcript in findings | Core dictation workflow |
-| Generate AI impression → verify evidence indices light up | AI integration |
-| QA failure blocks approval | Safety-critical — must block |
-| Critical finding alert appears | Safety-critical |
-| Keyboard shortcut `Ctrl+Enter` opens approval dialog | Core UX |
-| Batch queue: approve → auto-advance to next study | Batch workflow |
+| Login form, invalid credentials, 401-redirect route guard | `e2e/auth.spec.ts` |
+| Study selection loads its series, report and viewer stack | `e2e/workflow.spec.ts` |
+| AI analysis fills findings and impression, then QA passes | `e2e/workflow.spec.ts` |
+| Edited findings are persisted and drive impression generation | `e2e/workflow.spec.ts` |
+| QA warnings surface without blocking approval | `e2e/workflow.spec.ts` |
+| Approval finalizes the report with the signature | `e2e/workflow.spec.ts` |
+| A failed inference job leaves the report un-approvable | `e2e/workflow.spec.ts` |
 
-### Example Spec (target shape for a full-stack flow)
+### Still to Cover
 
-The selectors below (`.study-row`, `[data-testid="impression-textarea"]`, ...) don't all exist in the app yet — this illustrates the shape a full-stack spec should take once written, not a spec that runs today. See `e2e/auth.spec.ts` for a real, currently-passing example.
+These need real pixel data or services the mocked harness deliberately doesn't stand in for:
+
+| Test scenario | Why | What it needs |
+|---|---|---|
+| DICOM viewer: scroll a stack, window/level | Core viewing UX | Seeded Orthanc with real DICOM |
+| Trigger ASR → see transcript in findings | Core dictation workflow | ASR service |
+| QA *failure* blocks approval | Safety-critical | Backend QA rules that can fail |
+| Critical finding alert appears | Safety-critical | Inference output with a critical label |
+| Keyboard shortcut `Ctrl+Enter` opens approval dialog | Core UX | — |
+| Batch queue: approve → auto-advance to next study | Batch workflow | — |
+
+### Writing a New Mocked Spec
 
 ```typescript
-// e2e/report-workflow.spec.ts
 import { test, expect } from "@playwright/test";
+import { STUDY_CT, reportIdForStudy } from "./support/fixtures";
+import { mockWorkflowBackend, pinEnglishLocale } from "./support/mockBackend";
 
-test("approve a report via keyboard shortcut", async ({ page }) => {
+test("queues inference for the selected study", async ({ page }) => {
+  await pinEnglishLocale(page);
+  const backend = await mockWorkflowBackend(page, {
+    inference: { summary: "Small left pleural effusion." },
+    qa: { passes: true },
+  });
+
   await page.goto("/");
-  await page.fill('[name="username"]', "test-radiologist");
-  await page.fill('[name="password"]', "test-password");
-  await page.click('[type="submit"]');
+  await page.getByRole("complementary").nth(1).getByRole("button", { name: "AI Analysis" }).click();
 
-  // Open first study from queue
-  await page.click(".study-row:first-child");
-  await expect(page.locator(".dicom-viewer")).toBeVisible();
-
-  // Type an impression
-  await page.fill('[data-testid="impression-textarea"]', "No acute findings.");
-
-  // Trigger approval dialog with keyboard shortcut
-  await page.keyboard.press("Control+Enter");
-  await expect(page.locator('[data-testid="approval-dialog"]')).toBeVisible();
-
-  // Confirm
-  await page.click('[data-testid="confirm-approve"]');
-  await expect(page.locator(".report-approved-banner")).toBeVisible();
+  // Assert on what the user sees...
+  await expect(page.getByText("Passed")).toBeVisible();
+  // ...and on the request the UI actually produced.
+  expect(backend.calls.inferenceQueue[0].body?.report_id).toBe(reportIdForStudy(STUDY_CT));
 });
 ```
+
+`pinEnglishLocale` matters: `useUserPreferences` defaults `uiLanguage` to `de` and applies it on mount, so without it the language the assertions see depends on navigation order.
+
+The layout landmarks are the most stable way to scope a locator — `getByRole("main")` is the viewer, `getByRole("complementary").first()` the left sidebar, `.nth(1)` the report panel.
 
 ### Playwright Configuration
 
 See `playwright.config.ts` at the repo root. Notes:
 
 - `baseURL` defaults to `http://localhost:5173`; set `E2E_BASE_URL` to point at a different stack (e.g. a docker-compose deployment) instead.
+- `timeout` is raised to 60s from Playwright's 30s default, for the inference specs' polling fallback and Vite's first-request compile on a cold run.
 - The `webServer` auto-start (`npm run dev`) is skipped whenever `E2E_BASE_URL` is set, since that implies a stack is already running.
 - `PLAYWRIGHT_CHROMIUM_EXECUTABLE` lets a sandboxed/offline environment point at a pre-installed Chromium build instead of the one `@playwright/test` would otherwise try to download — not needed for a normal `npx playwright install`.
 

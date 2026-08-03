@@ -6,6 +6,10 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
+  // Above Playwright's 30s default: the workflow specs wait out the inference
+  // job's polling fallback, and a cold CI run also pays Vite's first-request
+  // compile on top of that.
+  timeout: 60_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

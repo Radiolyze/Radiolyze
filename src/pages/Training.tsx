@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -35,28 +36,20 @@ import {
 } from "@/services/trainingClient";
 import { toast } from "sonner";
 
-const FORMAT_INFO: Record<
-  ExportFormat,
-  { name: string; description: string; icon: typeof FileJson }
-> = {
-  coco: {
-    name: "COCO",
-    description: "Standard Object Detection Format. Kompatibel mit detectron2, MMDetection, YOLO.",
-    icon: FileJson,
-  },
-  huggingface: {
-    name: "HuggingFace",
-    description: "JSONL Dataset Format für 🤗 Transformers und datasets Library.",
-    icon: Database,
-  },
-  radiolyze: {
-    name: "Radiolyze",
-    description: "Radiolyze Format für Multimodal Fine-Tuning mit LoRA.",
-    icon: Sparkles,
-  },
+// Product names stay as they are; only the descriptions are translated.
+const FORMAT_INFO: Record<ExportFormat, { name: string; icon: typeof FileJson }> = {
+  coco: { name: "COCO", icon: FileJson },
+  huggingface: { name: "HuggingFace", icon: Database },
+  radiolyze: { name: "Radiolyze", icon: Sparkles },
 };
 
+// Slider bounds, shared with the labels underneath it. Keeping the percentages
+// out of the resources means a bound can only be changed in one place.
+const SPLIT_MIN = 0.5;
+const SPLIT_MAX = 0.95;
+
 export default function Training() {
+  const { t } = useTranslation("training");
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("radiolyze");
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [splitRatio, setSplitRatio] = useState([0.8]);
@@ -81,12 +74,12 @@ export default function Training() {
   const exportMutation = useMutation({
     mutationFn: exportAndDownload,
     onSuccess: () => {
-      toast.success("Export erfolgreich", {
-        description: "Das Training-Dataset wurde heruntergeladen.",
+      toast.success(t("toast.exportSuccess"), {
+        description: t("toast.exportSuccessDescription"),
       });
     },
     onError: (error: Error) => {
-      toast.error("Export fehlgeschlagen", {
+      toast.error(t("toast.exportError"), {
         description: error.message,
       });
     },
@@ -96,12 +89,12 @@ export default function Training() {
     mutationFn: getTrainingManifest,
     onSuccess: (data) => {
       setManifest(data);
-      toast.success("Manifest erzeugt", {
-        description: `${data.total} Bilder im Data-Capture-Katalog.`,
+      toast.success(t("toast.manifestReady"), {
+        description: t("toast.manifestReadyDescription", { count: data.total }),
       });
     },
     onError: (error: Error) => {
-      toast.error("Manifest fehlgeschlagen", {
+      toast.error(t("toast.manifestError"), {
         description: error.message,
       });
     },
@@ -141,10 +134,10 @@ export default function Training() {
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const timestamp = new Date().toISOString().slice(0, 10);
       downloadBlob(blob, `radiolyze-manifest-${timestamp}.json`);
-      toast.success("Manifest heruntergeladen");
+      toast.success(t("toast.manifestDownloaded"));
     } catch (error) {
-      toast.error("Manifest Download fehlgeschlagen", {
-        description: error instanceof Error ? error.message : "Unbekannter Fehler",
+      toast.error(t("toast.manifestDownloadError"), {
+        description: error instanceof Error ? error.message : t("toast.unknownError"),
       });
     } finally {
       setIsDownloadingManifest(false);
@@ -183,18 +176,16 @@ export default function Training() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <h1 className="text-lg font-semibold">Training Data Export</h1>
+        <h1 className="text-lg font-semibold">{t("header.title")}</h1>
         <Badge variant="outline" className="ml-2">
-          Radiolyze Fine-Tuning
+          {t("header.badge")}
         </Badge>
       </header>
 
       {/* Content */}
       <main className="max-w-5xl mx-auto p-6 space-y-6">
         <div className="mb-4">
-          <p className="text-muted-foreground">
-            Exportieren Sie Ihre Annotations für Radiolyze Fine-Tuning
-          </p>
+          <p className="text-muted-foreground">{t("header.subtitle")}</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3 mb-8">
@@ -203,7 +194,7 @@ export default function Training() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Tag className="h-4 w-4" />
-                Annotations
+                {t("stats.annotations")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -215,7 +206,7 @@ export default function Training() {
                   <div className="flex items-center gap-2 mt-2">
                     <Progress value={verifiedPercentage} className="h-2 flex-1" />
                     <span className="text-xs text-muted-foreground">
-                      {verifiedPercentage}% verifiziert
+                      {t("stats.verifiedPercentage", { percent: verifiedPercentage })}
                     </span>
                   </div>
                 </>
@@ -227,7 +218,7 @@ export default function Training() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Layers className="h-4 w-4" />
-                Studien & Serien
+                {t("stats.studiesAndSeries")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -237,11 +228,11 @@ export default function Training() {
                 <div className="flex gap-4">
                   <div>
                     <div className="text-3xl font-bold">{stats?.studies || 0}</div>
-                    <div className="text-xs text-muted-foreground">Studien</div>
+                    <div className="text-xs text-muted-foreground">{t("stats.studies")}</div>
                   </div>
                   <div>
                     <div className="text-3xl font-bold">{stats?.series || 0}</div>
-                    <div className="text-xs text-muted-foreground">Serien</div>
+                    <div className="text-xs text-muted-foreground">{t("stats.series")}</div>
                   </div>
                 </div>
               )}
@@ -252,18 +243,18 @@ export default function Training() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
-                Train/Val Split
+                {t("stats.split")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4">
                 <div>
                   <div className="text-3xl font-bold text-primary">{trainCount}</div>
-                  <div className="text-xs text-muted-foreground">Training</div>
+                  <div className="text-xs text-muted-foreground">{t("stats.training")}</div>
                 </div>
                 <div>
                   <div className="text-3xl font-bold text-muted-foreground">{valCount}</div>
-                  <div className="text-xs text-muted-foreground">Validation</div>
+                  <div className="text-xs text-muted-foreground">{t("stats.validation")}</div>
                 </div>
               </div>
             </CardContent>
@@ -274,10 +265,8 @@ export default function Training() {
           {/* Export Format Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>Export Format</CardTitle>
-              <CardDescription>
-                Wählen Sie das passende Format für Ihr Fine-Tuning Framework
-              </CardDescription>
+              <CardTitle>{t("formats.title")}</CardTitle>
+              <CardDescription>{t("formats.description")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {(Object.entries(FORMAT_INFO) as [ExportFormat, (typeof FORMAT_INFO)["coco"]][]).map(
@@ -310,7 +299,7 @@ export default function Training() {
                           <CheckCircle2 className="h-4 w-4 text-primary" />
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground">{info.description}</div>
+                      <div className="text-sm text-muted-foreground">{t(`formats.${format}`)}</div>
                     </div>
                   </div>
                 ),
@@ -323,17 +312,15 @@ export default function Training() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings2 className="h-5 w-5" />
-                Export Einstellungen
+                {t("settings.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Verified Only Toggle */}
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="verified-only">Nur verifizierte Annotations</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Empfohlen für höhere Datenqualität
-                  </p>
+                  <Label htmlFor="verified-only">{t("settings.verifiedOnly")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("settings.verifiedOnlyHint")}</p>
                 </div>
                 <Switch
                   id="verified-only"
@@ -345,7 +332,7 @@ export default function Training() {
               {/* Split Ratio Slider */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label>Train/Val Split</Label>
+                  <Label>{t("stats.split")}</Label>
                   <span className="text-sm font-medium">
                     {Math.round(splitRatio[0] * 100)}% / {Math.round((1 - splitRatio[0]) * 100)}%
                   </span>
@@ -353,20 +340,20 @@ export default function Training() {
                 <Slider
                   value={splitRatio}
                   onValueChange={setSplitRatio}
-                  min={0.5}
-                  max={0.95}
+                  min={SPLIT_MIN}
+                  max={SPLIT_MAX}
                   step={0.05}
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>50% Train</span>
-                  <span>95% Train</span>
+                  <span>{t("settings.splitBound", { percent: Math.round(SPLIT_MIN * 100) })}</span>
+                  <span>{t("settings.splitBound", { percent: Math.round(SPLIT_MAX * 100) })}</span>
                 </div>
               </div>
 
               {/* Category Filter */}
               <div className="space-y-3">
-                <Label>Kategorien filtern (optional)</Label>
+                <Label>{t("settings.categories")}</Label>
                 <div className="flex flex-wrap gap-2">
                   {categories.map(({ category, count }) => (
                     <Badge
@@ -381,7 +368,7 @@ export default function Training() {
                 </div>
                 {selectedCategories.length > 0 && (
                   <Button variant="ghost" size="sm" onClick={() => setSelectedCategories([])}>
-                    Filter zurücksetzen
+                    {t("settings.resetFilter")}
                   </Button>
                 )}
               </div>
@@ -390,9 +377,9 @@ export default function Training() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="include-images">Rendered Images einschließen</Label>
+                    <Label htmlFor="include-images">{t("dataCapture.includeImages")}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Fügt PNGs + Manifest für Data Capture hinzu (größere ZIP-Datei).
+                      {t("dataCapture.includeImagesHint")}
                     </p>
                   </div>
                   <Switch
@@ -414,10 +401,10 @@ export default function Training() {
                         {manifestMutation.isPending ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Manifest wird erzeugt...
+                            {t("dataCapture.generatingManifest")}
                           </>
                         ) : (
-                          "Manifest erzeugen"
+                          t("dataCapture.generateManifest")
                         )}
                       </Button>
                       <Button
@@ -426,7 +413,7 @@ export default function Training() {
                         onClick={handleManifestCheck}
                         disabled={manifestMutation.isPending || !stats?.totalAnnotations}
                       >
-                        Rendered Images prüfen
+                        {t("dataCapture.checkImages")}
                       </Button>
                       <Button
                         variant="ghost"
@@ -434,7 +421,9 @@ export default function Training() {
                         onClick={handleManifestDownload}
                         disabled={isDownloadingManifest || !stats?.totalAnnotations}
                       >
-                        {isDownloadingManifest ? "Download läuft..." : "Manifest herunterladen"}
+                        {isDownloadingManifest
+                          ? t("dataCapture.downloadingManifest")
+                          : t("dataCapture.downloadManifest")}
                       </Button>
                     </div>
 
@@ -442,17 +431,19 @@ export default function Training() {
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <CheckCircle2 className="h-4 w-4 text-primary" />
-                          {manifest.total} Bilder im Katalog
+                          {t("dataCapture.catalogCount", { count: manifest.total })}
                           {manifest.images.length !== manifest.total && (
                             <span className="text-muted-foreground">
-                              (Preview: {manifest.images.length})
+                              {t("dataCapture.previewCount", { count: manifest.images.length })}
                             </span>
                           )}
                         </div>
                         {manifest.status && (
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>OK: {manifest.status.ok}</span>
-                            <span>Fehler: {manifest.status.error}</span>
+                            <span>{t("dataCapture.statusOk", { count: manifest.status.ok })}</span>
+                            <span>
+                              {t("dataCapture.statusError", { count: manifest.status.error })}
+                            </span>
                           </div>
                         )}
                         <div className="space-y-1">
@@ -464,20 +455,20 @@ export default function Training() {
                               <span className="font-mono">{entry.id}</span>
                               <span className="text-muted-foreground">
                                 {entry.splits.join(", ")}
-                                {entry.status === "error" && " · Fehler"}
+                                {entry.status === "error" && ` · ${t("dataCapture.entryError")}`}
                               </span>
                             </div>
                           ))}
                           {manifest.images.length > 3 && (
                             <div className="text-xs text-muted-foreground">
-                              + {manifest.images.length - 3} weitere Einträge im Preview
+                              {t("dataCapture.moreEntries", { count: manifest.images.length - 3 })}
                             </div>
                           )}
                         </div>
                         {manifest.status?.error ? (
                           <div className="space-y-2">
                             <div className="text-xs font-medium text-muted-foreground">
-                              Fehlerliste (Preview)
+                              {t("dataCapture.errorListTitle")}
                             </div>
                             {manifest.images
                               .filter((entry) => entry.status === "error")
@@ -489,20 +480,20 @@ export default function Training() {
                                 >
                                   <div className="font-mono">{entry.id}</div>
                                   <div className="text-muted-foreground">
-                                    {entry.error || "Abruf fehlgeschlagen"}
+                                    {entry.error || t("dataCapture.fetchFailed")}
                                   </div>
                                 </div>
                               ))}
                             {manifest.status.error > 3 && (
                               <div className="text-xs text-muted-foreground">
-                                + {manifest.status.error - 3} weitere Fehler
+                                {t("dataCapture.moreErrors", { count: manifest.status.error - 3 })}
                               </div>
                             )}
                           </div>
                         ) : null}
                         <div className="flex items-start gap-2 text-xs text-muted-foreground">
                           <AlertCircle className="h-4 w-4 mt-0.5" />
-                          Das ZIP enthält `images/manifest.json` inklusive Hashes und Status.
+                          {t("dataCapture.manifestHint")}
                         </div>
                       </div>
                     )}
@@ -518,10 +509,12 @@ export default function Training() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold">Bereit zum Export</h3>
+                <h3 className="font-semibold">{t("export.readyTitle")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {stats?.totalAnnotations || 0} Annotations in {FORMAT_INFO[selectedFormat].name}{" "}
-                  Format
+                  {t("export.readySummary", {
+                    count: stats?.totalAnnotations || 0,
+                    format: FORMAT_INFO[selectedFormat].name,
+                  })}
                 </p>
               </div>
               <Button
@@ -532,20 +525,19 @@ export default function Training() {
                 {exportMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Exportiere...
+                    {t("export.inProgress")}
                   </>
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Dataset exportieren
+                    {t("export.action")}
                   </>
                 )}
               </Button>
             </div>
             {includeImages && (
               <div className="mt-3 text-xs text-muted-foreground">
-                Hinweis: Das Export-ZIP enthält ein Manifest unter <code>images/manifest.json</code>
-                .
+                <Trans t={t} i18nKey="export.zipHint" components={{ code: <code /> }} />
               </div>
             )}
 
@@ -553,10 +545,8 @@ export default function Training() {
               <div className="mt-4 p-4 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-warning">Keine Annotations vorhanden</p>
-                  <p className="text-sm text-muted-foreground">
-                    Verwenden Sie die Annotation-Tools im Viewer, um Trainings-Daten zu erstellen.
-                  </p>
+                  <p className="font-medium text-warning">{t("empty.title")}</p>
+                  <p className="text-sm text-muted-foreground">{t("empty.description")}</p>
                 </div>
               </div>
             )}
