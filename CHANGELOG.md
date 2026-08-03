@@ -12,6 +12,12 @@ for the full history.
 
 ### Added
 
+- `e2e/workflow.spec.ts`: end-to-end coverage of the core clinical workflow —
+  study selection, AI findings, QA and finalize (#116). Eight specs drive the
+  real workspace through a network-level backend stub (`e2e/support/`), so the
+  app's DICOMweb mapping, inference polling and report state all run unmodified
+  without Postgres/Redis/Orthanc/vLLM. Each spec asserts both what the user
+  sees and the request the UI produced.
 - `docs/en/development/dependencies.md` (and the DE mirror): the dependency
   policy — which majors are held back and why, how a bump is reviewed, and the
   pins that live outside Dependabot's reach.
@@ -62,6 +68,12 @@ for the full history.
 
 ### Changed
 
+- The `e2e-frontend` CI job blocks instead of running with
+  `continue-on-error` (#116). It was advisory while the suite only proved that
+  Playwright starts; now that it covers the core workflow and stubs every
+  backend response, a failure is a regression rather than an unavailable
+  service. The per-test timeout moves to 60s, since the inference specs wait
+  out the WebSocket-to-polling fallback.
 - Every timestamp column is `timestamptz` instead of a `String` holding ISO
   text (migration `0005_timestamps`, #102). Range queries and `ORDER BY` are
   now temporal rather than lexicographic — the old comparison only agreed with
