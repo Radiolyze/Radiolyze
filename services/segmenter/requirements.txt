@@ -4,7 +4,7 @@ httpx
 pydantic
 pydicom>=3.0.2,<4
 numpy<3
-SimpleITK>=2.5.5
+SimpleITK>=2.5.6
 scikit-image>=0.26.0
 Pillow>=12.3.0
 trimesh>=4.12.2
