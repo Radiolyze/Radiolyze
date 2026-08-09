@@ -7,7 +7,7 @@ numpy<3
 SimpleITK>=2.5.5
 scikit-image>=0.26.0
 Pillow>=12.3.0
-trimesh>=4.12.2
+trimesh>=5.0.0
 pygltflib>=1.16.5
 # DICOM SEG writer (app/dicom_seg.py). Replaced pydicom-seg, which is
 # unmaintained and never gained a pydicom 3 release.
