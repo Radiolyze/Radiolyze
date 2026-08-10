@@ -113,6 +113,15 @@ for the full history.
   rather than the request being wrong. It is what the impression endpoint's
   502 is raised from, so the service no longer has to know HTTP status codes
   to report an unreachable model.
+- `src/pages/History.tsx` (600 lines) is split along the same lines as
+  `Batch.tsx` (#120): the audit-event mapping moves to
+  `src/services/auditMapping.ts`, fetching and study-lookup enrichment to
+  `useAuditLog`, the filters and stats to `useHistoryFilters`, and the markup to
+  `HistoryStatsGrid`/`HistoryFilterBar`/`HistoryTimeline`, leaving the page at 66
+  lines that compose them. Behaviour is unchanged; what the split buys is that
+  the metadata fallback chains, the study enrichment and the date grouping are
+  now pure functions with tests, where before they could only be reached by
+  rendering the page.
 - The last three hand-rolled fetchers in the `ReportWorkspace` path —
   `useDicomWebQueue`, `usePriorStudies` and `usePriorReports` — fetch through
   react-query instead of a `useEffect` + `useState` triple with its own
