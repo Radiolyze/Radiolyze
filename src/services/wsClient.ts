@@ -6,6 +6,17 @@ type MessageHandler = (data: unknown) => void;
 // would just repeat the same rejection, so treat these as terminal.
 const AUTH_FAILURE_CLOSE_CODES = new Set([1008, 4401]);
 
+// The server pings an otherwise idle connection and closes it if nothing comes
+// back (backend `WS_HEARTBEAT_INTERVAL_SECONDS` / `WS_IDLE_TIMEOUT_SECONDS`),
+// so answering is what keeps a quiet session alive. Heartbeat frames are
+// transport bookkeeping and never reach `onMessage`.
+const HEARTBEAT_TYPES = new Set(["ping", "pong"]);
+
+const isHeartbeat = (parsed: unknown): parsed is { type: "ping" | "pong" } =>
+  typeof parsed === "object" &&
+  parsed !== null &&
+  HEARTBEAT_TYPES.has((parsed as { type?: unknown }).type as string);
+
 interface WsClientOptions {
   url: string;
   onMessage?: MessageHandler;
@@ -71,6 +82,12 @@ export function createWsClient(options: WsClientOptions) {
     socket.addEventListener("message", (event) => {
       try {
         const parsed = JSON.parse(event.data);
+        if (isHeartbeat(parsed)) {
+          if (parsed.type === "ping") {
+            send({ type: "pong" });
+          }
+          return;
+        }
         onMessage?.(parsed);
       } catch (err) {
         // Non-JSON payload; pass the raw data through as-is.

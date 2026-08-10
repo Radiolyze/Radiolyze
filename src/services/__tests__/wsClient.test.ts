@@ -199,3 +199,72 @@ describe("createWsClient reconnect backoff", () => {
     expect(FakeWebSocket.instances).toHaveLength(1);
   });
 });
+
+describe("createWsClient heartbeat", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    FakeWebSocket.instances = [];
+    // @ts-expect-error test double for the global WebSocket
+    global.WebSocket = FakeWebSocket;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const connectOpen = (onMessage?: (data: unknown) => void) => {
+    const client = createWsClient({ url: "ws://test", onMessage });
+    client.connect();
+    const socket = FakeWebSocket.instances[0];
+    socket.readyState = FakeWebSocket.OPEN;
+    socket.emit("open");
+    return socket;
+  };
+
+  it("answers a server ping with a pong", () => {
+    const socket = connectOpen();
+
+    socket.emit("message", { data: JSON.stringify({ type: "ping" }) });
+
+    expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: "pong" }));
+  });
+
+  it("keeps heartbeat frames out of the application message handler", () => {
+    const onMessage = vi.fn();
+    const socket = connectOpen(onMessage);
+
+    socket.emit("message", { data: JSON.stringify({ type: "ping" }) });
+    socket.emit("message", { data: JSON.stringify({ type: "pong" }) });
+
+    expect(onMessage).not.toHaveBeenCalled();
+  });
+
+  it("does not answer a pong — only the server drives the exchange", () => {
+    const socket = connectOpen();
+
+    socket.emit("message", { data: JSON.stringify({ type: "pong" }) });
+
+    expect(socket.send).not.toHaveBeenCalled();
+  });
+
+  it("still delivers application messages", () => {
+    const onMessage = vi.fn();
+    const socket = connectOpen(onMessage);
+    const event = { type: "report_status", reportId: "r-1", payload: {} };
+
+    socket.emit("message", { data: JSON.stringify(event) });
+
+    expect(onMessage).toHaveBeenCalledWith(event);
+    expect(socket.send).not.toHaveBeenCalled();
+  });
+
+  it("passes a non-JSON payload through rather than mistaking it for a heartbeat", () => {
+    const onMessage = vi.fn();
+    const socket = connectOpen(onMessage);
+
+    socket.emit("message", { data: "ping" });
+
+    expect(onMessage).toHaveBeenCalledWith("ping");
+    expect(socket.send).not.toHaveBeenCalled();
+  });
+});

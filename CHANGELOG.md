@@ -12,6 +12,16 @@ for the full history.
 
 ### Added
 
+- WebSocket heartbeat and idle disconnect (#106). `/api/v1/ws` sends
+  `{"type":"ping"}` after `WS_HEARTBEAT_INTERVAL_SECONDS` (default 30) of
+  silence and closes with code **4408** after `WS_IDLE_TIMEOUT_SECONDS`
+  (default 120). Before this, the endpoint sat in an unbounded `receive_text()`
+  loop: a half-open socket was noticed only when a broadcast happened to fail,
+  and never at all on a connection nothing was broadcast to, so dead
+  connections accumulated in the connection manager. A client-sent `ping` is
+  answered with `pong`, so either side can drive the exchange, and `0` disables
+  either half. `wsClient` answers server pings automatically and keeps
+  heartbeat frames out of the application's message handlers.
 - `e2e/workflow.spec.ts`: end-to-end coverage of the core clinical workflow —
   study selection, AI findings, QA and finalize (#116). Eight specs drive the
   real workspace through a network-level backend stub (`e2e/support/`), so the
@@ -78,6 +88,14 @@ for the full history.
   context used as the opening search, one request per settled search term
   rather than one per keystroke, and previous hits kept on screen while the
   next search is in flight (#113).
+
+### Deprecated
+
+- The `?token=` query parameter on `/api/v1/ws` (#106). Browsers authenticate
+  with the HttpOnly auth cookie; the query parameter writes the JWT into proxy
+  and access logs. It keeps working for non-browser clients, but every use is
+  now logged as a warning naming the user and client address, and a deployment
+  whose clients have migrated can reject it with `WS_ALLOW_QUERY_TOKEN=false`.
 
 ### Changed
 

@@ -268,6 +268,7 @@ Auth-Verhalten: Umgebungsvariable `AUTH_REQUIRED` (Standard `true`). Bei `false`
 
 `WS /api/v1/ws`
 
-- Live-Updates; optional Query-Parameter `token` (JWT). Bei `AUTH_REQUIRED=true` ist gueltiges Token erforderlich.
+- Live-Updates; bei `AUTH_REQUIRED=true` authentifiziert über das HttpOnly-Auth-Cookie. Der Query-Parameter `token` (JWT) funktioniert weiterhin, ist aber deprecated.
+- Heartbeat: Der Server pingt untätige Verbindungen und schließt sie nach `WS_IDLE_TIMEOUT_SECONDS` mit Code 4408.
 
 Siehe auch [WebSocket Events](websocket.md).
