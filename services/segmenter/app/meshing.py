@@ -72,7 +72,10 @@ def _decimate(mesh: trimesh.Trimesh, target_faces: int) -> trimesh.Trimesh:
     if len(mesh.faces) <= target_faces:
         return mesh
     try:
-        simplified = mesh.simplify_quadric_decimation(target_faces)
+        # `face_count=` by name, not positionally: trimesh's first parameter is
+        # `percent` (0.0-1.0), so a positional face count is read as a reduction
+        # ratio and rejected. See test_decimate_reaches_the_target_face_count.
+        simplified = mesh.simplify_quadric_decimation(face_count=target_faces)
         if simplified is not None and len(simplified.faces) > 0:
             return simplified
     except Exception:
