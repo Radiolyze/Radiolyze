@@ -99,6 +99,20 @@ for the full history.
 
 ### Changed
 
+- The impression and QA route groups moved out of `app/api/reports.py` into
+  `ImpressionService` and `QAService` (#123), continuing the service-layer
+  migration one route group at a time. `reports.py`: **820 → 696 lines**. The
+  handlers keep what the existing pattern leaves with them — status-code
+  translation and the WebSocket broadcasts — while the model call, the audit
+  provenance (`input_hash`, `output_summary`, image metadata), the report
+  write-back and the QA rule selection now live in separately testable
+  services. `ImpressionService` is deliberately distinct from
+  `InferenceService`: that one enqueues RQ jobs, this one calls the model
+  inline. No behaviour change.
+- `services/exceptions.py` gains `UpstreamError`, for a dependency failing
+  rather than the request being wrong. It is what the impression endpoint's
+  502 is raised from, so the service no longer has to know HTTP status codes
+  to report an unreachable model.
 - The last three hand-rolled fetchers in the `ReportWorkspace` path —
   `useDicomWebQueue`, `usePriorStudies` and `usePriorReports` — fetch through
   react-query instead of a `useEffect` + `useState` triple with its own

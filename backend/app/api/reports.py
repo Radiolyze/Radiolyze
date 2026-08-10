@@ -20,15 +20,9 @@ from starlette.concurrency import run_in_threadpool
 from ..audit import add_audit_event
 from ..deps import get_current_user, get_db, require_radiologist_or_admin
 from ..dicom_client import store_sr
-from ..inference_clients import (
-    generate_impression_stream,
-    generate_impression_text,
-    transcribe_audio,
-)
-from ..mock_logic import run_qa_checks
+from ..inference_clients import transcribe_audio
 from ..models import (
     InferenceJob,
-    QACheckResult,
     Report,
     ReportComparison,
     ReportRevision,
@@ -53,11 +47,16 @@ from ..schemas import (
     ReportRevisionResponse,
     ReportUpdateRequest,
 )
-from ..services import CriticalFindingService, PeerReviewService, ReportService
-from ..services.exceptions import ConflictError, NotFoundError
+from ..services import (
+    CriticalFindingService,
+    ImpressionService,
+    PeerReviewService,
+    QAService,
+    ReportService,
+)
+from ..services.exceptions import ConflictError, NotFoundError, UpstreamError
 from ..sr import build_sr_export
-from ..utils.hashing import compute_bytes_hash, compute_input_hash, compute_text_hash
-from ..utils.inference import build_image_metadata, build_output_summary
+from ..utils.hashing import compute_bytes_hash
 from ..utils.time import utc_now
 from ..ws_manager import broadcast_status
 
@@ -344,80 +343,29 @@ async def generate_impression_endpoint(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> ImpressionResponse:
-    import asyncio
-
     try:
-        loop = asyncio.get_running_loop()
-        text, confidence, model_name, metadata = await loop.run_in_executor(
-            None,
-            lambda: generate_impression_text(
-                payload.findings_text,
-                image_urls=payload.image_urls,
-                image_paths=payload.image_paths,
-            ),
-        )
-    except RuntimeError as exc:
+        result = await ImpressionService(db).generate(payload)
+    except UpstreamError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    generated_at = utc_now()
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    report = None
-    if payload.report_id:
-        report = db.get(Report, payload.report_id)
-        if not report:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Report {payload.report_id} not found; impression was generated but not persisted",
-            )
-        report.impression_text = text
-        report.updated_at = generated_at
-        if report.status in {"pending", "in_progress"}:
-            report.status = "draft"
-        input_hash = compute_input_hash(
-            report.study_id if report else None,
-            payload.findings_text,
-            payload.image_urls,
-            payload.image_paths,
-        )
-        output_summary = build_output_summary(text)
-        image_metadata = build_image_metadata(payload.image_urls, payload.image_paths, None)
-        metadata_payload = {
-            "model_version": model_name,
-            "model": model_name,
-            "confidence": confidence,
-            "pipeline": "impression_service",
-            "input_hash": input_hash,
-            "output_summary": output_summary,
-            **image_metadata,
-        }
-        if metadata:
-            metadata_payload.update(metadata)
-        add_audit_event(
-            db,
-            event_type="impression_generated",
-            actor_id="system",
-            report_id=payload.report_id,
-            study_id=report.study_id if report else None,
-            metadata=metadata_payload,
-            timestamp=generated_at,
-            source="api",
-        )
-        db.commit()
-
+    if result.persisted and payload.report_id:
         await broadcast_status(
             payload.report_id,
             {
                 "aiStatus": "idle",
-                "qaStatus": report.qa_status if report else "pending",
+                "qaStatus": result.qa_status or "pending",
                 "asrStatus": "idle",
             },
         )
 
     return ImpressionResponse(
-        text=text,
-        confidence=confidence,
-        model=model_name,
-        generated_at=generated_at,
-        metadata=metadata,
+        text=result.text,
+        confidence=result.confidence,
+        model=result.model,
+        generated_at=result.generated_at,
+        metadata=result.metadata,
     )
 
 
@@ -434,22 +382,12 @@ async def stream_impression_endpoint(
 
     async def _event_stream():
         try:
-            async for token in generate_impression_stream(
-                payload.findings_text,
-                image_urls=payload.image_urls,
-                image_refs=getattr(payload, "image_refs", None),
-            ):
+            async for token in ImpressionService.stream(payload):
                 # Escape newlines within a token to keep SSE framing intact
                 escaped = token.replace("\n", "\\n")
                 yield f"data: {escaped}\n\n"
-        except Exception as exc:
-            logger.error("SSE impression stream error: %s", exc)
         finally:
             yield "data: [DONE]\n\n"
-
-    import logging as _logging
-
-    logger = _logging.getLogger(__name__)
 
     return StreamingResponse(
         _event_stream(),
@@ -467,82 +405,20 @@ async def qa_check(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> QAResponse:
-    # Use configurable rules if any exist, otherwise fall back to hardcoded logic
-    from ..models import QARule
-    from ..qa_engine import evaluate_rules
+    result = QAService(db).run(payload)
 
-    active_rules = db.query(QARule).filter(QARule.is_active).all()
-    if active_rules:
-        checks, warnings, failures, score = evaluate_rules(
-            active_rules,
-            payload.findings_text or "",
-            payload.impression_text or "",
-        )
-    else:
-        checks, warnings, failures, score = run_qa_checks(
-            payload.findings_text, payload.impression_text
-        )
-    passes = len(failures) == 0
-    status = "pass"
-    if failures:
-        status = "fail"
-    elif warnings:
-        status = "warn"
-
-    if payload.report_id:
-        report = db.get(Report, payload.report_id)
-        now = utc_now()
-        if report:
-            report.qa_status = status
-            report.qa_warnings = warnings
-            report.updated_at = now
-
-        qa_result = QACheckResult(
-            report_id=payload.report_id,
-            status=status,
-            checks=[check.model_dump() for check in checks],
-            warnings=warnings,
-            failures=failures,
-            quality_score=score,
-            created_at=now,
-        )
-        db.add(qa_result)
-        input_hash = compute_text_hash(payload.findings_text, payload.impression_text)
-        output_summary = f"{status} (warnings={len(warnings)}, failures={len(failures)})"
-        add_audit_event(
-            db,
-            event_type="qa_check_run",
-            actor_id="system",
-            report_id=payload.report_id,
-            study_id=report.study_id if report else None,
-            metadata={
-                "model_version": "qa-rules-v1",
-                "engine": "rules",
-                "engine_version": "qa-rules-v1",
-                "status": status,
-                "warnings_count": len(warnings),
-                "failures_count": len(failures),
-                "checks_count": len(checks),
-                "quality_score": score,
-                "input_hash": input_hash,
-                "output_summary": output_summary,
-            },
-            timestamp=now,
-            source="api",
-        )
-        db.commit()
-
+    if result.persisted and payload.report_id:
         await broadcast_status(
             payload.report_id,
-            {"qaStatus": status, "aiStatus": "idle", "asrStatus": "idle"},
+            {"qaStatus": result.status, "aiStatus": "idle", "asrStatus": "idle"},
         )
 
     return QAResponse(
-        passes=passes,
-        failures=failures,
-        warnings=warnings,
-        quality_score=score,
-        checks=checks,
+        passes=result.passes,
+        failures=result.failures,
+        warnings=result.warnings,
+        quality_score=result.quality_score,
+        checks=result.checks,
     )
 
 
