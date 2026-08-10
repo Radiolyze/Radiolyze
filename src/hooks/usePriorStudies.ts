@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Series, Study } from "@/types/radiology";
 import { orthancClient } from "@/services/orthancClient";
 import type { DicomJsonRecord } from "@/services/dicomWebMapping";
@@ -8,6 +9,9 @@ import {
   mapStudyRecordToStudy,
 } from "@/services/dicomWebMapping";
 import { logger } from "@/lib/logger";
+
+export const priorStudiesQueryKey = (patientId: string | undefined, limit: number) =>
+  ["priorStudies", patientId, limit] as const;
 
 const buildFallbackStudy = (studyId: string, patientId: string): Study => ({
   id: studyId,
@@ -38,94 +42,86 @@ const getStudyDateValue = (study: Study) => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
+const loadPriorStudies = async (patientId: string, limit: number): Promise<Study[]> => {
+  const response = await orthancClient.listStudies({ limit, patientId });
+  const records = Array.isArray(response)
+    ? response
+    : Array.isArray((response as { Studies?: unknown[] }).Studies)
+      ? (response as { Studies: unknown[] }).Studies
+      : [];
+
+  const mapped = await Promise.all(
+    records.map(async (record) => {
+      if (typeof record === "string") {
+        const studyId = record;
+        return buildFallbackStudy(studyId, patientId);
+      }
+
+      const dicomRecord = record as DicomJsonRecord;
+      const studyId =
+        (dicomRecord["0020000D"]?.Value?.[0] as string | undefined) ||
+        (dicomRecord.StudyInstanceUID as string | undefined);
+      if (!studyId) return null;
+
+      const patient = mapStudyRecordToPatient(dicomRecord, studyId);
+      if (patient.id !== patientId) {
+        return null;
+      }
+
+      const study = mapStudyRecordToStudy(dicomRecord, patient.id, studyId);
+      const series = await resolveSeries(study.id);
+      return { ...study, series };
+    }),
+  );
+
+  return mapped
+    .filter((study): study is Study => Boolean(study))
+    .sort((a, b) => getStudyDateValue(b) - getStudyDateValue(a));
+};
+
 interface PriorStudiesState {
   priorStudies: Study[];
   isLoading: boolean;
   error: string | null;
 }
 
+/**
+ * The patient's other studies, newest first, minus the one on screen.
+ *
+ * The request is keyed on the patient alone: moving between studies of the
+ * same patient — the common case when reading priors — re-filters the cached
+ * list instead of re-querying Orthanc and re-resolving every series.
+ */
 export function usePriorStudies(
   patientId?: string,
   currentStudyId?: string,
   limit = 12,
 ): PriorStudiesState {
-  const [priorStudies, setPriorStudies] = useState<Study[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data,
+    isLoading,
+    isError,
+    error: queryError,
+  } = useQuery({
+    queryKey: priorStudiesQueryKey(patientId, limit),
+    queryFn: () => loadPriorStudies(patientId as string, limit),
+    enabled: Boolean(patientId),
+  });
 
   useEffect(() => {
-    let isActive = true;
-
-    if (!patientId) {
-      setPriorStudies([]);
-      setIsLoading(false);
-      setError(null);
-      return;
+    if (queryError) {
+      logger.warn("Failed to load prior studies", queryError);
     }
+  }, [queryError]);
 
-    const loadPriorStudies = async () => {
-      setIsLoading(true);
-      setError(null);
+  const priorStudies = useMemo(
+    () => (data ?? []).filter((study) => study.id !== currentStudyId),
+    [data, currentStudyId],
+  );
 
-      try {
-        const response = await orthancClient.listStudies({ limit, patientId });
-        const records = Array.isArray(response)
-          ? response
-          : Array.isArray((response as { Studies?: unknown[] }).Studies)
-            ? (response as { Studies: unknown[] }).Studies
-            : [];
-
-        const mapped = await Promise.all(
-          records.map(async (record) => {
-            if (typeof record === "string") {
-              const studyId = record;
-              return buildFallbackStudy(studyId, patientId);
-            }
-
-            const dicomRecord = record as DicomJsonRecord;
-            const studyId =
-              (dicomRecord["0020000D"]?.Value?.[0] as string | undefined) ||
-              (dicomRecord.StudyInstanceUID as string | undefined);
-            if (!studyId) return null;
-
-            const patient = mapStudyRecordToPatient(dicomRecord, studyId);
-            if (patientId && patient.id !== patientId) {
-              return null;
-            }
-
-            const study = mapStudyRecordToStudy(dicomRecord, patient.id, studyId);
-            const series = await resolveSeries(study.id);
-            return { ...study, series };
-          }),
-        );
-
-        const filtered = mapped
-          .filter((study): study is Study => Boolean(study))
-          .filter((study) => study.id !== currentStudyId)
-          .sort((a, b) => getStudyDateValue(b) - getStudyDateValue(a));
-
-        if (isActive) {
-          setPriorStudies(filtered);
-        }
-      } catch (err) {
-        logger.warn("Failed to load prior studies", err);
-        if (isActive) {
-          setError("Voruntersuchungen konnten nicht geladen werden.");
-          setPriorStudies([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadPriorStudies();
-
-    return () => {
-      isActive = false;
-    };
-  }, [patientId, currentStudyId, limit]);
-
-  return { priorStudies, isLoading, error };
+  return {
+    priorStudies,
+    isLoading,
+    error: isError ? "Voruntersuchungen konnten nicht geladen werden." : null,
+  };
 }
