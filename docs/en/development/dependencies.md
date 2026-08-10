@@ -52,6 +52,7 @@ issue, and the entry is removed when the migration lands. See the next section.
 
 | Package | Held at | Blocked by | Issue |
 |---|---|---|---|
+| `tailwindcss` | `<4` | v4 needs `@tailwindcss/postcss`, `@import "tailwindcss"` and a `tailwindcss-animate` replacement | [#197](https://github.com/Radiolyze/Radiolyze/issues/197) |
 | `tailwind-merge` | `<3` | v3 drops Tailwind 3 support; must land with a Tailwind 4 migration | [#197](https://github.com/Radiolyze/Radiolyze/issues/197) |
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` has no ESLint 10 support | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
 | `vite` | `<8` | `lovable-tagger` peer range caps Vite at `<8` | [#194](https://github.com/Radiolyze/Radiolyze/issues/194) |
@@ -133,6 +134,7 @@ notice going stale:
 | `@kitware/vtk.js` | `package.json` — an **exact** peer of `@cornerstonejs/core` and `tools` | `npm ci` fails on mismatch |
 | Cornerstone worker path | `scripts/bundle-cornerstone-worker.mjs` reaches into `node_modules/@cornerstonejs/dicom-image-loader/dist/esm/` | `npm run bundle:worker` in CI |
 | torch / totalsegmentator | `services/segmenter/requirements.txt` — floors only, so segmenter images are **not** reproducible across rebuilds | none |
+| `fast-simplification` | `services/segmenter/requirements.txt` — an *optional* trimesh extra that `app/meshing.py` hard-depends on | `test_decimate_reaches_the_target_face_count` |
 
 The `ruff` row is the one that bites. Dependabot sees the two pins through
 different ecosystems — `pip` for `requirements-dev.txt`, `pre-commit` for the

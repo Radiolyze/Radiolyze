@@ -23,6 +23,13 @@ updates:
     ignore:
       # Majors that are deliberately held back. Each one has a tracking issue;
       # remove the entry when the corresponding migration lands.
+      - dependency-name: "tailwindcss"
+        # v4 moves the PostCSS plugin to @tailwindcss/postcss, replaces the
+        # @tailwind directives with @import "tailwindcss", and retires
+        # tailwindcss-animate. It is the other half of the tailwind-merge entry
+        # below -- neither can move without the other -- so it is held with it
+        # rather than re-proposed weekly against a build it cannot pass.
+        versions: [">=4"]
       - dependency-name: "tailwind-merge"
         # v3 drops Tailwind CSS v3 support and must land together with a
         # Tailwind 4 migration. It declares no peerDependencies, so a bump
