@@ -57,7 +57,7 @@ nächster Abschnitt.
 | `tailwindcss` | `<4` | v4 braucht `@tailwindcss/postcss`, `@import "tailwindcss"` und einen Ersatz für `tailwindcss-animate` | [#197](https://github.com/Radiolyze/Radiolyze/issues/197) |
 | `tailwind-merge` | `<3` | v3 lässt Tailwind-3-Support fallen; muss zusammen mit einer Tailwind-4-Migration landen | [#197](https://github.com/Radiolyze/Radiolyze/issues/197) |
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` unterstützt ESLint 10 nicht | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
-| `vite` | `<8` | Peer-Range von `lovable-tagger` deckelt Vite auf `<8` | [#194](https://github.com/Radiolyze/Radiolyze/issues/194) |
+| `vite` | `<8` | Der Sprung 5 → 8 ist eine koordinierte Migration: Vitest teilt sich die Versionslinie mit Vite, und Node-Baseline sowie Rollup-Chunking-Defaults müssen neu verifiziert werden | [#194](https://github.com/Radiolyze/Radiolyze/issues/194) |
 | `@cornerstonejs/*` | `<5` | Braucht Änderungen an `vite.config.ts` und `scripts/bundle-cornerstone-worker.mjs` | [#195](https://github.com/Radiolyze/Radiolyze/issues/195) |
 
 `tailwind-merge` ist der lehrreiche Fall. Das v3-Release lässt den
