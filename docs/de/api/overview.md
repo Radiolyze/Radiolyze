@@ -22,6 +22,6 @@ Alle Endpunkte sollten unter `/api/v1` gefuehrt werden.
 ## Auth
 
 - API: JWT-Login unter `/api/v1/auth/login`; `AUTH_REQUIRED` steuert, ob geschuetzte Routen einen gueltigen Bearer-Token verlangen (Standard: an)
-- WebSocket: bei `AUTH_REQUIRED=true` JWT als Query-Parameter `token` erforderlich
+- WebSocket: bei `AUTH_REQUIRED=true` ist das HttpOnly-Auth-Cookie erforderlich; der Query-Parameter `token` ist ein deprecated Fallback für Nicht-Browser-Clients und lässt sich mit `WS_ALLOW_QUERY_TOKEN=false` abschalten
 - Orthanc DICOMweb: Basic Auth (lokal typisch `orthanc/orthanc`)
 - Production: starke Passwoerter, `ADMIN_PASSWORD` setzen, optional mTLS fuer intra-cluster Kommunikation

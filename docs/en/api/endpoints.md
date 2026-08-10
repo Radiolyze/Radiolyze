@@ -268,6 +268,7 @@ Auth behavior: environment variable `AUTH_REQUIRED` (default `true`). When set t
 
 `WS /api/v1/ws`
 
-- Live updates; optional query parameter `token` (JWT). A valid token is required when `AUTH_REQUIRED=true`.
+- Live updates; authenticated via the HttpOnly auth cookie when `AUTH_REQUIRED=true`. The `token` query parameter (JWT) still works but is deprecated.
+- Heartbeat: the server pings idle connections and closes them with code 4408 after `WS_IDLE_TIMEOUT_SECONDS`.
 
 See also [WebSocket Events](websocket.md).
