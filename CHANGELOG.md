@@ -163,6 +163,28 @@ for the full history.
   `data-panel-group-direction` attribute to `aria-orientation`. Panel sizes in
   `DicomViewer` are now percentage strings — v4 reads bare numbers as pixels.
   The Dependabot ignore entry for the package is gone (#198).
+- Drained the Dependabot backlog a second time, as one branch rather than
+  sixteen PRs each invalidating the next one's lockfile: i18next, react and
+  react-dom, react-hook-form, lint-staged, fastapi, uvicorn, alembic, redis, and
+  the SimpleITK and TotalSegmentator floors. globals 15 → 17 and
+  eslint-plugin-react-refresh 0.4 → 0.5 are majors, but `eslint.config.js` uses
+  only `globals.browser` and the `only-export-components` rule, and both survive.
+- `react-router-dom` 6.30.1 → 7.18.2 with no source change. The app uses
+  BrowserRouter, Routes, Route, Link, NavLink, useLocation and useNavigate, all
+  re-exported unchanged; the v7 breaking changes are the former future flags
+  becoming defaults, and `src/App.tsx` has no data router, loaders, actions,
+  fetchers or relative splat paths for any of them to act on.
+- Both `ruff` pins moved to 0.16.1 in one commit. Dependabot proposes
+  `backend/requirements-dev.txt` and `.pre-commit-config.yaml` as separate PRs
+  from separate ecosystems, and `scripts/check-ruff-pin-sync.sh` fails while they
+  disagree — so each half sat red on the other's absence until they landed
+  together. Also `pre-commit-hooks` v5 → v6, whose removed hooks this repo does
+  not run.
+- `tailwindcss` is held at `<4` in `.github/dependabot.yml` alongside the existing
+  `tailwind-merge` entry (#197). v4 moves the PostCSS plugin to
+  `@tailwindcss/postcss`, replaces the `@tailwind` directives, and retires
+  `tailwindcss-animate`; without the ignore entry the bump was re-proposed weekly
+  against a build it cannot pass.
 - Drained the Dependabot backlog: the Radix UI set, lucide-react,
   @hookform/resolvers, esbuild, the Cornerstone 4.x set, FastAPI, uvicorn,
   ruff, mypy, fakeredis, mkdocs-material, the segmenter version floors, and
@@ -172,8 +194,29 @@ for the full history.
 - Renamed the package from the `vite_react_shadcn_ts` scaffold name to
   `radiolyze` and set an initial `0.1.0` version (was `0.0.0`).
 
+### Removed
+
+- `src/components/ui/calendar.tsx`, the `react-day-picker` dependency and the
+  `overrides.react-day-picker.react` entry that forced v8 to accept React 19.
+  The component was the package's only importer and nothing imported the
+  component, so the react-day-picker 8 → 10 bump was failing typecheck on
+  shadcn boilerplate that never rendered.
+- `@tailwindcss/typography`. It was never added to `plugins` in
+  `tailwind.config.ts` and no `prose` class exists in `src/`, so it produced no
+  styles.
+
 ### Fixed
 
+- Mesh decimation in the segmenter never ran. `Trimesh.simplify_quadric_decimation`
+  is a wrapper around the optional `fast-simplification` package, which
+  `services/segmenter/requirements.txt` did not declare, and it was additionally
+  called with the face count in the first positional parameter — which is
+  `percent`, a 0.0–1.0 ratio. Either fault alone raises, and `_decimate` catches
+  every exception and returns the input mesh, so `MESH_MAX_FACES` was inert and
+  the viewer was served un-decimated meshes. Both predate trimesh 5; 4.12.2 fails
+  identically. `test_meshing.py` now asserts the target face count is reached, that
+  Taubin smoothing moves vertices, and that `MESH_MAX_FACES` reaches the artifact —
+  the previous `face_count > 0` assertion was satisfied by the fallback.
 - `GET /api/v1/inference/status/{job_id}` returned 500 for every job still
   queued or started. The stuck-job check read `.tzinfo` off `queued_at`, which
   was a `str`, so it raised `AttributeError` before it could compare anything.

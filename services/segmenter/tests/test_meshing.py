@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import SimpleITK as sitk
+import trimesh
 
 from app.manifest import build_manifest, write_manifest
 from app.meshing import build_mesh
@@ -50,6 +51,52 @@ def test_build_mesh_writes_glb_vtp_and_mask(tmp_path: Path) -> None:
     assert artifact.vertex_count > 0
     assert artifact.face_count > 0
     assert artifact.volume_ml > 0
+
+
+def test_decimate_reaches_the_target_face_count() -> None:
+    """`_decimate` catches every exception and returns the input mesh, so a
+    trimesh API that moves under us costs polygons rather than raising.
+
+    Two ways that has already happened, both invisible to a `face_count > 0`
+    assertion: `simplify_quadric_decimation` is a wrapper around the optional
+    `fast-simplification` package and raises ModuleNotFoundError when it is
+    missing, and its first positional parameter is `percent` (0.0-1.0), so a
+    face count passed positionally is rejected as a reduction ratio.
+    """
+    from app.meshing import _decimate
+
+    mesh = trimesh.creation.icosphere(subdivisions=4)
+    assert len(mesh.faces) > 2_000, "fixture must exceed the target to decimate at all"
+
+    assert len(_decimate(mesh, 2_000).faces) <= 2_000
+
+
+def test_smooth_moves_the_vertices() -> None:
+    """Same shape of silence as above: `_smooth` falls back to the un-smoothed
+    mesh, which still writes a valid GLB with a plausible face count."""
+    from app.meshing import _smooth
+
+    mesh = trimesh.creation.box()
+    before = mesh.vertices.copy()
+
+    assert not np.allclose(_smooth(mesh).vertices, before)
+
+
+def test_build_mesh_respects_the_face_budget(tmp_path: Path, monkeypatch) -> None:
+    """The end-to-end counterpart: MESH_MAX_FACES has to reach the artifact."""
+    monkeypatch.setenv("MESH_MAX_FACES", "2000")
+    job_dir = tmp_path / "job-budget"
+    (job_dir / "meshes").mkdir(parents=True)
+    (job_dir / "masks").mkdir(parents=True)
+
+    # The default fixture marches out to ~1.3k faces, under any budget, so it
+    # never enters the decimation path at all. This one is comfortably over.
+    reference = _reference_image((48, 64, 64))
+    mask = _sphere_mask(reference.GetSize()[::-1])
+
+    artifact = build_mesh(1, "bone", (0.9, 0.8, 0.7), mask, reference, job_dir=job_dir)
+    assert artifact is not None
+    assert artifact.face_count <= 2_000
 
 
 def test_build_mesh_returns_none_for_empty_mask(tmp_path: Path) -> None:

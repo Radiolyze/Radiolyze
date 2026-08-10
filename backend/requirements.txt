@@ -1,11 +1,11 @@
-fastapi==0.140.11
-uvicorn[standard]==0.51.0
+fastapi==0.141.1
+uvicorn[standard]==0.52.1
 sqlalchemy==2.0.51
-alembic==1.18.5
+alembic==1.19.0
 pydantic==2.13.4
 python-multipart==0.0.32
 psycopg[binary]==3.3.4
-redis==8.0.1
+redis==8.1.0
 rq==2.10.0
 httpx==0.28.1
 pydicom==3.0.2
