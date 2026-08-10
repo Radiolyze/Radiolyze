@@ -18,3 +18,12 @@ class NotFoundError(DomainError):
 
 class ConflictError(DomainError):
     """Raised when an operation conflicts with the entity's current state."""
+
+
+class UpstreamError(DomainError):
+    """Raised when a dependency the service calls out to fails.
+
+    Distinct from the errors above: nothing is wrong with the request, so the
+    transport layer should report it as a bad gateway rather than a client
+    error.
+    """
