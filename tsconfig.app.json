@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
-    "types": ["vitest/globals"],
+    // "node" is listed explicitly: vitest 3's global types referenced it, so it
+    // used to arrive transitively. Vitest 4 dropped that reference, which left
+    // the node: imports in src/i18n/__tests__ unresolvable.
+    "types": ["vitest/globals", "node"],
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],

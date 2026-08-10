@@ -62,7 +62,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
+        // import.meta.dirname, not __dirname: Vite 8 warns that the latter is
+        // unsupported by the native config loader it plans to default to.
+        "@": path.resolve(import.meta.dirname, "./src"),
       },
     },
     assetsInclude: ["**/*.wasm"],
@@ -70,18 +72,23 @@ export default defineConfig(({ mode }) => {
       format: "es",
     },
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         output: {
           format: "es",
-          manualChunks: {
-            cornerstone: [
-              "@cornerstonejs/core",
-              "@cornerstonejs/tools",
-              "@cornerstonejs/dicom-image-loader",
-              "dicom-parser",
+          // Vite 8 bundles with rolldown, which does not accept the object form
+          // of manualChunks. codeSplitting.groups is the equivalent: each group
+          // pulls the matching modules out of the vendor chunk by id, so the
+          // heavy imaging and charting libraries stay in their own cacheable
+          // files.
+          codeSplitting: {
+            groups: [
+              {
+                name: "cornerstone",
+                test: /[\\/]node_modules[\\/](@cornerstonejs[\\/]|dicom-parser[\\/])/,
+              },
+              { name: "vtk", test: /[\\/]node_modules[\\/]@kitware[\\/]vtk\.js[\\/]/ },
+              { name: "recharts", test: /[\\/]node_modules[\\/]recharts[\\/]/ },
             ],
-            vtk: ["@kitware/vtk.js"],
-            recharts: ["recharts"],
           },
         },
       },
@@ -101,8 +108,13 @@ export default defineConfig(({ mode }) => {
         "@cornerstonejs/codec-openjpeg",
         "@cornerstonejs/codec-openjph",
       ],
-      esbuildOptions: {
-        target: "esnext",
+      // Vite 8 pre-bundles with rolldown rather than esbuild; esbuildOptions is
+      // deprecated and no longer read. The target matters for the codec
+      // packages above, whose wasm glue relies on modern syntax.
+      rolldownOptions: {
+        transform: {
+          target: "esnext",
+        },
       },
     },
   };

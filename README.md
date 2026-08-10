@@ -118,7 +118,7 @@ docker compose -f docker-compose.yml -f docker/compose/whisper.yml up --build
 
 ## Local Development
 
-**Prerequisites**: Node.js 18+, npm
+**Prerequisites**: Node.js 22+, npm
 
 ```bash
 # Install dependencies

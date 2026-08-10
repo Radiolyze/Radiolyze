@@ -28,10 +28,24 @@ export default defineConfig({
       reporter: ["text-summary", "lcov"],
       // A floor, not a target — see #115. Raise these as coverage grows;
       // they exist to stop it sliding back.
+      //
+      // The branches/functions floors were re-anchored for vitest 4 (#194),
+      // whose v8 provider remaps coverage through the AST instead of counting
+      // raw v8 ranges. That changes what is being counted, not how much of it
+      // the same 494 tests reach — the denominators move sharply:
+      //
+      //   vitest 3          vitest 4
+      //   branches   78.72% (1114/1415)   28.77% (1097/3812)
+      //   functions  57.44% ( 243/ 423)   34.51% ( 459/1330)
+      //   statements 33.53% (5093/15188)  34.07% (1814/5324)
+      //
+      // Statements and lines are effectively unchanged, so their floors stay
+      // where they were (still low relative to actual — ratcheting them is
+      // #115's job, not this migration's).
       thresholds: {
         statements: 11,
-        branches: 65,
-        functions: 35,
+        branches: 26,
+        functions: 32,
         lines: 11,
       },
     },

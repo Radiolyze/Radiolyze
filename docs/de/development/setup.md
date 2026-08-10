@@ -2,7 +2,7 @@
 
 ## Voraussetzungen
 
-- Node.js 18+
+- Node.js 22+
 - npm oder pnpm
 
 ## Docker (empfohlen)
