@@ -99,6 +99,18 @@ for the full history.
 
 ### Changed
 
+- The last three hand-rolled fetchers in the `ReportWorkspace` path —
+  `useDicomWebQueue`, `usePriorStudies` and `usePriorReports` — fetch through
+  react-query instead of a `useEffect` + `useState` triple with its own
+  cancellation flag (#113). Their exported signatures are unchanged, so every
+  caller is untouched; what changes is that the requests now get the
+  `QueryClient` defaults from `src/App.tsx` (30 s `staleTime`, one retry, no
+  refetch-on-focus), are deduplicated across components, and are cached.
+  Concretely: the study queue no longer loads exactly once per mount, and the
+  prior-study/prior-report queries are keyed on the patient rather than on the
+  study or report, so moving between a patient's studies re-filters cached data
+  instead of re-querying Orthanc and re-resolving every series. This was the
+  work #113 deferred to the `useReport` split, which has since landed.
 - `useReport` (556 lines) is split into three focused hooks — `useReportMutations`
   (findings/impression/approval round trips), `useInference` (queue an AI job and
   merge its result) and `useQaChecks` — with `useReport` left as their

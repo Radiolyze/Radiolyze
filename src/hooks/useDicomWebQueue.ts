@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { QueueItem, Report, Series, Study } from "@/types/radiology";
 import { orthancClient } from "@/services/orthancClient";
 import { ApiError } from "@/services/apiClient";
@@ -12,6 +13,12 @@ import {
 } from "@/services/dicomWebMapping";
 import { mockQueueItems } from "@/data/mockData";
 import { logger } from "@/lib/logger";
+
+export const DICOM_WEB_QUEUE_QUERY_KEY = ["dicomWebQueue"] as const;
+
+// Shared so that "no queue yet" keeps a stable identity across renders — the
+// consumers memoize on it.
+const EMPTY_QUEUE: QueueItem[] = [];
 
 const allowMockFallback = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === "true";
 
@@ -147,97 +154,86 @@ const resolveReport = async (study: Study, patientId: string): Promise<Report> =
   }
 };
 
+const loadQueueItems = async (): Promise<QueueItem[]> => {
+  if (import.meta.env.VITE_USE_MOCK_QUEUE === "true") {
+    return mockQueueItems;
+  }
+
+  const response = await orthancClient.listStudies();
+  const records = Array.isArray(response)
+    ? response
+    : Array.isArray((response as { Studies?: unknown[] }).Studies)
+      ? (response as { Studies: unknown[] }).Studies
+      : [];
+
+  const parsedStudies = records
+    .map((record) => {
+      if (typeof record === "string") {
+        const patient = buildFallbackPatient(record);
+        const study = buildFallbackStudy(record, patient.id);
+        return { study, patient };
+      }
+
+      const dicomRecord = record as DicomJsonRecord;
+      const studyId =
+        (dicomRecord["0020000D"]?.Value?.[0] as string | undefined) ||
+        (dicomRecord.StudyInstanceUID as string | undefined);
+
+      if (!studyId) return null;
+
+      const patient = mapStudyRecordToPatient(dicomRecord, studyId);
+      const study = mapStudyRecordToStudy(dicomRecord, patient.id, studyId);
+      return { study, patient };
+    })
+    .filter((item): item is { study: Study; patient: ReturnType<typeof mapStudyRecordToPatient> } =>
+      Boolean(item),
+    );
+
+  return Promise.all(
+    parsedStudies.map(async ({ study, patient }) => {
+      const [series, report] = await Promise.all([
+        resolveSeries(study.id),
+        resolveReport(study, patient.id),
+      ]);
+      return {
+        id: `queue-${study.id}`,
+        patient,
+        study: { ...study, series },
+        report,
+        priority: "normal" as const,
+      };
+    }),
+  );
+};
+
+/**
+ * The worklist: every study Orthanc knows about, paired with its report.
+ *
+ * Fetched through react-query so the queue is shared between the components
+ * that read it, survives a remount from cache, and is refetched under the
+ * `QueryClient` defaults (`src/App.tsx`) rather than only once per mount.
+ * Invalidate `DICOM_WEB_QUEUE_QUERY_KEY` to force a reload.
+ */
 export function useDicomWebQueue() {
-  const [items, setItems] = useState<QueueItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data,
+    isLoading,
+    isError,
+    error: queryError,
+  } = useQuery({
+    queryKey: DICOM_WEB_QUEUE_QUERY_KEY,
+    queryFn: loadQueueItems,
+  });
 
   useEffect(() => {
-    let isActive = true;
-    const useMockQueue = import.meta.env.VITE_USE_MOCK_QUEUE === "true";
+    if (queryError) {
+      logger.warn("Failed to load DICOM studies", queryError);
+    }
+  }, [queryError]);
 
-    const loadStudies = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        if (useMockQueue) {
-          if (isActive) {
-            setItems(mockQueueItems);
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        const response = await orthancClient.listStudies();
-        const records = Array.isArray(response)
-          ? response
-          : Array.isArray((response as { Studies?: unknown[] }).Studies)
-            ? (response as { Studies: unknown[] }).Studies
-            : [];
-
-        const parsedStudies = records
-          .map((record) => {
-            if (typeof record === "string") {
-              const patient = buildFallbackPatient(record);
-              const study = buildFallbackStudy(record, patient.id);
-              return { study, patient };
-            }
-
-            const dicomRecord = record as DicomJsonRecord;
-            const studyId =
-              (dicomRecord["0020000D"]?.Value?.[0] as string | undefined) ||
-              (dicomRecord.StudyInstanceUID as string | undefined);
-
-            if (!studyId) return null;
-
-            const patient = mapStudyRecordToPatient(dicomRecord, studyId);
-            const study = mapStudyRecordToStudy(dicomRecord, patient.id, studyId);
-            return { study, patient };
-          })
-          .filter(
-            (item): item is { study: Study; patient: ReturnType<typeof mapStudyRecordToPatient> } =>
-              Boolean(item),
-          );
-
-        const queueItems = await Promise.all(
-          parsedStudies.map(async ({ study, patient }) => {
-            const [series, report] = await Promise.all([
-              resolveSeries(study.id),
-              resolveReport(study, patient.id),
-            ]);
-            return {
-              id: `queue-${study.id}`,
-              patient,
-              study: { ...study, series },
-              report,
-              priority: "normal" as const,
-            };
-          }),
-        );
-
-        if (isActive) {
-          setItems(queueItems);
-        }
-      } catch (err) {
-        logger.warn("Failed to load DICOM studies", err);
-        if (isActive) {
-          setError("DICOMweb-Studien konnten nicht geladen werden.");
-          setItems([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadStudies();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  return { items, isLoading, error };
+  return {
+    items: data ?? EMPTY_QUEUE,
+    isLoading,
+    error: isError ? "DICOMweb-Studien konnten nicht geladen werden." : null,
+  };
 }

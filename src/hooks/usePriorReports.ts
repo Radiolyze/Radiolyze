@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { ReportResponsePayload } from "@/services/reportClient";
 import { reportClient } from "@/services/reportClient";
+
+export const priorReportsQueryKey = (patientId: string | undefined) =>
+  ["priorReports", patientId] as const;
 
 interface UsePriorReportsReturn {
   priorReports: ReportResponsePayload[];
@@ -14,36 +18,34 @@ interface UsePriorReportsReturn {
  *
  * Used to enable report comparison / diff views between the current
  * and previous reports for the same patient.
+ *
+ * Keyed on the patient rather than on the report, so the exclusion of the
+ * current report is a filter over cached data: opening a second report for
+ * the same patient reuses the fetch the first one made.
  */
 export function usePriorReports(
   patientId: string | undefined,
   currentReportId: string | undefined,
 ): UsePriorReportsReturn {
-  const [priorReports, setPriorReports] = useState<ReportResponsePayload[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: priorReportsQueryKey(patientId),
+    queryFn: () => reportClient.getReportsByPatient(patientId as string),
+    enabled: Boolean(patientId),
+  });
 
-  const fetch = useCallback(async () => {
-    if (!patientId) return;
+  const priorReports = useMemo(() => {
+    const reports = data ?? [];
+    return currentReportId ? reports.filter((report) => report.id !== currentReportId) : reports;
+  }, [data, currentReportId]);
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      const reports = await reportClient.getReportsByPatient(patientId);
-      // Exclude current report from the list
-      const filtered = currentReportId ? reports.filter((r) => r.id !== currentReportId) : reports;
-      setPriorReports(filtered);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load prior reports");
-      setPriorReports([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [patientId, currentReportId]);
+  const refresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
-
-  return { priorReports, isLoading, error, refresh: fetch };
+  return {
+    priorReports,
+    isLoading,
+    error: error ? (error instanceof Error ? error.message : "Failed to load prior reports") : null,
+    refresh,
+  };
 }
