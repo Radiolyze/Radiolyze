@@ -6,7 +6,13 @@ import { logger } from "@/lib/logger";
 
 interface UseViewerResetOptions {
   stackViewportRef: RefObject<StackViewport | null>;
-  setActiveTool: Dispatch<SetStateAction<ViewerToolId>>;
+  /**
+   * Only ever called with a literal tool id, never with an updater function, so
+   * a plain setter is enough — and a caller holding a wider tool union (as
+   * `DicomViewer` does with `AllToolId`) can pass its own `useState` setter
+   * directly.
+   */
+  setActiveTool: (tool: ViewerToolId) => void;
   defaultPresetId: string;
   setSelectedPresetId: Dispatch<SetStateAction<string>>;
   setFrameIndex: (index: number) => void;

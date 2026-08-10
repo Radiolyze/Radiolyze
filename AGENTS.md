@@ -64,7 +64,7 @@ npm run dev
   `Base.metadata.create_all` only still runs outside production/staging, for local `uvicorn` convenience.
 
 ## Project Conventions
-- TypeScript strict mode.
+- TypeScript strict mode (`"strict": true` in `tsconfig.app.json`; `npm run typecheck` enforces it in CI).
 - No new dependencies without review.
 - UI must remain dark mode compatible.
 - No PHI in logs.

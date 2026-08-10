@@ -99,6 +99,21 @@ for the full history.
 
 ### Changed
 
+- TypeScript now compiles under full `strict` (#124). `tsconfig.app.json` had
+  `strict: false` with `strictNullChecks` added back on top, while `AGENTS.md`
+  documented the project as running in strict mode — the two disagreed. The
+  remaining flags turned out to cost exactly one error to enable, so the
+  documentation was right and the config is now what it described.
+  `noImplicitAny` and the redundant `strictNullChecks` override are gone from
+  both `tsconfig.app.json` and the root `tsconfig.json`. `noUnusedLocals` and
+  `noUnusedParameters` stay off: they are not part of `strict`, and ESLint
+  already enforces them.
+- `useViewerReset` declares `setActiveTool` as `(tool: ViewerToolId) => void`
+  rather than `Dispatch<SetStateAction<ViewerToolId>>`. It only ever sets a
+  literal, never an updater function, and the narrower type is what lets
+  `DicomViewer` — whose state is the wider `AllToolId` — pass its setter
+  without the `as` cast it needed before. That cast was what
+  `strictFunctionTypes` flagged.
 - The impression and QA route groups moved out of `app/api/reports.py` into
   `ImpressionService` and `QAService` (#123), continuing the service-layer
   migration one route group at a time. `reports.py`: **820 → 696 lines**. The
@@ -249,6 +264,20 @@ for the full history.
 
 ### Removed
 
+- `lovable-tagger` and its `componentTagger()` plugin in `vite.config.ts`
+  (#124, #194). The Lovable editor is no longer in use, so the dev-build JSX
+  source tagging it provided has no consumer. Its peer range
+  (`vite@>=5.0.0 <8.0.0`) was also what made the Vite 8 upgrade unresolvable,
+  so removing it clears that blocker — the `vite >=8` Dependabot ignore stays
+  for now, because the 5 → 8 jump is a coordinated migration in its own right
+  (Vitest shares Vite's version line, plus the Node baseline and rollup
+  chunking defaults) rather than a bump that was merely being held back.
+- The scaffold's Lovable social-preview tags in `index.html`: `og:image` and
+  `twitter:image` both pointed at `lovable.dev`, so every link preview of this
+  app was branded with a third party and hotlinked an asset from their domain,
+  and `twitter:site` credited `@Lovable`. `twitter:card` drops to `summary`,
+  there being no image to render large. The Radiolyze-specific `og:title`,
+  `og:description` and `og:type` are unchanged.
 - `src/components/ui/calendar.tsx`, the `react-day-picker` dependency and the
   `overrides.react-day-picker.react` entry that forced v8 to accept React 19.
   The component was the package's only importer and nothing imported the

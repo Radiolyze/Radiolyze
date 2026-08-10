@@ -286,7 +286,7 @@ export function DicomViewer({
 
   const handleReset = useViewerReset({
     stackViewportRef,
-    setActiveTool: setActiveTool as (tool: ViewerToolId) => void,
+    setActiveTool,
     defaultPresetId: windowLevelPresets[0].id,
     setSelectedPresetId,
     setFrameIndex,
