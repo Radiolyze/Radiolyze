@@ -6,7 +6,12 @@ import { logger } from "@/lib/logger";
 
 interface UseViewerResetOptions {
   stackViewportRef: RefObject<StackViewport | null>;
-  setActiveTool: Dispatch<SetStateAction<ViewerToolId>>;
+  /**
+   * Reset only ever sets a tool outright, never via the updater form, so this
+   * asks for a plain setter rather than a full `Dispatch<SetStateAction<…>>`.
+   * That lets a caller holding a setter for a wider tool union pass it in.
+   */
+  setActiveTool: (tool: ViewerToolId) => void;
   defaultPresetId: string;
   setSelectedPresetId: Dispatch<SetStateAction<string>>;
   setFrameIndex: (index: number) => void;
