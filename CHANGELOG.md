@@ -99,6 +99,21 @@ for the full history.
 
 ### Changed
 
+- TypeScript now compiles under full `strict` (#124). `tsconfig.app.json` had
+  `strict: false` with `strictNullChecks` added back on top, while `AGENTS.md`
+  documented the project as running in strict mode — the two disagreed. The
+  remaining flags turned out to cost exactly one error to enable, so the
+  documentation was right and the config is now what it described.
+  `noImplicitAny` and the redundant `strictNullChecks` override are gone from
+  both `tsconfig.app.json` and the root `tsconfig.json`. `noUnusedLocals` and
+  `noUnusedParameters` stay off: they are not part of `strict`, and ESLint
+  already enforces them.
+- `useViewerReset` declares `setActiveTool` as `(tool: ViewerToolId) => void`
+  rather than `Dispatch<SetStateAction<ViewerToolId>>`. It only ever sets a
+  literal, never an updater function, and the narrower type is what lets
+  `DicomViewer` — whose state is the wider `AllToolId` — pass its setter
+  without the `as` cast it needed before. That cast was what
+  `strictFunctionTypes` flagged.
 - The impression and QA route groups moved out of `app/api/reports.py` into
   `ImpressionService` and `QAService` (#123), continuing the service-layer
   migration one route group at a time. `reports.py`: **820 → 696 lines**. The
