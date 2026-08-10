@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -17,14 +15,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from ..audit import add_audit_event
 from ..deps import get_current_user, get_db, require_radiologist_or_admin
-from ..dicom_client import store_sr
-from ..inference_clients import transcribe_audio
 from ..models import (
     InferenceJob,
     Report,
-    ReportComparison,
     ReportRevision,
     User,
 )
@@ -48,19 +42,36 @@ from ..schemas import (
     ReportUpdateRequest,
 )
 from ..services import (
+    ComparisonService,
     CriticalFindingService,
+    ExportArtifact,
+    ExportService,
     ImpressionService,
     PeerReviewService,
     QAService,
     ReportService,
+    TranscriptionService,
 )
-from ..services.exceptions import ConflictError, NotFoundError, UpstreamError
-from ..sr import build_sr_export
-from ..utils.hashing import compute_bytes_hash
-from ..utils.time import utc_now
+from ..services.exceptions import (
+    ConflictError,
+    FeatureUnavailableError,
+    NotFoundError,
+    PayloadTooLargeError,
+    UpstreamError,
+    ValidationError,
+)
 from ..ws_manager import broadcast_status
 
 router = APIRouter()
+
+
+def _attachment(artifact: ExportArtifact) -> Response:
+    """Serve a rendered export as a browser download."""
+    return Response(
+        content=artifact.content,
+        media_type=artifact.media_type,
+        headers={"Content-Disposition": f'attachment; filename="{artifact.filename}"'},
+    )
 
 
 # Thin module-level facades delegating to ReportService, kept so the many
@@ -213,53 +224,19 @@ def export_structured_report(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user),
 ) -> Response:
-    report = db.get(Report, report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+    try:
+        artifact = ExportService(db).export_sr(
+            report_id,
+            export_format,
+            current_user_id=current_user.id if current_user is not None else None,
+            actor_id=actor_id,
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    # Authenticated caller wins over the (client-controlled) actor_id query
-    # param, which remains only as a dev-mode/back-compat fallback.
-    audit_actor_id = (
-        current_user.id if current_user is not None else (actor_id or report.approved_by)
-    )
-
-    normalized = export_format.lower()
-    if normalized not in {"json", "dicom"}:
-        raise HTTPException(status_code=400, detail="Unsupported SR export format")
-
-    content, filename, media_type = build_sr_export(report, normalized)
-
-    # Archive DICOM SR to Orthanc via STOW-RS when binary format is requested
-    orthanc_url: str | None = None
-    if normalized == "dicom" and isinstance(content, (bytes, bytearray)):
-        try:
-            orthanc_url = store_sr(report.study_id, bytes(content))
-            report.dicom_sr_orthanc_url = orthanc_url
-        except RuntimeError as exc:
-            import logging as _log
-
-            _log.getLogger(__name__).warning("STOW-RS archival failed (non-fatal): %s", exc)
-
-    add_audit_event(
-        db,
-        event_type="report_exported",
-        actor_id=audit_actor_id,
-        report_id=report.id,
-        study_id=report.study_id,
-        metadata={
-            "format": normalized,
-            "file_name": filename,
-            "orthanc_url": orthanc_url,
-        },
-        source="api",
-    )
-    db.commit()
-
-    return Response(
-        content=content,
-        media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return _attachment(artifact)
 
 
 @router.post("/api/v1/reports/asr-transcript", response_model=ASRResponse)
@@ -273,68 +250,38 @@ async def asr_transcript(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> ASRResponse:
-    max_audio_size = int(
-        os.environ.get("ASR_MAX_FILE_SIZE", str(25 * 1024 * 1024))
-    )  # 25 MB default
-    content = await file.read(max_audio_size + 1)
-    if not content:
-        raise HTTPException(status_code=400, detail="Empty audio payload")
-    if len(content) > max_audio_size:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Audio file too large (max {max_audio_size // (1024 * 1024)} MB)",
-        )
+    # One byte past the limit is enough to tell an oversize upload from an
+    # acceptable one, without buffering the whole of it to find out.
+    content = await file.read(TranscriptionService.max_audio_bytes() + 1)
     try:
-        text, confidence, model_name, metadata = await transcribe_audio(
+        result = await TranscriptionService(db).transcribe(
             content=content,
             filename=file.filename or "audio.wav",
             content_type=file.content_type,
             language=language,
-        )
-    except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    timestamp = utc_now()
-
-    audio_hash = compute_bytes_hash(content)
-    output_summary = f"transcript_length={len(text)}"
-
-    report = None
-    if report_id:
-        report = db.get(Report, report_id)
-        if report:
-            report.updated_at = timestamp
-        metadata_payload = {
-            "confidence": confidence,
-            "transcript_length": len(text),
-            "model_version": model_name,
-            "input_hash": audio_hash,
-            "output_summary": output_summary,
-            "asr_language_requested": language,
-        }
-        if metadata:
-            metadata_payload.update(metadata)
-        add_audit_event(
-            db,
-            event_type="asr_transcription",
-            actor_id=None,
             report_id=report_id,
-            study_id=report.study_id if report else None,
-            metadata=metadata_payload,
-            timestamp=timestamp,
-            source="api",
         )
-        db.commit()
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PayloadTooLargeError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    except UpstreamError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    if result.recorded and report_id:
         await broadcast_status(
             report_id,
             {
                 "asrStatus": "processing",
-                "asrConfidence": confidence,
+                "asrConfidence": result.confidence,
                 "aiStatus": "idle",
-                "qaStatus": report.qa_status if report else "pending",
+                # No report row means no QA state to report on; "pending" is
+                # what a report that has never been checked would say.
+                "qaStatus": result.qa_status or "pending",
             },
         )
 
-    return ASRResponse(text=text, confidence=confidence, timestamp=timestamp)
+    return ASRResponse(text=result.text, confidence=result.confidence, timestamp=result.timestamp)
 
 
 @router.post("/api/v1/reports/generate-impression", response_model=ImpressionResponse)
@@ -463,29 +410,12 @@ def create_comparison(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> ReportComparisonResponse:
-    report = db.get(Report, report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
-
-    comparison = ReportComparison(
-        current_report_id=report_id,
-        prior_study_uid=payload.prior_study_uid,
-        prior_series_uid=payload.prior_series_uid,
-        time_delta_days=payload.time_delta_days,
-        created_at=utc_now(),
-    )
-    db.add(comparison)
-    db.commit()
-    db.refresh(comparison)
-
-    return ReportComparisonResponse(
-        id=comparison.id,
-        current_report_id=comparison.current_report_id,
-        prior_study_uid=comparison.prior_study_uid,
-        prior_series_uid=comparison.prior_series_uid,
-        time_delta_days=comparison.time_delta_days,
-        created_at=comparison.created_at,
-    )
+    service = ComparisonService(db)
+    try:
+        comparison = service.create(report_id, payload)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return service.serialize(comparison)
 
 
 @router.get(
@@ -497,23 +427,8 @@ def list_comparisons(
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
 ) -> list[ReportComparisonResponse]:
-    comparisons = (
-        db.query(ReportComparison)
-        .filter(ReportComparison.current_report_id == report_id)
-        .order_by(ReportComparison.created_at.desc())
-        .all()
-    )
-    return [
-        ReportComparisonResponse(
-            id=c.id,
-            current_report_id=c.current_report_id,
-            prior_study_uid=c.prior_study_uid,
-            prior_series_uid=c.prior_series_uid,
-            time_delta_days=c.time_delta_days,
-            created_at=c.created_at,
-        )
-        for c in comparisons
-    ]
+    service = ComparisonService(db)
+    return [service.serialize(c) for c in service.list_for_report(report_id)]
 
 
 @router.get("/api/v1/reports/{report_id}/export-pdf")
@@ -524,39 +439,18 @@ def export_pdf(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user),
 ) -> Response:
-    report = db.get(Report, report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
-
-    # Authenticated caller wins over the (client-controlled) actor_id query
-    # param, which remains only as a dev-mode/back-compat fallback.
-    audit_actor_id = (
-        current_user.id if current_user is not None else (actor_id or report.approved_by)
-    )
-
-    from ..pdf_export import build_pdf_export
-
     try:
-        pdf_bytes, filename = build_pdf_export(report)
-    except RuntimeError as exc:
+        artifact = ExportService(db).export_pdf(
+            report_id,
+            current_user_id=current_user.id if current_user is not None else None,
+            actor_id=actor_id,
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FeatureUnavailableError as exc:
         raise HTTPException(status_code=501, detail=str(exc)) from exc
 
-    add_audit_event(
-        db,
-        event_type="report_exported",
-        actor_id=audit_actor_id,
-        report_id=report.id,
-        study_id=report.study_id,
-        metadata={"format": "pdf", "file_name": filename},
-        source="api",
-    )
-    db.commit()
-
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return _attachment(artifact)
 
 
 # ---------------------------------------------------------------------------
