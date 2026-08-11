@@ -1,6 +1,270 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+
+@custom-variant dark (&:is(.dark *));
+
+/* space-y-* on Tailwind 3's selector.
+   v4 reimplemented it as `> :not(:last-child)` with margin-block-end, where v3
+   used `> :not([hidden]) ~ :not([hidden])` with margin-block-start. The gap
+   therefore moved onto the *earlier* sibling — and vertical margins have no
+   effect on an inline box, so every container whose non-last child is inline
+   silently lost its spacing. In this app that is each of the 18 form groups
+   where a `<Label>` (an inline `<label>`) sits above its input: 8px per group,
+   nothing in the class names to show for it.
+   Removable once those forms use `grid gap-*` instead of `space-y-*`. */
+@utility space-y-* {
+  /* A custom utility does not replace a built-in functional one — both rules
+     are emitted — so v4's margin on the first child has to be neutralised.
+     `:where()` keeps this at the weight of the container class alone: enough
+     to beat the built-in (itself wrapped in `:where()`, so weightless), not
+     enough to beat a first child's own `mb-*`, which is emitted later. */
+  & > :where(:first-child) {
+    margin-block-end: 0;
+  }
+  /* v3's placement, down to the specificity: this outweighs a child's own
+     `mt-*`/`mb-*` exactly as it did before the migration. `space-y-reverse` is
+     not carried over — it appears nowhere in this codebase, and `flex-col-reverse`
+     with `gap-*` is the v4 answer to it. */
+  & > :not([hidden]) ~ :not([hidden]) {
+    margin-block-start: --spacing(--value(number));
+    margin-block-end: 0;
+  }
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= --theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+@theme {
+  /* v4 expresses the default line heights as unitless ratios (`calc(1.25 /
+     0.875)`) where v3 used lengths (`1.25rem`). For the element itself the two
+     agree; for a descendant that sets only a font size — every `text-[10px]`
+     micro-label in the viewer overlays and the report queue — a ratio is
+     recomputed against the smaller font and a length is not, so those labels
+     collapse from a 24px line box to 15px. These are v3's values. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+
+  --color-viewer: hsl(var(--viewer-bg));
+
+  --color-panel: hsl(var(--panel-bg));
+  --color-panel-secondary: hsl(var(--panel-secondary));
+  --color-panel-tertiary: hsl(var(--panel-tertiary));
+
+  --color-confidence-high: hsl(var(--confidence-high));
+  --color-confidence-medium: hsl(var(--confidence-medium));
+  --color-confidence-low: hsl(var(--confidence-low));
+
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-in-right: slide-in-right 0.3s ease-out;
+  --animate-pulse-ring: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-slide-up: slide-up 0.3s ease-out both;
+  --animate-shake: shake 0.4s ease-in-out;
+  --animate-record-glow: record-glow 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce-in: bounce-in 0.35s ease-out;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial,
+    sans-serif;
+  --font-mono:
+    SF Mono, Monaco, Inconsolata, Fira Mono, Droid Sans Mono, Source Code Pro,
+    monospace;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes pulse-ring {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 hsl(var(--warning) / 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 12px hsl(var(--warning) / 0);
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    15% {
+      transform: translateX(-6px);
+    }
+    30% {
+      transform: translateX(6px);
+    }
+    45% {
+      transform: translateX(-4px);
+    }
+    60% {
+      transform: translateX(4px);
+    }
+    75% {
+      transform: translateX(-2px);
+    }
+    90% {
+      transform: translateX(2px);
+    }
+  }
+  @keyframes record-glow {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.5);
+    }
+    50% {
+      box-shadow: 0 0 0 8px hsl(var(--destructive) / 0);
+    }
+  }
+  @keyframes bounce-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    60% {
+      transform: scale(1.05);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
 
 /* Radiolyze Design System
    Optimized for 12+ hour monitor sessions
@@ -144,9 +408,13 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Micro-interactions: subtle press feedback on all interactive elements */
+  /* Micro-interactions: subtle press feedback on all interactive elements.
+     cursor: pointer is here because Tailwind 4's preflight dropped the
+     `button, [role="button"] { cursor: pointer }` rule v3 shipped; without it
+     every button in the app falls back to the arrow cursor. */
   button:not(:disabled),
   [role="button"]:not(:disabled) {
+    cursor: pointer;
     transition: opacity 0.15s ease, transform 0.1s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   }
 
@@ -190,84 +458,87 @@
   }
 }
 
-@layer components {
+
+/* Component classes and the keyframes they drive.
+   @utility rather than @layer components: v4 emits these only where the
+   class is actually used, the same on-demand behaviour v3 gave the
+   components layer. */
+@keyframes mic-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--warning) / 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 12px hsl(var(--warning) / 0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility mic-pulse {
   /* Mic button pulse animation */
-  .mic-pulse {
-    animation: mic-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
+  animation: mic-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
 
-  @keyframes mic-pulse {
-    0%, 100% {
-      box-shadow: 0 0 0 0 hsl(var(--warning) / 0.7);
-    }
-    50% {
-      box-shadow: 0 0 0 12px hsl(var(--warning) / 0);
-    }
-  }
-
+@utility spinner {
   /* Loading spinner */
-  .spinner {
-    animation: spin 1s linear infinite;
-  }
+  animation: spin 1s linear infinite;
+}
 
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
+@utility fade-in {
   /* Fade in animation */
-  .fade-in {
-    animation: fade-in 0.3s ease-out;
-  }
+  animation: fade-in 0.3s ease-out;
+}
 
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
+@utility panel {
   /* Panel styling */
-  .panel {
-    @apply bg-card border border-border rounded-lg;
-  }
+  @apply bg-card border border-border rounded-lg;
+}
 
-  .panel-header {
-    @apply px-4 py-3 border-b border-border flex items-center justify-between;
-  }
+@utility panel-header {
+  @apply px-4 py-3 border-b border-border flex items-center justify-between;
+}
 
-  .panel-content {
-    @apply p-4;
-  }
+@utility panel-content {
+  @apply p-4;
+}
 
+@utility status-pass {
   /* Status badges */
-  .status-pass {
-    @apply bg-success/20 text-success border-success/30;
-  }
+  @apply bg-success/20 text-success border-success/30;
+}
 
-  .status-warn {
-    @apply bg-warning/20 text-warning border-warning/30;
-  }
+@utility status-warn {
+  @apply bg-warning/20 text-warning border-warning/30;
+}
 
-  .status-fail {
-    @apply bg-destructive/20 text-destructive border-destructive/30;
-  }
+@utility status-fail {
+  @apply bg-destructive/20 text-destructive border-destructive/30;
+}
 
-  .status-pending {
-    @apply bg-muted text-muted-foreground border-border;
-  }
+@utility status-pending {
+  @apply bg-muted text-muted-foreground border-border;
+}
 
+@utility tool-button {
   /* Tool button */
-  .tool-button {
-    @apply p-2 rounded-md transition-all duration-200 hover:bg-accent;
-  }
+  @apply p-2 rounded-md transition-all duration-200 hover:bg-accent;
 
-  .tool-button.active {
+  &.active {
     @apply bg-primary text-primary-foreground;
   }
 }

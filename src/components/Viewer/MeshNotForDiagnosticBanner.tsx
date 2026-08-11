@@ -5,7 +5,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 export function MeshNotForDiagnosticBanner() {
   const { t } = useTranslation("viewer");
   return (
-    <div className="absolute top-2 left-2 right-2 z-30 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/15 px-3 py-1.5 text-xs font-medium text-destructive backdrop-blur">
+    <div className="absolute top-2 left-2 right-2 z-30 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/15 px-3 py-1.5 text-xs font-medium text-destructive backdrop-blur-sm">
       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
       <span className="flex-1">{t("mesh.disclaimer")}</span>
       <HoverCard openDelay={150}>

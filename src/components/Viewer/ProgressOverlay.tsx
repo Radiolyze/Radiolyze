@@ -65,7 +65,7 @@ export function ProgressOverlay({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-3 min-w-[220px] shadow-sm",
+        "flex flex-col gap-2 bg-card/90 backdrop-blur-xs border border-border rounded-lg p-3 min-w-[220px] shadow-xs",
         className,
       )}
     >

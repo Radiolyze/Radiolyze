@@ -41,7 +41,7 @@ export function MeshPacsPushControl({ state, existingUrl, onPush }: MeshPacsPush
       </Button>
       {alreadyPushed && url && (
         <span
-          className="max-w-xs truncate rounded bg-card/90 px-2 py-0.5 text-[10px] text-muted-foreground backdrop-blur"
+          className="max-w-xs truncate rounded bg-card/90 px-2 py-0.5 text-[10px] text-muted-foreground backdrop-blur-sm"
           title={url}
         >
           {url}

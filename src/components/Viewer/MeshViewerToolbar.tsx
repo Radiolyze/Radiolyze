@@ -43,7 +43,7 @@ export function MeshViewerToolbar({
   const { t } = useTranslation("viewer");
 
   return (
-    <div className="absolute top-12 left-4 z-20 flex items-center gap-2 rounded-md border bg-card/90 p-2 backdrop-blur">
+    <div className="absolute top-12 left-4 z-20 flex items-center gap-2 rounded-md border bg-card/90 p-2 backdrop-blur-sm">
       <Select value={preset} onValueChange={(v) => onPresetChange(v as SegmentationPreset)}>
         <SelectTrigger className="h-8 w-44">
           <SelectValue />

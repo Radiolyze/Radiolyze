@@ -19,7 +19,7 @@ Before merging a dependency bump, ask which of the three it is:
 |---|---|---|
 | Install conflict | `npm ci` / `pip install` | `@cornerstonejs/dicom-image-loader` v5 against core v4 |
 | Type / API break | `npm run typecheck` | `react-resizable-panels` v4 renamed its exports |
-| **Silent behaviour change** | **nothing** | `tailwind-merge` v3 mis-resolving Tailwind 3 classes |
+| **Silent behaviour change** | **nothing** (until #197 added `src/lib/__tests__/utils.test.ts`) | `tailwind-merge` v3 mis-resolving Tailwind 3 classes |
 
 The third row is the one that needs a human.
 
@@ -52,17 +52,25 @@ issue, and the entry is removed when the migration lands. See the next section.
 
 | Package | Held at | Blocked by | Issue |
 |---|---|---|---|
-| `tailwindcss` | `<4` | v4 needs `@tailwindcss/postcss`, `@import "tailwindcss"` and a `tailwindcss-animate` replacement | [#197](https://github.com/Radiolyze/Radiolyze/issues/197) |
-| `tailwind-merge` | `<3` | v3 drops Tailwind 3 support; must land with a Tailwind 4 migration | [#197](https://github.com/Radiolyze/Radiolyze/issues/197) |
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` has no ESLint 10 support | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
 | `@cornerstonejs/*` | `<5` | Needs `vite.config.ts` and `scripts/bundle-cornerstone-worker.mjs` changes | [#195](https://github.com/Radiolyze/Radiolyze/issues/195) |
 
-`tailwind-merge` is the instructive one. Its v3 release drops Tailwind 3
-support, but it declares no `peerDependencies`, nothing about it is type-level,
-and no test asserts on merged class output. The bump installs cleanly, CI goes
-green, and `cn()` starts mis-resolving class conflicts across the whole
-component library — visual regressions with no obvious culprit. That is why the
-ignore entry exists rather than a "be careful when reviewing" note.
+`tailwind-merge` was the instructive one, and is worth keeping in mind as a
+pattern even though the entry is gone. Its v3 release drops Tailwind 3 support,
+but it declares no `peerDependencies`, nothing about it is type-level, and no
+test asserted on merged class output — so the bump installed cleanly, CI went
+green, and `cn()` would have started mis-resolving class conflicts across the
+whole component library, producing visual regressions with no obvious culprit.
+The ignore entry existed for exactly that reason rather than as a "be careful
+when reviewing" note.
+
+Resolved in [#197](https://github.com/Radiolyze/Radiolyze/issues/197) by
+migrating `tailwindcss` and `tailwind-merge` to their v4/v3 majors in one
+commit. The hole that made it invisible is closed too:
+`src/lib/__tests__/utils.test.ts` merges pairs of classes whose names or syntax
+exist only in Tailwind 4 (`outline-hidden`, `w-(--sidebar-width)`), so a
+`tailwind-merge` that predates them leaves both sides of the conflict in place
+and fails the test instead of shipping.
 
 `pydicom` in the segmenter used to be the same shape, and is worth keeping in
 mind as a pattern even though the entry is gone: `pydicom-seg` capped it at
@@ -112,9 +120,12 @@ python3 -m mkdocs build --strict
 - **The DICOM viewer** — no WebGL rendering test exists. Any `@cornerstonejs/*`
   or `@kitware/vtk.js` change wants a manual pass: series loading, MPR, and the
   segmentation overlay.
-- **Rendered styling** — no test asserts on merged Tailwind classes. Anything
-  touching `tailwindcss`, `tailwind-merge` or `class-variance-authority` needs a
-  visual review of the main routes in both light and dark theme.
+- **Rendered styling** — `src/lib/__tests__/utils.test.ts` asserts that `cn()`
+  resolves conflicts against the installed Tailwind's utility names, which
+  catches a `tailwind-merge` out of step with `tailwindcss`. Nothing asserts on
+  what the browser paints, so anything touching `tailwindcss`, `tailwind-merge`
+  or `class-variance-authority` still needs a visual review of the main routes
+  in both light and dark theme.
 - **DICOM-SEG export** — stubbed in the segmenter tests.
 
 **4. Keep risky bumps in their own commit** so a regression can be reverted

@@ -30,7 +30,7 @@ export function SeriesStack({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-lg p-2",
+        "flex items-center gap-2 bg-card/90 backdrop-blur-xs border border-border rounded-lg p-2",
         className,
       )}
     >

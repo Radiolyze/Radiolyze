@@ -37,7 +37,7 @@ export function DicomViewerFrameOverlays({
       </div>
 
       {totalFrames > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-2 border border-border">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-card/90 backdrop-blur-xs rounded-lg p-2 border border-border">
           <Button
             variant="ghost"
             size="icon"
@@ -76,7 +76,7 @@ export function DicomViewerFrameOverlays({
       )}
 
       {totalFrames > 1 && !isLoading && (
-        <div className="absolute bottom-4 right-4 text-xs text-muted-foreground bg-card/90 backdrop-blur-sm rounded px-2 py-1 border border-border">
+        <div className="absolute bottom-4 right-4 text-xs text-muted-foreground bg-card/90 backdrop-blur-xs rounded px-2 py-1 border border-border">
           Scrollen oder ↑↓ zum Navigieren
         </div>
       )}

@@ -72,7 +72,7 @@ export function DicomViewerToolbar({
 
       {/* Annotation mode toggle + tools */}
       {annotationTools.length > 0 && (
-        <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-1.5 border border-border">
+        <div className="flex items-center gap-2 bg-card/90 backdrop-blur-xs rounded-lg p-1.5 border border-border">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -133,7 +133,7 @@ export function DicomViewerToolbar({
       )}
 
       {/* Window/Level presets + Export */}
-      <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm rounded-lg p-2 border border-border">
+      <div className="flex items-center gap-2 bg-card/90 backdrop-blur-xs rounded-lg p-2 border border-border">
         <Select value={selectedPresetId} onValueChange={onPresetChange} disabled={!hasStack}>
           <SelectTrigger className="h-8 w-[170px] text-xs">
             <SelectValue placeholder={t("tools.window")} />
