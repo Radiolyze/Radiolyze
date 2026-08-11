@@ -101,11 +101,16 @@ jobs:
       # target (#115): the job fails if coverage slides below where it is now.
       - run: npm run test:coverage
       # Dependency vulnerability scan. Currently reported-only: the backlog
-      # has pre-existing high/critical findings, now concentrated in the
-      # imaging stack (@cornerstonejs/*, @kitware/vtk.js and their transitive
-      # deps) rather than the build tooling -- the Vite 8 / Vitest 4 migration
-      # (#194) took rollup, vitest and yaml off this list. Flip to blocking
-      # once the imaging backlog is cleaned up (#195).
+      # has pre-existing high/critical findings concentrated in the imaging
+      # stack rather than the build tooling -- the Vite 8 / Vitest 4 migration
+      # (#194) took rollup, vitest and yaml off this list.
+      #
+      # The Cornerstone 4 -> 5 migration (#195) changed which package is at
+      # fault without emptying the list: vtk.js 34's Babel chain and
+      # xmlbuilder2 are gone, and dcmjs -> adm-zip arrived in their place,
+      # reported through every @cornerstonejs/* package that depends on it.
+      # Flipping this to blocking still needs an upstream dcmjs release that
+      # moves off the affected adm-zip range.
       - name: npm audit
         continue-on-error: true
         run: npm audit --audit-level=high

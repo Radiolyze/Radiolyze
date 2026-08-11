@@ -16,20 +16,20 @@ updates:
         patterns:
           - "@radix-ui/*"
       # The three Cornerstone packages share a version line and only resolve
-      # when bumped together (core/tools/dicom-image-loader).
+      # when bumped together (core/tools/dicom-image-loader). @kitware/vtk.js
+      # rides along because core and tools declare it as an *exact* peer
+      # (36.4.1 as of Cornerstone 5.7.0), so a vtk.js bump on its own is an
+      # ERESOLVE and a Cornerstone bump that leaves vtk.js behind is the same.
       cornerstone:
         patterns:
           - "@cornerstonejs/*"
+          - "@kitware/vtk.js"
     ignore:
       # Majors that are deliberately held back. Each one has a tracking issue;
       # remove the entry when the corresponding migration lands.
       - dependency-name: "eslint"
         # Blocked upstream: eslint-plugin-jsx-a11y has no ESLint 10 support yet.
         versions: [">=10"]
-      - dependency-name: "@cornerstonejs/*"
-        # Needs a coordinated 4 -> 5 migration incl. vite.config.ts and
-        # scripts/bundle-cornerstone-worker.mjs.
-        versions: [">=5"]
 
   # Backend (pip)
   - package-ecosystem: pip
