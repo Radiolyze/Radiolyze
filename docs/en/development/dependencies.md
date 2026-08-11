@@ -37,7 +37,9 @@ Two mechanisms shape what arrives:
 single PR:
 
 - `@radix-ui/*` — 27 packages that track each other
-- `@cornerstonejs/*` — core, tools and dicom-image-loader share a version line
+- `@cornerstonejs/*` **and `@kitware/vtk.js`** — core, tools and
+  dicom-image-loader share a version line, and both core and tools declare
+  vtk.js as an *exact* peer, so all four move as one PR or none of them install
 - `opentelemetry-*` — the SDK (1.4x) and instrumentation (0.6xb0) lines are
   pinned to each other; split apart, every one of them is a pip conflict
 - `ruff` / `mypy` / `pytest*` — backend dev tooling
@@ -53,7 +55,15 @@ issue, and the entry is removed when the migration lands. See the next section.
 | Package | Held at | Blocked by | Issue |
 |---|---|---|---|
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` has no ESLint 10 support | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
-| `@cornerstonejs/*` | `<5` | Needs `vite.config.ts` and `scripts/bundle-cornerstone-worker.mjs` changes | [#195](https://github.com/Radiolyze/Radiolyze/issues/195) |
+
+`@cornerstonejs/*` was held at `<5` until [#195](https://github.com/Radiolyze/Radiolyze/issues/195)
+migrated the three packages together. What made it a migration rather than a
+bump was the install graph, not the API: Cornerstone 5 declares `@kitware/vtk.js`
+as an exact peer, so the viewer's own vtk.js pin had to move with it, and the
+two new packages it splits out of core (`@cornerstonejs/metadata`,
+`@cornerstonejs/utils`) had to reach `optimizeDeps`. The ignore entry is gone;
+vtk.js now travels in the `cornerstone` group so the four cannot be proposed
+apart.
 
 `tailwind-merge` was the instructive one, and is worth keeping in mind as a
 pattern even though the entry is gone. Its v3 release drops Tailwind 3 support,
@@ -119,7 +129,13 @@ python3 -m mkdocs build --strict
 
 - **The DICOM viewer** — no WebGL rendering test exists. Any `@cornerstonejs/*`
   or `@kitware/vtk.js` change wants a manual pass: series loading, MPR, and the
-  segmentation overlay.
+  segmentation overlay. What *is* covered is one step earlier: the Playwright
+  specs mount the workspace route, so anything that breaks the viewer's module
+  graph fails there. That is how the Cornerstone 5 migration caught
+  `xmlbuilder2` reaching for Node's `events` — typecheck, unit tests and
+  `npm run build` were all green while every viewer route died in the browser.
+  Treat a green `npm run build` on an imaging bump as saying nothing about
+  whether the app still loads.
 - **Rendered styling** — `src/lib/__tests__/utils.test.ts` asserts that `cn()`
   resolves conflicts against the installed Tailwind's utility names, which
   catches a `tailwind-merge` out of step with `tailwindcss`. Nothing asserts on
@@ -141,8 +157,8 @@ notice going stale:
 | Pin | Where | Guard |
 |---|---|---|
 | `ruff`, twice | `backend/requirements-dev.txt` **and** `.pre-commit-config.yaml` | `scripts/check-ruff-pin-sync.sh`, run in CI |
-| `@kitware/vtk.js` | `package.json` — an **exact** peer of `@cornerstonejs/core` and `tools` | `npm ci` fails on mismatch |
-| Cornerstone worker path | `scripts/bundle-cornerstone-worker.mjs` reaches into `node_modules/@cornerstonejs/dicom-image-loader/dist/esm/` | `npm run bundle:worker` in CI |
+| `@kitware/vtk.js` | `package.json` — pinned **exactly** (`36.4.1`, no caret) because `@cornerstonejs/core` and `tools` peer-depend on that one version | `npm ci` fails on mismatch |
+| Cornerstone worker path | `scripts/bundle-cornerstone-worker.mjs` reaches into `node_modules/@cornerstonejs/dicom-image-loader/dist/esm/` | `npm run bundle:worker` in CI, which now fails loudly if the entry point, the codec `.wasm` files or either `.wasm` path rewrite comes up empty |
 | torch / totalsegmentator | `services/segmenter/requirements.txt` — floors only, so segmenter images are **not** reproducible across rebuilds | none |
 | `fast-simplification` | `services/segmenter/requirements.txt` — an *optional* trimesh extra that `app/meshing.py` hard-depends on | `test_decimate_reaches_the_target_face_count` |
 

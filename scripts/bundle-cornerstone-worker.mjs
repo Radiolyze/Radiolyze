@@ -12,16 +12,28 @@ import { existsSync, mkdirSync, copyFileSync, readdirSync, readFileSync, writeFi
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, "..");
 
-// Directly construct the path to the worker file in node_modules
-const workerEntryPoint = join(
-  projectRoot,
-  "node_modules",
-  "@cornerstonejs",
-  "dicom-image-loader",
-  "dist",
-  "esm",
-  "decodeImageFrameWorker.js",
-);
+// Directly construct the path to the worker file in node_modules.
+// This is an internal path of the package, not part of its exports map, so it
+// can move in any release. The check below turns that into a build failure
+// naming the path, rather than a viewer that loads but cannot decode.
+const loaderRoot = join(projectRoot, "node_modules", "@cornerstonejs", "dicom-image-loader");
+const loaderPackageJson = join(loaderRoot, "package.json");
+const workerEntryPoint = join(loaderRoot, "dist", "esm", "decodeImageFrameWorker.js");
+
+if (!existsSync(workerEntryPoint)) {
+  const version = existsSync(loaderPackageJson)
+    ? JSON.parse(readFileSync(loaderPackageJson, "utf-8")).version
+    : "not installed";
+  console.error(
+    `Cornerstone worker entry point not found:\n` +
+      `  ${workerEntryPoint}\n` +
+      `  @cornerstonejs/dicom-image-loader: ${version}\n\n` +
+      `This path is internal to the package and moves between releases. Find the\n` +
+      `worker in node_modules/@cornerstonejs/dicom-image-loader/dist and update\n` +
+      `workerEntryPoint in this script.`,
+  );
+  process.exit(1);
+}
 
 // Output directory
 const outputDir = join(projectRoot, "public", "workers");
@@ -200,12 +212,20 @@ try {
     }
   }
 
-  if (replacements > 0) {
-    writeFileSync(outputFile, bundleContent);
-    console.log(`Total WASM path fixes: ${replacements}`);
-  } else {
-    console.log("  No WASM paths found to fix (may already be correct)");
+  if (replacements === 0) {
+    throw new Error(
+      `No 'wasmBinaryFile = "<name>.wasm"' assignments found in the bundle.\n` +
+        `Every codec whose Emscripten glue resolves its .wasm relative to the page\n` +
+        `URL needs this rewrite, so zero matches means either the codec packages\n` +
+        `changed how they reference their .wasm files, or the bundle no longer\n` +
+        `contains them. Left alone it produces a worker that fetches .wasm from the\n` +
+        `wrong origin path and fails to decode at runtime — check the bundle for\n` +
+        `how the codecs reference their .wasm files and update the patterns above.`,
+    );
   }
+
+  writeFileSync(outputFile, bundleContent);
+  console.log(`Total WASM path fixes: ${replacements}`);
 
   // Additional post-processing for codec runtime decodewasm path references.
   // Some codec loaders request paths like "/@cornerstonejs/codec-openjpeg/decodewasm"
@@ -254,12 +274,21 @@ try {
     }
   }
 
-  if (decodeReplacements > 0) {
-    writeFileSync(outputFile, bundleContent);
-    console.log(`Total decodewasm path fixes: ${decodeReplacements}`);
-  } else {
-    console.log("  No codec decodewasm references found to fix");
+  if (decodeReplacements === 0) {
+    throw new Error(
+      `No codec decodewasm references found in the bundle.\n` +
+        `The codec loaders request paths like "/@cornerstonejs/codec-openjpeg/decodewasm",\n` +
+        `which resolve against the page rather than /workers unless rewritten here.\n` +
+        `Zero matches means the codecs changed how they name those requests; the\n` +
+        `bundle still builds, but decoding fails in the browser. Check the bundle\n` +
+        `for the new shape and update decodePathRewrites above. If a release has\n` +
+        `genuinely stopped emitting them, delete this step rather than leaving a\n` +
+        `no-op that reads as a passing check.`,
+    );
   }
+
+  writeFileSync(outputFile, bundleContent);
+  console.log(`Total decodewasm path fixes: ${decodeReplacements}`);
 
   // Copy WASM files from codec packages
   console.log("\nCopying WASM codec files...");
@@ -272,16 +301,27 @@ try {
 
   for (const pkg of codecPackages) {
     const pkgDistDir = join(projectRoot, "node_modules", pkg, "dist");
-    if (existsSync(pkgDistDir)) {
-      const files = readdirSync(pkgDistDir);
-      for (const file of files) {
-        if (file.endsWith(".wasm")) {
-          const srcPath = join(pkgDistDir, file);
-          const destPath = join(outputDir, file);
-          copyFileSync(srcPath, destPath);
-          console.log(`  Copied: ${file}`);
-        }
-      }
+    if (!existsSync(pkgDistDir)) {
+      throw new Error(
+        `Codec package ${pkg} has no dist directory at ${pkgDistDir}.\n` +
+          `Its .wasm files are what the worker fetches from /workers at runtime, so\n` +
+          `skipping it produces a bundle that cannot decode that transfer syntax.\n` +
+          `If the package is genuinely gone from the dependency tree, remove it from\n` +
+          `codecPackages here and from the rewrite tables above.`,
+      );
+    }
+
+    const wasmFilesInPkg = readdirSync(pkgDistDir).filter((file) => file.endsWith(".wasm"));
+    if (wasmFilesInPkg.length === 0) {
+      throw new Error(
+        `Codec package ${pkg} ships no .wasm files in ${pkgDistDir}.\n` +
+          `The layout changed; find where the .wasm files moved to and update this step.`,
+      );
+    }
+
+    for (const file of wasmFilesInPkg) {
+      copyFileSync(join(pkgDistDir, file), join(outputDir, file));
+      console.log(`  Copied: ${file}`);
     }
   }
 

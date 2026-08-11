@@ -1,6 +1,9 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -65,6 +68,17 @@ export default defineConfig(({ mode }) => {
         // import.meta.dirname, not __dirname: Vite 8 warns that the latter is
         // unsupported by the native config loader it plans to default to.
         "@": path.resolve(import.meta.dirname, "./src"),
+        // Cornerstone 5 reaches Node's "events" through
+        // @cornerstonejs/metadata -> dcmjs -> xmlbuilder2, whose
+        // XMLBuilderCBImpl does `class ... extends EventEmitter` at module
+        // scope. Vite externalizes Node builtins for the browser, so
+        // EventEmitter arrives undefined and every route that touches the
+        // viewer dies with "Class extends value undefined" — in the dev server
+        // and in the production build alike. The npm "events" package is that
+        // class implemented for browsers; resolved through require.resolve so
+        // the alias does not depend on a node_modules layout.
+        // The trailing slash matters: without it Node hands back the builtin.
+        events: require.resolve("events/"),
       },
     },
     assetsInclude: ["**/*.wasm"],
@@ -81,12 +95,17 @@ export default defineConfig(({ mode }) => {
           // heavy imaging and charting libraries stay in their own cacheable
           // files.
           codeSplitting: {
+            // Order matters, and vtk.js has to come first. Cornerstone 5 uses
+            // far more of vtk.js than 4 did; with the cornerstone group listed
+            // first, ~1.5 MB of vtk.js lands inside the cornerstone chunk and
+            // the vtk chunk shrinks to what MeshViewer imports directly, so a
+            // Cornerstone bump re-downloads vtk.js along with it.
             groups: [
+              { name: "vtk", test: /[\\/]node_modules[\\/]@kitware[\\/]vtk\.js[\\/]/ },
               {
                 name: "cornerstone",
                 test: /[\\/]node_modules[\\/](@cornerstonejs[\\/]|dicom-parser[\\/])/,
               },
-              { name: "vtk", test: /[\\/]node_modules[\\/]@kitware[\\/]vtk\.js[\\/]/ },
               { name: "recharts", test: /[\\/]node_modules[\\/]recharts[\\/]/ },
             ],
           },
@@ -98,10 +117,17 @@ export default defineConfig(({ mode }) => {
         "@cornerstonejs/core",
         "@cornerstonejs/tools",
         "@cornerstonejs/dicom-image-loader",
+        // Cornerstone 5 split these two out of core. Neither declares
+        // "type": "module" while its exports point at ESM, so which of the two
+        // module systems a resolver picks depends on the resolver — listing
+        // them keeps the dev server's decision the same as the build's.
+        "@cornerstonejs/metadata",
+        "@cornerstonejs/utils",
         "dicom-parser",
-        // vtk.js and its dependencies need CJS transformation
+        // vtk.js needs CJS transformation. Its "globalthis" dependency used to
+        // be listed here too; vtk.js 36 dropped it, and Vite warns on start
+        // about an include entry it cannot resolve.
         "@kitware/vtk.js",
-        "globalthis",
         // Codec packages need CJS transformation for their JS wrappers
         "@cornerstonejs/codec-charls",
         "@cornerstonejs/codec-libjpeg-turbo-8bit",
