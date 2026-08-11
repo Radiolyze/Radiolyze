@@ -38,12 +38,6 @@ updates:
       - dependency-name: "eslint"
         # Blocked upstream: eslint-plugin-jsx-a11y has no ESLint 10 support yet.
         versions: [">=10"]
-      - dependency-name: "vite"
-        # lovable-tagger, whose peer range capped Vite at <8, has been removed.
-        # Still held because the 5 -> 8 jump itself is a coordinated migration
-        # (vitest shares Vite's version line, Node baseline, rollup chunking
-        # defaults) that a lone Dependabot bump cannot carry -- see #194.
-        versions: [">=8"]
       - dependency-name: "@cornerstonejs/*"
         # Needs a coordinated 4 -> 5 migration incl. vite.config.ts and
         # scripts/bundle-cornerstone-worker.mjs.
