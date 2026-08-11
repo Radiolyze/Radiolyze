@@ -119,7 +119,7 @@ export function ComparisonSingleView({
                 variant={viewerMode === "mpr" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewerMode(viewerMode === "mpr" ? "stack" : "mpr")}
-                className="bg-card/90 backdrop-blur-sm"
+                className="bg-card/90 backdrop-blur-xs"
               >
                 <Box className="h-4 w-4 mr-2" />
                 MPR
@@ -139,7 +139,7 @@ export function ComparisonSingleView({
                 variant={viewerMode === "vrt" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewerMode(viewerMode === "vrt" ? "stack" : "vrt")}
-                className="bg-card/90 backdrop-blur-sm"
+                className="bg-card/90 backdrop-blur-xs"
               >
                 <View className="h-4 w-4 mr-2" />
                 3D
@@ -159,7 +159,7 @@ export function ComparisonSingleView({
                 variant={viewerMode === "mesh" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewerMode(viewerMode === "mesh" ? "stack" : "mesh")}
-                className="bg-card/90 backdrop-blur-sm"
+                className="bg-card/90 backdrop-blur-xs"
               >
                 <Boxes className="h-4 w-4 mr-2" />
                 {t("mesh.title")}
@@ -175,7 +175,7 @@ export function ComparisonSingleView({
             variant="outline"
             size="sm"
             onClick={onEnableCompare}
-            className="bg-card/90 backdrop-blur-sm"
+            className="bg-card/90 backdrop-blur-xs"
           >
             <Columns2 className="h-4 w-4 mr-2" />
             {t("comparison.enable")}

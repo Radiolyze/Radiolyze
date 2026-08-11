@@ -13,7 +13,7 @@ export function MeshLabelSkeletonPanel() {
 
   return (
     <div
-      className="absolute top-12 right-4 z-20 flex max-h-[85%] w-80 flex-col gap-2 rounded-md border bg-card/90 p-3 backdrop-blur"
+      className="absolute top-12 right-4 z-20 flex max-h-[85%] w-80 flex-col gap-2 rounded-md border bg-card/90 p-3 backdrop-blur-sm"
       role="status"
       aria-live="polite"
     >

@@ -23,7 +23,7 @@ export function ImageControls({
   return (
     <div
       className={cn(
-        "flex gap-1 bg-card/90 backdrop-blur-sm rounded-lg p-1 border border-border",
+        "flex gap-1 bg-card/90 backdrop-blur-xs rounded-lg p-1 border border-border",
         className,
       )}
     >

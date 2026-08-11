@@ -31,7 +31,7 @@ export function SeriesList({ series, selectedSeriesId, onSelectSeries }: SeriesL
             className={cn(
               "w-full p-3 rounded-lg text-left transition-colors",
               "hover:bg-sidebar-accent",
-              "focus:outline-none focus:ring-2 focus:ring-sidebar-ring",
+              "focus:outline-hidden focus:ring-2 focus:ring-sidebar-ring",
               selectedSeriesId === s.id
                 ? "bg-sidebar-accent border border-primary/50"
                 : "bg-transparent",

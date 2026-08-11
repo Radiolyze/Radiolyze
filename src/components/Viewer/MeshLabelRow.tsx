@@ -43,7 +43,7 @@ export function MeshLabelRow({
             <button
               type="button"
               aria-label={t("mesh.colorPicker.open", { name: label.name })}
-              className="h-3 w-3 shrink-0 rounded-sm border ring-offset-background transition-shadow hover:ring-2 hover:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-3 w-3 shrink-0 rounded-sm border ring-offset-background transition-shadow hover:ring-2 hover:ring-ring focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               style={{ backgroundColor: toCssColor(state.color) }}
             />
           </PopoverTrigger>

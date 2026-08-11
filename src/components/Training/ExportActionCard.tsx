@@ -64,7 +64,7 @@ export function ExportActionCard({
             zero annotations is not yet a fact. */}
         {!totalAnnotations && !statsLoading && (
           <div className="mt-4 p-4 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
             <div>
               <p className="font-medium text-warning">{t("empty.title")}</p>
               <p className="text-sm text-muted-foreground">{t("empty.description")}</p>

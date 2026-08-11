@@ -52,7 +52,7 @@ export function MeshLabelPanel({
   const { t } = useTranslation("viewer");
 
   return (
-    <div className="absolute top-12 right-4 z-20 flex max-h-[85%] w-80 flex-col gap-2 rounded-md border bg-card/90 p-3 backdrop-blur">
+    <div className="absolute top-12 right-4 z-20 flex max-h-[85%] w-80 flex-col gap-2 rounded-md border bg-card/90 p-3 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs font-semibold uppercase text-muted-foreground">
           {t("mesh.labels")}{" "}

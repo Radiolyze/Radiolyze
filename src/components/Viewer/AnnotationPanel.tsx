@@ -319,7 +319,7 @@ function AnnotationItem({
           <div className="flex items-center gap-1.5">
             <span className="font-medium text-sm truncate">{annotation.label}</span>
             {annotation.verifiedBy && (
-              <CheckCircle2 className="h-3.5 w-3.5 text-success flex-shrink-0" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
             )}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">

@@ -10,6 +10,19 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      // Sonner injects its own stylesheet at runtime, and that stylesheet is
+      // unlayered: since Tailwind 4 puts its utilities in a real `@layer`, any
+      // unlayered rule beats them no matter how specific the utility is. The
+      // `classNames` below stopped reaching the toast surface because of it —
+      // a light toast on a dark radiology UI. Sonner's own variables are the
+      // supported way in, and an inline style outranks its defaults.
+      style={
+        {
+          "--normal-bg": "hsl(var(--background))",
+          "--normal-text": "hsl(var(--foreground))",
+          "--normal-border": "hsl(var(--border))",
+        } as React.CSSProperties
+      }
       toastOptions={{
         classNames: {
           toast:

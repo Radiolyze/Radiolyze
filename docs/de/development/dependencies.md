@@ -21,7 +21,7 @@ sich handelt:
 |---|---|---|
 | Installationskonflikt | `npm ci` / `pip install` | `@cornerstonejs/dicom-image-loader` v5 gegen core v4 |
 | Typ-/API-Bruch | `npm run typecheck` | `react-resizable-panels` v4 hat seine Exports umbenannt |
-| **Stille Verhaltensänderung** | **nichts** | `tailwind-merge` v3 löst Tailwind-3-Klassen falsch auf |
+| **Stille Verhaltensänderung** | **nichts** (bis #197 `src/lib/__tests__/utils.test.ts` ergänzt hat) | `tailwind-merge` v3 löst Tailwind-3-Klassen falsch auf |
 
 Die dritte Zeile braucht einen Menschen.
 
@@ -54,18 +54,25 @@ nächster Abschnitt.
 
 | Paket | Gehalten auf | Blockiert durch | Issue |
 |---|---|---|---|
-| `tailwindcss` | `<4` | v4 braucht `@tailwindcss/postcss`, `@import "tailwindcss"` und einen Ersatz für `tailwindcss-animate` | [#197](https://github.com/Radiolyze/Radiolyze/issues/197) |
-| `tailwind-merge` | `<3` | v3 lässt Tailwind-3-Support fallen; muss zusammen mit einer Tailwind-4-Migration landen | [#197](https://github.com/Radiolyze/Radiolyze/issues/197) |
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` unterstützt ESLint 10 nicht | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
 | `@cornerstonejs/*` | `<5` | Braucht Änderungen an `vite.config.ts` und `scripts/bundle-cornerstone-worker.mjs` | [#195](https://github.com/Radiolyze/Radiolyze/issues/195) |
 
-`tailwind-merge` ist der lehrreiche Fall. Das v3-Release lässt den
-Tailwind-3-Support fallen, deklariert aber keine `peerDependencies`, ist an
-keiner Stelle typ-relevant, und kein Test prüft die gemergte Klassenausgabe. Der
-Bump installiert sauber, CI wird grün — und `cn()` löst danach Klassenkonflikte
-in der gesamten Komponentenbibliothek falsch auf: visuelle Regressionen ohne
-erkennbaren Verursacher. Deshalb existiert ein Ignore-Eintrag und nicht bloß
+`tailwind-merge` war der lehrreiche Fall und bleibt als Muster erwähnenswert,
+auch wenn der Eintrag weg ist. Das v3-Release lässt den Tailwind-3-Support
+fallen, deklariert aber keine `peerDependencies`, ist an keiner Stelle
+typ-relevant, und kein Test prüfte die gemergte Klassenausgabe. Der Bump
+installiert sauber, CI wird grün — und `cn()` hätte danach Klassenkonflikte in
+der gesamten Komponentenbibliothek falsch aufgelöst: visuelle Regressionen ohne
+erkennbaren Verursacher. Deshalb existierte ein Ignore-Eintrag und nicht bloß
 eine Notiz „beim Review aufpassen".
+
+Aufgelöst in [#197](https://github.com/Radiolyze/Radiolyze/issues/197):
+`tailwindcss` und `tailwind-merge` sind in einem Commit gemeinsam auf ihre
+Majors v4/v3 migriert. Auch die Lücke, die das unsichtbar machte, ist
+geschlossen — `src/lib/__tests__/utils.test.ts` merged Klassenpaare, deren Namen
+oder Syntax es nur in Tailwind 4 gibt (`outline-hidden`, `w-(--sidebar-width)`).
+Ein `tailwind-merge`, das sie nicht kennt, behält beide Seiten des Konflikts und
+lässt den Test scheitern, statt die Regression auszuliefern.
 
 `pydicom` hatte im Segmenter dieselbe Form — als Muster weiterhin lehrreich,
 auch wenn der Eintrag entfallen ist: `pydicom-seg` deckelte es auf `<3`, der
@@ -115,9 +122,12 @@ python3 -m mkdocs build --strict
 - **Der DICOM-Viewer** — es gibt keinen WebGL-Rendering-Test. Jede Änderung an
   `@cornerstonejs/*` oder `@kitware/vtk.js` braucht einen manuellen Durchgang:
   Serienladen, MPR und Segmentierungs-Overlay.
-- **Gerendertes Styling** — kein Test prüft gemergte Tailwind-Klassen. Alles, was
-  `tailwindcss`, `tailwind-merge` oder `class-variance-authority` berührt,
-  braucht ein visuelles Review der Hauptrouten in hellem und dunklem Theme.
+- **Gerendertes Styling** — `src/lib/__tests__/utils.test.ts` prüft, dass `cn()`
+  Konflikte gegen die Utility-Namen des installierten Tailwind auflöst, und
+  fängt damit ein `tailwind-merge` ab, das nicht zu `tailwindcss` passt. Was der
+  Browser malt, prüft nichts; alles, was `tailwindcss`, `tailwind-merge` oder
+  `class-variance-authority` berührt, braucht weiterhin ein visuelles Review der
+  Hauptrouten in hellem und dunklem Theme.
 - **DICOM-SEG-Export** — in den Segmenter-Tests gestubbt.
 
 **4. Riskante Bumps in einen eigenen Commit legen**, damit eine Regression

@@ -49,7 +49,7 @@ export default function Login() {
           >
             <Activity className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text">
+          <h1 className="text-2xl font-bold tracking-tight bg-linear-to-br from-foreground to-foreground/70 bg-clip-text">
             Radiolyze
           </h1>
           <p className="text-sm text-muted-foreground">{t("auth.loginPrompt")}</p>

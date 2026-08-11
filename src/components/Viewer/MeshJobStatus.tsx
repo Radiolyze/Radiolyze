@@ -13,7 +13,7 @@ export function MeshJobProgress({ progressPct }: MeshJobProgressProps) {
   const { t } = useTranslation("viewer");
 
   return (
-    <div className="absolute top-28 left-4 z-20 w-72 rounded-md border bg-card/90 p-3 backdrop-blur">
+    <div className="absolute top-28 left-4 z-20 w-72 rounded-md border bg-card/90 p-3 backdrop-blur-sm">
       <div className="text-xs font-medium mb-1">
         {t("mesh.status.running", { progress: progressPct })}
       </div>
@@ -39,7 +39,7 @@ export function MeshJobError({ message, onRetry, canRetry }: MeshJobErrorProps) 
     >
       <div className="flex-1">
         <div className="font-semibold">{t("mesh.status.failed")}</div>
-        <div className="mt-0.5 break-words">{message}</div>
+        <div className="mt-0.5 wrap-break-word">{message}</div>
       </div>
       <Button
         size="sm"

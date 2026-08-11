@@ -12,6 +12,12 @@ for the full history.
 
 ### Added
 
+- `src/lib/__tests__/utils.test.ts`: the first test to assert on merged class
+  output (#197). Each case merges a pair whose winning class only exists in
+  Tailwind 4 — `outline-hidden`, `w-(--sidebar-width)`, `backdrop-blur-xs` — so
+  a `tailwind-merge` that predates them keeps both sides of the conflict and
+  fails here, instead of shipping a silent visual regression as the dependency
+  policy describes.
 - WebSocket heartbeat and idle disconnect (#106). `/api/v1/ws` sends
   `{"type":"ping"}` after `WS_HEARTBEAT_INTERVAL_SECONDS` (default 30) of
   silence and closes with code **4408** after `WS_IDLE_TIMEOUT_SECONDS`
@@ -99,6 +105,58 @@ for the full history.
 
 ### Changed
 
+- `tailwindcss` 3.4 → 4.3 and `tailwind-merge` 2.6 → 3.6, in one commit
+  (#197). They share a version line in one direction only: tailwind-merge v3
+  drops Tailwind 3 support but declares no `peerDependencies`, so bumping it
+  alone installs cleanly, type-checks cleanly, and leaves `cn()` resolving
+  class conflicts against a table that no longer matches the CSS — visual
+  regressions with a green pipeline. Both Dependabot ignore entries are gone
+  now that neither is held back.
+  - The configuration is CSS-first: `tailwind.config.ts` is replaced by
+    `@theme` in `src/index.css`, `darkMode: ["class"]` by
+    `@custom-variant dark`, and the component classes by `@utility` (which
+    keeps the emit-only-if-used behaviour the components layer had).
+  - The PostCSS pipeline is `@tailwindcss/postcss`, and the `@tailwind`
+    directives are `@import "tailwindcss"`.
+  - Utilities renamed by v4 were migrated across 55 files — `outline-none` →
+    `outline-hidden`, `shadow-sm` → `shadow-xs`, `shadow` → `shadow-sm`,
+    `backdrop-blur` → `backdrop-blur-sm`, `bg-gradient-*` → `bg-linear-*`,
+    `flex-shrink-0` → `shrink-0`, `break-words` → `wrap-break-word`,
+    `w-[--var]` → `w-(--var)`, `!p-0` → `p-0!` — plus the variant-order flip
+    that v4 applies left-to-right (`group-[.destructive]:hover:` →
+    `hover:group-[.destructive]:`).
+  - Five behaviour changes are compensated for rather than accepted, each of
+    which type-checks and tests clean and shows up only on screen:
+    - v4's preflight makes the default border colour `currentcolor` instead of
+      gray-200; a compatibility rule keeps the v3 default on pseudo-elements
+      (the design system's own `* { @apply border-border }` still wins for
+      real elements, as before).
+    - v4's preflight dropped `button { cursor: pointer }`, which would have
+      cost every button in the app its pointer cursor. The existing
+      `button:not(:disabled)` base rule carries it now.
+    - `space-y-*` moved the gap onto the earlier sibling as `margin-block-end`,
+      which a vertical margin on an inline box does nothing with — so all 18
+      form groups where a `<Label>` sits above its input silently lost 8px.
+      `src/index.css` redefines `space-y-*` on v3's selector.
+    - v4's default line heights are unitless ratios where v3's were lengths,
+      so a `text-[10px]` label inside a sized ancestor recomputed its line box
+      from 24px down to 15px. The `--text-*--line-height` theme variables are
+      pinned to v3's values.
+    - Tailwind's utilities now live in a real `@layer`, and unlayered CSS beats
+      a cascade layer regardless of specificity — so Sonner's runtime-injected
+      stylesheet started winning over the toast's own `classNames`, rendering
+      a light toast on the dark UI. `sonner.tsx` sets Sonner's `--normal-*`
+      variables inline instead.
+  - `components.json` no longer names a Tailwind config file; the shadcn CLI
+    reads the CSS-first configuration.
+  - Two differences are accepted rather than compensated for, both intended v4
+    behaviour: its preflight zeroes the browser's default 1px `th`/`td`
+    padding (invisible here — every table cell sets `px-4` inside a fixed-height
+    row), and the default colour palette moved from sRGB hex to OKLCH, which
+    shifts the 99 default-palette utilities in `src/` (`text-yellow-400` and
+    friends) by an imperceptible amount on sRGB displays and makes them
+    slightly more vivid on wide-gamut ones. The design system's own colours are
+    `hsl(var(--…))` throughout and are untouched.
 - TypeScript now compiles under full `strict` (#124). `tsconfig.app.json` had
   `strict: false` with `strictNullChecks` added back on top, while `AGENTS.md`
   documented the project as running in strict mode — the two disagreed. The
@@ -248,11 +306,6 @@ for the full history.
   disagree — so each half sat red on the other's absence until they landed
   together. Also `pre-commit-hooks` v5 → v6, whose removed hooks this repo does
   not run.
-- `tailwindcss` is held at `<4` in `.github/dependabot.yml` alongside the existing
-  `tailwind-merge` entry (#197). v4 moves the PostCSS plugin to
-  `@tailwindcss/postcss`, replaces the `@tailwind` directives, and retires
-  `tailwindcss-animate`; without the ignore entry the bump was re-proposed weekly
-  against a build it cannot pass.
 - Drained the Dependabot backlog: the Radix UI set, lucide-react,
   @hookform/resolvers, esbuild, the Cornerstone 4.x set, FastAPI, uvicorn,
   ruff, mypy, fakeredis, mkdocs-material, the segmenter version floors, and
@@ -264,6 +317,10 @@ for the full history.
 
 ### Removed
 
+- `tailwind.config.ts` and the `autoprefixer` dependency (#197). The theme now
+  lives in `src/index.css`; Tailwind 4 does its own vendor prefixing through
+  Lightning CSS, which also raises the browser floor to the baseline v4
+  targets (Safari 16.4, Chrome 111, Firefox 128).
 - `lovable-tagger` and its `componentTagger()` plugin in `vite.config.ts`
   (#124, #194). The Lovable editor is no longer in use, so the dev-build JSX
   source tagging it provided has no consumer. Its peer range

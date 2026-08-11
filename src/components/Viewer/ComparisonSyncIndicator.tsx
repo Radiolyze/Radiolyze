@@ -23,7 +23,7 @@ export function ComparisonSyncIndicator({ isVisible, syncOptions }: ComparisonSy
 
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-      <Badge variant="outline" className="bg-card/90 backdrop-blur-sm gap-1">
+      <Badge variant="outline" className="bg-card/90 backdrop-blur-xs gap-1">
         <Link2 className="h-3 w-3" />
         {labels}
       </Badge>

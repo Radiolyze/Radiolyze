@@ -382,7 +382,7 @@ export function DicomViewer({
       />
 
       {/* Series Info */}
-      <div className="absolute top-4 right-4 z-10 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
+      <div className="absolute top-4 right-4 z-10 bg-card/90 backdrop-blur-xs rounded-lg px-3 py-2 border border-border">
         <p className="text-sm font-medium">{series.seriesDescription}</p>
         <p className="text-xs text-muted-foreground">
           {series.modality} • {t("series.seriesNumber", { number: series.seriesNumber })}

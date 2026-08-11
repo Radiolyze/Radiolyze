@@ -60,7 +60,7 @@ export function MPRToolbar({
   const isSlabActive = slabSettings.thickness > 0;
 
   return (
-    <div className="flex items-center gap-2 p-2 bg-card/90 backdrop-blur-sm border-b border-border">
+    <div className="flex items-center gap-2 p-2 bg-card/90 backdrop-blur-xs border-b border-border">
       {/* Tool buttons */}
       <div className="flex gap-1 bg-muted rounded-lg p-1">
         {tools.map((tool) => (

@@ -21,7 +21,7 @@ export function MeshClipPlaneSlider({ axis, range, position, onChange }: MeshCli
   const step = (range[1] - range[0]) / 200 || 1;
 
   return (
-    <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-md border bg-card/90 px-3 py-2 backdrop-blur">
+    <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-md border bg-card/90 px-3 py-2 backdrop-blur-sm">
       <span className="text-xs text-muted-foreground">{label}</span>
       <Slider
         value={[value]}
