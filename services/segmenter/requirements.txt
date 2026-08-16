@@ -25,4 +25,4 @@ highdicom>=0.28.1
 # channels. If reproducible segmenter images become a requirement, this needs
 # a real pin (== plus a hash-locked constraints file), not a >=.
 torch>=2.13.0
-totalsegmentator>=2.17.0
+totalsegmentator>=2.18.0
