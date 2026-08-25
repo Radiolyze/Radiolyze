@@ -113,6 +113,33 @@ def test_verify_audit_log_detects_tampering(client, db):
     assert 3 in data["brokenSeqs"]
 
 
+def test_append_takes_advisory_lock_on_postgres():
+    """Concurrent appends must serialise, or they collide on audit_events.seq."""
+    from unittest.mock import MagicMock
+
+    from app.audit import _lock_audit_chain
+
+    db = MagicMock()
+    db.get_bind.return_value.dialect.name = "postgresql"
+    _lock_audit_chain(db)
+
+    db.execute.assert_called_once()
+    assert "pg_advisory_xact_lock" in str(db.execute.call_args[0][0])
+
+
+def test_append_skips_advisory_lock_on_sqlite():
+    """SQLite has no advisory locks - the statement would just error out."""
+    from unittest.mock import MagicMock
+
+    from app.audit import _lock_audit_chain
+
+    db = MagicMock()
+    db.get_bind.return_value.dialect.name = "sqlite"
+    _lock_audit_chain(db)
+
+    db.execute.assert_not_called()
+
+
 def test_add_audit_event_requires_caller_commit(db):
     """add_audit_event() does not commit; a caller rollback discards the event."""
     from app.audit import add_audit_event

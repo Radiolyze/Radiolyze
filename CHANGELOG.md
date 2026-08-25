@@ -346,6 +346,15 @@ for the full history.
 
 ### Fixed
 
+- Concurrent writes no longer collide on the audit chain. `add_audit_event()`
+  derived `seq`/`prev_hash` from the tail of `audit_events` and inserted
+  without holding anything, so overlapping requests read the same tail and all
+  but one died on `ix_audit_events_seq` — taking the surrounding transaction
+  with them, which turned parallel `POST /api/v1/reports/create` calls into
+  500s and lost the reports, not just the audit rows. The append now takes a
+  transaction-level advisory lock (Postgres) before reading the tail, so
+  writers queue and the chain stays gap-free. Reproduced against Postgres with
+  12 concurrent writers: 48 of 60 appends failed before, none after.
 - Mesh decimation in the segmenter never ran. `Trimesh.simplify_quadric_decimation`
   is a wrapper around the optional `fast-simplification` package, which
   `services/segmenter/requirements.txt` did not declare, and it was additionally

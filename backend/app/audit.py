@@ -4,11 +4,36 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from .models import AuditEvent
 from .utils.hashing import compute_audit_event_hash
 from .utils.time import parse_datetime, utc_now
+
+# Stable 64-bit key for the advisory lock below - the ASCII bytes of
+# "AUDITSEQ", so the holder is recognisable in ``pg_locks``.
+_AUDIT_SEQ_LOCK_KEY = int.from_bytes(b"AUDITSEQ", "big", signed=True)
+
+
+def _lock_audit_chain(db: Session) -> None:
+    """Serialise audit appends for the rest of the caller's transaction.
+
+    ``seq``/``prev_hash`` are derived from the current tail of the chain, so
+    two requests that read the same tail concurrently both build an event with
+    the same ``seq`` and the loser dies on ``ix_audit_events_seq`` (taking its
+    whole transaction - the report it was auditing included - with it). A
+    transaction-level advisory lock makes the read-then-insert atomic: the
+    second writer waits until the first commits and then reads the real tail,
+    or - if the first rolled back - reads the same tail and reuses the seq, so
+    the chain stays gap-free either way.
+
+    Postgres only. SQLite (dev/tests) has no advisory locks; it serialises
+    writers at the file level, which leaves the same read-then-insert window,
+    but no concurrent-writer deployment runs on it.
+    """
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _AUDIT_SEQ_LOCK_KEY})
 
 
 def add_audit_event(
@@ -33,6 +58,10 @@ def add_audit_event(
     consistent even across multiple events per request) but the caller owns
     the commit - if the caller's transaction rolls back, this event rolls
     back with it.
+
+    Takes an advisory lock on the chain (see :func:`_lock_audit_chain`) that
+    is likewise held until the caller commits or rolls back, so concurrent
+    appends queue up instead of colliding on ``seq``.
     """
     metadata_payload = dict(metadata or {})
     if source and "source" not in metadata_payload:
@@ -43,6 +72,7 @@ def add_audit_event(
     # and fall back to now for anything unparseable rather than 500.
     event_timestamp = parse_datetime(timestamp) or utc_now()
 
+    _lock_audit_chain(db)
     last_event = db.query(AuditEvent).order_by(AuditEvent.seq.desc()).first()
     seq = (last_event.seq + 1) if last_event else 1
     prev_hash = last_event.event_hash if last_event else None
