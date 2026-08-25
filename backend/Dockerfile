@@ -9,6 +9,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY alembic.ini .
+COPY migrations ./migrations
 
 # Non-root: also used by the worker/migrate services, which share this
 # image. /data/segmentations is pre-created here so that when Docker
