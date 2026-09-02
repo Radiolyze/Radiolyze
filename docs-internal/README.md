@@ -15,4 +15,5 @@ of updating the draft in place.
 | File | Purpose |
 | --- | --- |
 | `documentation-improvement-plan.md` | Draft restructuring plan for `docs/` (audience-oriented navigation). |
-| `gap-analysis-plan.md` | Draft gap analysis of the codebase against `docs/roadmap.md`. |
+| `gap-analysis-plan.md` | Draft gap analysis of the codebase against `docs/roadmap.md`. **Fully resolved** as of 2026-09-02 — every GAP it lists is implemented; superseded by `status-and-next-themes.md`. |
+| `status-and-next-themes.md` | Status audit of every open issue and roadmap item against `main`, plus the prioritized themes that follow from it (2026-09-02). |
