@@ -75,28 +75,35 @@ umgesetzt: `segment_total.py`, `colors.py`, `MeshColorPicker.tsx`,
 
 ## Nächste Themen — priorisiert
 
-### Thema 1 — Tracker & Roadmap in Deckung bringen  ▸ zuerst
+### Thema 1 — Tracker & Roadmap in Deckung bringen  ▸ ✅ erledigt 2026-09-02
 
 **Warum zuerst:** billigste Maßnahme mit dem größten Hebel. Sie beendet die
 Doppelarbeit, die bereits zwei PRs gekostet hat, und stellt her, dass die
 Issue-Liste wieder eine belastbare Arbeitsgrundlage ist.
 
-1. #99, #102, #106, #113, #115, #120, #121, #123 mit Verweis auf den Beleg
-   in obiger Tabelle schließen.
-2. #117 und #116 auf ihren tatsächlichen Restumfang eindampfen (Themen 4 und 7).
-3. `docs/en/roadmap.md` + DE-Spiegel: die acht erledigten `[ ]` abhaken —
-   Zeilen 55, 57, 69, 70, 72 sowie M2 und M3.
-4. `docs-internal/gap-analysis-plan.md` als vollständig abgearbeitet
-   kennzeichnen — nicht löschen: die `docs-internal/README.md` hält
+1. ✅ #99, #102, #106, #113, #115, #120, #121, #123 geschlossen, jeweils mit
+   dem konkreten Beleg auf `main` im Abschlusskommentar.
+2. ✅ #117 und #116 auf ihren tatsächlichen Restumfang neu geschnitten — der
+   Stand steht jetzt im Issue-Body statt am Ende von 16 bzw. 6 Kommentaren.
+3. ✅ `docs/en/roadmap.md` + DE-Spiegel: 13 Einträge je Sprache korrigiert.
+   Acht waren fälschlich offen, fünf überzeichneten den offenen Rest. Zwei
+   bleiben bewusst `[~]` statt abgehakt — Security Hardening (AuthZ/RBAC
+   ungenutzt) und M3 (Mesh-Bundle-Budget). Sechs Punkte bleiben offen.
+   Dazu ein Abgleichsdatum im Kopf beider Dateien, damit die Drift beim
+   nächsten Mal sichtbar ist statt still.
+4. ✅ `docs-internal/gap-analysis-plan.md` als vollständig abgearbeitet
+   gekennzeichnet — nicht gelöscht: die `docs-internal/README.md` hält
    ausdrücklich fest, dass alte Pläne als historischer Kontext bleiben.
-5. Zwei neue Issues für real offene, bisher unverfolgte Arbeit anlegen:
-   mypy-Backlog (Thema 2) und Backend-Großdateien (Thema 6).
+5. ✅ Zwei neue Issues für real offene, bisher unverfolgte Arbeit:
+   **#292** (mypy-Backlog, Thema 2) und **#293** (Backend-Großdateien, Thema 6).
+
+Offener Tracker danach: **5 Issues** — #116, #117, #196, #292, #293.
 
 **Aufwand:** ~0,5 Tag. Kein Code-Risiko.
 
 ---
 
-### Thema 2 — mypy-Backlog auf 0, dann Gate scharf schalten
+### Thema 2 — mypy-Backlog auf 0, dann Gate scharf schalten  ▸ #292
 
 **Warum:** `mypy` ist die einzige Prüfung im Backend-CI, die nicht blockiert.
 Der Kommentar in `ci.yml` sagt seit Einführung „report only until the backlog
@@ -157,7 +164,7 @@ der das Verhalten festnagelt, nicht erst danach.
 
 ---
 
-### Thema 4 — #117 i18n abschließen und absichern
+### Thema 4 — #117 i18n abschließen und absichern  ▸ #117
 
 Verifizierter Rest — kleiner, als der Issue-Verlauf nahelegt:
 
@@ -205,7 +212,7 @@ und diesen Schritt in die Definition of Done für Test-PRs aufnehmen.
 
 ---
 
-### Thema 6 — Backend-Großdateien aufteilen
+### Thema 6 — Backend-Großdateien aufteilen  ▸ #293
 
 #120 hat die Frontend-Monolithen zerlegt und ist damit erledigt; das
 Backend-Pendant wurde nie erfasst:
@@ -230,7 +237,7 @@ verhaltenswahrend gefahren worden.
 
 ---
 
-### Thema 7 — #116: Viewer-Interaktion end-to-end
+### Thema 7 — Viewer-Interaktion end-to-end  ▸ #116
 
 Der Kern-Workflow ist seit #239 abgedeckt und der `e2e-frontend`-Job
 blockierend. Offen bleibt, was der Issue als Flow 2 nennt: Serien-Scrolling,
