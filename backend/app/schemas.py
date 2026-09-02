@@ -80,7 +80,13 @@ class ReportResponse(ApiBaseModel):
     approved_by: str | None = None
     qa_status: str
     qa_warnings: list[str]
-    structured_data: dict[str, Any] | None = Field(default=None, alias="structuredData")
+    # Response-only, so the alias is needed for output but never for input:
+    # ``serialization_alias`` keeps the wire name ``structuredData`` while
+    # leaving the field constructible under its own name, which a plain
+    # ``alias`` does not (the synthesized __init__ takes the alias instead).
+    structured_data: dict[str, Any] | None = Field(
+        default=None, serialization_alias="structuredData"
+    )
     inference_status: str | None = None
     inference_summary: str | None = None
     inference_confidence: float | None = None

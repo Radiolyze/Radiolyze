@@ -8,6 +8,7 @@ data work to this service.
 
 from __future__ import annotations
 
+import builtins
 import hashlib
 import uuid
 
@@ -115,7 +116,11 @@ class ReportService:
             query = query.filter(Report.status == status)
         return query.order_by(Report.created_at.desc()).offset(offset).limit(limit).all()
 
-    def list_by_patient(self, patient_id: str, *, limit: int = 20, offset: int = 0) -> list[Report]:
+    # ``list`` above shadows the builtin for every annotation that follows it in
+    # this class body, so the return type here has to name the builtin outright.
+    def list_by_patient(
+        self, patient_id: str, *, limit: int = 20, offset: int = 0
+    ) -> builtins.list[Report]:
         return (
             self.db.query(Report)
             .filter(Report.patient_id == patient_id)

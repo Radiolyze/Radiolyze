@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 from fastapi import Cookie, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -65,22 +66,29 @@ def get_current_user(
     return user
 
 
-def require_role(*roles: str) -> Callable:
+def require_role(*roles: str) -> Any:
     """Return a FastAPI dependency that enforces role-based access control.
 
     When AUTH_REQUIRED=false (development), the check is skipped entirely.
     In production (or when AUTH_REQUIRED=true) the current user must have
     one of the specified roles, otherwise a 403 is raised.
 
-    Usage::
+    The return value is already a ``Depends`` marker, so call sites use it
+    directly as the default rather than wrapping it again::
 
         @router.delete("/api/v1/qa/rules/{rule_id}")
         def delete_qa_rule(
             rule_id: str,
-            _: None = Depends(require_role("admin")),
+            _: None = require_role("admin"),
             db: Session = Depends(get_db),
         ) -> None:
             ...
+
+    Declared as ``Any`` for the same reason ``fastapi.Depends`` itself is:
+    the marker stands in for whatever the dependency resolves to, so the
+    parameter it is assigned to keeps its own annotation (``None`` above).
+    Annotating it ``Callable`` -- which it is not; ``params.Depends`` has no
+    ``__call__`` -- made every one of those defaults a type error.
     """
     import os
 
