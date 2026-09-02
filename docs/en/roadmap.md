@@ -1,5 +1,12 @@
 # Roadmap
 
+> **Last reconciled against the code:** 2026-09-02, `main` @ `0081341`.
+> Tick the box in the same PR that implements the item. At the last audit this
+> file had drifted by eight already-completed entries, and stale entries are
+> not free: they cost two duplicate PRs (#233/#236, #266/#267), each started by
+> a second pass that found finished work still listed as open. The full audit
+> is in `docs-internal/status-and-next-themes.md`.
+
 ## Phase 1: UI MVP (0-4 Weeks)
 
 - [x] Finalize 3-column layout
@@ -46,18 +53,18 @@
 
 - [~] Human Oversight dialog + audit trail (dialog present; mandatory fields for Inference/Impression/QA/ASR, report events not yet end-to-end)
 - [~] EU AI Act documentation (Annex IV draft present, open TODOs)
-- [~] Drift monitoring (API report + snapshot persistence, scheduling/UI open)
-- [~] Security hardening (baseline documentation; AuthN/AuthZ, TLS, rate limits open)
+- [x] Drift monitoring (API report + snapshot persistence, APScheduler job via `DRIFT_SCHEDULE_HOURS`, Monitoring UI)
+- [~] Security hardening (AuthN, TLS and rate limits done; AuthZ/RBAC open — `User.role` exists but is not enforced)
 
 ## Phase 5: Production (14-22 Weeks)
 
-- [~] DICOM SR export (JSON + binary export + UI, archiving/persistence open)
-- [ ] Templates + Guidelines RAG
+- [x] DICOM SR export (JSON + binary export + UI, STOW-RS archiving persisted as `dicom_sr_orthanc_url`)
+- [x] Templates + Guidelines RAG (pgvector cosine search, embedding worker, ILIKE fallback)
 - [x] vLLM GPU worker (Compose + API integration, multimodal)
-- [ ] DICOM -> image pipeline for multimodal inference (WADO-RS/JPEG)
+- [x] DICOM -> image pipeline for multimodal inference (`retrieve_rendered_frame` + Redis-cached `retrieve_and_cache_frame`)
 - [x] Batch Reporting Dashboard (multi-select, bulk actions, analytics + API integration)
 - [x] Report history / audit log UI
-- [~] Observability (metrics endpoint + drift report, tracing open)
+- [x] Observability (metrics endpoint + drift report + OpenTelemetry tracing, `backend/app/tracing.py`)
 
 ## Phase 5.5: MedGemma Capability Expansion (16-24 Weeks)
 
@@ -66,10 +73,10 @@
 - [x] Index.tsx wiring: pass report.inferenceFindings as findings prop to DicomViewer
 - [x] On-demand frame localization: API endpoint POST /api/v1/inference/localize (single frame, fast response via job polling)
 - [x] "Analyze frame" button in DicomViewer toolbar (send current frame to localization endpoint)
-- [ ] 3D readiness: slice order, spacing, VOI/WL persistence
-- [ ] Longitudinal context: current/prior pairs + time delta
-- [ ] Structured outputs (JSON Schema + validation)
-- [ ] Evidence indices mandatory for image inputs
+- [x] 3D readiness: slice order (IPP-z -> SliceLocation -> InstanceNumber), spacing, VOI/WL persistence
+- [x] Longitudinal context: current/prior pairs + time delta (`ReportComparison` model + API)
+- [x] Structured outputs (JSON Schema via `guided_json`, strict validation behind `SCHEMA_STRICT`)
+- [x] Evidence indices mandatory for image inputs (`model_validator` in `ai_schemas.py`)
 - [ ] Optional: WSI/patch manifest + tile inputs
 - [ ] Data capture mode (rendered PNG + manifest)
 
@@ -78,35 +85,34 @@
 - [ ] Performance optimization (web worker, streaming)
 - [ ] Medusa/multi-token decoding for lower latency
 - [ ] Multi-site deployment
-- [ ] Advanced viewer tools (MPR, annotation suite)
+- [x] Advanced viewer tools (MPR, VRT, annotation suite)
 - [ ] Analytics dashboard
 
 ## Phase 7: 3D Tissue Models (parallel to Phase 5/6)
 
 - [x] **M1**: Bone-HU end-to-end pipeline (segmenter microservice, backend orchestrator, vtk.js MeshViewer, GLB+VTP+NIfTI export, audit events) — see `components/segmenter.md`
-- [ ] **M2**: TotalSegmentator multi-organ (~104 classes, GPU build, lazy mesh loading, label search/sort)
-- [ ] **M3**: Polish (color editor, loading skeletons, cross-section clip plane, ROCm variant, mesh bundle budget)
+- [x] **M2**: TotalSegmentator multi-organ (~104 classes, GPU build, per-label lazy mesh loading, label search/sort)
+- [~] **M3**: Polish (color editor, loading skeletons, cross-section clip plane and ROCm variant done; mesh bundle budget open)
 - [x] **M4**: DICOM SEG export via `highdicom` with STOW-RS push to Orthanc (push button in MeshViewer, `segmentation_pushed_to_pacs` audit)
 
 ## Next Steps (Next Sprint)
 
-### MedGemma Overlay (Proposals 3-5, immediately actionable)
+Every item of the previous list (MedGemma overlay, Annex IV, drift
+scheduling, tracing, RAG, the DICOM image pipeline, 3D readiness, longitudinal
+context, structured outputs) is implemented. Only RBAC survives from it, as
+item 7 below.
 
-1. Wire Index.tsx: pass `report.inferenceFindings` as `findings` prop to `<DicomViewer>` — makes the overlay functional.
-2. On-demand frame localization: backend endpoint `POST /api/v1/inference/localize` for a single frame (job queue, fast polling).
-3. "Analyze frame" button in DicomViewer toolbar: send current frame ImageRef to localization endpoint, display findings directly in the overlay.
+The current priorities are therefore maintenance, not features. Full reasoning
+and effort estimates: `docs-internal/status-and-next-themes.md`.
 
-### Medium-term
-
-4. Complete Annex IV (risk analysis, data governance, model cards, KPI/drift).
-5. Implement security hardening (JWT/OIDC, RBAC, TLS termination, rate limits).
-6. Operationalize drift monitoring (scheduler, alerts UI, review process).
-7. Observability/tracing (OpenTelemetry, dashboard, log correlation).
-8. Design Templates/Guidelines RAG (vector store, retrieval API, UI hook).
-9. DICOM -> image pipeline for multimodal (WADO-RS render/JPEG, caching/TTL).
-10. 3D readiness: capture slice metadata + sampling strategies.
-11. Longitudinal context: persist time delta + prior mapping.
-12. Prepare structured JSON outputs + schema validation.
+1. Reconcile the issue tracker with the code — nine of eleven open issues are implemented.
+2. Clear the mypy backlog (107 errors across 29 files) and make the gate blocking.
+3. Work off the Dependabot queue (20 open PRs; only `eslint <10` is held deliberately).
+4. Finish i18n (#117) and pull the frontend coverage ratchet past its 11% floor.
+5. Split the backend monoliths (`tasks.py` 975 lines, `inference_clients.py` 774, `api/training.py` 752).
+6. E2E coverage for viewer interaction (#116) — blocked on a decision about seeded DICOM fixtures.
+7. AuthZ/RBAC: `User.role` exists on the model but nothing enforces it.
+8. Phase 6, after an audit of its own — its items are listed, not analysed.
 
 ## Risks and Dependencies
 
