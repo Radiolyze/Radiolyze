@@ -1,5 +1,17 @@
 # Gap-Analyse & Umsetzungsplan
 
+> **✅ Vollständig abgearbeitet — Stand 2026-09-02, `main` @ `0081341`.**
+>
+> Jeder unten als offen geführte GAP ist umgesetzt: GAP-02 (pgvector-Semantiksuche),
+> GAP-03 (Compliance-Doku inkl. Risk Management und Model Card), GAP-04
+> (`retrieve_rendered_frame`), GAP-05 (OpenTelemetry), GAP-06
+> (`model_validator` für Evidence-Indices), GAP-07 (Slice-Sortierung nach
+> IPP-z, VOI/WL-Persistenz), GAP-08 (`ReportComparison`) und GAP-11 (TLS-Overlay).
+> GAP-09 und GAP-10 sind wie geplant nach Phase 6 verschoben.
+>
+> Dieses Dokument bleibt als historischer Kontext stehen. Der aktuelle Stand
+> und die nächsten Themen: `docs-internal/status-and-next-themes.md`.
+
 **Erstellt:** 2026-04-25  
 **Aktualisiert:** 2026-04-25  
 **Branch:** claude/audit-roadmap-gaps-Zf7l7  
