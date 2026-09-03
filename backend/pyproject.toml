@@ -19,3 +19,35 @@ python_version = "3.11"
 ignore_missing_imports = true
 strict = false
 warn_return_any = true
+
+# The mypy backlog, module by module (#292).
+#
+# The gate used to be `continue-on-error: true` in CI, which let every new PR
+# add to the backlog -- it grew from ~96 to 112 that way. This list replaces
+# that: mypy blocks everywhere else, and shrinks here one module per PR until
+# it is empty, at which point the whole section goes away.
+#
+# Adding a module here is not a way to get a PR green. Fix the errors instead.
+[[tool.mypy.overrides]]
+module = [
+    "app.api.annotations",
+    "app.api.audit",
+    "app.api.monitoring",
+    "app.api.segmentation",
+    "app.api.templates",
+    "app.asr_providers",
+    "app.auth",
+    "app.dicom_client",
+    "app.main",
+    "app.mock_logic",
+    "app.prompts",
+    "app.qa_engine",
+    "app.rate_limiter",
+    "app.segmentation_client",
+    "app.sr",
+    "app.tasks",
+    "app.tracing",
+    "app.utils.embedding",
+    "app.utils.sqltypes",
+]
+ignore_errors = true

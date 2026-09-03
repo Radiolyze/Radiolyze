@@ -58,6 +58,39 @@ def test_get_report_not_found(client):
     assert response.status_code == 404
 
 
+def test_structured_data_uses_the_same_key_on_every_report_route(client):
+    """``structured_data`` goes out as ``structuredData`` from all three routes.
+
+    ``GET /reports/{id}`` builds its own Response to carry the ETag header and
+    so skips the serializer FastAPI applies to ``response_model``. That
+    serializer dumps by alias; the hand-built one did not, so this one route
+    used to answer with ``structured_data`` while the list routes -- and the
+    OpenAPI schema -- said ``structuredData``.
+    """
+    created = client.post(
+        "/api/v1/reports/create",
+        json={"study_id": "study-alias", "patient_id": "patient-alias"},
+    ).json()
+    report_id = created["id"]
+
+    client.patch(
+        f"/api/v1/reports/{report_id}",
+        json={"structuredData": {"finding": "no acute abnormality"}},
+    )
+
+    single = client.get(f"/api/v1/reports/{report_id}").json()
+    listed = next(r for r in client.get("/api/v1/reports").json() if r["id"] == report_id)
+    by_patient = next(
+        r
+        for r in client.get("/api/v1/reports/by-patient/patient-alias").json()
+        if r["id"] == report_id
+    )
+
+    for name, body in (("single", single), ("list", listed), ("by-patient", by_patient)):
+        assert body["structuredData"] == {"finding": "no acute abnormality"}, name
+        assert "structured_data" not in body, name
+
+
 def test_update_report(client):
     create_resp = client.post(
         "/api/v1/reports/create",

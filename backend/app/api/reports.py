@@ -145,7 +145,11 @@ def get_report(
         raise HTTPException(status_code=404, detail="Report not found")
     data = service.serialize_one(report)
     response = Response(
-        content=data.model_dump_json(),
+        # This route builds its own Response to carry the ETag, bypassing the
+        # serializer FastAPI applies to ``response_model`` — which dumps by
+        # alias. Without by_alias the aliased fields would go out under their
+        # Python names here and their declared names everywhere else.
+        content=data.model_dump_json(by_alias=True),
         media_type="application/json",
         headers={"ETag": f'"{ReportService.compute_etag(report)}"'},
     )
@@ -156,7 +160,7 @@ def get_report(
 async def update_report(
     report_id: str,
     payload: ReportUpdateRequest,
-    request: Request = None,
+    request: Request,
     _: None = require_radiologist_or_admin,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user),
@@ -165,7 +169,7 @@ async def update_report(
     # payload.actor_id is only a dev-mode fallback (AUTH_REQUIRED=false),
     # since it cannot otherwise be trusted to identify who made the change.
     actor_id = current_user.id if current_user is not None else payload.actor_id
-    if_match = request.headers.get("If-Match") if request else None
+    if_match = request.headers.get("If-Match")
 
     def _update_sync() -> tuple[ReportResponse, bool, str | None]:
         service = ReportService(db)
