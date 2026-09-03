@@ -3,11 +3,7 @@ import i18n, { resources } from "@/i18n";
 import type { ExportFormat } from "@/services/trainingClient";
 import { VRT_PRESETS } from "@/types/vrt";
 import { SLAB_BLEND_MODES, type MPROrientation } from "@/types/mpr";
-import {
-  ANNOTATION_CATEGORY_VALUES,
-  ANNOTATION_LATERALITY_VALUES,
-  ANNOTATION_SEVERITY_VALUES,
-} from "@/types/annotations";
+import { ANNOTATION_CATEGORY_VALUES } from "@/types/annotations";
 
 type Resource = Record<string, unknown>;
 
@@ -106,16 +102,6 @@ describe("training export resources", () => {
       expect(i18n.t(`viewer:annotations.categories.${category}`, { defaultValue: "" })).not.toBe(
         "",
       );
-    }
-    for (const severity of ANNOTATION_SEVERITY_VALUES) {
-      expect(i18n.t(`viewer:annotations.severities.${severity}`, { defaultValue: "" })).not.toBe(
-        "",
-      );
-    }
-    for (const laterality of ANNOTATION_LATERALITY_VALUES) {
-      expect(
-        i18n.t(`viewer:annotations.lateralities.${laterality}`, { defaultValue: "" }),
-      ).not.toBe("");
     }
   });
 

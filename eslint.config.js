@@ -34,9 +34,14 @@ export default tseslint.config(
   },
   // The i18n guard (#117). Everything the user reads goes through `t()`; a
   // literal that reaches the DOM renders in one language whatever the UI is set
-  // to. Warning rather than error: the existing English literals (product
-  // names, units, shortcut hints) are not worth a blanket rewrite, and the
-  // regression test in src/i18n/__tests__ is the half of the guard that blocks.
+  // to, and this backlog grew back between cleanups faster than the sweeps
+  // removed it.
+  //
+  // A warning rather than an error: product names, unit symbols and shortcut
+  // hints are reported too, and a blocking rule would be landed with a wall of
+  // suppressions. The blocking half of the guard is the resource contract test
+  // in src/i18n/__tests__. Tighten to "error" once the remaining findings are
+  // either translated or individually silenced with a reason.
   {
     files: ["src/components/**/*.tsx", "src/pages/**/*.tsx"],
     // `components/ui` is the vendored shadcn layer -- its literals are
@@ -48,6 +53,8 @@ export default tseslint.config(
       "i18next/no-literal-string": [
         "warn",
         {
+          // JSX text *and* attributes -- a placeholder or an aria-label is read
+          // by a user just as much as body text is.
           mode: "jsx-only",
           // Only the attributes a user actually reads. Everything else --
           // variant, size, side, data-* -- is markup configuration.
@@ -55,6 +62,15 @@ export default tseslint.config(
             include: ["placeholder", "title", "alt", "aria-label", "label", "subtitle"],
             exclude: [".*"],
           },
+          // Template literals are display copy just as much as plain strings:
+          // `Mindestens 10 erforderlich, ${n} vorhanden` was one of them.
+          "should-validate-template": true,
+          // <kbd> holds physical key names (Esc, Shift+LMB) and <code> holds
+          // identifiers -- neither is translated in any language. `Trans` is
+          // the plugin's own exclusion: its children are the markup of an
+          // already-translated key.
+          "jsx-components": { exclude: ["Trans", "kbd", "code"] },
+          message: "Hardcoded display string -- move it into src/i18n/locales (#117).",
         },
       ],
     },

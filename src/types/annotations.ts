@@ -101,7 +101,7 @@ export interface AnnotationListParams {
 }
 
 /**
- * The classification vocabularies in display order. The labels live in the
+ * The category vocabulary in display order. The labels live in the
  * `viewer` namespace under `annotations.<vocabulary>.<value>` and are resolved
  * at the render site -- a label table in a type module has no `useTranslation`
  * to reach and would pin the UI to one language (#117).
@@ -115,17 +115,4 @@ export const ANNOTATION_CATEGORY_VALUES: AnnotationCategory[] = [
   "lesion",
   "anatomical",
   "other",
-];
-
-export const ANNOTATION_SEVERITY_VALUES: AnnotationSeverity[] = [
-  "benign",
-  "indeterminate",
-  "malignant",
-];
-
-export const ANNOTATION_LATERALITY_VALUES: AnnotationLaterality[] = [
-  "left",
-  "right",
-  "bilateral",
-  "midline",
 ];

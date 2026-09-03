@@ -170,17 +170,6 @@
       "anatomical": "Anatomisch",
       "other": "Sonstiges"
     },
-    "severities": {
-      "benign": "Benigne",
-      "indeterminate": "Unbestimmt",
-      "malignant": "Maligne"
-    },
-    "lateralities": {
-      "left": "Links",
-      "right": "Rechts",
-      "bilateral": "Bilateral",
-      "midline": "Mittellinie"
-    },
     "dialog": {
       "title": "Annotation beschriften",
       "description": "Geben Sie ein Label und eine Kategorie für die Annotation ein.",

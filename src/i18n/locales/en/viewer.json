@@ -170,17 +170,6 @@
       "anatomical": "Anatomical",
       "other": "Other"
     },
-    "severities": {
-      "benign": "Benign",
-      "indeterminate": "Indeterminate",
-      "malignant": "Malignant"
-    },
-    "lateralities": {
-      "left": "Left",
-      "right": "Right",
-      "bilateral": "Bilateral",
-      "midline": "Midline"
-    },
     "dialog": {
       "title": "Label annotation",
       "description": "Enter a label and a category for the annotation.",
