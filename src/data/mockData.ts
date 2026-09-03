@@ -1,3 +1,15 @@
+/**
+ * Demo fixtures for local development and screenshots.
+ *
+ * The German strings in here are **deliberately not translated**: they are
+ * sample patient names, findings and report bodies standing in for what a
+ * German site's PACS would return, not UI copy. Running them through `t()`
+ * would treat them as part of the interface and gain nothing — an English user
+ * of a German deployment sees German report text either way.
+ *
+ * Noted explicitly because repeated i18n audits (#117) have re-reported this
+ * file as a finding. If a future sweep flags it again, this is the answer.
+ */
 import type {
   Patient,
   Study,

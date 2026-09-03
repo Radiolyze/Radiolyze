@@ -144,6 +144,89 @@
   },
   "annotations": {
     "selectSeries": "Select a series",
-    "confirmDelete": "Delete annotation \"{{label}}\"?"
+    "confirmDelete": "Delete annotation \"{{label}}\"?",
+    "dialogTitle": "Label annotation",
+    "dialogDescription": "Enter a label and a category for the annotation.",
+    "label": "Label",
+    "labelPlaceholder": "e.g. round nodule 1.2cm",
+    "category": "Category",
+    "context": "Tool: {{tool}} • Frame: {{frame}}",
+    "cancel": "Cancel",
+    "save": "Save",
+    "categories": {
+      "nodule": "Nodule",
+      "mass": "Mass",
+      "infiltrate": "Infiltrate",
+      "effusion": "Effusion",
+      "fracture": "Fracture",
+      "lesion": "Lesion",
+      "anatomical": "Anatomical",
+      "other": "Other"
+    },
+    "severities": {
+      "benign": "Benign",
+      "indeterminate": "Indeterminate",
+      "malignant": "Malignant"
+    },
+    "lateralities": {
+      "left": "Left",
+      "right": "Right",
+      "bilateral": "Bilateral",
+      "midline": "Midline"
+    }
+  },
+  "vrt": {
+    "title": "3D VRT",
+    "presetPlaceholder": "Select preset",
+    "presets": {
+      "ct-bone": "Optimised for bone structures",
+      "ct-lung": "Optimised for lung parenchyma",
+      "ct-soft-tissue": "Soft tissue and organs",
+      "ct-angiography": "Contrast-filled vessels",
+      "ct-muscle-bone": "Muscle and bone structures"
+    },
+    "viewAngles": {
+      "anterior": "Anterior (A)",
+      "posterior": "Posterior (P)",
+      "left": "Left (L)",
+      "right": "Right (R)",
+      "superior": "Superior (S)",
+      "inferior": "Inferior (I)"
+    },
+    "lighting": {
+      "trigger": "Lighting",
+      "title": "Rendering settings",
+      "quality": "Render quality",
+      "qualityHigh": "High",
+      "qualityMedium": "Medium",
+      "qualityFast": "Fast",
+      "ambient": "Ambient light",
+      "diffuse": "Diffuse reflection",
+      "specular": "Specular reflection",
+      "specularPower": "Specular power"
+    },
+    "resetCamera": "Reset camera"
+  },
+  "mpr": {
+    "viewports": {
+      "axial": "Axial",
+      "sagittal": "Sagittal",
+      "coronal": "Coronal"
+    },
+    "slab": {
+      "blendModes": {
+        "composite": "Normal",
+        "mip": "MIP",
+        "minip": "MinIP",
+        "average": "Average"
+      },
+      "thicknessThin": "Thin (0mm)",
+      "thicknessMm": "{{value}}mm"
+    }
+  },
+  "state": {
+    "loading": "Loading DICOM images...",
+    "empty": "No DICOM images loaded",
+    "emptyHint": "Check the DICOMweb connection and series ID."
   }
 }

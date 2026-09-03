@@ -12,6 +12,20 @@ for the full history.
 
 ### Added
 
+- An ESLint guard against untranslated UI copy (#117): `i18next/no-literal-string`
+  runs over `src/components/**` as a **warning**. Every i18n audit on this repo
+  has found more hardcoded strings than the previous one did, because nothing
+  stopped them coming back between passes. Vendored `src/components/ui/**`
+  primitives and test fixtures are excluded — their strings are upstream or
+  throwaway. It stays a warning while the remaining backlog (100 reports, the
+  viewer toolbars and `AIFindingsOverlay` mostly) is worked down; promoting it
+  to an error is the follow-up.
+- `src/i18n/__tests__/labelTables.test.ts` and
+  `src/components/Viewer/__tests__/viewerLabelTables.test.tsx`: the two halves of
+  the contract behind the label tables below — that every member of each table
+  has a translation in both languages, and that the components resolve it rather
+  than rendering the raw key. Same shape as the export-format test from #233 and
+  the drift-metric test from #229.
 - `src/lib/__tests__/utils.test.ts`: the first test to assert on merged class
   output (#197). Each case merges a pair whose winning class only exists in
   Tailwind 4 — `outline-hidden`, `w-(--sidebar-width)`, `backdrop-blur-xs` — so
@@ -105,6 +119,21 @@ for the full history.
 
 ### Changed
 
+- The label tables in `src/types/{vrt,mpr,annotations}.ts` hold i18n keys instead
+  of German display strings (#117), resolved at the render site. They are data
+  modules, not components: a string held there is fixed at import time, so a
+  language switch left the VRT preset descriptions, MPR viewport labels, slab
+  blend modes and annotation categories in the old language — and they were only
+  ever German to begin with. `VRTToolbar`, `MPRViewport`, `MPRToolbar`,
+  `AnnotationPanel`, `AnnotationLabelDialog` and `DicomViewerStateOverlay` now
+  render through the `viewer` namespace in German and English.
+  - `SLAB_THICKNESS_PRESETS` carried its own label next to the value it described
+    (`{ value: 5, label: "5mm" }`), free to drift from it and hardcoding the unit
+    in German for the 0 case. It is a list of millimetre values now, formatted
+    from the value at the render site.
+  - `src/data/mockData.ts` gains a module header marking its German strings as
+    deliberate demo fixtures rather than untranslated UI copy, so the next audit
+    does not re-report them for a fourth time.
 - `tailwindcss` 3.4 → 4.3 and `tailwind-merge` 2.6 → 3.6, in one commit
   (#197). They share a version line in one direction only: tailwind-merge v3
   drops Tailwind 3 support but declares no `peerDependencies`, so bumping it

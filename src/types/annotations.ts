@@ -100,27 +100,36 @@ export interface AnnotationListParams {
   offset?: number;
 }
 
-// Annotation category labels for UI
-export const ANNOTATION_CATEGORIES: Record<AnnotationCategory, string> = {
-  nodule: "Nodule",
-  mass: "Masse",
-  infiltrate: "Infiltrat",
-  effusion: "Erguss",
-  fracture: "Fraktur",
-  lesion: "Läsion",
-  anatomical: "Anatomisch",
-  other: "Sonstiges",
+/**
+ * i18n keys of the annotation label tables, in the `viewer` namespace.
+ *
+ * These are data tables, not markup: a `useTranslation` in a type module is the
+ * wrong place for it, so each entry holds a key that the render site resolves.
+ * Convention: `annotations.<table>.${member}` — `annotationLabels.test.ts` pins
+ * that every member of each union has a key and that every key resolves in both
+ * languages, so a category added here without translations fails the suite
+ * instead of rendering a raw key to the user.
+ */
+export const ANNOTATION_CATEGORY_KEYS: Record<AnnotationCategory, string> = {
+  nodule: "annotations.categories.nodule",
+  mass: "annotations.categories.mass",
+  infiltrate: "annotations.categories.infiltrate",
+  effusion: "annotations.categories.effusion",
+  fracture: "annotations.categories.fracture",
+  lesion: "annotations.categories.lesion",
+  anatomical: "annotations.categories.anatomical",
+  other: "annotations.categories.other",
 };
 
-export const ANNOTATION_SEVERITIES: Record<AnnotationSeverity, string> = {
-  benign: "Benigne",
-  indeterminate: "Unbestimmt",
-  malignant: "Maligne",
+export const ANNOTATION_SEVERITY_KEYS: Record<AnnotationSeverity, string> = {
+  benign: "annotations.severities.benign",
+  indeterminate: "annotations.severities.indeterminate",
+  malignant: "annotations.severities.malignant",
 };
 
-export const ANNOTATION_LATERALITIES: Record<AnnotationLaterality, string> = {
-  left: "Links",
-  right: "Rechts",
-  bilateral: "Bilateral",
-  midline: "Mittellinie",
+export const ANNOTATION_LATERALITY_KEYS: Record<AnnotationLaterality, string> = {
+  left: "annotations.lateralities.left",
+  right: "annotations.lateralities.right",
+  bilateral: "annotations.lateralities.bilateral",
+  midline: "annotations.lateralities.midline",
 };

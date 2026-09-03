@@ -27,7 +27,7 @@ import type {
   AnnotationCategory,
   AnnotationCreateRequest,
 } from "@/types/annotations";
-import { ANNOTATION_CATEGORIES, ANNOTATION_SEVERITIES } from "@/types/annotations";
+import { ANNOTATION_CATEGORY_KEYS } from "@/types/annotations";
 
 interface AnnotationPanelProps {
   studyId: string | null;
@@ -266,6 +266,8 @@ function AnnotationItem({
   isSaving,
   dimmed,
 }: AnnotationItemProps) {
+  const { t } = useTranslation("viewer");
+
   if (isEditing) {
     return (
       <div className="p-2 bg-card rounded-lg border border-primary space-y-2">
@@ -280,9 +282,9 @@ function AnnotationItem({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(ANNOTATION_CATEGORIES).map(([key, label]) => (
-              <SelectItem key={key} value={key}>
-                {label}
+            {Object.entries(ANNOTATION_CATEGORY_KEYS).map(([category, labelKey]) => (
+              <SelectItem key={category} value={category}>
+                {t(labelKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -324,7 +326,9 @@ function AnnotationItem({
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <Badge variant="outline" className="text-[10px] h-4 px-1">
-              {ANNOTATION_CATEGORIES[annotation.category] || annotation.category}
+              {ANNOTATION_CATEGORY_KEYS[annotation.category]
+                ? t(ANNOTATION_CATEGORY_KEYS[annotation.category])
+                : annotation.category}
             </Badge>
             <span className="text-[10px] text-muted-foreground">{annotation.toolType}</span>
             {!dimmed && (

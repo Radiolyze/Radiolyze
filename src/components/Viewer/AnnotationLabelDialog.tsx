@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Check, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { AnnotationCategory, AnnotationCreateRequest } from "@/types/annotations";
-import { ANNOTATION_CATEGORIES } from "@/types/annotations";
+import { ANNOTATION_CATEGORY_KEYS } from "@/types/annotations";
 
 interface AnnotationLabelDialogProps {
   open: boolean;
@@ -36,6 +37,7 @@ export function AnnotationLabelDialog({
   onSave,
   onCancel,
 }: AnnotationLabelDialogProps) {
+  const { t } = useTranslation("viewer");
   const [label, setLabel] = useState("");
   const [category, setCategory] = useState<AnnotationCategory>("other");
   const [isSaving, setIsSaving] = useState(false);
@@ -73,18 +75,16 @@ export function AnnotationLabelDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Annotation beschriften</DialogTitle>
-          <DialogDescription>
-            Geben Sie ein Label und eine Kategorie für die Annotation ein.
-          </DialogDescription>
+          <DialogTitle>{t("annotations.dialogTitle")}</DialogTitle>
+          <DialogDescription>{t("annotations.dialogDescription")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="annotation-label">Label</Label>
+            <Label htmlFor="annotation-label">{t("annotations.label")}</Label>
             <Input
               id="annotation-label"
-              placeholder="z.B. Rundlicher Nodulus 1.2cm"
+              placeholder={t("annotations.labelPlaceholder")}
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional: focuses the label input when the dialog opens
@@ -98,15 +98,15 @@ export function AnnotationLabelDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Kategorie</Label>
+            <Label>{t("annotations.category")}</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as AnnotationCategory)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(ANNOTATION_CATEGORIES).map(([key, displayLabel]) => (
-                  <SelectItem key={key} value={key}>
-                    {displayLabel}
+                {Object.entries(ANNOTATION_CATEGORY_KEYS).map(([categoryId, labelKey]) => (
+                  <SelectItem key={categoryId} value={categoryId}>
+                    {t(labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -115,7 +115,10 @@ export function AnnotationLabelDialog({
 
           {pendingAnnotation?.toolType && (
             <div className="text-xs text-muted-foreground">
-              Tool: {pendingAnnotation.toolType} • Frame: {(pendingAnnotation.frameIndex ?? 0) + 1}
+              {t("annotations.context", {
+                tool: pendingAnnotation.toolType,
+                frame: (pendingAnnotation.frameIndex ?? 0) + 1,
+              })}
             </div>
           )}
         </div>
@@ -123,7 +126,7 @@ export function AnnotationLabelDialog({
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
             <X className="h-4 w-4 mr-1" />
-            Abbrechen
+            {t("annotations.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!label.trim() || isSaving}>
             {isSaving ? (
@@ -131,7 +134,7 @@ export function AnnotationLabelDialog({
             ) : (
               <Check className="h-4 w-4 mr-1" />
             )}
-            Speichern
+            {t("annotations.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

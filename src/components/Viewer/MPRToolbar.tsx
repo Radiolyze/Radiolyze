@@ -14,7 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { MPROrientation, SlabBlendMode, SlabSettings } from "@/types/mpr";
-import { SLAB_BLEND_MODE_LABELS, SLAB_THICKNESS_PRESETS } from "@/types/mpr";
+import { SLAB_BLEND_MODE_LABEL_KEYS, SLAB_THICKNESS_PRESETS } from "@/types/mpr";
 import type { WindowLevelPreset } from "@/config/viewer";
 
 export type MPRToolId = "crosshairs" | "pan" | "zoom" | "windowLevel";
@@ -115,7 +115,7 @@ export function MPRToolbar({
             <Layers className="h-4 w-4" />
             {isSlabActive ? (
               <span className="text-xs">
-                {SLAB_BLEND_MODE_LABELS[slabSettings.blendMode]} {slabSettings.thickness}mm
+                {t(SLAB_BLEND_MODE_LABEL_KEYS[slabSettings.blendMode])} {slabSettings.thickness}mm
               </span>
             ) : (
               <span className="text-xs">Slab/MIP</span>
@@ -135,7 +135,7 @@ export function MPRToolbar({
                     className="flex-1 h-7 text-xs"
                     onClick={() => onSlabSettingsChange({ ...slabSettings, blendMode: mode })}
                   >
-                    {SLAB_BLEND_MODE_LABELS[mode]}
+                    {t(SLAB_BLEND_MODE_LABEL_KEYS[mode])}
                   </Button>
                 ))}
               </div>
@@ -157,17 +157,17 @@ export function MPRToolbar({
                 className="w-full"
               />
               <div className="flex gap-1 flex-wrap">
-                {SLAB_THICKNESS_PRESETS.map((preset) => (
+                {SLAB_THICKNESS_PRESETS.map((thickness) => (
                   <Button
-                    key={preset.value}
-                    variant={slabSettings.thickness === preset.value ? "secondary" : "ghost"}
+                    key={thickness}
+                    variant={slabSettings.thickness === thickness ? "secondary" : "ghost"}
                     size="sm"
                     className="h-6 text-xs px-2"
-                    onClick={() =>
-                      onSlabSettingsChange({ ...slabSettings, thickness: preset.value })
-                    }
+                    onClick={() => onSlabSettingsChange({ ...slabSettings, thickness })}
                   >
-                    {preset.label}
+                    {thickness === 0
+                      ? t("mpr.slab.thicknessThin")
+                      : t("mpr.slab.thicknessMm", { value: thickness })}
                   </Button>
                 ))}
               </div>

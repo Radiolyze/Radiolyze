@@ -144,6 +144,89 @@
   },
   "annotations": {
     "selectSeries": "Wählen Sie eine Serie aus",
-    "confirmDelete": "Annotation \"{{label}}\" löschen?"
+    "confirmDelete": "Annotation \"{{label}}\" löschen?",
+    "dialogTitle": "Annotation beschriften",
+    "dialogDescription": "Geben Sie ein Label und eine Kategorie für die Annotation ein.",
+    "label": "Label",
+    "labelPlaceholder": "z.B. Rundlicher Nodulus 1.2cm",
+    "category": "Kategorie",
+    "context": "Tool: {{tool}} • Frame: {{frame}}",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "categories": {
+      "nodule": "Nodule",
+      "mass": "Masse",
+      "infiltrate": "Infiltrat",
+      "effusion": "Erguss",
+      "fracture": "Fraktur",
+      "lesion": "Läsion",
+      "anatomical": "Anatomisch",
+      "other": "Sonstiges"
+    },
+    "severities": {
+      "benign": "Benigne",
+      "indeterminate": "Unbestimmt",
+      "malignant": "Maligne"
+    },
+    "lateralities": {
+      "left": "Links",
+      "right": "Rechts",
+      "bilateral": "Bilateral",
+      "midline": "Mittellinie"
+    }
+  },
+  "vrt": {
+    "title": "3D VRT",
+    "presetPlaceholder": "Preset wählen",
+    "presets": {
+      "ct-bone": "Optimiert für Knochenstrukturen",
+      "ct-lung": "Optimiert für Lungenparenchym",
+      "ct-soft-tissue": "Weichteilgewebe und Organe",
+      "ct-angiography": "Kontrastmittelgefüllte Gefäße",
+      "ct-muscle-bone": "Muskel- und Knochenstrukturen"
+    },
+    "viewAngles": {
+      "anterior": "Anterior (A)",
+      "posterior": "Posterior (P)",
+      "left": "Links (L)",
+      "right": "Rechts (R)",
+      "superior": "Superior (S)",
+      "inferior": "Inferior (I)"
+    },
+    "lighting": {
+      "trigger": "Beleuchtung",
+      "title": "Rendering-Einstellungen",
+      "quality": "Renderqualität",
+      "qualityHigh": "Hoch",
+      "qualityMedium": "Mittel",
+      "qualityFast": "Schnell",
+      "ambient": "Umgebungslicht",
+      "diffuse": "Diffuse Reflexion",
+      "specular": "Spiegelreflexion",
+      "specularPower": "Glanzstärke"
+    },
+    "resetCamera": "Kamera zurücksetzen"
+  },
+  "mpr": {
+    "viewports": {
+      "axial": "Axial",
+      "sagittal": "Sagittal",
+      "coronal": "Coronal"
+    },
+    "slab": {
+      "blendModes": {
+        "composite": "Normal",
+        "mip": "MIP",
+        "minip": "MinIP",
+        "average": "Average"
+      },
+      "thicknessThin": "Dünn (0mm)",
+      "thicknessMm": "{{value}}mm"
+    }
+  },
+  "state": {
+    "loading": "Lade DICOM-Bilder...",
+    "empty": "Keine DICOM-Bilder geladen",
+    "emptyHint": "Prüfen Sie DICOMweb-Verbindung und Serien-ID."
   }
 }

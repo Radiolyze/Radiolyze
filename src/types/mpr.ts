@@ -5,7 +5,12 @@ export type MPROrientation = "axial" | "sagittal" | "coronal";
 export interface MPRViewportConfig {
   id: string;
   orientation: MPROrientation;
-  label: string;
+  /**
+   * i18n key of the viewport label, in the `viewer` namespace. A data table,
+   * not markup — the key is resolved at the render site rather than through a
+   * `useTranslation` in this module. Convention: `mpr.viewports.${orientation}`.
+   */
+  labelKey: string;
   color: string;
 }
 
@@ -31,9 +36,24 @@ export interface MPRCrosshairPosition {
 }
 
 export const MPR_VIEWPORTS: MPRViewportConfig[] = [
-  { id: "axial", orientation: "axial", label: "Axial", color: "hsl(var(--chart-1))" },
-  { id: "sagittal", orientation: "sagittal", label: "Sagittal", color: "hsl(var(--chart-2))" },
-  { id: "coronal", orientation: "coronal", label: "Coronal", color: "hsl(var(--chart-3))" },
+  {
+    id: "axial",
+    orientation: "axial",
+    labelKey: "mpr.viewports.axial",
+    color: "hsl(var(--chart-1))",
+  },
+  {
+    id: "sagittal",
+    orientation: "sagittal",
+    labelKey: "mpr.viewports.sagittal",
+    color: "hsl(var(--chart-2))",
+  },
+  {
+    id: "coronal",
+    orientation: "coronal",
+    labelKey: "mpr.viewports.coronal",
+    color: "hsl(var(--chart-3))",
+  },
 ];
 
 // Slab/MIP rendering modes
@@ -44,18 +64,23 @@ export interface SlabSettings {
   blendMode: SlabBlendMode;
 }
 
-export const SLAB_BLEND_MODE_LABELS: Record<SlabBlendMode, string> = {
-  composite: "Normal",
-  mip: "MIP",
-  minip: "MinIP",
-  average: "Average",
+/**
+ * i18n keys of the blend-mode labels, in the `viewer` namespace. Resolved at the
+ * render site — see the note on `MPRViewportConfig.labelKey`.
+ */
+export const SLAB_BLEND_MODE_LABEL_KEYS: Record<SlabBlendMode, string> = {
+  composite: "mpr.slab.blendModes.composite",
+  mip: "mpr.slab.blendModes.mip",
+  minip: "mpr.slab.blendModes.minip",
+  average: "mpr.slab.blendModes.average",
 };
 
-export const SLAB_THICKNESS_PRESETS = [
-  { value: 0, label: "Dünn (0mm)" },
-  { value: 5, label: "5mm" },
-  { value: 10, label: "10mm" },
-  { value: 20, label: "20mm" },
-  { value: 50, label: "50mm" },
-  { value: 100, label: "100mm" },
-];
+/**
+ * Thickness shortcuts offered next to the slab slider, in millimetres.
+ *
+ * These carried a `label` string alongside the value ("5mm" next to `value: 5`),
+ * which could drift from the number it described and hardcoded the unit in
+ * German for the 0 case. The label is now derived from the value at the render
+ * site through `mpr.slab.thicknessMm` / `mpr.slab.thicknessThin`.
+ */
+export const SLAB_THICKNESS_PRESETS: readonly number[] = [0, 5, 10, 20, 50, 100];
