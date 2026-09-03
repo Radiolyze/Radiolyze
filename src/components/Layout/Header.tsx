@@ -179,13 +179,13 @@ export function Header() {
                     variant="ghost"
                     size="icon"
                     className={navLinkClass("/training")}
-                    aria-label="Training Export"
+                    aria-label={t("header.trainingExport")}
                   >
                     <GraduationCap className="h-5 w-5" />
                   </Button>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent>Training Export</TooltipContent>
+              <TooltipContent>{t("header.trainingExport")}</TooltipContent>
             </Tooltip>
 
             {/* History */}

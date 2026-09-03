@@ -7,7 +7,9 @@
     "drafts": "Drafts",
     "approved": "Approved",
     "finalized": "Finalized",
-    "todayCompleted": "Completed today"
+    "todayCompleted": "Completed today",
+    "avgTurnaround": "Avg. turnaround",
+    "qaIssues": "QA issues"
   },
   "filters": {
     "search": "Search...",

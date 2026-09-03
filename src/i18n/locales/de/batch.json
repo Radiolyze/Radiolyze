@@ -7,7 +7,9 @@
     "drafts": "Entwürfe",
     "approved": "Freigegeben",
     "finalized": "Finalisiert",
-    "todayCompleted": "Heute abgeschlossen"
+    "todayCompleted": "Heute abgeschlossen",
+    "avgTurnaround": "Ø Bearbeitungszeit",
+    "qaIssues": "QA-Auffälligkeiten"
   },
   "filters": {
     "search": "Suchen...",

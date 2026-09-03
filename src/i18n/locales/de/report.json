@@ -131,7 +131,9 @@
     "noSchema": "Kein strukturiertes Template verfügbar",
     "structured": "Strukturiert",
     "freetext": "Freitext",
-    "toggleLabel": "Strukturierte Eingabe"
+    "toggleLabel": "Strukturierte Eingabe",
+    "yes": "Ja",
+    "no": "Nein"
   },
   "inference": {
     "title": "KI-Analyse",

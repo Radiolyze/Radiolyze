@@ -131,7 +131,9 @@
     "noSchema": "No structured template available",
     "structured": "Structured",
     "freetext": "Free text",
-    "toggleLabel": "Structured input"
+    "toggleLabel": "Structured input",
+    "yes": "Yes",
+    "no": "No"
   },
   "inference": {
     "title": "AI Analysis",

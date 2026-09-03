@@ -56,10 +56,10 @@ export function HistoryFilterBar({
           </div>
           <Select value={eventFilter} onValueChange={onEventFilterChange}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Event type" />
+              <SelectValue placeholder={t("history.eventType")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All events</SelectItem>
+              <SelectItem value="all">{t("history.allEvents")}</SelectItem>
               {Object.entries(eventTypeConfig).map(([key, config]) => (
                 <SelectItem key={key} value={key}>
                   {config.label}
@@ -69,10 +69,10 @@ export function HistoryFilterBar({
           </Select>
           <Select value={actorFilter} onValueChange={onActorFilterChange}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="User" />
+              <SelectValue placeholder={t("history.user")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All users</SelectItem>
+              <SelectItem value="all">{t("history.allUsers")}</SelectItem>
               {actors.map((actor) => (
                 <SelectItem key={actor} value={actor}>
                   {actor}

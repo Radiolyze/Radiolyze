@@ -147,7 +147,7 @@ export function StructuredForm({
                             onCheckedChange={(v) => handleFieldChange(field.key, v)}
                           />
                           <span className="text-xs text-muted-foreground">
-                            {values[field.key] ? "Ja" : "Nein"}
+                            {values[field.key] ? t("structuredForm.yes") : t("structuredForm.no")}
                           </span>
                         </div>
                       )}
