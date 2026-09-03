@@ -5,7 +5,7 @@
 - Kein Fine-Tuning: Es geht nur um aktuelle Laufzeitnutzung und um Datenerhebung fuer spaetere Auswertungen.
 
 ## Methodik und Quellen im Repo
-- Laufzeit-Inferenz: `backend/app/inference_clients.py`, `backend/app/api/inference.py`, `backend/app/tasks.py`
+- Laufzeit-Inferenz: `backend/app/inference_clients/`, `backend/app/api/inference.py`, `backend/app/tasks.py`
 - Bildquellen und Auswahl: `src/hooks/useDicomSeriesInstances.ts`, `src/hooks/reporting/inferenceHelpers.ts`, `src/hooks/useReport.ts`
 - Deployment: `docker-compose.yml`
 - Viewer und Vergleich: `docs/components/viewer.md`, `src/components/Viewer/*`, `src/hooks/usePriorStudies.ts`
@@ -26,15 +26,15 @@ unvollstaendig fuer 3D- und Longitudinal-Analysen.
 
 | Faehigkeit | Status | Umsetzung im Projekt | Hinweise |
 | --- | --- | --- | --- |
-| Multimodal (Text + Bilder) | genutzt | vLLM Chat-Completion mit `image_url` Content; Prompts fuer Summary/Impression | `backend/app/inference_clients.py` |
+| Multimodal (Text + Bilder) | genutzt | vLLM Chat-Completion mit `image_url` Content; Prompts fuer Summary/Impression | `backend/app/inference_clients/` |
 | Multi-Frame/Serien-Input | teilweise | Auswahl von Frames pro Serie (Sampling/Limit) | `src/hooks/reporting/inferenceHelpers.ts` |
 | Longitudinal (Current + Prior) | teilweise | Prior-Studien + `role=current|prior` in ImageRefs; Vergleichsviewer | `src/hooks/usePriorStudies.ts`, `src/pages/ReportWorkspace.tsx` |
 | 3D Volumenanalyse | teilweise (UI only) | MPR/VRT Viewer vorhanden, aber Inferenz nutzt 2D Frames | `docs/components/viewer.md`, `src/hooks/useDicomSeriesInstances.ts` |
 | Anatomische Lokalisierung/Detektion | teilweise (Datensammlung) | 2D Bounding-Boxes + Labels erfasst; nicht im Inferenz-Output genutzt | `backend/app/api/annotations.py`, `backend/app/api/training.py` |
-| Evidence/Provenienz | genutzt | Evidence-Indices werden aus Modellantwort extrahiert und im UI referenziert | `backend/app/inference_clients.py`, `src/components/RightPanel/ImpressionPanel.tsx` |
+| Evidence/Provenienz | genutzt | Evidence-Indices werden aus Modellantwort extrahiert und im UI referenziert | `backend/app/inference_clients/`, `src/components/RightPanel/ImpressionPanel.tsx` |
 | WSI/Pathologie | nicht | Keine WSI-Pipeline, keine Tile-Verarbeitung | - |
 | Klinische Dokumente/EHR | nicht | Keine EHR-Importe; nur Report-Text im System | - |
-| Speech (MedASR) | genutzt | ASR Service via vLLM; UI nimmt Diktat auf | `backend/app/inference_clients.py`, `src/hooks/useASR.ts` |
+| Speech (MedASR) | genutzt | ASR Service via vLLM; UI nimmt Diktat auf | `backend/app/asr_providers.py`, `src/hooks/useASR.ts` |
 
 ## Ergaenzung: 3D-Daten und MedGemma-Inputformat
 
@@ -42,7 +42,7 @@ unvollstaendig fuer 3D- und Longitudinal-Analysen.
 - vLLM nutzt ein OpenAI-kompatibles Chat-Format mit multimodalem `content`.
 - Das Projekt sendet `image_url` Eintraege (WADO-RS URLs oder base64 Data-URLs).
 - Keine direkte Uebergabe von DICOM/NIfTI; alles laeuft ueber gerenderte 2D-Bilder.
-- Referenzen: `backend/app/inference_clients.py` (`_build_multimodal_content`, `_encode_image_path`).
+- Referenzen: `backend/app/image_encoder.py` (`_build_multimodal_content`, `_encode_image_path`).
 
 ### 3D-Volumen (CT/MR) - MedGemma 1.5
 - Native 3D-Unterstuetzung setzt Preprocessing auf Slice-Sequenzen voraus.

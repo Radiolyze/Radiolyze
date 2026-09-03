@@ -148,7 +148,7 @@ def test_generate_volume_summary_uses_preprocess(monkeypatch) -> None:
 
     with (
         patch("app.segmentation_client.preprocess_for_medgemma", return_value=fake_preprocess),
-        patch("app.inference_clients._vllm_chat_completion", side_effect=fake_chat),
+        patch("app.vllm_client._vllm_chat_completion", side_effect=fake_chat),
     ):
         from app.inference_clients import generate_volume_inference_summary
 
@@ -194,7 +194,7 @@ def test_generate_comparison_text_emits_structured_output(monkeypatch) -> None:
 
     with (
         patch("app.segmentation_client.preprocess_for_medgemma", side_effect=fake_preprocess),
-        patch("app.inference_clients._vllm_chat_completion", return_value=fake_response),
+        patch("app.vllm_client._vllm_chat_completion", return_value=fake_response),
     ):
         from app.inference_clients import generate_comparison_text
 

@@ -220,7 +220,7 @@ Backend-Pendant wurde nie erfasst:
 | Datei | Zeilen |
 |---|---|
 | `backend/app/tasks.py` | 975 |
-| `backend/app/inference_clients.py` | 774 |
+| `backend/app/inference_clients.py` | 774 — erledigt, jetzt das Paket `backend/app/inference_clients/` |
 | `backend/app/api/training.py` | 752 |
 | `backend/app/api/inference.py` | 615 |
 
