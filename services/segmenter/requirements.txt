@@ -13,7 +13,7 @@ trimesh>=5.0.0
 # wrapper around it and raises ModuleNotFoundError without it, which
 # app/meshing.py catches and turns into an un-decimated mesh. Removing this
 # line silently disables MESH_MAX_FACES.
-fast-simplification>=0.1.13
+fast-simplification>=0.2.0
 pygltflib>=1.16.5
 # DICOM SEG writer (app/dicom_seg.py). Replaced pydicom-seg, which is
 # unmaintained and never gained a pydicom 3 release.
@@ -25,4 +25,4 @@ highdicom>=0.28.1
 # channels. If reproducible segmenter images become a requirement, this needs
 # a real pin (== plus a hash-locked constraints file), not a >=.
 torch>=2.13.0
-totalsegmentator>=2.17.0
+totalsegmentator>=2.18.0
