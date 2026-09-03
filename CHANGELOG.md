@@ -16,7 +16,7 @@ for the full history.
   `src/components/**` — excluding the vendored `ui/` primitives and tests — and
   warns on literal text in JSX, so the stock of hardcoded German cannot grow
   back between passes. Deliberately a warning: the remaining backlog is known
-  (91 sites at the time of writing, `MPRViewer` and `VRTViewer` the largest),
+  (78 sites at the time of writing, `MPRViewer` and `VRTViewer` the largest),
   and erroring today would block unrelated changes. `jsx-text-only` mode keeps
   it to what a user actually reads, rather than class names and test hooks.
 - `src/types/__tests__/labelKeys.test.ts`: walks every VRT preset, MPR
