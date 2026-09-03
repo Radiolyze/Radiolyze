@@ -95,6 +95,32 @@ Existing test files:
 | `tests/test_audit.py` | Audit event creation, field validation |
 | `tests/test_auth.py` | JWT creation, validation, role checks |
 | `tests/test_peer_review.py` | Peer review workflow |
+| `tests/test_inference_seams.py` | That the inference mocking seams below actually intercept |
+
+### Mocking the inference flows
+
+`app/inference_clients/` is a package with one module per generation flow
+(`text`, `localize`, `volume`, `comparison`, `streaming`). There are exactly two
+network boundaries underneath it, and **those are the only correct patch
+targets**:
+
+```python
+patch("app.vllm_client._vllm_chat_completion")          # every vLLM call
+patch("app.segmentation_client.preprocess_for_medgemma")  # volume + comparison
+```
+
+Patch them at those modules, not at `app.inference_clients`. Each flow reaches
+the client through the module object (`vllm_client._vllm_chat_completion(...)`)
+rather than through a name imported into its own globals, which is what lets one
+patch cover all five flows and keeps it working when a flow moves between
+modules.
+
+Getting this wrong fails quietly rather than loudly: a patch applied to the
+wrong namespace is still *accepted*, it simply has no effect, and the flow goes
+on to make a real HTTP call while the mock sits unused. `tests/test_inference_seams.py`
+pins both halves — that the real seam intercepts every flow, and that the
+obsolete pre-split target (`app.inference_clients._vllm_chat_completion`) stays
+absent so `mock.patch` raises `AttributeError` instead of no-opping.
 
 **Writing a backend test:**
 

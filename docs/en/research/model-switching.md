@@ -76,7 +76,7 @@ Radiolyze works with any multimodal model that supports the OpenAI chat completi
 **Compatibility requirements:**
 - Must support `image_url` content in messages
 - Must support `guided_json` parameter (or equivalent structured output)
-- Must accept the prompt format used in `backend/app/inference_clients.py`
+- Must accept the prompt format used in `backend/app/inference_clients/`
 
 ```bash
 # 1. Edit .env
@@ -93,7 +93,7 @@ curl http://localhost:8001/v1/models
 docker compose logs vllm --tail=50
 ```
 
-**Prompt compatibility:** The system prompt in `backend/app/inference_clients.py` is tuned for MedGemma. If switching to a different model family, review and test the prompt — other models may require different formatting or instruction styles.
+**Prompt compatibility:** The system prompt in `backend/app/inference_clients/` is tuned for MedGemma. If switching to a different model family, review and test the prompt — other models may require different formatting or instruction styles.
 
 ---
 
@@ -139,7 +139,7 @@ VLLM_MODEL=gpt-4o
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # The backend uses VLLM_BASE_URL — rename in your .env if needed:
-# Some installations use a wrapper; check backend/app/inference_clients.py
+# Some installations use a wrapper; check backend/app/inference_clients/
 ```
 
 The OpenAI API supports `image_url` content and structured JSON output (`response_format: json_object`), so it is compatible with the Radiolyze prompt format.
@@ -198,7 +198,7 @@ Different models have different capabilities for structured output:
 | OpenAI API | — | ✅ Yes | Use `response_format` in request |
 | Groq | — | ✅ Yes | JSON mode supported |
 
-The backend automatically uses `guided_json` for vLLM. If you switch to a backend that does not support it, you may need to adjust `backend/app/inference_clients.py` to use `response_format` instead.
+The backend automatically uses `guided_json` for vLLM. If you switch to a backend that does not support it, you may need to adjust `backend/app/inference_clients/` to use `response_format` instead.
 
 ---
 

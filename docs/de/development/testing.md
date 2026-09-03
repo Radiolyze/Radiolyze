@@ -77,6 +77,32 @@ Vorhandene Test-Dateien:
 | `tests/test_audit.py` | Audit-Event-Erstellung, Feldvalidierung |
 | `tests/test_auth.py` | JWT-Erstellung, Validierung, Rollenprüfungen |
 | `tests/test_peer_review.py` | Peer-Review-Workflow |
+| `tests/test_inference_seams.py` | Dass die unten genannten Inference-Mocking-Punkte tatsaechlich greifen |
+
+### Inference-Flows mocken
+
+`app/inference_clients/` ist ein Paket mit einem Modul je Generierungs-Flow
+(`text`, `localize`, `volume`, `comparison`, `streaming`). Darunter liegen genau
+zwei Netzwerkgrenzen, und **nur diese sind die richtigen Patch-Ziele**:
+
+```python
+patch("app.vllm_client._vllm_chat_completion")            # jeder vLLM-Aufruf
+patch("app.segmentation_client.preprocess_for_medgemma")  # volume + comparison
+```
+
+Dort patchen, nicht an `app.inference_clients`. Jeder Flow erreicht den Client
+ueber das Modulobjekt (`vllm_client._vllm_chat_completion(...)`) statt ueber
+einen in die eigenen Globals importierten Namen. Genau das sorgt dafuer, dass
+ein Patch alle fuenf Flows abdeckt und weiter greift, wenn ein Flow das Modul
+wechselt.
+
+Ein Fehler dabei faellt leise aus, nicht laut: Ein Patch auf den falschen
+Namensraum wird trotzdem *angenommen*, wirkt aber nicht — der Flow macht einen
+echten HTTP-Aufruf, waehrend der Mock ungenutzt danebenliegt.
+`tests/test_inference_seams.py` sichert beide Haelften ab: dass der echte
+Patch-Punkt jeden Flow abfaengt, und dass das alte Ziel von vor dem Split
+(`app.inference_clients._vllm_chat_completion`) abwesend bleibt, damit
+`mock.patch` einen `AttributeError` wirft statt wirkungslos zu bleiben.
 
 **Backend-Test schreiben:**
 

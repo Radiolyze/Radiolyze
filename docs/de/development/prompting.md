@@ -6,7 +6,7 @@ sein, ohne Code-Deploy. Gleichzeitig sollen sichere Defaults als Vorlagen
 bereitstehen.
 
 ## Aktueller Stand (Referenz)
-- `backend/app/inference_clients.py` nutzt:
+- `backend/app/inference_clients/` nutzt:
   - `VLLM_SYSTEM_PROMPT`
   - `VLLM_IMAGE_SUMMARY_PROMPT`
   - `VLLM_IMAGE_IMPRESSION_PROMPT`

@@ -155,7 +155,7 @@ See [MedGemma Model Guide](research/index.md) for capabilities and limitations.
 
 **Can I replace MedGemma with a different model?**
 
-Yes. The inference client (`backend/app/inference_clients.py`) uses an OpenAI-compatible API. Any model served by vLLM, Ollama, or a compatible endpoint can be substituted by changing the `INFERENCE_BASE_URL` and `INFERENCE_MODEL` environment variables.
+Yes. The inference client (`backend/app/inference_clients/`) uses an OpenAI-compatible API. Any model served by vLLM, Ollama, or a compatible endpoint can be substituted by changing the `INFERENCE_BASE_URL` and `INFERENCE_MODEL` environment variables.
 
 See [Switching the Inference Backend](research/index.md#switching-the-inference-backend).
 

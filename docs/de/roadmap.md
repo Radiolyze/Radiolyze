@@ -110,7 +110,7 @@ Begruendung und Aufwaende: `docs-internal/status-and-next-themes.md`.
 2. mypy-Backlog abbauen (107 Fehler in 29 Dateien) und das Gate blockierend schalten.
 3. Dependabot-Rueckstau abarbeiten (20 offene PRs; nur `eslint <10` ist bewusst gehalten).
 4. i18n abschliessen (#117) und den Coverage-Boden von 11 % nachziehen.
-5. Backend-Monolithen aufteilen (`tasks.py` 975 Zeilen, `inference_clients.py` 774, `api/training.py` 752).
+5. Backend-Monolithen aufteilen (#293) — `inference_clients.py` (774 Zeilen) ist erledigt, jetzt ein Paket mit einem Modul je Generierungs-Flow; `tasks.py` (975) und `api/training.py` (752) stehen noch aus.
 6. E2E-Abdeckung fuer die Viewer-Interaktion (#116) — blockiert durch die Entscheidung zu DICOM-Fixtures.
 7. AuthZ/RBAC: `User.role` existiert am Modell, wird aber nirgends durchgesetzt.
 8. Phase 6, nach einer eigenen Aufnahme — ihre Punkte sind gelistet, nicht analysiert.
