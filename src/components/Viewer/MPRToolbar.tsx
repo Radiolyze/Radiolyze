@@ -13,8 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import type { MPROrientation, SlabBlendMode, SlabSettings } from "@/types/mpr";
-import { SLAB_BLEND_MODE_LABELS, SLAB_THICKNESS_PRESETS } from "@/types/mpr";
+import type { MPROrientation, SlabSettings } from "@/types/mpr";
+import { SLAB_BLEND_MODES, SLAB_THICKNESS_PRESETS } from "@/types/mpr";
 import type { WindowLevelPreset } from "@/config/viewer";
 
 export type MPRToolId = "crosshairs" | "pan" | "zoom" | "windowLevel";
@@ -33,14 +33,13 @@ interface MPRToolbarProps {
   onSlabSettingsChange: (settings: SlabSettings) => void;
 }
 
-const tools: { id: MPRToolId; icon: typeof Crosshair; label: string; shortcut?: string }[] = [
-  { id: "crosshairs", icon: Crosshair, label: "Crosshairs", shortcut: "C" },
-  { id: "pan", icon: Move, label: "Pan", shortcut: "P" },
-  { id: "zoom", icon: ZoomIn, label: "Zoom", shortcut: "Z" },
-  { id: "windowLevel", icon: Sun, label: "Fenster/Level", shortcut: "W" },
+/** Icon and shortcut per tool; the label is resolved as `viewer:mpr.tools.<id>`. */
+const tools: { id: MPRToolId; icon: typeof Crosshair; shortcut?: string }[] = [
+  { id: "crosshairs", icon: Crosshair, shortcut: "C" },
+  { id: "pan", icon: Move, shortcut: "P" },
+  { id: "zoom", icon: ZoomIn, shortcut: "Z" },
+  { id: "windowLevel", icon: Sun, shortcut: "W" },
 ];
-
-const blendModes: SlabBlendMode[] = ["composite", "mip", "minip", "average"];
 
 export function MPRToolbar({
   activeTool,
@@ -63,27 +62,31 @@ export function MPRToolbar({
     <div className="flex items-center gap-2 p-2 bg-card/90 backdrop-blur-xs border-b border-border">
       {/* Tool buttons */}
       <div className="flex gap-1 bg-muted rounded-lg p-1">
-        {tools.map((tool) => (
-          <Tooltip key={tool.id}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-8 w-8",
-                  activeTool === tool.id && "bg-primary text-primary-foreground",
-                )}
-                onClick={() => onToolSelect(tool.id)}
-                aria-label={tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label}
-              >
-                <tool.icon className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {tool.label} {tool.shortcut && `(${tool.shortcut})`}
-            </TooltipContent>
-          </Tooltip>
-        ))}
+        {tools.map((tool) => {
+          const name = t(`mpr.tools.${tool.id}`);
+          const label = tool.shortcut
+            ? t("mpr.toolShortcut", { name, shortcut: tool.shortcut })
+            : name;
+          return (
+            <Tooltip key={tool.id}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8",
+                    activeTool === tool.id && "bg-primary text-primary-foreground",
+                  )}
+                  onClick={() => onToolSelect(tool.id)}
+                  aria-label={label}
+                >
+                  <tool.icon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{label}</TooltipContent>
+            </Tooltip>
+          );
+        })}
       </div>
 
       <div className="w-px h-6 bg-border" />
@@ -91,7 +94,7 @@ export function MPRToolbar({
       {/* Window/Level presets */}
       <Select value={selectedPresetId} onValueChange={onPresetChange}>
         <SelectTrigger className="h-8 w-[140px] text-xs">
-          <SelectValue placeholder="W/L Preset" />
+          <SelectValue placeholder={t("mpr.windowLevelPreset")} />
         </SelectTrigger>
         <SelectContent>
           {presets.map((preset) => (
@@ -115,19 +118,22 @@ export function MPRToolbar({
             <Layers className="h-4 w-4" />
             {isSlabActive ? (
               <span className="text-xs">
-                {SLAB_BLEND_MODE_LABELS[slabSettings.blendMode]} {slabSettings.thickness}mm
+                {t("mpr.slab.indicator", {
+                  mode: t(`mpr.slab.blendMode.${slabSettings.blendMode}`),
+                  thickness: slabSettings.thickness,
+                })}
               </span>
             ) : (
-              <span className="text-xs">Slab/MIP</span>
+              <span className="text-xs">{t("mpr.slab.toggle")}</span>
             )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-72" align="start">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs font-medium">Projektionsmodus</Label>
+              <Label className="text-xs font-medium">{t("mpr.slab.projectionMode")}</Label>
               <div className="flex gap-1">
-                {blendModes.map((mode) => (
+                {SLAB_BLEND_MODES.map((mode) => (
                   <Button
                     key={mode}
                     variant={slabSettings.blendMode === mode ? "default" : "outline"}
@@ -135,7 +141,7 @@ export function MPRToolbar({
                     className="flex-1 h-7 text-xs"
                     onClick={() => onSlabSettingsChange({ ...slabSettings, blendMode: mode })}
                   >
-                    {SLAB_BLEND_MODE_LABELS[mode]}
+                    {t(`mpr.slab.blendMode.${mode}`)}
                   </Button>
                 ))}
               </div>
@@ -143,8 +149,10 @@ export function MPRToolbar({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium">Schichtdicke</Label>
-                <span className="text-xs text-muted-foreground">{slabSettings.thickness}mm</span>
+                <Label className="text-xs font-medium">{t("mpr.slab.thickness")}</Label>
+                <span className="text-xs text-muted-foreground">
+                  {t("mpr.slab.thicknessValue", { mm: slabSettings.thickness })}
+                </span>
               </div>
               <Slider
                 value={[slabSettings.thickness]}
@@ -157,17 +165,17 @@ export function MPRToolbar({
                 className="w-full"
               />
               <div className="flex gap-1 flex-wrap">
-                {SLAB_THICKNESS_PRESETS.map((preset) => (
+                {SLAB_THICKNESS_PRESETS.map((mm) => (
                   <Button
-                    key={preset.value}
-                    variant={slabSettings.thickness === preset.value ? "secondary" : "ghost"}
+                    key={mm}
+                    variant={slabSettings.thickness === mm ? "secondary" : "ghost"}
                     size="sm"
                     className="h-6 text-xs px-2"
-                    onClick={() =>
-                      onSlabSettingsChange({ ...slabSettings, thickness: preset.value })
-                    }
+                    onClick={() => onSlabSettingsChange({ ...slabSettings, thickness: mm })}
                   >
-                    {preset.label}
+                    {mm === 0
+                      ? t("mpr.slab.thicknessThin", { mm })
+                      : t("mpr.slab.thicknessValue", { mm })}
                   </Button>
                 ))}
               </div>
@@ -176,13 +184,13 @@ export function MPRToolbar({
             <div className="pt-2 border-t border-border">
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>
-                  <strong>MIP:</strong> Maximum Intensity Projection (Gefäße, Knochen)
+                  <strong>{t("mpr.slab.blendMode.mip")}:</strong> {t("mpr.slab.help.mip")}
                 </p>
                 <p>
-                  <strong>MinIP:</strong> Minimum Intensity Projection (Lunge, Atemwege)
+                  <strong>{t("mpr.slab.blendMode.minip")}:</strong> {t("mpr.slab.help.minip")}
                 </p>
                 <p>
-                  <strong>Average:</strong> Mittlere Intensität (Rauschreduktion)
+                  <strong>{t("mpr.slab.blendMode.average")}:</strong> {t("mpr.slab.help.average")}
                 </p>
               </div>
             </div>
@@ -201,12 +209,12 @@ export function MPRToolbar({
             className="h-8 w-8"
             onClick={() => onMaximize(isMaximized ? null : activeViewport)}
             disabled={!activeViewport && !isMaximized}
-            aria-label={isMaximized ? "Alle Ansichten" : "Maximieren"}
+            aria-label={isMaximized ? t("mpr.showAll") : t("mpr.maximize")}
           >
             {isMaximized ? <Grid2X2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>{isMaximized ? "Alle Ansichten" : "Maximieren"}</TooltipContent>
+        <TooltipContent>{isMaximized ? t("mpr.showAll") : t("mpr.maximize")}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
@@ -216,12 +224,14 @@ export function MPRToolbar({
             size="icon"
             className="h-8 w-8"
             onClick={onReset}
-            aria-label={`${t("tools.reset")} (R)`}
+            aria-label={t("mpr.toolShortcut", { name: t("tools.reset"), shortcut: "R" })}
           >
             <RotateCcw className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>{t("tools.reset")} (R)</TooltipContent>
+        <TooltipContent>
+          {t("mpr.toolShortcut", { name: t("tools.reset"), shortcut: "R" })}
+        </TooltipContent>
       </Tooltip>
     </div>
   );

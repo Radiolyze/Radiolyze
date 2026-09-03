@@ -12,6 +12,22 @@ for the full history.
 
 ### Added
 
+- An i18n guard in ESLint (#117). `i18next/no-literal-string` runs over
+  `src/components/**` — excluding the vendored `ui/` primitives and tests — and
+  warns on literal text in JSX, so the stock of hardcoded German cannot grow
+  back between passes. Deliberately a warning: the remaining backlog is known
+  (91 sites at the time of writing, `MPRViewer` and `VRTViewer` the largest),
+  and erroring today would block unrelated changes. `jsx-text-only` mode keeps
+  it to what a user actually reads, rather than class names and test hooks.
+- `src/types/__tests__/labelKeys.test.ts`: walks every VRT preset, MPR
+  orientation, slab blend mode and annotation category, severity and laterality
+  in both languages (#117). The label tables below are looked up by value, so a
+  member added without a translation would render the raw key to the user; this
+  fails the suite instead. Same contract shape as the export-format test from
+  #233.
+- `src/components/Viewer/__tests__/VRTToolbar.test.tsx`: renders `VRTToolbar`
+  and `MPRViewport` in both languages. The resource tests can only prove a key
+  exists, not that the component reaches for it.
 - `src/lib/__tests__/utils.test.ts`: the first test to assert on merged class
   output (#197). Each case merges a pair whose winning class only exists in
   Tailwind 4 — `outline-hidden`, `w-(--sidebar-width)`, `backdrop-blur-xs` — so
@@ -105,6 +121,22 @@ for the full history.
 
 ### Changed
 
+- The label tables in `src/types/{vrt,mpr,annotations}.ts` hold data only
+  (#117). `VRT_PRESETS.description`, `MPRViewportConfig.label`,
+  `SLAB_BLEND_MODE_LABELS` and the three `ANNOTATION_*` maps carried German
+  display strings on module-level constants, so they were fixed at import time
+  and a language switch left the VRT preset descriptions, the MPR orientation
+  labels and the annotation categories behind in German. Labels are now
+  resolved per render under `viewer:vrt.*`, `viewer:mpr.*` and
+  `viewer:annotations.*`; `SLAB_BLEND_MODE_LABELS` is replaced by
+  `SLAB_BLEND_MODES`, `SLAB_THICKNESS_PRESETS` by the plain mm values, and the
+  `ANNOTATION_*` maps by `ANNOTATION_{CATEGORY,SEVERITY,LATERALITY}_VALUES`.
+  - `VRTToolbar`, `DicomViewerStateOverlay`, `AnnotationLabelDialog`,
+    `AnnotationPanel`, `MPRToolbar` and `MPRViewport` render through i18n end
+    to end as a result — the first three had no `useTranslation` at all.
+  - The VRT view-angle and MPR tool buttons keep their keyboard shortcut as an
+    interpolation rather than baking it into the label, so "Left (L)" stays
+    "Links (L)" in German with the mnemonic intact.
 - `tailwindcss` 3.4 → 4.3 and `tailwind-merge` 2.6 → 3.6, in one commit
   (#197). They share a version line in one direction only: tailwind-merge v3
   drops Tailwind 3 support but declares no `peerDependencies`, so bumping it

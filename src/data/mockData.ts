@@ -1,3 +1,15 @@
+/**
+ * Demo fixtures — deliberately German, deliberately not translated.
+ *
+ * These stand in for radiology reports written by a German-speaking
+ * radiologist, so their prose is sample *content*, not UI copy: running it
+ * through i18n would mean maintaining a second set of invented findings for
+ * no benefit. i18n audits keep reporting this file as untranslated German;
+ * it is not a finding. See #117.
+ *
+ * The date formatting these fixtures used to carry did move out — into
+ * `src/lib/date.ts`, where it follows the active UI language (#228).
+ */
 import type {
   Patient,
   Study,

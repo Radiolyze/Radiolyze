@@ -52,7 +52,8 @@
       "checking": "QA checking...",
       "passed": "QA passed",
       "warnings": "QA warnings"
-    }
+    },
+    "loadingImages": "Loading DICOM images..."
   },
   "series": {
     "title": "Series",
@@ -80,7 +81,9 @@
     "selectSeries": "Select a series",
     "selectSeriesFor3d": "Select a series for 3D rendering",
     "selectSeriesForMpr": "Select a series for multi-planar reconstruction",
-    "unsupportedModality": "Modality {{modality}} is not supported. Only CT, MR and PT are available."
+    "unsupportedModality": "Modality {{modality}} is not supported. Only CT, MR and PT are available.",
+    "noImages": "No DICOM images loaded",
+    "noImagesHint": "Check the DICOMweb connection and the series ID."
   },
   "mesh": {
     "title": "3D Model",
@@ -144,6 +147,110 @@
   },
   "annotations": {
     "selectSeries": "Select a series",
-    "confirmDelete": "Delete annotation \"{{label}}\"?"
+    "confirmDelete": "Delete annotation \"{{label}}\"?",
+    "category": {
+      "nodule": "Nodule",
+      "mass": "Mass",
+      "infiltrate": "Infiltrate",
+      "effusion": "Effusion",
+      "fracture": "Fracture",
+      "lesion": "Lesion",
+      "anatomical": "Anatomical",
+      "other": "Other"
+    },
+    "severity": {
+      "benign": "Benign",
+      "indeterminate": "Indeterminate",
+      "malignant": "Malignant"
+    },
+    "laterality": {
+      "left": "Left",
+      "right": "Right",
+      "bilateral": "Bilateral",
+      "midline": "Midline"
+    },
+    "dialogTitle": "Label annotation",
+    "dialogDescription": "Enter a label and a category for the annotation.",
+    "labelField": "Label",
+    "labelPlaceholder": "e.g. round nodule 1.2 cm",
+    "categoryField": "Category",
+    "notesPlaceholder": "Notes...",
+    "toolFrame": "Tool: {{tool}} • Frame: {{frame}}",
+    "title": "Annotations",
+    "empty": "No annotations yet.",
+    "emptyHint": "Use the annotation tools to mark regions.",
+    "currentFrame": "Frame {{frame}}",
+    "otherFrames": "Other frames",
+    "verifiedCount": "Verified: {{verified}}/{{total}}",
+    "frameLabel": "Frame: {{frame}}",
+    "frameShort": "• F{{frame}}"
+  },
+  "vrt": {
+    "selectPreset": "Select preset",
+    "presets": {
+      "ct-bone": "Optimised for bone structures",
+      "ct-lung": "Optimised for lung parenchyma",
+      "ct-soft-tissue": "Soft tissue and organs",
+      "ct-angiography": "Contrast-filled vessels",
+      "ct-muscle-bone": "Muscle and bone structures"
+    },
+    "viewAngle": {
+      "anterior": "Anterior",
+      "posterior": "Posterior",
+      "left": "Left",
+      "right": "Right",
+      "superior": "Superior",
+      "inferior": "Inferior"
+    },
+    "viewAngleShortcut": "{{name}} ({{shortcut}})",
+    "lighting": "Lighting",
+    "renderSettings": "Rendering settings",
+    "quality": {
+      "label": "Render quality",
+      "high": "High",
+      "medium": "Medium",
+      "fast": "Fast"
+    },
+    "ambient": "Ambient light",
+    "diffuse": "Diffuse reflection",
+    "specular": "Specular reflection",
+    "specularPower": "Specular power",
+    "resetCamera": "Reset camera"
+  },
+  "mpr": {
+    "orientation": {
+      "axial": "Axial",
+      "sagittal": "Sagittal",
+      "coronal": "Coronal"
+    },
+    "tools": {
+      "crosshairs": "Crosshairs",
+      "pan": "Pan",
+      "zoom": "Zoom",
+      "windowLevel": "Window/Level"
+    },
+    "toolShortcut": "{{name}} ({{shortcut}})",
+    "windowLevelPreset": "W/L preset",
+    "maximize": "Maximise",
+    "showAll": "All views",
+    "slab": {
+      "toggle": "Slab/MIP",
+      "blendMode": {
+        "composite": "Normal",
+        "mip": "MIP",
+        "minip": "MinIP",
+        "average": "Average"
+      },
+      "indicator": "{{mode}} {{thickness}}mm",
+      "projectionMode": "Projection mode",
+      "thickness": "Slab thickness",
+      "thicknessValue": "{{mm}}mm",
+      "thicknessThin": "Thin ({{mm}}mm)",
+      "help": {
+        "mip": "Maximum intensity projection (vessels, bone)",
+        "minip": "Minimum intensity projection (lung, airways)",
+        "average": "Mean intensity (noise reduction)"
+      }
+    }
   }
 }

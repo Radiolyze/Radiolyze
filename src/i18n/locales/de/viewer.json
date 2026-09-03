@@ -52,7 +52,8 @@
       "checking": "QA prüft...",
       "passed": "QA bestanden",
       "warnings": "QA-Warnungen"
-    }
+    },
+    "loadingImages": "Lade DICOM-Bilder..."
   },
   "series": {
     "title": "Serien",
@@ -80,7 +81,9 @@
     "selectSeries": "Wählen Sie eine Serie aus",
     "selectSeriesFor3d": "Wählen Sie eine Serie für die 3D-Darstellung",
     "selectSeriesForMpr": "Wählen Sie eine Serie für die Multi-Planar-Rekonstruktion",
-    "unsupportedModality": "Modalität {{modality}} wird nicht unterstützt. Nur CT, MR und PT sind verfügbar."
+    "unsupportedModality": "Modalität {{modality}} wird nicht unterstützt. Nur CT, MR und PT sind verfügbar.",
+    "noImages": "Keine DICOM-Bilder geladen",
+    "noImagesHint": "Prüfen Sie DICOMweb-Verbindung und Serien-ID."
   },
   "mesh": {
     "title": "3D Modell",
@@ -144,6 +147,110 @@
   },
   "annotations": {
     "selectSeries": "Wählen Sie eine Serie aus",
-    "confirmDelete": "Annotation \"{{label}}\" löschen?"
+    "confirmDelete": "Annotation \"{{label}}\" löschen?",
+    "category": {
+      "nodule": "Nodulus",
+      "mass": "Masse",
+      "infiltrate": "Infiltrat",
+      "effusion": "Erguss",
+      "fracture": "Fraktur",
+      "lesion": "Läsion",
+      "anatomical": "Anatomisch",
+      "other": "Sonstiges"
+    },
+    "severity": {
+      "benign": "Benigne",
+      "indeterminate": "Unbestimmt",
+      "malignant": "Maligne"
+    },
+    "laterality": {
+      "left": "Links",
+      "right": "Rechts",
+      "bilateral": "Bilateral",
+      "midline": "Mittellinie"
+    },
+    "dialogTitle": "Annotation beschriften",
+    "dialogDescription": "Geben Sie ein Label und eine Kategorie für die Annotation ein.",
+    "labelField": "Label",
+    "labelPlaceholder": "z.B. Rundlicher Nodulus 1.2cm",
+    "categoryField": "Kategorie",
+    "notesPlaceholder": "Notizen...",
+    "toolFrame": "Tool: {{tool}} • Bild: {{frame}}",
+    "title": "Annotationen",
+    "empty": "Keine Annotationen vorhanden.",
+    "emptyHint": "Verwenden Sie die Annotation-Tools, um Bereiche zu markieren.",
+    "currentFrame": "Bild {{frame}}",
+    "otherFrames": "Andere Bilder",
+    "verifiedCount": "Verifiziert: {{verified}}/{{total}}",
+    "frameLabel": "Bild: {{frame}}",
+    "frameShort": "• B{{frame}}"
+  },
+  "vrt": {
+    "selectPreset": "Preset wählen",
+    "presets": {
+      "ct-bone": "Optimiert für Knochenstrukturen",
+      "ct-lung": "Optimiert für Lungenparenchym",
+      "ct-soft-tissue": "Weichteilgewebe und Organe",
+      "ct-angiography": "Kontrastmittelgefüllte Gefäße",
+      "ct-muscle-bone": "Muskel- und Knochenstrukturen"
+    },
+    "viewAngle": {
+      "anterior": "Anterior",
+      "posterior": "Posterior",
+      "left": "Links",
+      "right": "Rechts",
+      "superior": "Superior",
+      "inferior": "Inferior"
+    },
+    "viewAngleShortcut": "{{name}} ({{shortcut}})",
+    "lighting": "Beleuchtung",
+    "renderSettings": "Rendering-Einstellungen",
+    "quality": {
+      "label": "Renderqualität",
+      "high": "Hoch",
+      "medium": "Mittel",
+      "fast": "Schnell"
+    },
+    "ambient": "Umgebungslicht",
+    "diffuse": "Diffuse Reflexion",
+    "specular": "Spiegelreflexion",
+    "specularPower": "Glanzstärke",
+    "resetCamera": "Kamera zurücksetzen"
+  },
+  "mpr": {
+    "orientation": {
+      "axial": "Axial",
+      "sagittal": "Sagittal",
+      "coronal": "Koronar"
+    },
+    "tools": {
+      "crosshairs": "Fadenkreuz",
+      "pan": "Verschieben",
+      "zoom": "Zoom",
+      "windowLevel": "Fenster/Level"
+    },
+    "toolShortcut": "{{name}} ({{shortcut}})",
+    "windowLevelPreset": "W/L Preset",
+    "maximize": "Maximieren",
+    "showAll": "Alle Ansichten",
+    "slab": {
+      "toggle": "Slab/MIP",
+      "blendMode": {
+        "composite": "Normal",
+        "mip": "MIP",
+        "minip": "MinIP",
+        "average": "Average"
+      },
+      "indicator": "{{mode}} {{thickness}}mm",
+      "projectionMode": "Projektionsmodus",
+      "thickness": "Schichtdicke",
+      "thicknessValue": "{{mm}}mm",
+      "thicknessThin": "Dünn ({{mm}}mm)",
+      "help": {
+        "mip": "Maximum Intensity Projection (Gefäße, Knochen)",
+        "minip": "Minimum Intensity Projection (Lunge, Atemwege)",
+        "average": "Mittlere Intensität (Rauschreduktion)"
+      }
+    }
   }
 }
