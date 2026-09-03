@@ -30,7 +30,12 @@
     "signaturePlaceholder": "Dr. Name",
     "approve": "Approve & Finalize",
     "cancel": "Cancel",
-    "confirmMessage": "Are you sure you want to approve this report?"
+    "confirmMessage": "Are you sure you want to approve this report?",
+    "approved": "Already approved",
+    "finalized": "Report is approved",
+    "finalizedBy": "Approved by {{approver}}",
+    "finalizedAt": "Approved on {{date}}",
+    "finalizedByAt": "Approved by {{approver}} on {{date}}"
   },
   "qa": {
     "title": "QA Checks",

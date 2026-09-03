@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { createWsClient } from "@/services/wsClient";
-import type { AIStatus } from "@/types/radiology";
+import type { AIStatus, ReportStatus } from "@/types/radiology";
 import { logger } from "@/lib/logger";
 
 export interface ReportStatusPayload {
@@ -8,6 +8,8 @@ export interface ReportStatusPayload {
   aiStatus?: AIStatus;
   qaStatus?: "pending" | "checking" | "pass" | "warn" | "fail";
   asrConfidence?: number;
+  /** Lifecycle status of the report itself (draft → finalized), not of a sub-task. */
+  status?: ReportStatus;
 }
 
 export interface ReportStatusEvent {

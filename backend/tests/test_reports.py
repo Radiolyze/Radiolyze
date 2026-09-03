@@ -152,6 +152,56 @@ def test_finalize_report(client):
     assert data["approved_by"] == "Dr. Test"
 
 
+def test_finalize_broadcasts_the_report_status(client):
+    """The queue badge and the approve button only move if `status` is in the payload."""
+    with client.websocket_connect("/api/v1/ws") as ws:
+        report_id = client.post(
+            "/api/v1/reports/create",
+            json={"study_id": "study-ws-status", "patient_id": "patient-ws-status"},
+        ).json()["id"]
+
+        assert (
+            client.post(
+                f"/api/v1/reports/{report_id}/finalize",
+                json={"approvedBy": "Dr. Test"},
+            ).status_code
+            == 200
+        )
+
+        for _ in range(10):
+            message = ws.receive_json()
+            if message["type"] == "report_status":
+                assert message["reportId"] == report_id
+                assert message["payload"]["status"] == "finalized"
+                break
+        else:
+            raise AssertionError("no report_status event arrived")
+
+
+def test_update_broadcasts_the_report_status(client):
+    report_id = client.post(
+        "/api/v1/reports/create",
+        json={"study_id": "study-ws-patch", "patient_id": "patient-ws-patch"},
+    ).json()["id"]
+
+    with client.websocket_connect("/api/v1/ws") as ws:
+        assert (
+            client.patch(
+                f"/api/v1/reports/{report_id}",
+                json={"findings_text": "Unauffälliger Befund der miterfassten Organe."},
+            ).status_code
+            == 200
+        )
+
+        for _ in range(10):
+            message = ws.receive_json()
+            if message["type"] == "report_status":
+                assert message["payload"]["status"] == "draft"
+                break
+        else:
+            raise AssertionError("no report_status event arrived")
+
+
 def test_qa_check(client):
     response = client.post(
         "/api/v1/reports/qa-check",

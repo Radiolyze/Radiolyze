@@ -56,6 +56,7 @@ export function useReportStatusSync(initialItems: QueueItem[] = []) {
           ...item,
           report: {
             ...item.report,
+            status: liveStatus.status || item.report.status,
             qaStatus: liveStatus.qaStatus || item.report.qaStatus,
             aiStatus: liveStatus.aiStatus || item.report.aiStatus,
           },

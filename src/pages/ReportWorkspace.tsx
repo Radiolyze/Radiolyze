@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { QueueItem } from "@/types/radiology";
 import { LeftSidebar } from "@/components/Sidebar/LeftSidebar";
 import { ComparisonViewer } from "@/components/Viewer/ComparisonViewer";
@@ -72,6 +72,14 @@ export const ReportWorkspace = () => {
   });
 
   const liveStatus = report ? getReportStatus(report.id) : undefined;
+
+  // A finalize by someone else only reaches this tab over the WebSocket, so the
+  // panel has to see the live status rather than the one from the last fetch.
+  const liveReport = useMemo(() => {
+    if (!report) return report;
+    if (!liveStatus?.status || liveStatus.status === report.status) return report;
+    return { ...report, status: liveStatus.status };
+  }, [report, liveStatus?.status]);
 
   const inference = useWorkspaceInference({
     report,
@@ -164,7 +172,7 @@ export const ReportWorkspace = () => {
       }
       rightPanel={
         <RightPanel
-          report={report}
+          report={liveReport ?? report}
           asrLanguage={preferences.asrLanguage}
           findings={findings}
           impression={impression}

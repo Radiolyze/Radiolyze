@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { FileText, Clock, CheckCircle, Sparkles } from "lucide-react";
-import type { AIStatus, QueueItem } from "@/types/radiology";
+import type { AIStatus, QueueItem, ReportStatus } from "@/types/radiology";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useDateFormat } from "@/hooks/useDateFormat";
@@ -20,7 +20,10 @@ export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueue
     (i) => i.report.status === "pending" || i.report.status === "in_progress",
   ).length;
 
-  const statusConfig = {
+  const statusConfig: Record<
+    ReportStatus,
+    { icon: typeof Clock; label: string; className: string }
+  > = {
     pending: {
       icon: Clock,
       label: t("status.pending"),
@@ -92,7 +95,9 @@ export function ReportQueue({ items, selectedItemId, onSelectItem }: ReportQueue
 
       <div className="overflow-y-auto max-h-48 p-2 space-y-1">
         {items.map((item) => {
-          const status = statusConfig[item.report.status];
+          // The status now also arrives over the WebSocket, so an unknown value
+          // must render as pending rather than crash the whole queue.
+          const status = statusConfig[item.report.status] ?? statusConfig.pending;
           const priority = priorityConfig[item.priority];
           const StatusIcon = status.icon;
           const aiStatus = item.report.aiStatus;

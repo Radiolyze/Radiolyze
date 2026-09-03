@@ -30,7 +30,12 @@
     "signaturePlaceholder": "Dr. Name",
     "approve": "Freigeben & Abschließen",
     "cancel": "Abbrechen",
-    "confirmMessage": "Sind Sie sicher, dass Sie diesen Befund freigeben möchten?"
+    "confirmMessage": "Sind Sie sicher, dass Sie diesen Befund freigeben möchten?",
+    "approved": "Bereits freigegeben",
+    "finalized": "Befund ist freigegeben",
+    "finalizedBy": "Freigegeben von {{approver}}",
+    "finalizedAt": "Freigegeben am {{date}}",
+    "finalizedByAt": "Freigegeben von {{approver}} am {{date}}"
   },
   "qa": {
     "title": "QA-Prüfungen",
