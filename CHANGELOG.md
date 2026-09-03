@@ -105,6 +105,17 @@ for the full history.
 
 ### Changed
 
+- `backend/app/inference_clients.py` (774 lines) is now a package with a module
+  per job family (#293): `text` (impression/summary), `streaming`, `localize`,
+  `volume` and `comparison`. The public names are unchanged and re-exported
+  from `__init__`, so `app.tasks` and the services import exactly as before.
+  - The package boundary moved the vLLM call sites out of the module tests
+    patched. Every module now reaches the client through the module —
+    `vllm_client._vllm_chat_completion(...)` — so `app.vllm_client` is the one
+    patch target that intercepts the call from any job family, and the
+    pre-split `app.inference_clients._vllm_chat_completion` is deliberately
+    *not* kept as an alias: patching an alias would succeed while no longer
+    reaching a call site inside a submodule.
 - `tailwindcss` 3.4 → 4.3 and `tailwind-merge` 2.6 → 3.6, in one commit
   (#197). They share a version line in one direction only: tailwind-merge v3
   drops Tailwind 3 support but declares no `peerDependencies`, so bumping it

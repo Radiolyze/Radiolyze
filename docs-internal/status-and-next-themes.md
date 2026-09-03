@@ -69,7 +69,7 @@ umgesetzt: `segment_total.py`, `colors.py`, `MeshColorPicker.tsx`,
 | Coverage-Schwelle Frontend | 11 % Statements | ausdrücklich Boden, kein Ziel |
 | `npm audit` | non-blocking | wartet auf dcmjs-Release ohne betroffene adm-zip-Range |
 | Offene Dependabot-PRs | **20** | ältester 2026-08-10, nur ESLint ist bewusst zurückgehalten |
-| Backend-Großdateien | `tasks.py` 975, `inference_clients.py` 774, `api/training.py` 752 | #120 war rein Frontend-skopiert |
+| Backend-Großdateien | `tasks.py` 975, `api/training.py` 752 | #120 war rein Frontend-skopiert; `inference_clients.py` (774) ist als Paket aufgeteilt |
 
 ---
 
@@ -220,7 +220,7 @@ Backend-Pendant wurde nie erfasst:
 | Datei | Zeilen |
 |---|---|
 | `backend/app/tasks.py` | 975 |
-| `backend/app/inference_clients.py` | 774 |
+| `backend/app/inference_clients.py` (aufgeteilt) | 774 |
 | `backend/app/api/training.py` | 752 |
 | `backend/app/api/inference.py` | 615 |
 
