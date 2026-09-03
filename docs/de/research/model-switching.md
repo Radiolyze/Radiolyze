@@ -68,7 +68,7 @@ curl http://localhost:8001/v1/models
 **Kompatibilitätsanforderungen:**
 - Muss `image_url`-Inhalt in Nachrichten unterstützen
 - Muss `guided_json`-Parameter (oder äquivalente strukturierte Ausgabe) unterstützen
-- Muss das in `backend/app/inference_clients.py` verwendete Prompt-Format akzeptieren
+- Muss das in `backend/app/inference_clients/` verwendete Prompt-Format akzeptieren
 
 ```bash
 # 1. .env bearbeiten

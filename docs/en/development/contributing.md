@@ -99,7 +99,7 @@ npm run lint
 - **Type annotations on all public functions** — use `from __future__ import annotations`
 - **No bare `except:`** — always catch specific exceptions
 - **No PHI in log statements** — log IDs and hashes, not names or text content
-- **Environment variable access** — use the `_env_flag()` / `_env_int()` helpers in `inference_clients.py` / `asr_providers.py`, not bare `os.environ.get()`
+- **Environment variable access** — use the `_env_flag()` / `_env_int()` helpers in `inference_utils.py` / `asr_providers.py`, not bare `os.environ.get()`
 - **DB operations** — use the SQLAlchemy session from `deps.py`; never raw SQL strings
 
 ```bash

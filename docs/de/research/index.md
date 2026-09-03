@@ -13,7 +13,7 @@ Radiolyze verwendet eine **multimodale KI-Pipeline**, um radiologische Befundsen
 DICOM-Frames (JPEG)
         │
         ▼
-  Inference-Client          backend/app/inference_clients.py
+  Inference-Client          backend/app/inference_clients/
   (OpenAI-kompatibel)
         │
         ▼
@@ -170,7 +170,7 @@ Um Prompt-Verbesserungen, Modell-Evaluierungen oder neue Inferenz-Backends beizu
 1. [Contributing-Richtlinien](../development/contributing.md) lesen.
 2. GitHub-Issue eröffnen mit Beschreibung der vorgeschlagenen Änderung.
 3. Für Prompt-Änderungen: `backend/app/prompts.py` bearbeiten und Vorher/Nachher-Beispiele im PR einschließen.
-4. Für neue Inferenz-Backends: Client-Interface in `backend/app/inference_clients.py` implementieren.
+4. Für neue Inferenz-Backends: Client-Interface in `backend/app/inference_clients/` implementieren.
 
 ---
 

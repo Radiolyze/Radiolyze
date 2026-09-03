@@ -5,7 +5,7 @@
 - No fine-tuning: this covers only current runtime usage and data collection for future evaluation.
 
 ## Methods and Sources in the Repo
-- Runtime inference: `backend/app/inference_clients.py`, `backend/app/api/inference.py`, `backend/app/tasks.py`
+- Runtime inference: `backend/app/inference_clients/`, `backend/app/api/inference.py`, `backend/app/tasks.py`
 - Image sources and selection: `src/hooks/useDicomSeriesInstances.ts`, `src/hooks/reporting/inferenceHelpers.ts`, `src/hooks/useReport.ts`
 - Deployment: `docker-compose.yml`
 - Viewer and comparison: `docs/components/viewer.md`, `src/components/Viewer/*`, `src/hooks/usePriorStudies.ts`
@@ -25,15 +25,15 @@ audit trails, but incomplete for 3D and longitudinal analyses.
 
 | Capability | Status | Implementation | Notes |
 | --- | --- | --- | --- |
-| Multimodal (text + images) | in use | vLLM chat completion with `image_url` content; prompts for summary/impression | `backend/app/inference_clients.py` |
+| Multimodal (text + images) | in use | vLLM chat completion with `image_url` content; prompts for summary/impression | `backend/app/inference_clients/` |
 | Multi-frame/series input | in use | Frontend frame selection (legacy) + segmenter-side volume preprocessor | `src/hooks/reporting/inferenceHelpers.ts`, `services/segmenter/app/medgemma_preprocess.py` |
-| Longitudinal (current + prior) | in use | Dedicated `/api/v1/inference/comparison` endpoint with structured diff schema | `backend/app/inference_clients.py:generate_comparison_text`, `src/components/RightPanel/ComparisonPanel.tsx` |
-| 3D volume analysis | in use | Segmenter `/preprocess/medgemma` renders DICOM CT/MR to ≤85 windowed 896×896 axial slices | `services/segmenter/app/medgemma_preprocess.py`, `backend/app/inference_clients.py:generate_volume_inference_summary` |
-| Anatomical localization/detection | in use (CXR) | Modality-locked endpoint with `cxr_finding` and `cxr_anatomy` modes | `backend/app/inference_clients.py:generate_localize_findings`, `backend/app/api/inference.py` |
-| Evidence/provenance | in use | Evidence indices extracted from model response and referenced in UI | `backend/app/inference_clients.py`, `src/components/RightPanel/ImpressionPanel.tsx` |
+| Longitudinal (current + prior) | in use | Dedicated `/api/v1/inference/comparison` endpoint with structured diff schema | `backend/app/inference_clients/comparison.py`, `src/components/RightPanel/ComparisonPanel.tsx` |
+| 3D volume analysis | in use | Segmenter `/preprocess/medgemma` renders DICOM CT/MR to ≤85 windowed 896×896 axial slices | `services/segmenter/app/medgemma_preprocess.py`, `backend/app/inference_clients/volume.py` |
+| Anatomical localization/detection | in use (CXR) | Modality-locked endpoint with `cxr_finding` and `cxr_anatomy` modes | `backend/app/inference_clients/localize.py`, `backend/app/api/inference.py` |
+| Evidence/provenance | in use | Evidence indices extracted from model response and referenced in UI | `backend/app/inference_clients/`, `src/components/RightPanel/ImpressionPanel.tsx` |
 | WSI/pathology | not used | No WSI pipeline, no tile processing | - |
 | Clinical documents/EHR | not used | No EHR imports; only report text in the system | - |
-| Speech (MedASR) | in use | ASR service via vLLM; UI captures dictation | `backend/app/inference_clients.py`, `src/hooks/useASR.ts` |
+| Speech (MedASR) | in use | ASR service via vLLM; UI captures dictation | `backend/app/inference_clients/`, `src/hooks/useASR.ts` |
 
 ## Additional Detail: 3D Data and MedGemma Input Format
 
@@ -41,7 +41,7 @@ audit trails, but incomplete for 3D and longitudinal analyses.
 - vLLM uses an OpenAI-compatible chat format with multimodal `content`.
 - The project sends `image_url` entries (WADO-RS URLs or base64 data URLs).
 - No direct DICOM/NIfTI handoff; everything goes through rendered 2D images.
-- References: `backend/app/inference_clients.py` (`_build_multimodal_content`, `_encode_image_path`).
+- References: `backend/app/image_encoder.py` (`_build_multimodal_content`, `_encode_image_path`).
 
 ### 3D Volumes (CT/MR) - MedGemma 1.5
 - Native 3D support requires preprocessing into slice sequences.
@@ -62,7 +62,7 @@ audit trails, but incomplete for 3D and longitudinal analyses.
   budget for 3D + headroom for prompt + output) and `VLLM_MAX_TOKENS=4096`.
 - `VLLM_GUIDED_JSON=true` enforces the AI-output schemas at decode time.
 - References: `docker-compose.yml`, `services/segmenter/app/medgemma_preprocess.py`,
-  `backend/app/inference_clients.py:generate_volume_inference_summary`.
+  `backend/app/inference_clients/volume.py`.
 
 ### Window Presets (Volume Preprocessor)
 | Modality | Default Preset | Centre / Width | Notes |
