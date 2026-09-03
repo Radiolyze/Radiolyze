@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 import i18n, { resources } from "@/i18n";
 import type { ExportFormat } from "@/services/trainingClient";
+import {
+  ANNOTATION_CATEGORY_VALUES,
+  ANNOTATION_SEVERITY_VALUES,
+  ANNOTATION_LATERALITY_VALUES,
+} from "@/types/annotations";
+import { MPR_VIEWPORTS, SLAB_BLEND_MODES } from "@/types/mpr";
+import { VRT_PRESETS, VRT_VIEW_ANGLES } from "@/types/vrt";
 
 type Resource = Record<string, unknown>;
 
@@ -138,5 +145,69 @@ describe("drift alert metric labels", () => {
     expect(i18n.t("common:monitoring.history.subtitle", { count: 2 })).toBe(
       "Based on 2 saved snapshots",
     );
+  });
+});
+
+/**
+ * The label tables that used to sit in `src/types/{vrt,mpr,annotations}.ts` as
+ * hardcoded German (#117). Their display names now live in the `viewer`
+ * resources and are resolved at the render site, keyed by the union member —
+ * which means a member added without its translation renders a raw key like
+ * `annotations.categories.calcification` to the user.
+ *
+ * Each block below walks the exported member list, so extending one of those
+ * unions without extending both locale files fails here instead of in the UI.
+ * Same contract shape as the export-format and drift-metric tests above.
+ */
+describe("viewer label tables", () => {
+  const cases: [string, string, readonly string[]][] = [
+    ["annotation categories", "annotations.categories", ANNOTATION_CATEGORY_VALUES],
+    ["annotation severities", "annotations.severities", ANNOTATION_SEVERITY_VALUES],
+    ["annotation lateralities", "annotations.lateralities", ANNOTATION_LATERALITY_VALUES],
+    ["MPR orientations", "mpr.orientations", MPR_VIEWPORTS.map((v) => v.orientation)],
+    ["slab blend modes", "mpr.blendModes", SLAB_BLEND_MODES],
+    ["VRT presets", "vrt.presets", VRT_PRESETS.map((p) => p.id)],
+    ["VRT view angles", "vrt.viewAngles", Object.keys(VRT_VIEW_ANGLES)],
+  ];
+
+  for (const [name, group, members] of cases) {
+    it.each(["de", "en"])(`names every member of the ${name} in %s`, async (lng) => {
+      await i18n.changeLanguage(lng);
+      expect(members.length).toBeGreaterThan(0);
+      for (const member of members) {
+        expect(i18n.t(`viewer:${group}.${member}`, { defaultValue: "" })).not.toBe("");
+      }
+    });
+  }
+
+  it("resolves the shared image count as a plural in both languages", async () => {
+    // Rendered by VRTViewer and MPRViewer for the same volume, so it has to
+    // read correctly at one image as well as at many.
+    await i18n.changeLanguage("de");
+    expect(i18n.t("viewer:volume.imageCount", { count: 1 })).toBe("1 Bild");
+    expect(i18n.t("viewer:volume.imageCount", { count: 42 })).toBe("42 Bilder");
+
+    await i18n.changeLanguage("en");
+    expect(i18n.t("viewer:volume.imageCount", { count: 1 })).toBe("1 image");
+    expect(i18n.t("viewer:volume.imageCount", { count: 42 })).toBe("42 images");
+  });
+
+  it("carries the 3D slice minimum as a placeholder rather than a spelled-out number", () => {
+    // The bound comes from MIN_SLICES_FOR_3D in VRTViewer; the German original
+    // spelled "Mindestens 10" out next to `imageIds.length < 10`, so the two
+    // could drift apart silently.
+    for (const lng of ["de", "en"] as const) {
+      expect(resources[lng].viewer.volume.insufficientImages).toContain("{{min}}");
+    }
+  });
+
+  it("keeps an unknown annotation category rendering its raw identifier", async () => {
+    // AnnotationPanel passes the category as its own defaultValue, so a
+    // category the backend adds first degrades to today's behaviour rather
+    // than rendering blank.
+    await i18n.changeLanguage("en");
+    expect(
+      i18n.t("viewer:annotations.categories.calcification", { defaultValue: "calcification" }),
+    ).toBe("calcification");
   });
 });

@@ -27,7 +27,7 @@ import type {
   AnnotationCategory,
   AnnotationCreateRequest,
 } from "@/types/annotations";
-import { ANNOTATION_CATEGORIES, ANNOTATION_SEVERITIES } from "@/types/annotations";
+import { ANNOTATION_CATEGORY_VALUES } from "@/types/annotations";
 
 interface AnnotationPanelProps {
   studyId: string | null;
@@ -138,7 +138,7 @@ export function AnnotationPanel({
       <div className="p-3 border-b border-border">
         <h3 className="font-semibold text-sm flex items-center gap-2">
           <Tag className="h-4 w-4" />
-          Annotations
+          {t("annotations.title")}
           <Badge variant="secondary" className="ml-auto">
             {annotations.length}
           </Badge>
@@ -152,9 +152,9 @@ export function AnnotationPanel({
           </div>
         ) : annotations.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
-            Keine Annotations vorhanden.
+            {t("annotations.empty")}
             <br />
-            Verwenden Sie die Annotation-Tools, um Bereiche zu markieren.
+            {t("annotations.emptyHint")}
           </div>
         ) : (
           <div className="p-2 space-y-2">
@@ -162,7 +162,7 @@ export function AnnotationPanel({
             {currentFrameAnnotations.length > 0 && (
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground px-2 py-1">
-                  Frame {currentFrameIndex + 1}
+                  {t("annotations.currentFrame", { number: currentFrameIndex + 1 })}
                 </div>
                 {currentFrameAnnotations.map((ann) => (
                   <AnnotationItem
@@ -190,7 +190,9 @@ export function AnnotationPanel({
             {/* Other frames */}
             {otherAnnotations.length > 0 && (
               <div className="space-y-1">
-                <div className="text-xs text-muted-foreground px-2 py-1">Andere Frames</div>
+                <div className="text-xs text-muted-foreground px-2 py-1">
+                  {t("annotations.otherFrames")}
+                </div>
                 {otherAnnotations.map((ann) => (
                   <AnnotationItem
                     key={ann.id}
@@ -221,9 +223,12 @@ export function AnnotationPanel({
       {/* Stats footer */}
       <div className="p-2 border-t border-border text-xs text-muted-foreground flex justify-between">
         <span>
-          Verifiziert: {annotations.filter((a) => a.verifiedBy).length}/{annotations.length}
+          {t("annotations.verifiedCount", {
+            verified: annotations.filter((a) => a.verifiedBy).length,
+            total: annotations.length,
+          })}
         </span>
-        <span>Frame: {currentFrameIndex + 1}</span>
+        <span>{t("annotations.frame", { number: currentFrameIndex + 1 })}</span>
       </div>
     </div>
   );
@@ -266,13 +271,15 @@ function AnnotationItem({
   isSaving,
   dimmed,
 }: AnnotationItemProps) {
+  const { t } = useTranslation("viewer");
+
   if (isEditing) {
     return (
       <div className="p-2 bg-card rounded-lg border border-primary space-y-2">
         <Input
           value={editLabel}
           onChange={(e) => onEditLabel(e.target.value)}
-          placeholder="Label"
+          placeholder={t("annotations.dialog.label")}
           className="h-8 text-sm"
         />
         <Select value={editCategory} onValueChange={(v) => onEditCategory(v as AnnotationCategory)}>
@@ -280,9 +287,9 @@ function AnnotationItem({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(ANNOTATION_CATEGORIES).map(([key, label]) => (
-              <SelectItem key={key} value={key}>
-                {label}
+            {ANNOTATION_CATEGORY_VALUES.map((value) => (
+              <SelectItem key={value} value={value}>
+                {t(`annotations.categories.${value}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -290,15 +297,15 @@ function AnnotationItem({
         <Textarea
           value={editNotes}
           onChange={(e) => onEditNotes(e.target.value)}
-          placeholder="Notizen..."
+          placeholder={t("annotations.edit.notesPlaceholder")}
           className="text-xs min-h-[60px]"
         />
         <div className="flex gap-1">
           <Button size="sm" className="flex-1 h-7 text-xs" onClick={onSaveEdit} disabled={isSaving}>
-            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Speichern"}
+            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : t("annotations.edit.save")}
           </Button>
           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onCancelEdit}>
-            Abbrechen
+            {t("annotations.edit.cancel")}
           </Button>
         </div>
       </div>
@@ -324,12 +331,14 @@ function AnnotationItem({
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <Badge variant="outline" className="text-[10px] h-4 px-1">
-              {ANNOTATION_CATEGORIES[annotation.category] || annotation.category}
+              {t(`annotations.categories.${annotation.category}`, {
+                defaultValue: annotation.category,
+              })}
             </Badge>
             <span className="text-[10px] text-muted-foreground">{annotation.toolType}</span>
             {!dimmed && (
               <span className="text-[10px] text-muted-foreground">
-                • F{annotation.frameIndex + 1}
+                {t("annotations.frameShort", { number: annotation.frameIndex + 1 })}
               </span>
             )}
           </div>

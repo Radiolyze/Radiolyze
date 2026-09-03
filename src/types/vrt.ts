@@ -15,8 +15,8 @@ export interface TransferFunction {
 
 export interface VRTPreset {
   id: string;
+  /** Product name (e.g. "CT Bone") — a proper noun, not display copy. */
   name: string;
-  description: string;
   transferFunction: TransferFunction;
   ambient: number;
   diffuse: number;
@@ -33,11 +33,13 @@ export interface VRTPreset {
 // Bone: +400 to +1000 HU
 // Metal: +2000+ HU
 
+// Each preset's description lives in the `viewer` resources under
+// `vrt.presets.<id>` and is resolved at the render site — a module-level
+// constant is fixed at import time and would not follow a language switch.
 export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-bone",
     name: "CT Bone",
-    description: "Optimiert für Knochenstrukturen",
     ambient: 0.2,
     diffuse: 0.9,
     specular: 0.3,
@@ -65,7 +67,6 @@ export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-lung",
     name: "CT Lung",
-    description: "Optimiert für Lungenparenchym",
     ambient: 0.2,
     diffuse: 0.9,
     specular: 0.1,
@@ -98,7 +99,6 @@ export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-soft-tissue",
     name: "CT Soft Tissue",
-    description: "Weichteilgewebe und Organe",
     ambient: 0.3,
     diffuse: 0.8,
     specular: 0.2,
@@ -131,7 +131,6 @@ export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-angiography",
     name: "CT Angiography",
-    description: "Kontrastmittelgefüllte Gefäße",
     ambient: 0.2,
     diffuse: 0.9,
     specular: 0.5,
@@ -162,7 +161,6 @@ export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-muscle-bone",
     name: "CT Muscle/Bone",
-    description: "Muskel- und Knochenstrukturen",
     ambient: 0.2,
     diffuse: 0.85,
     specular: 0.3,

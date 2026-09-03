@@ -80,7 +80,9 @@
     "selectSeries": "Select a series",
     "selectSeriesFor3d": "Select a series for 3D rendering",
     "selectSeriesForMpr": "Select a series for multi-planar reconstruction",
-    "unsupportedModality": "Modality {{modality}} is not supported. Only CT, MR and PT are available."
+    "unsupportedModality": "Modality {{modality}} is not supported. Only CT, MR and PT are available.",
+    "noImages": "No DICOM images loaded",
+    "checkConnection": "Check the DICOMweb connection and series ID."
   },
   "mesh": {
     "title": "3D Model",
@@ -144,6 +146,153 @@
   },
   "annotations": {
     "selectSeries": "Select a series",
-    "confirmDelete": "Delete annotation \"{{label}}\"?"
+    "confirmDelete": "Delete annotation \"{{label}}\"?",
+    "title": "Annotations",
+    "empty": "No annotations yet.",
+    "emptyHint": "Use the annotation tools to mark regions.",
+    "currentFrame": "Frame {{number}}",
+    "otherFrames": "Other frames",
+    "verifiedCount": "Verified: {{verified}}/{{total}}",
+    "frame": "Frame: {{number}}",
+    "categories": {
+      "nodule": "Nodule",
+      "mass": "Mass",
+      "infiltrate": "Infiltrate",
+      "effusion": "Effusion",
+      "fracture": "Fracture",
+      "lesion": "Lesion",
+      "anatomical": "Anatomical",
+      "other": "Other"
+    },
+    "severities": {
+      "benign": "Benign",
+      "indeterminate": "Indeterminate",
+      "malignant": "Malignant"
+    },
+    "lateralities": {
+      "left": "Left",
+      "right": "Right",
+      "bilateral": "Bilateral",
+      "midline": "Midline"
+    },
+    "dialog": {
+      "title": "Label annotation",
+      "description": "Enter a label and a category for the annotation.",
+      "label": "Label",
+      "labelPlaceholder": "e.g. Round nodule 1.2cm",
+      "category": "Category",
+      "context": "Tool: {{tool}} • Frame: {{frame}}",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "edit": {
+      "notesPlaceholder": "Notes...",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "frameShort": "• F{{number}}"
+  },
+  "vrt": {
+    "title": "3D VRT",
+    "selectPreset": "Select preset",
+    "resetCamera": "Reset camera",
+    "lighting": "Lighting",
+    "renderSettings": "Rendering settings",
+    "quality": "Render quality",
+    "qualityHigh": "High",
+    "qualityMedium": "Medium",
+    "qualityFast": "Fast",
+    "ambient": "Ambient light",
+    "diffuse": "Diffuse reflection",
+    "specular": "Specular reflection",
+    "specularPower": "Specular power",
+    "customPreset": "Custom",
+    "presets": {
+      "ct-bone": "Optimised for bone structures",
+      "ct-lung": "Optimised for lung parenchyma",
+      "ct-soft-tissue": "Soft tissue and organs",
+      "ct-angiography": "Contrast-filled vessels",
+      "ct-muscle-bone": "Muscle and bone structures"
+    },
+    "viewAngles": {
+      "anterior": "Anterior",
+      "posterior": "Posterior",
+      "left": "Left",
+      "right": "Right",
+      "superior": "Superior",
+      "inferior": "Inferior"
+    },
+    "shortcuts": {
+      "rotate": "Rotate",
+      "pan": "Pan",
+      "zoom": "Zoom",
+      "presets": "Presets",
+      "view": "View",
+      "reset": "Reset"
+    },
+    "viewerTitle": "3D Volume Rendering"
+  },
+  "mpr": {
+    "title": "MPR viewer",
+    "orientations": {
+      "axial": "Axial",
+      "sagittal": "Sagittal",
+      "coronal": "Coronal"
+    },
+    "blendModes": {
+      "composite": "Normal",
+      "mip": "MIP",
+      "minip": "MinIP",
+      "average": "Average"
+    },
+    "tools": {
+      "crosshairs": "Crosshairs",
+      "pan": "Pan",
+      "zoom": "Zoom",
+      "windowLevel": "Window/Level"
+    },
+    "windowLevelPreset": "W/L preset",
+    "maximize": "Maximise",
+    "allViews": "All views",
+    "slab": {
+      "toggle": "Slab/MIP",
+      "active": "{{mode}} {{thickness}}mm",
+      "projectionMode": "Projection mode",
+      "thickness": "Slab thickness",
+      "thicknessValue": "{{value}}mm",
+      "thicknessThin": "Thin (0mm)",
+      "hintMip": "Maximum intensity projection (vessels, bone)",
+      "hintMinip": "Minimum intensity projection (lung, airways)",
+      "hintAverage": "Mean intensity (noise reduction)"
+    },
+    "navigation": "MPR navigation",
+    "legend": {
+      "axial": "Axial (transverse)",
+      "sagittal": "Sagittal",
+      "coronal": "Coronal (frontal)"
+    },
+    "shortcuts": {
+      "crosshairs": "Crosshairs",
+      "pan": "Pan",
+      "zoom": "Zoom",
+      "windowLevel": "Window/Level",
+      "maximize": "Maximise",
+      "mipToggle": "Toggle MIP",
+      "reset": "Reset"
+    }
+  },
+  "loading": {
+    "images": "Loading DICOM images..."
+  },
+  "volume": {
+    "loadingData": "Loading DICOM data...",
+    "buildingVolume": "Building 3D volume...",
+    "imageCount_one": "{{count}} image",
+    "imageCount_other": "{{count}} images",
+    "loadError": "Failed to load",
+    "limitedSupport3d": "{{modality}} images are not well suited to 3D rendering, as spatial metadata (PixelSpacing, ImageOrientation) is often missing.",
+    "limitedSupportMpr": "{{modality}} images are not well suited to MPR, as spatial metadata (PixelSpacing, ImageOrientation) is often missing.",
+    "limitedSupportHint": "Note: {{modality}} images often lack spatial metadata. The 3D rendering may be inaccurate.",
+    "insufficientImages": "Not enough images for 3D rendering. At least {{min}} required, {{count}} available."
   }
 }

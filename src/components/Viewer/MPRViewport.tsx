@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { MPRViewportConfig, SlabSettings } from "@/types/mpr";
-import { SLAB_BLEND_MODE_LABELS } from "@/types/mpr";
 
 interface MPRViewportProps {
   config: MPRViewportConfig;
@@ -15,6 +15,7 @@ interface MPRViewportProps {
 
 export const MPRViewport = forwardRef<HTMLDivElement, MPRViewportProps>(
   ({ config, sliceIndex, totalSlices, isActive, onClick, className, slabSettings }, ref) => {
+    const { t } = useTranslation("viewer");
     const isSlabActive = slabSettings && slabSettings.thickness > 0;
 
     return (
@@ -35,13 +36,16 @@ export const MPRViewport = forwardRef<HTMLDivElement, MPRViewportProps>(
           className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded text-xs font-semibold"
           style={{ backgroundColor: config.color, color: "black" }}
         >
-          {config.label}
+          {t(`mpr.orientations.${config.orientation}`)}
         </div>
 
         {/* Slab indicator */}
         {isSlabActive && (
           <div className="absolute top-2 right-2 z-10 bg-accent text-accent-foreground px-2 py-0.5 rounded text-xs font-semibold">
-            {SLAB_BLEND_MODE_LABELS[slabSettings.blendMode]} {slabSettings.thickness}mm
+            {t("mpr.slab.active", {
+              mode: t(`mpr.blendModes.${slabSettings.blendMode}`),
+              thickness: slabSettings.thickness,
+            })}
           </div>
         )}
 

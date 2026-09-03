@@ -100,27 +100,32 @@ export interface AnnotationListParams {
   offset?: number;
 }
 
-// Annotation category labels for UI
-export const ANNOTATION_CATEGORIES: Record<AnnotationCategory, string> = {
-  nodule: "Nodule",
-  mass: "Masse",
-  infiltrate: "Infiltrat",
-  effusion: "Erguss",
-  fracture: "Fraktur",
-  lesion: "Läsion",
-  anatomical: "Anatomisch",
-  other: "Sonstiges",
-};
+// The members of each classification union, in the order the UI offers them.
+// Their display names live in the `viewer` resources under
+// `annotations.{categories,severities,lateralities}.<member>` and are resolved
+// at the render site: a label table in a type module is fixed at import time and
+// cannot follow a language switch. Adding a member here without its translation
+// fails the contract test in `src/i18n/__tests__/resources.test.ts`.
+export const ANNOTATION_CATEGORY_VALUES: AnnotationCategory[] = [
+  "nodule",
+  "mass",
+  "infiltrate",
+  "effusion",
+  "fracture",
+  "lesion",
+  "anatomical",
+  "other",
+];
 
-export const ANNOTATION_SEVERITIES: Record<AnnotationSeverity, string> = {
-  benign: "Benigne",
-  indeterminate: "Unbestimmt",
-  malignant: "Maligne",
-};
+export const ANNOTATION_SEVERITY_VALUES: AnnotationSeverity[] = [
+  "benign",
+  "indeterminate",
+  "malignant",
+];
 
-export const ANNOTATION_LATERALITIES: Record<AnnotationLaterality, string> = {
-  left: "Links",
-  right: "Rechts",
-  bilateral: "Bilateral",
-  midline: "Mittellinie",
-};
+export const ANNOTATION_LATERALITY_VALUES: AnnotationLaterality[] = [
+  "left",
+  "right",
+  "bilateral",
+  "midline",
+];

@@ -1,3 +1,16 @@
+/**
+ * German-language demo fixtures.
+ *
+ * The literals below are deliberately **not** translated: they stand in for
+ * radiologist-authored report text and patient records, not for UI copy, and a
+ * `t()` sweep here would produce translation keys nobody renders. #117 records
+ * this decision — treat a report body or a patient name in this file as sample
+ * data rather than as an i18n finding.
+ *
+ * Display formatting is a different matter and was fixed separately: the date
+ * and time helpers moved to `src/lib/date.ts` in #228 and format in the active
+ * UI language.
+ */
 import type {
   Patient,
   Study,

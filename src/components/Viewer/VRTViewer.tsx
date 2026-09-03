@@ -18,6 +18,9 @@ const PRESET_SHORTCUTS: Record<string, number> = {
   "5": 4, // CT Muscle/Bone
 };
 
+/** Minimum slices a volume needs before 3D rendering is offered. */
+const MIN_SLICES_FOR_3D = 10;
+
 const VIEW_ANGLE_SHORTCUTS: Record<string, VRTViewAngle> = {
   a: "anterior",
   p: "posterior",
@@ -127,7 +130,7 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
 
   if (!series) {
     return (
-      <ViewerEmptyState title="3D Volume Rendering" subtitle={t("emptyState.selectSeriesFor3d")} />
+      <ViewerEmptyState title={t("vrt.viewerTitle")} subtitle={t("emptyState.selectSeriesFor3d")} />
     );
   }
 
@@ -136,18 +139,21 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
   if (!supportedModalities.includes(series.modality)) {
     return (
       <ViewerEmptyState
-        title="3D Volume Rendering"
+        title={t("vrt.viewerTitle")}
         subtitle={t("emptyState.unsupportedModality", { modality: series.modality })}
       />
     );
   }
 
   // Need enough slices for 3D
-  if (imageIds.length < 10) {
+  if (imageIds.length < MIN_SLICES_FOR_3D) {
     return (
       <ViewerEmptyState
-        title="3D Volume Rendering"
-        subtitle={`Nicht genügend Bilder für 3D-Rendering. Mindestens 10 erforderlich, ${imageIds.length} vorhanden.`}
+        title={t("vrt.viewerTitle")}
+        subtitle={t("volume.insufficientImages", {
+          min: MIN_SLICES_FOR_3D,
+          count: imageIds.length,
+        })}
       />
     );
   }
@@ -156,7 +162,7 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
   const modalitiesWithLimitedSupport = ["US", "XA", "RF", "SC"];
   const hasLimitedSupport = modalitiesWithLimitedSupport.includes(series.modality);
   const limitedSupportWarning = hasLimitedSupport
-    ? `Hinweis: ${series.modality}-Bilder haben oft keine räumlichen Metadaten. Die 3D-Darstellung kann ungenau sein.`
+    ? t("volume.limitedSupportHint", { modality: series.modality })
     : null;
 
   return (
@@ -176,9 +182,11 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin" />
             <span className="text-sm">
-              {isFetchingInstances ? "Lade DICOM-Daten..." : "Erstelle 3D-Volumen..."}
+              {isFetchingInstances ? t("volume.loadingData") : t("volume.buildingVolume")}
             </span>
-            <span className="text-xs text-muted-foreground/60">{imageIds.length} Bilder</span>
+            <span className="text-xs text-muted-foreground/60">
+              {t("volume.imageCount", { count: imageIds.length })}
+            </span>
           </div>
         </div>
       )}
@@ -187,12 +195,11 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
       {effectiveError && !isLoading && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-destructive max-w-md px-4">
-            <p className="text-sm font-medium">Fehler beim Laden</p>
+            <p className="text-sm font-medium">{t("volume.loadError")}</p>
             <p className="text-xs text-muted-foreground mt-1">{effectiveError}</p>
             {hasLimitedSupport && (
               <p className="text-xs text-yellow-500 mt-2">
-                {series.modality}-Bilder sind für 3D-Rendering nicht optimal geeignet, da oft
-                räumliche Metadaten (PixelSpacing, ImageOrientation) fehlen.
+                {t("volume.limitedSupport3d", { modality: series.modality })}
               </p>
             )}
           </div>
@@ -210,29 +217,30 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
             <>
               {/* Preset badge */}
               <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 text-xs text-white">
-                {VRT_PRESETS.find((p) => p.id === settings.presetId)?.name || "Custom"}
+                {VRT_PRESETS.find((p) => p.id === settings.presetId)?.name ?? t("vrt.customPreset")}
               </div>
 
               {/* Controls hint */}
               <div className="absolute bottom-3 left-3 space-y-0.5 text-xs text-white/70 bg-black/40 rounded px-2 py-1">
                 <p>
-                  <kbd className="px-1 bg-black/40 rounded">LMB</kbd> Rotieren
+                  <kbd className="px-1 bg-black/40 rounded">LMB</kbd> {t("vrt.shortcuts.rotate")}
                 </p>
                 <p>
-                  <kbd className="px-1 bg-black/40 rounded">RMB</kbd> Pan
+                  <kbd className="px-1 bg-black/40 rounded">RMB</kbd> {t("vrt.shortcuts.pan")}
                 </p>
                 <p>
-                  <kbd className="px-1 bg-black/40 rounded">Scroll</kbd> Zoom
+                  <kbd className="px-1 bg-black/40 rounded">Scroll</kbd> {t("vrt.shortcuts.zoom")}
                 </p>
                 <div className="border-t border-white/20 mt-1 pt-1">
                   <p>
-                    <kbd className="px-1 bg-black/40 rounded">1-5</kbd> Presets
+                    <kbd className="px-1 bg-black/40 rounded">1-5</kbd> {t("vrt.shortcuts.presets")}
                   </p>
                   <p>
-                    <kbd className="px-1 bg-black/40 rounded">A/P/L/R/S/I</kbd> Ansicht
+                    <kbd className="px-1 bg-black/40 rounded">A/P/L/R/S/I</kbd>{" "}
+                    {t("vrt.shortcuts.view")}
                   </p>
                   <p>
-                    <kbd className="px-1 bg-black/40 rounded">Esc</kbd> Reset
+                    <kbd className="px-1 bg-black/40 rounded">Esc</kbd> {t("vrt.shortcuts.reset")}
                   </p>
                 </div>
               </div>
@@ -242,7 +250,7 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
                 <div className="absolute bottom-3 right-3 text-right text-xs text-white/70 bg-black/40 rounded px-2 py-1">
                   <p className="truncate max-w-[200px]">{series.seriesDescription}</p>
                   <p>
-                    {series.modality} • {imageIds.length} Bilder
+                    {series.modality} • {t("volume.imageCount", { count: imageIds.length })}
                   </p>
                   {limitedSupportWarning && (
                     <p className="text-yellow-400 text-[10px] mt-1 max-w-[200px]">
