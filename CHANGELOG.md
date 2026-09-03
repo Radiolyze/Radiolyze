@@ -12,6 +12,14 @@ for the full history.
 
 ### Added
 
+- `category` (`pathological` / `anatomical` / `other`) on every localization
+  finding (#298): requested in both localize prompts, validated on
+  `FindingBoxOutput`, and carried through the job metadata into `FindingBox` in
+  the frontend. `AIFindingsOverlay` colours each box by it instead of by a
+  substring match over the label, and names it in the box's `<title>` so the
+  classification is not carried by colour alone. Anatomy mode defaults a box
+  the model left uncategorized to `anatomical`; a value outside the set drops
+  to "uncategorized" rather than taking the finding down with it.
 - `i18next/no-literal-string` as a lint guard over `src/components/**` and
   `src/pages/**` (#117), plus `eslint-plugin-i18next` as a devDependency — the
   rule the issue asks for. A warning, not an error: it also reports product
@@ -127,6 +135,14 @@ for the full history.
 
 ### Changed
 
+- `SCHEMA_VERSION` 1.2 → 1.3, for the finding category. The version is stamped
+  into every stored job's metadata and is the only thing separating a finding
+  with no category because the field did not exist from one the model declined
+  to classify.
+- The keyword lists in `AIFindingsOverlay` are demoted to a fallback for
+  findings stored before the category existed, and documented as closed while
+  the model's output is not: "Pneumothorax", "Kardiomegalie" and "Spiculae" are
+  in neither list and were coloured neutral without a word about it.
 - The remaining user-visible strings resolve through i18next (#117). Two parts
   of the issue's scope turned out to be understated: `VRTToolbar` held twelve
   German literals rather than the two listed (the earlier count came from an

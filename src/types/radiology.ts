@@ -1,6 +1,15 @@
 // Radiolyze Radiology Types
 
 /**
+ * How the model classified a finding. Mirrors `FindingCategory` in
+ * `backend/app/ai_schemas.py` — a value added on one side without the other
+ * fails the resource contract test in `src/i18n/__tests__/resources.test.ts`.
+ */
+export const FINDING_CATEGORY_VALUES = ["pathological", "anatomical", "other"] as const;
+
+export type FindingCategory = (typeof FINDING_CATEGORY_VALUES)[number];
+
+/**
  * A single AI-detected finding with a bounding box.
  * Coordinates are in MedGemma's normalized 0-1000 space:
  * box_2d = [y_min, x_min, y_max, x_max]
@@ -9,6 +18,12 @@ export interface FindingBox {
   box_2d: [number, number, number, number];
   label: string;
   confidence?: number;
+  /**
+   * Absent on findings stored before the backend published the field (#298),
+   * and on a response where the model left it out. The overlay falls back to
+   * matching on the label there.
+   */
+  category?: FindingCategory;
 }
 
 export interface Patient {

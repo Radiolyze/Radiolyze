@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { FindingBox } from "@/types/radiology";
+import { useTranslation } from "react-i18next";
+import type { FindingBox, FindingCategory } from "@/types/radiology";
 import { cn } from "@/lib/utils";
 
 interface AIFindingsOverlayProps {
@@ -19,6 +20,7 @@ interface AIFindingsOverlayProps {
  * aspect ratios such as chest X-rays).
  */
 export function AIFindingsOverlay({ findings, className }: AIFindingsOverlayProps) {
+  const { t } = useTranslation("viewer");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   if (findings.length === 0) return null;
@@ -28,14 +30,15 @@ export function AIFindingsOverlay({ findings, className }: AIFindingsOverlayProp
       className={cn("absolute inset-0 w-full h-full pointer-events-none", className)}
       viewBox="0 0 1000 1000"
       preserveAspectRatio="xMidYMid meet"
-      aria-label={`${findings.length} KI-Befunde`}
+      aria-label={t("findings.overlayLabel", { count: findings.length })}
     >
       {findings.map((finding, index) => {
         const [y1, x1, y2, x2] = finding.box_2d;
         const width = x2 - x1;
         const height = y2 - y1;
         const isHovered = hoveredIndex === index;
-        const { stroke, fill, labelBg } = getBoxColors(finding);
+        const category = resolveCategory(finding);
+        const { stroke, fill, labelBg } = CATEGORY_COLORS[category];
 
         // Label: place above the box; if box is at the very top, place below instead
         const labelY = y1 > 40 ? y1 - 6 : y2 + 20;
@@ -48,6 +51,16 @@ export function AIFindingsOverlay({ findings, className }: AIFindingsOverlayProp
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
           >
+            {/* The category reaches the box as colour only, which a reader with
+                a red-green or blue-yellow deficiency cannot separate. The title
+                names it in words for the tooltip and the accessibility tree. */}
+            <title>
+              {t("findings.boxTitle", {
+                label: finding.label,
+                category: t(`findings.categories.${category}`),
+              })}
+            </title>
+
             {/* Bounding box rectangle */}
             <rect
               x={x1}
@@ -135,6 +148,17 @@ function CornerAccents({
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Fallback classification for findings that carry no `category`: everything
+ * stored before the backend published the field (#298), plus a response where
+ * the model left it out.
+ *
+ * Both lists are bilingual, but they are also *closed* while the model's output
+ * is not — "Pneumothorax", "Kardiomegalie" and "Spiculae" are in neither, and
+ * fall through to "other". That is why this is the fallback and not the rule:
+ * a silently wrong colour is worse in a reporting overlay than a neutral one.
+ * Do not grow these lists; fix the category at the source instead.
+ */
 const PATHOLOGICAL_KEYWORDS = [
   "rundherd",
   "nodule",
@@ -189,45 +213,47 @@ type BoxColors = {
   labelBg: string;
 };
 
-function getBoxColors(finding: FindingBox): BoxColors {
-  const labelLower = finding.label.toLowerCase();
-
-  const isPathological = PATHOLOGICAL_KEYWORDS.some((kw) => labelLower.includes(kw));
-  const isAnatomical = !isPathological && ANATOMICAL_KEYWORDS.some((kw) => labelLower.includes(kw));
-
-  if (isPathological) {
-    // Red-orange for pathological findings
-    return {
-      stroke: "rgba(239, 68, 68, 0.95)",
-      fill: {
-        normal: "rgba(239, 68, 68, 0.08)",
-        hovered: "rgba(239, 68, 68, 0.18)",
-      },
-      labelBg: "rgba(185, 28, 28, 0.92)",
-    };
-  }
-
-  if (isAnatomical) {
-    // Cyan-blue for anatomical structures
-    return {
-      stroke: "rgba(6, 182, 212, 0.90)",
-      fill: {
-        normal: "rgba(6, 182, 212, 0.06)",
-        hovered: "rgba(6, 182, 212, 0.15)",
-      },
-      labelBg: "rgba(8, 145, 178, 0.90)",
-    };
-  }
-
-  // Amber as default
-  return {
+const CATEGORY_COLORS: Record<FindingCategory, BoxColors> = {
+  // Red-orange for pathological findings
+  pathological: {
+    stroke: "rgba(239, 68, 68, 0.95)",
+    fill: {
+      normal: "rgba(239, 68, 68, 0.08)",
+      hovered: "rgba(239, 68, 68, 0.18)",
+    },
+    labelBg: "rgba(185, 28, 28, 0.92)",
+  },
+  // Cyan-blue for anatomical structures
+  anatomical: {
+    stroke: "rgba(6, 182, 212, 0.90)",
+    fill: {
+      normal: "rgba(6, 182, 212, 0.06)",
+      hovered: "rgba(6, 182, 212, 0.15)",
+    },
+    labelBg: "rgba(8, 145, 178, 0.90)",
+  },
+  // Amber for anything the model did not classify
+  other: {
     stroke: "rgba(245, 158, 11, 0.90)",
     fill: {
       normal: "rgba(245, 158, 11, 0.07)",
       hovered: "rgba(245, 158, 11, 0.16)",
     },
     labelBg: "rgba(180, 83, 9, 0.90)",
-  };
+  },
+};
+
+/**
+ * The model's own category wins; the keyword lists above only answer for a
+ * finding that carries none.
+ */
+function resolveCategory(finding: FindingBox): FindingCategory {
+  if (finding.category) return finding.category;
+
+  const labelLower = finding.label.toLowerCase();
+  if (PATHOLOGICAL_KEYWORDS.some((kw) => labelLower.includes(kw))) return "pathological";
+  if (ANATOMICAL_KEYWORDS.some((kw) => labelLower.includes(kw))) return "anatomical";
+  return "other";
 }
 
 /** Rough character-count-based width estimate for the label background rect. */

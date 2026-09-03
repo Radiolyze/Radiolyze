@@ -81,6 +81,16 @@
     "showFindings": "Show AI findings ({{count}})",
     "hideFindings": "Hide AI findings ({{count}})"
   },
+  "findings": {
+    "overlayLabel_one": "{{count}} AI finding",
+    "overlayLabel_other": "{{count}} AI findings",
+    "boxTitle": "{{label}} — {{category}}",
+    "categories": {
+      "pathological": "Pathological finding",
+      "anatomical": "Anatomical structure",
+      "other": "Not classified"
+    }
+  },
   "emptyState": {
     "selectSeries": "Select a series",
     "selectSeriesFor3d": "Select a series for 3D rendering",
