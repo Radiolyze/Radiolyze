@@ -285,5 +285,11 @@
       "passRate": "Pass-Rate",
       "warnings": "Warnungen"
     }
+  },
+  "autoSave": {
+    "saving": "Speichern…",
+    "saved": "Gespeichert",
+    "conflict": "Konflikt",
+    "error": "Fehler"
   }
 }

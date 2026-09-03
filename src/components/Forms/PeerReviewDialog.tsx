@@ -46,10 +46,11 @@ interface PeerReviewDialogProps {
   ) => void;
 }
 
+/** Icon and colour per decision; the label is looked up as `peerReview.decision.<key>`. */
 const decisionConfig = {
-  agree: { icon: CheckCircle, label: "Zustimmung", color: "text-green-400" },
-  disagree: { icon: XCircle, label: "Ablehnung", color: "text-red-400" },
-  revise: { icon: Edit3, label: "Überarbeitung", color: "text-yellow-400" },
+  agree: { icon: CheckCircle, color: "text-green-400" },
+  disagree: { icon: XCircle, color: "text-red-400" },
+  revise: { icon: Edit3, color: "text-yellow-400" },
 };
 
 export function PeerReviewDialog({
@@ -59,6 +60,7 @@ export function PeerReviewDialog({
   onSubmitReview,
 }: PeerReviewDialogProps) {
   const { t } = useTranslation("report");
+  const { t: tCommon } = useTranslation("common");
   const [requestOpen, setRequestOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState<PeerReview | null>(null);
   const [assignedTo, setAssignedTo] = useState("");
@@ -97,19 +99,23 @@ export function PeerReviewDialog({
             </span>
             {pendingReviews.length > 0 && (
               <Badge variant="secondary" className="text-xs">
-                {pendingReviews.length} offen
+                {t("peerReview.pendingCount", { count: pendingReviews.length })}
               </Badge>
             )}
           </div>
           {completedReviews.map((r) => {
-            const cfg =
-              decisionConfig[r.decision as keyof typeof decisionConfig] || decisionConfig.agree;
+            const decision: keyof typeof decisionConfig =
+              r.decision && r.decision in decisionConfig
+                ? (r.decision as keyof typeof decisionConfig)
+                : "agree";
+            const cfg = decisionConfig[decision];
             const Icon = cfg.icon;
             return (
               <div key={r.id} className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Icon className={`h-3 w-3 ${cfg.color}`} />
                 <span>
-                  {r.assigned_to || "Reviewer"}: {cfg.label}
+                  {r.assigned_to || t("peerReview.reviewer")}:{" "}
+                  {t(`peerReview.decision.${decision}`)}
                 </span>
                 {r.review_comment && (
                   <span className="truncate max-w-[150px]" title={r.review_comment}>
@@ -124,7 +130,11 @@ export function PeerReviewDialog({
               key={r.id}
               className="flex items-center justify-between text-xs text-muted-foreground"
             >
-              <span>{r.assigned_to || "Unzugewiesen"}: ausstehend</span>
+              <span>
+                {t("peerReview.pendingFor", {
+                  reviewer: r.assigned_to || t("peerReview.unassigned"),
+                })}
+              </span>
               {onSubmitReview && (
                 <Button
                   size="sm"
@@ -132,7 +142,7 @@ export function PeerReviewDialog({
                   className="h-6 text-xs"
                   onClick={() => setSubmitOpen(r)}
                 >
-                  Bewerten
+                  {t("peerReview.rate")}
                 </Button>
               )}
             </div>
@@ -198,9 +208,9 @@ export function PeerReviewDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="agree">Zustimmung</SelectItem>
-                <SelectItem value="disagree">Ablehnung</SelectItem>
-                <SelectItem value="revise">Überarbeitung empfohlen</SelectItem>
+                <SelectItem value="agree">{t("peerReview.decision.agree")}</SelectItem>
+                <SelectItem value="disagree">{t("peerReview.decision.disagree")}</SelectItem>
+                <SelectItem value="revise">{t("peerReview.decision.revise")}</SelectItem>
               </SelectContent>
             </Select>
             <Textarea
@@ -215,10 +225,10 @@ export function PeerReviewDialog({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSubmitOpen(null)}>
-              Abbrechen
+              {tCommon("actions.cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={!reviewComment.trim()}>
-              Absenden
+              {t("peerReview.submitReview")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -15,7 +15,10 @@
     "name": "Name",
     "email": "E-Mail",
     "role": "Rolle",
-    "department": "Abteilung"
+    "department": "Abteilung",
+    "signature": "Digitale Signatur",
+    "signaturePlaceholder": "Dr. med. Max Mustermann",
+    "signatureHint": "Wird bei Report-Freigabe verwendet"
   },
   "display": {
     "title": "Darstellung",

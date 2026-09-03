@@ -15,7 +15,10 @@
     "name": "Name",
     "email": "Email",
     "role": "Role",
-    "department": "Department"
+    "department": "Department",
+    "signature": "Digital signature",
+    "signaturePlaceholder": "Dr Jane Doe, MD",
+    "signatureHint": "Used when a report is approved"
   },
   "display": {
     "title": "Display",

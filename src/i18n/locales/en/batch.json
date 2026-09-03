@@ -33,7 +33,14 @@
     "created": "Created",
     "actions": "Actions",
     "noResults": "No results found",
-    "loading": "Loading data..."
+    "loading": "Loading data...",
+    "title": "Reports",
+    "entryCount_one": "{{count}} entry",
+    "entryCount_other": "{{count}} entries",
+    "errorHint": "Please try again or contact support.",
+    "noResultsFiltered": "Adjust the filters to see more results.",
+    "noReportsYet": "There are no reports yet.",
+    "accession": "Accession"
   },
   "actions": {
     "open": "Open",
@@ -52,7 +59,9 @@
     "confirmExport": "Do you want to export {{count}} reports?",
     "processing": "Processing {{current}} of {{total}}...",
     "completed": "{{count}} reports processed successfully",
-    "failed": "{{count}} reports failed"
+    "failed": "{{count}} reports failed",
+    "deleteConfirm_one": "{{count}} report will be permanently deleted.",
+    "deleteConfirm_other": "{{count}} reports will be permanently deleted."
   },
   "empty": {
     "title": "No Reports",

@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useState, useCallback } from "react";
 import { useWebSocket, ReportStatusEvent, ReportStatusPayload } from "./useWebSocket";
 import type { QueueItem } from "@/types/radiology";
@@ -26,14 +27,14 @@ export function useReportStatusSync(initialItems: QueueItem[] = []) {
       // Show toast for significant status changes
       if (payload.qaStatus === "fail") {
         toast({
-          title: "QA-Prüfung fehlgeschlagen",
-          description: `Report ${reportId.slice(0, 8)}... hat die QA nicht bestanden.`,
+          title: i18n.t("errors:qa.failedTitle"),
+          description: i18n.t("errors:qa.failedDescription", { report: reportId.slice(0, 8) }),
           variant: "destructive",
         });
       } else if (payload.qaStatus === "pass") {
         toast({
-          title: "QA-Prüfung bestanden",
-          description: `Report ${reportId.slice(0, 8)}... ist bereit zur Freigabe.`,
+          title: i18n.t("errors:qa.passedTitle"),
+          description: i18n.t("errors:qa.passedDescription", { report: reportId.slice(0, 8) }),
         });
       }
     },

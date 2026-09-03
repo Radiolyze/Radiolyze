@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useEffect, useState } from "react";
 import type { ImageRef, Series } from "@/types/radiology";
 import {
@@ -228,7 +229,7 @@ export const useDicomSeriesInstances = (series: Series | null): UseDicomSeriesIn
       } catch (err) {
         logger.warn("Failed to load DICOM instances", err);
         if (isActive) {
-          setError("DICOM-Daten konnten nicht geladen werden.");
+          setError(i18n.t("errors:dicomweb.instancesLoadFailed"));
           setImageIds([]);
           setImageRefs([]);
         }

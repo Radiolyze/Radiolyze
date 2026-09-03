@@ -33,7 +33,14 @@
     "created": "Erstellt",
     "actions": "Aktionen",
     "noResults": "Keine Ergebnisse gefunden",
-    "loading": "Lade Daten..."
+    "loading": "Lade Daten...",
+    "title": "Reports",
+    "entryCount_one": "{{count}} Eintrag",
+    "entryCount_other": "{{count}} Einträge",
+    "errorHint": "Bitte versuchen Sie es erneut oder kontaktieren Sie den Support.",
+    "noResultsFiltered": "Passen Sie die Filter an, um mehr Ergebnisse zu sehen.",
+    "noReportsYet": "Es sind noch keine Reports vorhanden.",
+    "accession": "Accession"
   },
   "actions": {
     "open": "Öffnen",
@@ -52,7 +59,9 @@
     "confirmExport": "Möchten Sie {{count}} Befunde exportieren?",
     "processing": "Verarbeite {{current}} von {{total}}...",
     "completed": "{{count}} Befunde erfolgreich verarbeitet",
-    "failed": "{{count}} Befunde fehlgeschlagen"
+    "failed": "{{count}} Befunde fehlgeschlagen",
+    "deleteConfirm_one": "{{count}} Report wird dauerhaft gelöscht.",
+    "deleteConfirm_other": "{{count}} Reports werden dauerhaft gelöscht."
   },
   "empty": {
     "title": "Keine Befunde",

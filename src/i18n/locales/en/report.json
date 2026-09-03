@@ -112,7 +112,19 @@
     "cancel": "Cancel",
     "submit": "Request",
     "submitTitle": "Submit Review",
-    "reviewCommentPlaceholder": "Review comment..."
+    "reviewCommentPlaceholder": "Review comment...",
+    "pendingCount_one": "{{count}} open",
+    "pendingCount_other": "{{count}} open",
+    "reviewer": "Reviewer",
+    "unassigned": "Unassigned",
+    "pendingFor": "{{reviewer}}: pending",
+    "rate": "Review",
+    "submitReview": "Submit",
+    "decision": {
+      "agree": "Agree",
+      "disagree": "Disagree",
+      "revise": "Revision recommended"
+    }
   },
   "structuredForm": {
     "general": "General",
@@ -173,5 +185,11 @@
       "regressed": "Regressed",
       "resolved": "Resolved"
     }
+  },
+  "toast": {
+    "saved": "Findings saved"
+  },
+  "diff": {
+    "noChanges": "No changes"
   }
 }

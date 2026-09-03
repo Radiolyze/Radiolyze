@@ -70,8 +70,8 @@ export function ProgressOverlay({
       )}
     >
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Status</span>
-        <span className="uppercase tracking-wide">Live</span>
+        <span>{t("progress.status")}</span>
+        <span className="uppercase tracking-wide">{t("progress.live")}</span>
       </div>
 
       <div className="flex items-center justify-between">
@@ -94,7 +94,7 @@ export function ProgressOverlay({
 
       {asrConfidence !== undefined && asrConfidence > 0 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>ASR Konfidenz</span>
+          <span>{t("progress.asrConfidence")}</span>
           <span className="font-medium text-foreground">{Math.round(asrConfidence * 100)}%</span>
         </div>
       )}

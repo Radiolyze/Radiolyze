@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { AIStatus, ImageRef, Report } from "@/types/radiology";
@@ -100,7 +101,7 @@ export function useWorkspaceInference({
     } catch (error) {
       logger.warn("Failed to generate impression", error);
       setLocalAiStatus("error");
-      toast.error("KI-Analyse fehlgeschlagen");
+      toast.error(i18n.t("errors:report.generateFailed"));
     }
   }, [
     findings,
@@ -117,7 +118,7 @@ export function useWorkspaceInference({
   const handleAnalyzeImages = useCallback(async () => {
     if (isGenerating || isAnalyzingImages) return;
     if (imageRefs.length === 0 && priorImageRefs.length === 0) {
-      toast.error("Keine Bilder zum Analysieren vorhanden");
+      toast.error(i18n.t("errors:report.noImagesToAnalyze"));
       return;
     }
 
@@ -136,11 +137,11 @@ export function useWorkspaceInference({
         findingsText: result.findings,
         impressionText: result.impression,
       });
-      toast.success("KI-Analyse abgeschlossen");
+      toast.success(i18n.t("viewer:progress.ai.completed"));
     } catch (error) {
       logger.warn("Failed to analyze images", error);
       setLocalAiStatus("error");
-      toast.error("KI-Analyse fehlgeschlagen");
+      toast.error(i18n.t("errors:report.generateFailed"));
     } finally {
       setIsAnalyzingImages(false);
     }
@@ -161,7 +162,7 @@ export function useWorkspaceInference({
     async (imageRef: ImageRef) => {
       if (isAnalyzingFrame || isGenerating) return;
       if (!reportId || !studyId) {
-        toast.error("Kein Report ausgewählt");
+        toast.error(i18n.t("errors:report.noneSelected"));
         return;
       }
       setIsAnalyzingFrame(true);
@@ -193,7 +194,7 @@ export function useWorkspaceInference({
       } catch (error) {
         logger.warn("Frame-Lokalisierung fehlgeschlagen", error);
         setLocalAiStatus("error");
-        toast.error("Frame-Analyse fehlgeschlagen");
+        toast.error(i18n.t("errors:report.frameAnalysisFailed"));
       } finally {
         setIsAnalyzingFrame(false);
       }

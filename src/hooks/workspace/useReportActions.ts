@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import type { Report } from "@/types/radiology";
@@ -48,7 +49,7 @@ export function useReportActions({
     async (signature?: string) => {
       const name = signature?.trim();
       if (!name) {
-        toast.error("Bitte Name/Unterschrift eingeben");
+        toast.error(i18n.t("errors:report.signatureRequired"));
         return;
       }
 
@@ -57,7 +58,7 @@ export function useReportActions({
         toast.success(`Report freigegeben (${name})`);
       } catch (error) {
         logger.warn("Report finalize failed", error);
-        toast.error("Report-Freigabe fehlgeschlagen");
+        toast.error(i18n.t("errors:report.approveFailed"));
       }
     },
     [approveReport],
@@ -69,10 +70,10 @@ export function useReportActions({
     }
     try {
       await updateFindings(findings);
-      toast.success("Befund gespeichert");
+      toast.success(i18n.t("report:toast.saved"));
     } catch (error) {
       logger.warn("Findings update failed", error);
-      toast.error("Befund speichern fehlgeschlagen");
+      toast.error(i18n.t("errors:report.saveFailed"));
     }
   }, [findings, reportId, updateFindings]);
 
@@ -93,7 +94,7 @@ export function useReportActions({
         toast.success(`DICOM SR exportiert (${format.toUpperCase()})`);
       } catch (error) {
         logger.warn("DICOM SR export failed", error);
-        toast.error("DICOM SR Export fehlgeschlagen");
+        toast.error(i18n.t("errors:report.exportFailed"));
       } finally {
         if (blobUrl) URL.revokeObjectURL(blobUrl);
       }

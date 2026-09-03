@@ -285,5 +285,11 @@
       "passRate": "Pass rate",
       "warnings": "Warnings"
     }
+  },
+  "autoSave": {
+    "saving": "Saving…",
+    "saved": "Saved",
+    "conflict": "Conflict",
+    "error": "Error"
   }
 }

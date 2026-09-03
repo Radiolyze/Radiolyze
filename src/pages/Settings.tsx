@@ -63,9 +63,9 @@ export default function Settings() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="signature">Digitale Signatur</Label>
-              <Input id="signature" placeholder="Dr. med. Max Mustermann" />
-              <p className="text-xs text-muted-foreground">Wird bei Report-Freigabe verwendet</p>
+              <Label htmlFor="signature">{t("profile.signature")}</Label>
+              <Input id="signature" placeholder={t("profile.signaturePlaceholder")} />
+              <p className="text-xs text-muted-foreground">{t("profile.signatureHint")}</p>
             </div>
           </CardContent>
         </Card>

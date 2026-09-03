@@ -105,10 +105,9 @@ export default function Batch() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
-              <span>Reports</span>
+              <span>{t("table.title")}</span>
               <Badge variant="outline">
-                {filteredReports.length}{" "}
-                {t("table.noResults").includes("Ergebnisse") ? "Einträge" : "entries"}
+                {t("table.entryCount", { count: filteredReports.length })}
               </Badge>
             </CardTitle>
           </CardHeader>

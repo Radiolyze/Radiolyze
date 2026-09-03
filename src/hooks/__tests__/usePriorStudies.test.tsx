@@ -102,9 +102,7 @@ describe("usePriorStudies", () => {
 
     const { result } = setup("pat-1", undefined);
 
-    await waitFor(() =>
-      expect(result.current.error).toBe("Voruntersuchungen konnten nicht geladen werden."),
-    );
+    await waitFor(() => expect(result.current.error).toBe("Prior studies could not be loaded."));
     expect(result.current.priorStudies).toEqual([]);
   });
 });
