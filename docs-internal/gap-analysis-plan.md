@@ -93,7 +93,7 @@ semantisch ähnliche Texte werden nicht gefunden.
 **Roadmap:** Phase 5 `[ ]` – "DICOM → Image Pipeline für Multimodal Inference (WADO-RS/JPEG)"  
 **Befund:** Das Frontend baut WADO-RS Rendered-Frame-URLs via
 `buildWadorsRenderedFrameUrl` und übergibt sie als `image_urls` an den
-Inference-Endpunkt. `backend/app/inference_clients.py` schreibt diese URLs für
+Inference-Endpunkt. `backend/app/image_encoder.py` schreibt diese URLs für
 den Docker-internen Zugriff um (`_rewrite_image_urls`). **Serverseitiges
 Frame-Retrieval** (Backend holt selbst Pixel-Daten via WADO-RS und konvertiert
 zu JPEG/PNG) existiert nicht. `dicom_client.py` enthält nur `store_sr()`
@@ -156,7 +156,7 @@ Traceability-Anforderung aus EU AI Act Art. 12 potenziell verletzt.
 #### GAP-08: Longitudinal Context – keine DB-Persistenz der Current/Prior-Paare
 **Roadmap:** Phase 5.5 `[ ]` – "Longitudinal Context: Current/Prior Paare + Time-Delta"  
 **Befund:** `time_delta_days` ist in `backend/app/schemas.py` und
-`inference_clients.py` als Feld in `image_refs` vorhanden und wird korrekt in
+`inference_clients/comparison.py` als Feld in `image_refs` vorhanden und wird korrekt in
 den Prompt-Text eingebettet. Es gibt jedoch keine DB-Tabelle und keinen
 API-Endpunkt zur Persistenz von "Current-Study ↔ Prior-Study"-Paaren mit
 zugehörigem Time-Delta. Der Wert wird nur pro-Request übergeben, nicht dauerhaft

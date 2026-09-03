@@ -109,7 +109,7 @@ and effort estimates: `docs-internal/status-and-next-themes.md`.
 2. Clear the mypy backlog (107 errors across 29 files) and make the gate blocking.
 3. Work off the Dependabot queue (20 open PRs; only `eslint <10` is held deliberately).
 4. Finish i18n (#117) and pull the frontend coverage ratchet past its 11% floor.
-5. Split the backend monoliths (`tasks.py` 975 lines, `inference_clients.py` 774, `api/training.py` 752).
+5. Split the backend monoliths (#293) — `inference_clients.py` (774) is done and is now a package with a module per task family; `tasks.py` (975) and `api/training.py` (752) remain.
 6. E2E coverage for viewer interaction (#116) — blocked on a decision about seeded DICOM fixtures.
 7. AuthZ/RBAC: `User.role` exists on the model but nothing enforces it.
 8. Phase 6, after an audit of its own — its items are listed, not analysed.

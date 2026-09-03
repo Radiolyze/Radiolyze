@@ -108,5 +108,5 @@ ReportWorkspace (report.inferenceFindings present)
 ## Dependencies
 
 - **Proposal 1** is independent and can be implemented immediately.
-- **Proposal 2** may require adjustments in `inference_clients.py` and `tasks.py` for a separate localization prompt/task.
+- **Proposal 2** may require adjustments in `inference_clients/localize.py` and `tasks.py` for a separate localization prompt/task.
 - **Proposal 3** depends on Proposal 2 (or a mock for testing).
