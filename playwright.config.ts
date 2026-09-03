@@ -25,12 +25,18 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        // Pin to the sandbox's pre-installed Chromium build when present,
-        // instead of the revision this @playwright/test version would
-        // otherwise try to download (which network policy may block).
-        launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
-          ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
-          : {},
+        launchOptions: {
+          // A fake capture device, so the dictation spec's real
+          // getUserMedia/MediaRecorder path has something to record. CI runners
+          // have no microphone, and a prompt would block the run.
+          args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+          // Pin to the sandbox's pre-installed Chromium build when present,
+          // instead of the revision this @playwright/test version would
+          // otherwise try to download (which network policy may block).
+          ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+            ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
+            : {}),
+        },
       },
     },
   ],
