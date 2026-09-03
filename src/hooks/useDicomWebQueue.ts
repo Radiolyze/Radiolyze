@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { QueueItem, Report, Series, Study } from "@/types/radiology";
@@ -234,6 +235,6 @@ export function useDicomWebQueue() {
   return {
     items: data ?? EMPTY_QUEUE,
     isLoading,
-    error: isError ? "DICOMweb-Studien konnten nicht geladen werden." : null,
+    error: isError ? i18n.t("errors:dicomweb.queueLoadFailed") : null,
   };
 }

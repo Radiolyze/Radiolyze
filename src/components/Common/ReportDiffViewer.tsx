@@ -66,6 +66,8 @@ function computeLineDiff(textA: string, textB: string): DiffLine[] {
 }
 
 function DiffBlock({ label, diff }: { label: string; diff: DiffLine[] }) {
+  const { t } = useTranslation("report");
+
   const added = diff.filter((d) => d.type === "added").length;
   const removed = diff.filter((d) => d.type === "removed").length;
 
@@ -105,7 +107,7 @@ function DiffBlock({ label, diff }: { label: string; diff: DiffLine[] }) {
           </div>
         ))}
         {diff.length === 0 && (
-          <div className="text-muted-foreground/50 px-2 py-1 italic">Keine Änderungen</div>
+          <div className="text-muted-foreground/50 px-2 py-1 italic">{t("diff.noChanges")}</div>
         )}
       </div>
     </div>

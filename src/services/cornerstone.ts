@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import {
   init as initCornerstoneCore,
   isCornerstoneInitialized,
@@ -210,7 +211,7 @@ export const getCornerstoneInitErrorMessage = (fallbackMessage: string, error: u
     return fallbackMessage;
   }
 
-  return "DICOM-Decodierung fehlgeschlagen (Codec/WASM). Bitte Browser-Cache leeren und Worker-Assets unter /workers prüfen.";
+  return i18n.t("errors:viewer.codecDecodeFailed");
 };
 
 /**

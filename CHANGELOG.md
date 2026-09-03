@@ -12,6 +12,28 @@ for the full history.
 
 ### Added
 
+- `i18next/no-literal-string` as a lint guard over `src/components/**` and
+  `src/pages/**` (#117), plus `eslint-plugin-i18next` as a devDependency — the
+  rule the issue asks for. A warning, not an error: it also reports product
+  names, unit symbols and the shortcut hints in `<kbd>`, and a blocking rule
+  would have landed with a wall of suppressions. `jsx-only` mode, so the six
+  attributes a user reads (`placeholder`, `title`, `alt`, `aria-label`,
+  `label`, `subtitle`) are checked alongside JSX text; template literals count
+  as display copy; `<kbd>`, `<code>` and `<Trans>` children do not. 218
+  findings before, 100 after.
+- A contract test over the unions the new viewer keys are indexed by: a VRT
+  preset, MPR plane, slab mode or annotation category added without a matching
+  translation fails `src/i18n/__tests__/resources.test.ts` instead of rendering
+  a raw key to the user.
+- `docs/{en,de}/development/i18n.md` gains three sections: why a label table in
+  a type module cannot be translated in place, `i18n.t` versus
+  `useTranslation` for strings outside the render path, and what the guard
+  reports and how to answer a warning.
+- `AGENTS.md` gains a "Claiming Work" section. Nine of ten PRs opened on
+  2026-09-03 were duplicates — five runs split `inference_clients.py`, five ran
+  the same i18n sweep, all within six minutes — because there was no way to
+  claim an issue and every run found the same one unclaimed.
+
 - `src/lib/__tests__/utils.test.ts`: the first test to assert on merged class
   output (#197). Each case merges a pair whose winning class only exists in
   Tailwind 4 — `outline-hidden`, `w-(--sidebar-width)`, `backdrop-blur-xs` — so
@@ -104,6 +126,35 @@ for the full history.
   whose clients have migrated can reject it with `WS_ALLOW_QUERY_TOKEN=false`.
 
 ### Changed
+
+- The remaining user-visible strings resolve through i18next (#117). Two parts
+  of the issue's scope turned out to be understated: `VRTToolbar` held twelve
+  German literals rather than the two listed (the earlier count came from an
+  umlaut search, which misses German words that have none), and the larger half
+  sat outside components entirely — the toasts and error strings in
+  `useWorkspaceInference`, `useReportActions`, `useQaChecks`,
+  `useReportStatusSync`, the four viewport hooks and `services/cornerstone.ts`.
+  Those are what an English-speaking user actually hit, and they resolve through
+  `i18n.t` now, mostly against keys `errors.json` already had. Measured across
+  `src/` excluding locales, tests and `mockData.ts`: 56 German literals before,
+  14 after, and those 14 are `t(key, fallback)` call sites plus the keyword list
+  tracked as #298.
+- `src/types/{vrt,mpr,annotations}.ts` carry ids instead of display text; the
+  words are resolved at the render site (#117). A module-level table is
+  evaluated once at import, so a string there is fixed in whatever language it
+  was written in and does not follow a language switch. Two duplications fell
+  out with it: `SLAB_BLEND_MODE_LABELS` and an independently maintained
+  `blendModes` list in `MPRToolbar` collapse into one `SLAB_BLEND_MODES`, and
+  `SLAB_THICKNESS_PRESETS` no longer spells its millimetre values out twice.
+- `ruff` 0.16.1 → 0.16.4 and `mypy` 2.3.0 → 2.3.1, both pins in one commit.
+  `ruff` is pinned in `backend/requirements-dev.txt` and in
+  `.pre-commit-config.yaml`, Dependabot proposes them from two ecosystems, and
+  `scripts/check-ruff-pin-sync.sh` fails on each of the two PRs individually —
+  so neither could ever go green alone (#287, #270).
+- The coverage thresholds in `vitest.config.ts` are re-anchored from 11/26/32/11
+  to 34/28/33/34, roughly a point below the measured 35.03/29.11/34.73/35.46. A
+  floor two thirds below actual is not the ratchet #115 describes: two thirds of
+  the coverage could have disappeared without the job noticing.
 
 - `tailwindcss` 3.4 → 4.3 and `tailwind-merge` 2.6 → 3.6, in one commit
   (#197). They share a version line in one direction only: tailwind-merge v3
@@ -316,6 +367,13 @@ for the full history.
   `radiolyze` and set an initial `0.1.0` version (was `0.0.0`).
 
 ### Removed
+
+- `ANNOTATION_SEVERITIES` and `ANNOTATION_LATERALITIES` from
+  `src/types/annotations.ts` (#117). The first was imported into
+  `AnnotationPanel` and never used, the second read by nothing at all.
+  Translating them would have left two unused vocabularies in the resources;
+  the `AnnotationSeverity`/`AnnotationLaterality` types stay, and whatever
+  panel renders them later brings its own list and keys.
 
 - `tailwind.config.ts` and the `autoprefixer` dependency (#197). The theme now
   lives in `src/index.css`; Tailwind 4 does its own vendor prefixing through

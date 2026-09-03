@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import type { QACheck, QAStatus } from "@/types/radiology";
 import type { QAServiceResponse } from "@/services/qaClient";
 
@@ -14,7 +15,7 @@ export const buildChecksFromService = (response: QAServiceResponse): QACheck[] =
     const trimmed = message?.trim();
     checks.push({
       id: `qa-fail-${index}`,
-      name: trimmed || "QA Fehler",
+      name: trimmed || i18n.t("errors:qa.unnamedCheck"),
       status: "fail",
       message: trimmed || undefined,
     });

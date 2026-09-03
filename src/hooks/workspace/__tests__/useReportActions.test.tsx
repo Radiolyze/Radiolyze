@@ -128,7 +128,7 @@ describe("useReportActions — approve", () => {
 
     await act(async () => result.current.approve("Dr. Meier"));
 
-    expect(toast.error).toHaveBeenCalledWith("Report-Freigabe fehlgeschlagen");
+    expect(toast.error).toHaveBeenCalledWith("Approval failed");
   });
 });
 
@@ -139,7 +139,7 @@ describe("useReportActions — save", () => {
     await act(async () => result.current.saveFindings());
 
     expect(updateFindings).toHaveBeenCalledWith("Neuer Befund");
-    expect(toast.success).toHaveBeenCalledWith("Befund gespeichert");
+    expect(toast.success).toHaveBeenCalledWith("Findings saved");
   });
 
   it("does nothing when no report is open", async () => {
@@ -157,7 +157,7 @@ describe("useReportActions — save", () => {
 
     await act(async () => result.current.saveFindings());
 
-    expect(toast.error).toHaveBeenCalledWith("Befund speichern fehlgeschlagen");
+    expect(toast.error).toHaveBeenCalledWith("Failed to save report");
   });
 });
 
@@ -187,7 +187,7 @@ describe("useReportActions — export", () => {
 
     await act(async () => result.current.exportStructuredReport("dicom"));
 
-    expect(toast.error).toHaveBeenCalledWith("DICOM SR Export fehlgeschlagen");
+    expect(toast.error).toHaveBeenCalledWith("Export failed");
     expect(revokeObjectURL).not.toHaveBeenCalled();
   });
 });

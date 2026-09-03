@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useEffect, useState } from "react";
 import type { MutableRefObject, RefObject } from "react";
 import type { StackViewport } from "@cornerstonejs/core";
@@ -67,7 +68,7 @@ export const useCornerstoneStackSetup = ({
       } catch (error) {
         logger.warn("Cornerstone stack setup failed", error);
         if (isActive) {
-          onError?.("Viewer konnte nicht initialisiert werden.");
+          onError?.(i18n.t("errors:viewer.initFailed"));
         }
       } finally {
         if (isActive) {

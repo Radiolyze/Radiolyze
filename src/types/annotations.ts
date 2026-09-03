@@ -100,27 +100,19 @@ export interface AnnotationListParams {
   offset?: number;
 }
 
-// Annotation category labels for UI
-export const ANNOTATION_CATEGORIES: Record<AnnotationCategory, string> = {
-  nodule: "Nodule",
-  mass: "Masse",
-  infiltrate: "Infiltrat",
-  effusion: "Erguss",
-  fracture: "Fraktur",
-  lesion: "Läsion",
-  anatomical: "Anatomisch",
-  other: "Sonstiges",
-};
-
-export const ANNOTATION_SEVERITIES: Record<AnnotationSeverity, string> = {
-  benign: "Benigne",
-  indeterminate: "Unbestimmt",
-  malignant: "Maligne",
-};
-
-export const ANNOTATION_LATERALITIES: Record<AnnotationLaterality, string> = {
-  left: "Links",
-  right: "Rechts",
-  bilateral: "Bilateral",
-  midline: "Mittellinie",
-};
+/**
+ * The category vocabulary in display order. The labels live in the
+ * `viewer` namespace under `annotations.<vocabulary>.<value>` and are resolved
+ * at the render site -- a label table in a type module has no `useTranslation`
+ * to reach and would pin the UI to one language (#117).
+ */
+export const ANNOTATION_CATEGORY_VALUES: AnnotationCategory[] = [
+  "nodule",
+  "mass",
+  "infiltrate",
+  "effusion",
+  "fracture",
+  "lesion",
+  "anatomical",
+  "other",
+];

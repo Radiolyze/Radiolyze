@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -33,6 +34,7 @@ interface StructuredReportFormProps {
  * Designed for radiology structured reporting (RSNA/IHE MRRT inspired).
  */
 export function StructuredReportForm({ schema, data, onChange }: StructuredReportFormProps) {
+  const { t } = useTranslation("report");
   const handleFieldChange = useCallback(
     (key: string, value: string | number | boolean) => {
       onChange({ ...data, [key]: value });
@@ -98,7 +100,9 @@ export function StructuredReportForm({ schema, data, onChange }: StructuredRepor
                   onChange={(e) => handleFieldChange(field.key, e.target.checked)}
                   className="rounded border-input"
                 />
-                <span className="text-sm text-muted-foreground">{field.placeholder ?? "Ja"}</span>
+                <span className="text-sm text-muted-foreground">
+                  {field.placeholder ?? t("structuredForm.yes")}
+                </span>
               </div>
             )}
           </div>

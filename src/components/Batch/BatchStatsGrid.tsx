@@ -52,7 +52,7 @@ export function BatchStatsGrid({ stats }: BatchStatsGridProps) {
         <CardContent className="pt-4 pb-3">
           <div className="flex items-center gap-2">
             <Timer className="h-4 w-4 text-primary" />
-            <span className="text-sm text-muted-foreground">Ø TAT</span>
+            <span className="text-sm text-muted-foreground">{t("stats.avgTurnaround")}</span>
           </div>
           <p className="text-2xl font-bold mt-1">{stats.avgTurnaround} min</p>
         </CardContent>
@@ -61,7 +61,7 @@ export function BatchStatsGrid({ stats }: BatchStatsGridProps) {
         <CardContent className="pt-4 pb-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-destructive" />
-            <span className="text-sm text-muted-foreground">QA Issues</span>
+            <span className="text-sm text-muted-foreground">{t("stats.qaIssues")}</span>
           </div>
           <p className="text-2xl font-bold mt-1">{stats.qaWarnings}</p>
         </CardContent>

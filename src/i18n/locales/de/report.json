@@ -112,14 +112,28 @@
     "cancel": "Abbrechen",
     "submit": "Anfordern",
     "submitTitle": "Zweitmeinung abgeben",
-    "reviewCommentPlaceholder": "Kommentar zur Zweitmeinung..."
+    "reviewCommentPlaceholder": "Kommentar zur Zweitmeinung...",
+    "pendingCount_one": "{{count}} offen",
+    "pendingCount_other": "{{count}} offen",
+    "reviewer": "Reviewer",
+    "unassigned": "Unzugewiesen",
+    "pendingFor": "{{reviewer}}: ausstehend",
+    "rate": "Bewerten",
+    "submitReview": "Absenden",
+    "decision": {
+      "agree": "Zustimmung",
+      "disagree": "Ablehnung",
+      "revise": "Überarbeitung empfohlen"
+    }
   },
   "structuredForm": {
     "general": "Allgemein",
     "noSchema": "Kein strukturiertes Template verfügbar",
     "structured": "Strukturiert",
     "freetext": "Freitext",
-    "toggleLabel": "Strukturierte Eingabe"
+    "toggleLabel": "Strukturierte Eingabe",
+    "yes": "Ja",
+    "no": "Nein"
   },
   "inference": {
     "title": "KI-Analyse",
@@ -173,5 +187,11 @@
       "regressed": "Regredient",
       "resolved": "Rückgebildet"
     }
+  },
+  "toast": {
+    "saved": "Befund gespeichert"
+  },
+  "diff": {
+    "noChanges": "Keine Änderungen"
   }
 }

@@ -4,9 +4,12 @@ import { ComparisonViewer } from "@/components/Viewer/ComparisonViewer";
 import { RightPanel } from "@/components/RightPanel/RightPanel";
 import { ReportWorkspaceView } from "@/pages/ReportWorkspaceView";
 
+// Shown for the split second before the first query resolves. The dash is
+// deliberately language-neutral: this object is built once at module load, so a
+// translated string here would freeze whichever language was active then.
 const placeholderPatient: Patient = {
   id: "unknown",
-  name: "Laden...",
+  name: "—",
   dateOfBirth: "",
   gender: "O",
   mrn: "-",

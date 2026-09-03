@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Enums, RenderingEngine, volumeLoader, cache, VolumeViewport } from "@cornerstonejs/core";
 import {
@@ -316,7 +317,7 @@ export const useMPRVolumeViewport = ({
         logger.error("MPR initialization failed:", error);
         if (isActive) {
           onInitErrorRef.current?.(
-            getCornerstoneInitErrorMessage("MPR-Viewer konnte nicht initialisiert werden.", error),
+            getCornerstoneInitErrorMessage(i18n.t("errors:viewer.initFailedMpr"), error),
           );
         }
       } finally {

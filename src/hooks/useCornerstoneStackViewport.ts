@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Enums, RenderingEngine, type StackViewport } from "@cornerstonejs/core";
 import { ToolGroupManager } from "@cornerstonejs/tools";
@@ -168,7 +169,7 @@ export const useCornerstoneStackViewport = ({
         logger.warn("Cornerstone initialization failed", error);
         if (isActive) {
           onInitErrorRef.current?.(
-            getCornerstoneInitErrorMessage("Viewer konnte nicht initialisiert werden.", error),
+            getCornerstoneInitErrorMessage(i18n.t("errors:viewer.initFailed"), error),
           );
         }
       } finally {

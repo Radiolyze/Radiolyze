@@ -105,7 +105,8 @@
     "notifications": "Notifications",
     "keyboardShortcuts": "Keyboard Shortcuts",
     "profile": "Profile",
-    "logout": "Log Out"
+    "logout": "Log Out",
+    "trainingExport": "Training export"
   },
   "queue": {
     "title": "Queue",
@@ -285,5 +286,24 @@
       "passRate": "Pass rate",
       "warnings": "Warnings"
     }
+  },
+  "autoSave": {
+    "saving": "Saving…",
+    "saved": "Saved",
+    "conflict": "Conflict",
+    "error": "Error"
+  },
+  "history": {
+    "eventType": "Event type",
+    "allEvents": "All events",
+    "user": "User",
+    "allUsers": "All users"
+  },
+  "dashboard": {
+    "serviceStatus": "Service status",
+    "reports": "Reports",
+    "qaStatus": "QA status",
+    "inferenceJobs": "Inference jobs",
+    "auditEvents": "Audit events"
   }
 }

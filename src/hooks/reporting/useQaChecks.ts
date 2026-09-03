@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useCallback, useState } from "react";
 import type { QACheck, QAStatus, Report } from "@/types/radiology";
 import { mockQAChecks } from "@/data/mockData";
@@ -80,7 +81,11 @@ export function useQaChecks({ report, setReport }: UseQaChecksParams): UseQaChec
       } catch (error) {
         if (!allowMockFallback) {
           logger.warn("QA check failed.", error);
-          return publish({ checks: [], warnings: ["QA-Prüfung fehlgeschlagen"], status: "warn" });
+          return publish({
+            checks: [],
+            warnings: [i18n.t("errors:qa.checkFailed")],
+            status: "warn",
+          });
         }
 
         logger.warn("QA check failed, using mock checks.", error);

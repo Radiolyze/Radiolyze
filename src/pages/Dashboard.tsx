@@ -155,7 +155,7 @@ export default function Dashboard() {
         {/* Service Health */}
         <Card className="animate-slide-up" style={{ animationDelay: "50ms" }}>
           <CardHeader>
-            <CardTitle className="text-lg">Service Status</CardTitle>
+            <CardTitle className="text-lg">{t("dashboard.serviceStatus")}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading && !health ? (
@@ -213,7 +213,9 @@ export default function Dashboard() {
             <>
               <Card className="animate-slide-up" style={{ animationDelay: "150ms" }}>
                 <CardHeader>
-                  <CardTitle className="text-sm text-muted-foreground">Reports</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground">
+                    {t("dashboard.reports")}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-3xl font-bold">{metrics.reports_total}</p>
@@ -230,7 +232,9 @@ export default function Dashboard() {
 
               <Card className="animate-slide-up" style={{ animationDelay: "230ms" }}>
                 <CardHeader>
-                  <CardTitle className="text-sm text-muted-foreground">QA Status</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground">
+                    {t("dashboard.qaStatus")}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1">
@@ -246,7 +250,9 @@ export default function Dashboard() {
 
               <Card className="animate-slide-up" style={{ animationDelay: "310ms" }}>
                 <CardHeader>
-                  <CardTitle className="text-sm text-muted-foreground">Inference Jobs</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground">
+                    {t("dashboard.inferenceJobs")}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1">
@@ -259,7 +265,7 @@ export default function Dashboard() {
                   </div>
                   <div className="mt-3 pt-2 border-t border-border/50">
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Audit Events</span>
+                      <span>{t("dashboard.auditEvents")}</span>
                       <span className="tabular-nums">{metrics.audit_events_total}</span>
                     </div>
                   </div>

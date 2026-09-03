@@ -63,6 +63,29 @@ npm run dev
   `docker-compose.yml`'s `migrate` service runs `alembic upgrade head` before `backend`/`worker` start;
   `Base.metadata.create_all` only still runs outside production/staging, for local `uvicorn` convenience.
 
+## Claiming Work (read this before writing code for an issue)
+
+Parallel runs pick the same issue and duplicate each other's work. On
+2026-09-03 five runs split `inference_clients.py` and five more did the #117
+i18n sweep within six minutes of one another; nine of the ten PRs were thrown
+away. Earlier, #233/#236 and #266/#267 were started 1 and 74 seconds apart.
+This is the single most expensive failure mode in this repository, and it is
+avoidable in one step:
+
+1. **Before writing code for an issue, claim it.** Assign yourself, or post a
+   comment saying you are starting and what you intend to change. A claim
+   younger than a few hours with no PR is still active.
+2. **Check for a claim first.** Read the issue's comments and the open PRs
+   (`is:pr is:open` referencing that issue) before starting. If someone has
+   claimed it, pick a different issue -- the tracker is not short of them.
+3. **Duplicate anyway? Compare, do not merge both.** Check the branches out,
+   run the checks, and keep one with the reasons written on the PR. Close the
+   rest pointing at the survivor.
+
+The same rule applies to the module list in `[[tool.mypy.overrides]]` and to
+any file two issues both name: #292 and #293 overlap on `tasks.py` and
+`api/reports.py` deliberately, and the issues say so.
+
 ## Project Conventions
 - TypeScript strict mode (`"strict": true` in `tsconfig.app.json`; `npm run typecheck` enforces it in CI).
 - No new dependencies without review.

@@ -32,13 +32,8 @@ interface RightPanelProps {
   onUseAllFramesChange?: (nextValue: boolean) => void;
 }
 
-const AUTO_SAVE_LABELS: Record<AutoSaveStatus, string> = {
-  idle: "",
-  saving: "Speichern…",
-  saved: "Gespeichert",
-  conflict: "Konflikt",
-  error: "Fehler",
-};
+/** Auto-save states that carry a label, resolved as `report:autoSave.<status>`. */
+const AUTO_SAVE_LABELLED: AutoSaveStatus[] = ["saving", "saved", "conflict", "error"];
 
 const AUTO_SAVE_COLORS: Record<AutoSaveStatus, string> = {
   idle: "",
@@ -81,9 +76,9 @@ export function RightPanel({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {autoSaveStatus && autoSaveStatus !== "idle" && (
+      {autoSaveStatus && AUTO_SAVE_LABELLED.includes(autoSaveStatus) && (
         <div className={`px-3 py-1 text-xs ${AUTO_SAVE_COLORS[autoSaveStatus]}`}>
-          {AUTO_SAVE_LABELS[autoSaveStatus]}
+          {t(`autoSave.${autoSaveStatus}`)}
         </div>
       )}
       <FindingsPanel

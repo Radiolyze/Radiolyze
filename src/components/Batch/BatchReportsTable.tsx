@@ -105,7 +105,7 @@ export function BatchReportsTable({
               />
             </TableHead>
             <TableHead>{t("table.patient")}</TableHead>
-            <TableHead>Accession</TableHead>
+            <TableHead>{t("table.accession")}</TableHead>
             <TableHead>{t("table.study")}</TableHead>
             <TableHead>{t("table.status")}</TableHead>
             <TableHead>QA</TableHead>
@@ -153,7 +153,7 @@ export function BatchReportsTable({
                 <EmptyState
                   icon={XCircle}
                   title={errorMessage}
-                  description="Bitte versuchen Sie es erneut oder kontaktieren Sie den Support."
+                  description={t("table.errorHint")}
                 />
               </TableCell>
             </TableRow>
@@ -220,9 +220,7 @@ export function BatchReportsTable({
                   icon={FileText}
                   title={t("table.noResults")}
                   description={
-                    hasActiveFilters
-                      ? "Passen Sie die Filter an um mehr Ergebnisse zu sehen."
-                      : "Es sind noch keine Reports vorhanden."
+                    hasActiveFilters ? t("table.noResultsFiltered") : t("table.noReportsYet")
                   }
                 />
               </TableCell>
