@@ -14,7 +14,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from .. import vllm_client
-from ..ai_schemas import SCHEMA_VERSION, LocalizeOutput
+from ..ai_schemas import SCHEMA_VERSION, LocalizeOutput, normalize_finding_category
 from ..image_encoder import _rewrite_image_url
 from ..inference_utils import _env_flag
 from ..prompts import render_prompt_with_metadata
@@ -27,7 +27,10 @@ LOCALIZE_CXR_FINDING_PROMPT = (
     "For each finding, provide a bounding box in normalized coordinates (0-1000 space).\n"
     "Format: box_2d = [y_min, x_min, y_max, x_max] where (0,0) is top-left.\n"
     "Return a JSON object with key 'findings' (array of objects).\n"
-    'Each object: { "box_2d": [y1,x1,y2,x2], "label": "finding name", "confidence": 0.0-1.0 }\n'
+    'Each object: { "box_2d": [y1,x1,y2,x2], "label": "finding name", '
+    '"category": "pathological" | "anatomical" | "other", "confidence": 0.0-1.0 }\n'
+    "Use 'pathological' for an abnormality, 'anatomical' for a normal structure "
+    "localized for orientation, and 'other' when neither applies.\n"
     "Return only valid JSON. No markdown or code fences.\n"
     'If no findings, return {"findings": []}.'
 )
@@ -40,7 +43,8 @@ LOCALIZE_CXR_ANATOMY_PROMPT = (
     "For each region, provide a bounding box in normalized coordinates (0-1000 space).\n"
     "Format: box_2d = [y_min, x_min, y_max, x_max] where (0,0) is top-left.\n"
     "Return a JSON object with key 'findings' (array of objects).\n"
-    'Each object: { "box_2d": [y1,x1,y2,x2], "label": "anatomical region", "confidence": 0.0-1.0 }\n'
+    'Each object: { "box_2d": [y1,x1,y2,x2], "label": "anatomical region", '
+    '"category": "anatomical", "confidence": 0.0-1.0 }\n'
     "Return only valid JSON. No markdown or code fences."
 )
 
@@ -83,12 +87,18 @@ def generate_localize_findings(
     if mode not in {"cxr_finding", "cxr_anatomy"}:
         raise ValueError(f"Unsupported localize mode: {mode}")
     prompt = LOCALIZE_CXR_FINDING_PROMPT if mode == "cxr_finding" else LOCALIZE_CXR_ANATOMY_PROMPT
+    # In anatomy mode every box *is* an anatomical region by construction of the
+    # prompt, so a model that omits the field still yields a categorized box.
+    # The finding mode has no such default -- an uncategorized finding stays
+    # uncategorized rather than being guessed at.
+    default_category = "anatomical" if mode == "cxr_anatomy" else None
 
     image_urls = [_rewrite_image_url(wado_url.strip())]
     if not _env_flag("VLLM_ENABLED", False):
         mock_finding = {
             "box_2d": [100, 100, 300, 300],
             "label": "Mock finding (VLLM_ENABLED=false)",
+            "category": default_category or "other",
             "confidence": 0.5,
         }
         return [mock_finding], model_name or "mock-localize-0.1", {"provider": "mock", "mode": mode}
@@ -118,6 +128,7 @@ def generate_localize_findings(
                         {
                             "box_2d": f.box_2d,
                             "label": f.label,
+                            "category": f.category or default_category,
                             "confidence": f.confidence,
                             "slice_index": f.slice_index,
                         }
@@ -138,6 +149,10 @@ def generate_localize_findings(
                                     {
                                         "box_2d": [float(x) for x in box],
                                         "label": str(item.get("label", "")),
+                                        "category": (
+                                            normalize_finding_category(item.get("category"))
+                                            or default_category
+                                        ),
                                         "confidence": item.get("confidence"),
                                     }
                                 )
@@ -156,6 +171,7 @@ def generate_localize_findings(
             mock_finding = {
                 "box_2d": [150, 150, 350, 350],
                 "label": "Fallback (vLLM error)",
+                "category": "other",
                 "confidence": 0.3,
             }
             return (

@@ -218,3 +218,70 @@ def test_schema_endpoint_includes_comparison(client) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert "comparison_output" in payload["schemas"]
+
+
+# --- Finding categories (#298) -------------------------------------------------
+#
+# The overlay used to derive the colour of a box from a keyword list over the
+# free-text label. The category now comes from the model with the box, so these
+# cover the two directions that list could not: a category the schema does not
+# know, and a finding the model left uncategorized.
+
+
+def test_finding_box_keeps_the_box_when_the_category_is_unknown() -> None:
+    from app.ai_schemas import LocalizeOutput
+
+    output = LocalizeOutput.model_validate(
+        {
+            "findings": [
+                {"box_2d": [1, 2, 3, 4], "label": "Consolidation", "category": "PATHOLOGICAL"},
+                {"box_2d": [5, 6, 7, 8], "label": "Nodule", "category": "suspicious"},
+                {"box_2d": [9, 10, 11, 12], "label": "Right lung"},
+            ]
+        }
+    )
+
+    # Case-folded, unknown dropped to None -- and no finding lost: a category
+    # outside the set costs the hint, not the box.
+    assert [f.category for f in output.findings] == ["pathological", None, None]
+    assert len(output.findings) == 3
+
+
+def test_generate_localize_findings_passes_the_category_through(monkeypatch) -> None:
+    monkeypatch.setenv("VLLM_ENABLED", "true")
+    monkeypatch.setenv("VLLM_FALLBACK_TO_MOCK", "false")
+
+    response = (
+        '{"findings":['
+        '{"box_2d":[10,20,30,40],"label":"Consolidation",'
+        '"category":"pathological","confidence":0.8},'
+        '{"box_2d":[50,60,70,80],"label":"Pneumothorax","confidence":0.6}]}'
+    )
+
+    with patch("app.vllm_client._vllm_chat_completion", return_value=response):
+        from app.inference_clients import generate_localize_findings
+
+        findings, _model, metadata = generate_localize_findings(
+            {"wado_url": "http://orthanc/foo", "series_modality": "CR"}
+        )
+
+    assert metadata["json_schema_valid"] is True
+    assert [f["category"] for f in findings] == ["pathological", None]
+
+
+def test_localize_anatomy_mode_defaults_the_category(monkeypatch) -> None:
+    """Every box in anatomy mode is an anatomical region by construction."""
+    monkeypatch.setenv("VLLM_ENABLED", "true")
+    monkeypatch.setenv("VLLM_FALLBACK_TO_MOCK", "false")
+
+    response = '{"findings":[{"box_2d":[10,20,30,40],"label":"Right lung","confidence":0.9}]}'
+
+    with patch("app.vllm_client._vllm_chat_completion", return_value=response):
+        from app.inference_clients import generate_localize_findings
+
+        findings, _model, _metadata = generate_localize_findings(
+            {"wado_url": "http://orthanc/foo", "series_modality": "DX"},
+            mode="cxr_anatomy",
+        )
+
+    assert [f["category"] for f in findings] == ["anatomical"]
