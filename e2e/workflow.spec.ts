@@ -178,7 +178,9 @@ test.describe("core report workflow", () => {
     await expect(approve).toBeDisabled();
 
     // The radiologist is told what failed, not just that something did.
-    await reportPanel(page).getByRole("button", { name: /QA Checks/ }).click();
+    await reportPanel(page)
+      .getByRole("button", { name: /QA Checks/ })
+      .click();
     // `buildChecksFromService` uses the failure text as both the check's name
     // and its message, so it renders twice.
     await expect(reportPanel(page).getByText(failure).first()).toBeVisible();
