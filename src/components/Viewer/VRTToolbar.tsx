@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   RotateCcw,
   Box,
@@ -41,7 +42,7 @@ export function VRTToolbar({
   onReset,
   className,
 }: VRTToolbarProps) {
-  const currentPreset = VRT_PRESETS.find((p) => p.id === settings.presetId);
+  const { t } = useTranslation("viewer");
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -62,14 +63,14 @@ export function VRTToolbar({
         {/* Preset Selection */}
         <Select value={settings.presetId} onValueChange={onPresetChange}>
           <SelectTrigger className="w-[160px] h-8 text-xs">
-            <SelectValue placeholder="Preset wählen" />
+            <SelectValue placeholder={t("vrt.presetPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {VRT_PRESETS.map((preset) => (
               <SelectItem key={preset.id} value={preset.id}>
                 <div className="flex flex-col">
                   <span>{preset.name}</span>
-                  <span className="text-xs text-muted-foreground">{preset.description}</span>
+                  <span className="text-xs text-muted-foreground">{t(preset.descriptionKey)}</span>
                 </div>
               </SelectItem>
             ))}
@@ -178,23 +179,23 @@ export function VRTToolbar({
           <PopoverTrigger asChild>
             <Button variant="ghost" size="sm" className="h-8 gap-1.5">
               <Sun className="h-4 w-4" />
-              <span className="text-xs">Beleuchtung</span>
+              <span className="text-xs">{t("vrt.lighting")}</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80" align="start">
             <div className="space-y-4">
-              <div className="font-medium text-sm">Rendering-Einstellungen</div>
+              <div className="font-medium text-sm">{t("vrt.renderSettings")}</div>
 
               {/* Sample Distance (Quality) */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span>Renderqualität</span>
+                  <span>{t("vrt.quality.label")}</span>
                   <span className="text-muted-foreground">
                     {settings.sampleDistance < 0.5
-                      ? "Hoch"
+                      ? t("vrt.quality.high")
                       : settings.sampleDistance < 1.5
-                        ? "Mittel"
-                        : "Schnell"}
+                        ? t("vrt.quality.medium")
+                        : t("vrt.quality.fast")}
                   </span>
                 </div>
                 <Slider
@@ -210,7 +211,7 @@ export function VRTToolbar({
               {/* Ambient */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span>Umgebungslicht</span>
+                  <span>{t("vrt.ambient")}</span>
                   <span className="text-muted-foreground">
                     {Math.round(settings.ambient * 100)}%
                   </span>
@@ -228,7 +229,7 @@ export function VRTToolbar({
               {/* Diffuse */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span>Diffuse Reflexion</span>
+                  <span>{t("vrt.diffuse")}</span>
                   <span className="text-muted-foreground">
                     {Math.round(settings.diffuse * 100)}%
                   </span>
@@ -246,7 +247,7 @@ export function VRTToolbar({
               {/* Specular */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span>Spiegelreflexion</span>
+                  <span>{t("vrt.specular")}</span>
                   <span className="text-muted-foreground">
                     {Math.round(settings.specular * 100)}%
                   </span>
@@ -264,7 +265,7 @@ export function VRTToolbar({
               {/* Specular Power */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span>Glanzstärke</span>
+                  <span>{t("vrt.specularPower")}</span>
                   <span className="text-muted-foreground">{settings.specularPower}</span>
                 </div>
                 <Slider
@@ -290,12 +291,12 @@ export function VRTToolbar({
               size="icon"
               className="h-8 w-8"
               onClick={onReset}
-              aria-label="Kamera zurücksetzen"
+              aria-label={t("vrt.resetCamera")}
             >
               <RotateCcw className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Kamera zurücksetzen</TooltipContent>
+          <TooltipContent>{t("vrt.resetCamera")}</TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>

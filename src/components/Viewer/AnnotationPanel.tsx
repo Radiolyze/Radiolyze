@@ -27,7 +27,7 @@ import type {
   AnnotationCategory,
   AnnotationCreateRequest,
 } from "@/types/annotations";
-import { ANNOTATION_CATEGORIES, ANNOTATION_SEVERITIES } from "@/types/annotations";
+import { ANNOTATION_CATEGORY_KEYS } from "@/types/annotations";
 
 interface AnnotationPanelProps {
   studyId: string | null;
@@ -44,7 +44,7 @@ export function AnnotationPanel({
   onAnnotationSelect,
   className,
 }: AnnotationPanelProps) {
-  const { t } = useTranslation("viewer");
+  const { t } = useTranslation(["viewer", "common"]);
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
@@ -221,9 +221,12 @@ export function AnnotationPanel({
       {/* Stats footer */}
       <div className="p-2 border-t border-border text-xs text-muted-foreground flex justify-between">
         <span>
-          Verifiziert: {annotations.filter((a) => a.verifiedBy).length}/{annotations.length}
+          {t("annotations.verifiedCount", {
+            verified: annotations.filter((a) => a.verifiedBy).length,
+            total: annotations.length,
+          })}
         </span>
-        <span>Frame: {currentFrameIndex + 1}</span>
+        <span>{t("annotations.frame", { frame: currentFrameIndex + 1 })}</span>
       </div>
     </div>
   );
@@ -266,13 +269,15 @@ function AnnotationItem({
   isSaving,
   dimmed,
 }: AnnotationItemProps) {
+  const { t } = useTranslation(["viewer", "common"]);
+
   if (isEditing) {
     return (
       <div className="p-2 bg-card rounded-lg border border-primary space-y-2">
         <Input
           value={editLabel}
           onChange={(e) => onEditLabel(e.target.value)}
-          placeholder="Label"
+          placeholder={t("annotations.label")}
           className="h-8 text-sm"
         />
         <Select value={editCategory} onValueChange={(v) => onEditCategory(v as AnnotationCategory)}>
@@ -280,9 +285,9 @@ function AnnotationItem({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(ANNOTATION_CATEGORIES).map(([key, label]) => (
+            {Object.entries(ANNOTATION_CATEGORY_KEYS).map(([key, categoryKey]) => (
               <SelectItem key={key} value={key}>
-                {label}
+                {t(categoryKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -290,15 +295,15 @@ function AnnotationItem({
         <Textarea
           value={editNotes}
           onChange={(e) => onEditNotes(e.target.value)}
-          placeholder="Notizen..."
+          placeholder={t("annotations.notesPlaceholder")}
           className="text-xs min-h-[60px]"
         />
         <div className="flex gap-1">
           <Button size="sm" className="flex-1 h-7 text-xs" onClick={onSaveEdit} disabled={isSaving}>
-            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Speichern"}
+            {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : t("common:actions.save")}
           </Button>
           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onCancelEdit}>
-            Abbrechen
+            {t("common:actions.cancel")}
           </Button>
         </div>
       </div>
@@ -324,7 +329,9 @@ function AnnotationItem({
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <Badge variant="outline" className="text-[10px] h-4 px-1">
-              {ANNOTATION_CATEGORIES[annotation.category] || annotation.category}
+              {t(ANNOTATION_CATEGORY_KEYS[annotation.category], {
+                defaultValue: annotation.category,
+              })}
             </Badge>
             <span className="text-[10px] text-muted-foreground">{annotation.toolType}</span>
             {!dimmed && (

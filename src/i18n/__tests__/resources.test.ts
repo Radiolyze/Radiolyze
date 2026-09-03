@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import i18n, { resources } from "@/i18n";
 import type { ExportFormat } from "@/services/trainingClient";
+import { VRT_PRESETS } from "@/types/vrt";
+import { MPR_VIEWPORTS, SLAB_BLEND_MODE_KEYS, SLAB_THICKNESS_PRESETS } from "@/types/mpr";
+import { ANNOTATION_CATEGORY_KEYS } from "@/types/annotations";
 
 type Resource = Record<string, unknown>;
 
@@ -87,6 +90,39 @@ describe("DICOMweb settings resources", () => {
     // translation that loses the tag would drop the path out of the sentence.
     for (const lng of ["de", "en"] as const) {
       expect(resources[lng].settings.dicomweb.urlHint).toContain("<path>/dicom-web</path>");
+    }
+  });
+});
+
+describe("viewer label tables", () => {
+  // The tables in src/types/{vrt,mpr,annotations}.ts hold translation keys
+  // rather than labels — a type module has nowhere to look a translation up.
+  // Nothing in the type system ties a key to a resource, so an entry added
+  // without its translation would render the raw key to the user. These walk
+  // the tables so that fails here instead.
+  const tables: Array<[string, string[]]> = [
+    ["VRT preset descriptions", VRT_PRESETS.map((preset) => preset.descriptionKey)],
+    ["MPR viewport labels", MPR_VIEWPORTS.map((viewport) => viewport.labelKey)],
+    ["slab blend modes", Object.values(SLAB_BLEND_MODE_KEYS)],
+    ["annotation categories", Object.values(ANNOTATION_CATEGORY_KEYS)],
+  ];
+
+  for (const [table, keys] of tables) {
+    it.each(["de", "en"])(`resolves every key of the ${table} in %s`, async (lng) => {
+      await i18n.changeLanguage(lng);
+      expect(keys.length).toBeGreaterThan(0);
+      for (const key of keys) {
+        expect(i18n.t(`viewer:${key}`, { defaultValue: "" })).not.toBe("");
+      }
+    });
+  }
+
+  it("carries the slab thickness as an interpolated value", () => {
+    // SLAB_THICKNESS_PRESETS is millimetres only; the labels used to spell the
+    // same numbers out a second time and could drift from the values.
+    expect(SLAB_THICKNESS_PRESETS).toContain(0);
+    for (const lng of ["de", "en"] as const) {
+      expect(resources[lng].viewer.mpr.slab.thicknessValue).toContain("{{value}}");
     }
   });
 });

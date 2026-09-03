@@ -9,6 +9,9 @@ import { ViewerEmptyState } from "./ViewerEmptyState";
 import { VRT_PRESETS, DEFAULT_VRT_SETTINGS, type VRTViewAngle } from "@/types/vrt";
 import { cn } from "@/lib/utils";
 
+/** A volume needs a stack to interpolate through; below this it renders as noise. */
+const MIN_SLICES_FOR_3D = 10;
+
 // Keyboard shortcut mappings
 const PRESET_SHORTCUTS: Record<string, number> = {
   "1": 0, // CT Bone
@@ -126,9 +129,7 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
   }, [isReady, applyPreset, setViewAngle, handleReset]);
 
   if (!series) {
-    return (
-      <ViewerEmptyState title="3D Volume Rendering" subtitle={t("emptyState.selectSeriesFor3d")} />
-    );
+    return <ViewerEmptyState title={t("vrt.title")} subtitle={t("emptyState.selectSeriesFor3d")} />;
   }
 
   // Check if modality supports VRT
@@ -136,18 +137,21 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
   if (!supportedModalities.includes(series.modality)) {
     return (
       <ViewerEmptyState
-        title="3D Volume Rendering"
+        title={t("vrt.title")}
         subtitle={t("emptyState.unsupportedModality", { modality: series.modality })}
       />
     );
   }
 
   // Need enough slices for 3D
-  if (imageIds.length < 10) {
+  if (imageIds.length < MIN_SLICES_FOR_3D) {
     return (
       <ViewerEmptyState
-        title="3D Volume Rendering"
-        subtitle={`Nicht genügend Bilder für 3D-Rendering. Mindestens 10 erforderlich, ${imageIds.length} vorhanden.`}
+        title={t("vrt.title")}
+        subtitle={t("vrt.notEnoughSlices", {
+          required: MIN_SLICES_FOR_3D,
+          available: imageIds.length,
+        })}
       />
     );
   }
@@ -156,7 +160,7 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
   const modalitiesWithLimitedSupport = ["US", "XA", "RF", "SC"];
   const hasLimitedSupport = modalitiesWithLimitedSupport.includes(series.modality);
   const limitedSupportWarning = hasLimitedSupport
-    ? `Hinweis: ${series.modality}-Bilder haben oft keine räumlichen Metadaten. Die 3D-Darstellung kann ungenau sein.`
+    ? t("vrt.limitedSupportHint", { modality: series.modality })
     : null;
 
   return (
@@ -176,9 +180,11 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin" />
             <span className="text-sm">
-              {isFetchingInstances ? "Lade DICOM-Daten..." : "Erstelle 3D-Volumen..."}
+              {isFetchingInstances ? t("vrt.loadingData") : t("vrt.buildingVolume")}
             </span>
-            <span className="text-xs text-muted-foreground/60">{imageIds.length} Bilder</span>
+            <span className="text-xs text-muted-foreground/60">
+              {t("vrt.imageCount", { count: imageIds.length })}
+            </span>
           </div>
         </div>
       )}
@@ -187,12 +193,11 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
       {effectiveError && !isLoading && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-destructive max-w-md px-4">
-            <p className="text-sm font-medium">Fehler beim Laden</p>
+            <p className="text-sm font-medium">{t("vrt.loadError")}</p>
             <p className="text-xs text-muted-foreground mt-1">{effectiveError}</p>
             {hasLimitedSupport && (
               <p className="text-xs text-yellow-500 mt-2">
-                {series.modality}-Bilder sind für 3D-Rendering nicht optimal geeignet, da oft
-                räumliche Metadaten (PixelSpacing, ImageOrientation) fehlen.
+                {t("vrt.limitedSupportError", { modality: series.modality })}
               </p>
             )}
           </div>
@@ -210,19 +215,20 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
             <>
               {/* Preset badge */}
               <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 text-xs text-white">
-                {VRT_PRESETS.find((p) => p.id === settings.presetId)?.name || "Custom"}
+                {VRT_PRESETS.find((p) => p.id === settings.presetId)?.name ??
+                  t("vrt.presetFallback")}
               </div>
 
               {/* Controls hint */}
               <div className="absolute bottom-3 left-3 space-y-0.5 text-xs text-white/70 bg-black/40 rounded px-2 py-1">
                 <p>
-                  <kbd className="px-1 bg-black/40 rounded">LMB</kbd> Rotieren
+                  <kbd className="px-1 bg-black/40 rounded">LMB</kbd> {t("vrt.controls.rotate")}
                 </p>
                 <p>
-                  <kbd className="px-1 bg-black/40 rounded">RMB</kbd> Pan
+                  <kbd className="px-1 bg-black/40 rounded">RMB</kbd> {t("vrt.controls.pan")}
                 </p>
                 <p>
-                  <kbd className="px-1 bg-black/40 rounded">Scroll</kbd> Zoom
+                  <kbd className="px-1 bg-black/40 rounded">Scroll</kbd> {t("vrt.controls.zoom")}
                 </p>
                 <div className="border-t border-white/20 mt-1 pt-1">
                   <p>

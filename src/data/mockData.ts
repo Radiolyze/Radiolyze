@@ -1,3 +1,11 @@
+/**
+ * Demo fixtures — German sample data on purpose, not untranslated UI strings.
+ *
+ * Nothing here reaches a user through i18n: these stand in for records that
+ * come from the PACS at runtime, so a `t()` sweep over this file would
+ * translate the patients rather than the product. Left as-is deliberately;
+ * see #117.
+ */
 import type {
   Patient,
   Study,

@@ -12,7 +12,8 @@
     "analyzeFrame": "Analyze frame",
     "analyzeFrameHint": "Send current frame for AI localization",
     "annotationModeActive": "Annotation mode active",
-    "annotationModeActivate": "Activate annotation mode"
+    "annotationModeActivate": "Activate annotation mode",
+    "crosshairs": "Crosshairs"
   },
   "comparison": {
     "title": "Comparison",
@@ -144,6 +145,98 @@
   },
   "annotations": {
     "selectSeries": "Select a series",
-    "confirmDelete": "Delete annotation \"{{label}}\"?"
+    "confirmDelete": "Delete annotation \"{{label}}\"?",
+    "title": "Label annotation",
+    "description": "Enter a label and a category for the annotation.",
+    "label": "Label",
+    "labelPlaceholder": "e.g. Round nodule 1.2cm",
+    "categoryLabel": "Category",
+    "notesPlaceholder": "Notes...",
+    "toolFrame": "Tool: {{tool}} • Frame: {{frame}}",
+    "category": {
+      "nodule": "Nodule",
+      "mass": "Mass",
+      "infiltrate": "Infiltrate",
+      "effusion": "Effusion",
+      "fracture": "Fracture",
+      "lesion": "Lesion",
+      "anatomical": "Anatomical",
+      "other": "Other"
+    },
+    "verifiedCount": "Verified: {{verified}}/{{total}}",
+    "frame": "Frame: {{frame}}"
+  },
+  "vrt": {
+    "title": "3D volume rendering",
+    "presetPlaceholder": "Select preset",
+    "presetFallback": "Custom",
+    "presets": {
+      "ct-bone": "Optimised for bone structures",
+      "ct-lung": "Optimised for lung parenchyma",
+      "ct-soft-tissue": "Soft tissue and organs",
+      "ct-angiography": "Contrast-filled vessels",
+      "ct-muscle-bone": "Muscle and bone structures"
+    },
+    "lighting": "Lighting",
+    "renderSettings": "Rendering settings",
+    "quality": {
+      "label": "Render quality",
+      "high": "High",
+      "medium": "Medium",
+      "fast": "Fast"
+    },
+    "ambient": "Ambient light",
+    "diffuse": "Diffuse reflection",
+    "specular": "Specular reflection",
+    "specularPower": "Specular power",
+    "resetCamera": "Reset camera",
+    "loadingData": "Loading DICOM data...",
+    "buildingVolume": "Building 3D volume...",
+    "imageCount_one": "{{count}} image",
+    "imageCount_other": "{{count}} images",
+    "loadError": "Loading failed",
+    "notEnoughSlices": "Not enough images for 3D rendering. At least {{required}} required, {{available}} available.",
+    "limitedSupportHint": "Note: {{modality}} images often carry no spatial metadata. The 3D rendering may be inaccurate.",
+    "limitedSupportError": "{{modality}} images are not well suited to 3D rendering, as spatial metadata (PixelSpacing, ImageOrientation) is often missing.",
+    "controls": {
+      "rotate": "Rotate",
+      "pan": "Pan",
+      "zoom": "Zoom"
+    }
+  },
+  "mpr": {
+    "title": "MPR viewer",
+    "orientation": {
+      "axial": "Axial",
+      "sagittal": "Sagittal",
+      "coronal": "Coronal"
+    },
+    "windowLevelPlaceholder": "W/L preset",
+    "maximize": "Maximise",
+    "allViews": "All views",
+    "slab": {
+      "toggle": "Slab/MIP",
+      "active": "{{mode}} {{thickness}}mm",
+      "projectionMode": "Projection mode",
+      "thickness": "Slab thickness",
+      "thicknessValue": "{{value}}mm",
+      "thicknessOff": "Thin (0mm)",
+      "blendMode": {
+        "composite": "Normal",
+        "mip": "MIP",
+        "minip": "MinIP",
+        "average": "Average"
+      },
+      "hint": {
+        "mip": "Maximum intensity projection (vessels, bone)",
+        "minip": "Minimum intensity projection (lung, airways)",
+        "average": "Mean intensity (noise reduction)"
+      }
+    }
+  },
+  "states": {
+    "loading": "Loading DICOM images...",
+    "empty": "No DICOM images loaded",
+    "emptyHint": "Check the DICOMweb connection and series ID."
   }
 }

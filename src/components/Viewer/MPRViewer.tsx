@@ -159,7 +159,9 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
   }, [isReady, maximizedViewport, handleMaximize, toggleMIP, handleReset]);
 
   if (!series) {
-    return <ViewerEmptyState title="MPR-Viewer" subtitle={t("emptyState.selectSeriesForMpr")} />;
+    return (
+      <ViewerEmptyState title={t("mpr.title")} subtitle={t("emptyState.selectSeriesForMpr")} />
+    );
   }
 
   // Show warning for modalities that may lack proper 3D metadata

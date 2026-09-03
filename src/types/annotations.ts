@@ -100,27 +100,21 @@ export interface AnnotationListParams {
   offset?: number;
 }
 
-// Annotation category labels for UI
-export const ANNOTATION_CATEGORIES: Record<AnnotationCategory, string> = {
-  nodule: "Nodule",
-  mass: "Masse",
-  infiltrate: "Infiltrat",
-  effusion: "Erguss",
-  fracture: "Fraktur",
-  lesion: "Läsion",
-  anatomical: "Anatomisch",
-  other: "Sonstiges",
-};
-
-export const ANNOTATION_SEVERITIES: Record<AnnotationSeverity, string> = {
-  benign: "Benigne",
-  indeterminate: "Unbestimmt",
-  malignant: "Maligne",
-};
-
-export const ANNOTATION_LATERALITIES: Record<AnnotationLaterality, string> = {
-  left: "Links",
-  right: "Rechts",
-  bilateral: "Bilateral",
-  midline: "Mittellinie",
+/**
+ * Keys into the `viewer` namespace, resolved where a category is rendered.
+ *
+ * Severity and laterality had label tables here too, in German only and read by
+ * nothing — the panel that would show them does not exist yet. They are dropped
+ * rather than translated, so the vocabulary gets written once, next to whatever
+ * ends up rendering it.
+ */
+export const ANNOTATION_CATEGORY_KEYS: Record<AnnotationCategory, string> = {
+  nodule: "annotations.category.nodule",
+  mass: "annotations.category.mass",
+  infiltrate: "annotations.category.infiltrate",
+  effusion: "annotations.category.effusion",
+  fracture: "annotations.category.fracture",
+  lesion: "annotations.category.lesion",
+  anatomical: "annotations.category.anatomical",
+  other: "annotations.category.other",
 };

@@ -1,0 +1,1 @@
+{"root":["./vite.config.ts","./playwright.config.ts","./e2e/auth.spec.ts","./e2e/workflow.spec.ts","./e2e/support/fixtures.ts","./e2e/support/mockBackend.ts"],"version":"5.8.3"}

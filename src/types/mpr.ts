@@ -1,11 +1,10 @@
-import type { Enums } from "@cornerstonejs/core";
-
 export type MPROrientation = "axial" | "sagittal" | "coronal";
 
 export interface MPRViewportConfig {
   id: string;
   orientation: MPROrientation;
-  label: string;
+  /** Key into the `viewer` namespace, resolved where the viewport is rendered. */
+  labelKey: string;
   color: string;
 }
 
@@ -31,9 +30,24 @@ export interface MPRCrosshairPosition {
 }
 
 export const MPR_VIEWPORTS: MPRViewportConfig[] = [
-  { id: "axial", orientation: "axial", label: "Axial", color: "hsl(var(--chart-1))" },
-  { id: "sagittal", orientation: "sagittal", label: "Sagittal", color: "hsl(var(--chart-2))" },
-  { id: "coronal", orientation: "coronal", label: "Coronal", color: "hsl(var(--chart-3))" },
+  {
+    id: "axial",
+    orientation: "axial",
+    labelKey: "mpr.orientation.axial",
+    color: "hsl(var(--chart-1))",
+  },
+  {
+    id: "sagittal",
+    orientation: "sagittal",
+    labelKey: "mpr.orientation.sagittal",
+    color: "hsl(var(--chart-2))",
+  },
+  {
+    id: "coronal",
+    orientation: "coronal",
+    labelKey: "mpr.orientation.coronal",
+    color: "hsl(var(--chart-3))",
+  },
 ];
 
 // Slab/MIP rendering modes
@@ -44,18 +58,20 @@ export interface SlabSettings {
   blendMode: SlabBlendMode;
 }
 
-export const SLAB_BLEND_MODE_LABELS: Record<SlabBlendMode, string> = {
-  composite: "Normal",
-  mip: "MIP",
-  minip: "MinIP",
-  average: "Average",
+/**
+ * Keys into the `viewer` namespace, resolved where a blend mode is rendered.
+ * The mode names are acronyms in both languages, but `composite` is not, and a
+ * label table in a type module has no place to look a translation up.
+ */
+export const SLAB_BLEND_MODE_KEYS: Record<SlabBlendMode, string> = {
+  composite: "mpr.slab.blendMode.composite",
+  mip: "mpr.slab.blendMode.mip",
+  minip: "mpr.slab.blendMode.minip",
+  average: "mpr.slab.blendMode.average",
 };
 
-export const SLAB_THICKNESS_PRESETS = [
-  { value: 0, label: "Dünn (0mm)" },
-  { value: 5, label: "5mm" },
-  { value: 10, label: "10mm" },
-  { value: 20, label: "20mm" },
-  { value: 50, label: "50mm" },
-  { value: 100, label: "100mm" },
-];
+/**
+ * Millimetres only — the labels used to spell the same numbers out a second
+ * time, so a preset could be changed here and still render its old value.
+ */
+export const SLAB_THICKNESS_PRESETS = [0, 5, 10, 20, 50, 100];
