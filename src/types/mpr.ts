@@ -2,10 +2,14 @@ import type { Enums } from "@cornerstonejs/core";
 
 export type MPROrientation = "axial" | "sagittal" | "coronal";
 
+/**
+ * No `label` here: the orientation *is* the label's key, resolved per render as
+ * `viewer:mpr.orientations.${orientation}`. A label baked in at import time
+ * would survive a language switch unchanged.
+ */
 export interface MPRViewportConfig {
   id: string;
   orientation: MPROrientation;
-  label: string;
   color: string;
 }
 
@@ -31,9 +35,9 @@ export interface MPRCrosshairPosition {
 }
 
 export const MPR_VIEWPORTS: MPRViewportConfig[] = [
-  { id: "axial", orientation: "axial", label: "Axial", color: "hsl(var(--chart-1))" },
-  { id: "sagittal", orientation: "sagittal", label: "Sagittal", color: "hsl(var(--chart-2))" },
-  { id: "coronal", orientation: "coronal", label: "Coronal", color: "hsl(var(--chart-3))" },
+  { id: "axial", orientation: "axial", color: "hsl(var(--chart-1))" },
+  { id: "sagittal", orientation: "sagittal", color: "hsl(var(--chart-2))" },
+  { id: "coronal", orientation: "coronal", color: "hsl(var(--chart-3))" },
 ];
 
 // Slab/MIP rendering modes
@@ -44,18 +48,16 @@ export interface SlabSettings {
   blendMode: SlabBlendMode;
 }
 
-export const SLAB_BLEND_MODE_LABELS: Record<SlabBlendMode, string> = {
-  composite: "Normal",
-  mip: "MIP",
-  minip: "MinIP",
-  average: "Average",
-};
+/**
+ * Display order for the projection-mode buttons. The labels live under
+ * `viewer:mpr.slab.blendModes.*` — MIP and MinIP keep their acronyms in both
+ * languages, but "Normal" and "Average" do not.
+ */
+export const SLAB_BLEND_MODES: SlabBlendMode[] = ["composite", "mip", "minip", "average"];
 
-export const SLAB_THICKNESS_PRESETS = [
-  { value: 0, label: "Dünn (0mm)" },
-  { value: 5, label: "5mm" },
-  { value: 10, label: "10mm" },
-  { value: 20, label: "20mm" },
-  { value: 50, label: "50mm" },
-  { value: 100, label: "100mm" },
-];
+/**
+ * Slab thicknesses in mm. Rendered through `viewer:mpr.slab.thicknessMm`, which
+ * carries the unit, so the millimetre suffix is translatable and the numbers
+ * are not spelled out twice.
+ */
+export const SLAB_THICKNESS_PRESETS = [0, 5, 10, 20, 50, 100];

@@ -13,10 +13,15 @@ export interface TransferFunction {
   colorPoints: Array<{ x: number; r: number; g: number; b: number }>; // HU -> RGB
 }
 
+/**
+ * A preset carries no user-facing description. `name` is the CT protocol name,
+ * which is the same in every language; the description is looked up per render
+ * as `viewer:vrt.presets.${id}`, so a language switch reaches text already on
+ * screen instead of leaving the import-time value behind.
+ */
 export interface VRTPreset {
   id: string;
   name: string;
-  description: string;
   transferFunction: TransferFunction;
   ambient: number;
   diffuse: number;
@@ -37,7 +42,6 @@ export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-bone",
     name: "CT Bone",
-    description: "Optimiert für Knochenstrukturen",
     ambient: 0.2,
     diffuse: 0.9,
     specular: 0.3,
@@ -65,7 +69,6 @@ export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-lung",
     name: "CT Lung",
-    description: "Optimiert für Lungenparenchym",
     ambient: 0.2,
     diffuse: 0.9,
     specular: 0.1,
@@ -98,7 +101,6 @@ export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-soft-tissue",
     name: "CT Soft Tissue",
-    description: "Weichteilgewebe und Organe",
     ambient: 0.3,
     diffuse: 0.8,
     specular: 0.2,
@@ -131,7 +133,6 @@ export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-angiography",
     name: "CT Angiography",
-    description: "Kontrastmittelgefüllte Gefäße",
     ambient: 0.2,
     diffuse: 0.9,
     specular: 0.5,
@@ -162,7 +163,6 @@ export const VRT_PRESETS: VRTPreset[] = [
   {
     id: "ct-muscle-bone",
     name: "CT Muscle/Bone",
-    description: "Muskel- und Knochenstrukturen",
     ambient: 0.2,
     diffuse: 0.85,
     specular: 0.3,

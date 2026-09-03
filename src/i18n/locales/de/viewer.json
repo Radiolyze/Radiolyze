@@ -144,6 +144,118 @@
   },
   "annotations": {
     "selectSeries": "Wählen Sie eine Serie aus",
-    "confirmDelete": "Annotation \"{{label}}\" löschen?"
+    "confirmDelete": "Annotation \"{{label}}\" löschen?",
+    "categories": {
+      "nodule": "Rundherd",
+      "mass": "Masse",
+      "infiltrate": "Infiltrat",
+      "effusion": "Erguss",
+      "fracture": "Fraktur",
+      "lesion": "Läsion",
+      "anatomical": "Anatomisch",
+      "other": "Sonstiges"
+    },
+    "severities": {
+      "benign": "Benigne",
+      "indeterminate": "Unbestimmt",
+      "malignant": "Maligne"
+    },
+    "lateralities": {
+      "left": "Links",
+      "right": "Rechts",
+      "bilateral": "Bilateral",
+      "midline": "Mittellinie"
+    },
+    "categoryLabel": "Kategorie",
+    "labelPlaceholder": "Label",
+    "notesPlaceholder": "Notizen...",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "context": "Tool: {{tool}} • Frame: {{frame}}",
+    "dialogTitle": "Annotation beschriften",
+    "dialogDescription": "Geben Sie ein Label und eine Kategorie für die Annotation ein.",
+    "labelField": "Label",
+    "labelHint": "z.B. Rundlicher Nodulus 1.2cm",
+    "panelTitle": "Annotationen",
+    "empty": "Keine Annotationen vorhanden.",
+    "emptyHint": "Verwenden Sie die Annotations-Tools, um Bereiche zu markieren.",
+    "currentFrame": "Frame {{frame}}",
+    "otherFrames": "Andere Frames",
+    "verifiedCount": "Verifiziert: {{verified}}/{{total}}",
+    "frameLabel": "Frame: {{frame}}",
+    "frameShort": "• F{{frame}}"
+  },
+  "vrt": {
+    "title": "3D VRT",
+    "presetPlaceholder": "Preset wählen",
+    "presets": {
+      "ct-bone": "Optimiert für Knochenstrukturen",
+      "ct-lung": "Optimiert für Lungenparenchym",
+      "ct-soft-tissue": "Weichteilgewebe und Organe",
+      "ct-angiography": "Kontrastmittelgefüllte Gefäße",
+      "ct-muscle-bone": "Muskel- und Knochenstrukturen"
+    },
+    "viewAngles": {
+      "anterior": "Anterior (A)",
+      "posterior": "Posterior (P)",
+      "left": "Links (L)",
+      "right": "Rechts (R)",
+      "superior": "Superior (S)",
+      "inferior": "Inferior (I)"
+    },
+    "lighting": {
+      "button": "Beleuchtung",
+      "title": "Rendering-Einstellungen",
+      "quality": "Renderqualität",
+      "qualityHigh": "Hoch",
+      "qualityMedium": "Mittel",
+      "qualityFast": "Schnell",
+      "ambient": "Umgebungslicht",
+      "diffuse": "Diffuse Reflexion",
+      "specular": "Spiegelreflexion",
+      "specularPower": "Glanzstärke"
+    },
+    "resetCamera": "Kamera zurücksetzen"
+  },
+  "mpr": {
+    "orientations": {
+      "axial": "Axial",
+      "sagittal": "Sagittal",
+      "coronal": "Koronal"
+    },
+    "tools": {
+      "crosshairs": "Fadenkreuz",
+      "windowLevel": "Fenster/Level"
+    },
+    "windowLevelPlaceholder": "W/L Preset",
+    "slab": {
+      "button": "Slab/MIP",
+      "blendModeLabel": "Projektionsmodus",
+      "blendModes": {
+        "composite": "Normal",
+        "mip": "MIP",
+        "minip": "MinIP",
+        "average": "Mittelwert"
+      },
+      "thickness": "Schichtdicke",
+      "thicknessNone": "Dünn (0 mm)",
+      "thicknessMm": "{{value}} mm",
+      "indicator": "{{mode}} {{thickness}} mm",
+      "hints": {
+        "mip": "Maximum Intensity Projection (Gefäße, Knochen)",
+        "minip": "Minimum Intensity Projection (Lunge, Atemwege)",
+        "average": "Mittlere Intensität (Rauschreduktion)"
+      }
+    },
+    "layout": {
+      "maximize": "Maximieren",
+      "showAll": "Alle Ansichten"
+    },
+    "withShortcut": "{{label}} ({{shortcut}})"
+  },
+  "overlay": {
+    "loading": "Lade DICOM-Bilder...",
+    "noImages": "Keine DICOM-Bilder geladen",
+    "noImagesHint": "Prüfen Sie DICOMweb-Verbindung und Serien-ID."
   }
 }

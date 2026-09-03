@@ -1,3 +1,13 @@
+/**
+ * German-language demo fixtures — deliberately **not** translated.
+ *
+ * These stand in for clinical content a real deployment gets from the PACS and
+ * the model (report bodies, AI impressions, QA findings, ASR transcripts), not
+ * for UI chrome. Running them through `t()` would claim the app translates
+ * patient data, which it does not: the report language follows the source, not
+ * the interface language. #117 records this as a decision so the next i18n
+ * sweep does not report the strings below as a finding again.
+ */
 import type {
   Patient,
   Study,
