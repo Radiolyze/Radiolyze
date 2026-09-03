@@ -248,7 +248,10 @@ export function VRTViewer({ series, className }: VRTViewerProps) {
                 <div className="absolute bottom-3 right-3 text-right text-xs text-white/70 bg-black/40 rounded px-2 py-1">
                   <p className="truncate max-w-[200px]">{series.seriesDescription}</p>
                   <p>
-                    {series.modality} • {imageIds.length} Bilder
+                    {t("vrt.seriesSummary", {
+                      modality: series.modality,
+                      count: imageIds.length,
+                    })}
                   </p>
                   {limitedSupportWarning && (
                     <p className="text-yellow-400 text-[10px] mt-1 max-w-[200px]">

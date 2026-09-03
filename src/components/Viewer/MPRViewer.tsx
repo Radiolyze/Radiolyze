@@ -210,9 +210,11 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin" />
             <span className="text-sm">
-              {isFetchingInstances ? "Lade DICOM-Daten..." : "Erstelle 3D-Volumen..."}
+              {isFetchingInstances ? t("mpr.loadingData") : t("mpr.buildingVolume")}
             </span>
-            <span className="text-xs text-muted-foreground/60">{imageIds.length} Bilder</span>
+            <span className="text-xs text-muted-foreground/60">
+              {t("vrt.imageCount", { count: imageIds.length })}
+            </span>
           </div>
         </div>
       )}
@@ -221,12 +223,11 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
       {effectiveError && !isLoading && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-destructive max-w-md px-4">
-            <p className="text-sm font-medium">Fehler beim Laden</p>
+            <p className="text-sm font-medium">{t("mpr.loadError")}</p>
             <p className="text-xs text-muted-foreground mt-1">{effectiveError}</p>
             {hasLimitedSupport && (
               <p className="text-xs text-yellow-500 mt-2">
-                {series.modality}-Bilder sind für MPR nicht optimal geeignet, da oft räumliche
-                Metadaten (PixelSpacing, ImageOrientation) fehlen.
+                {t("mpr.limitedSupportError", { modality: series.modality })}
               </p>
             )}
           </div>
@@ -248,7 +249,7 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
 
               {/* Info panel */}
               <div className="bg-card rounded-lg border border-border p-4 flex flex-col">
-                <h3 className="text-sm font-semibold mb-3">MPR Navigation</h3>
+                <h3 className="text-sm font-semibold mb-3">{t("mpr.navigation")}</h3>
 
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center gap-2">
@@ -256,46 +257,48 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
                       className="w-3 h-3 rounded"
                       style={{ backgroundColor: "rgb(255, 99, 71)" }}
                     />
-                    <span className="text-muted-foreground">Axial (Transversal)</span>
+                    <span className="text-muted-foreground">{t("mpr.legend.axial")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div
                       className="w-3 h-3 rounded"
                       style={{ backgroundColor: "rgb(50, 205, 50)" }}
                     />
-                    <span className="text-muted-foreground">Sagittal</span>
+                    <span className="text-muted-foreground">{t("mpr.legend.sagittal")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div
                       className="w-3 h-3 rounded"
                       style={{ backgroundColor: "rgb(30, 144, 255)" }}
                     />
-                    <span className="text-muted-foreground">Coronal (Frontal)</span>
+                    <span className="text-muted-foreground">{t("mpr.legend.coronal")}</span>
                   </div>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-border space-y-1 text-xs text-muted-foreground">
                   <p>
-                    <kbd className="px-1 bg-muted rounded">LMB</kbd> Crosshairs
+                    <kbd className="px-1 bg-muted rounded">LMB</kbd> {t("mpr.shortcuts.crosshairs")}
                   </p>
                   <p>
-                    <kbd className="px-1 bg-muted rounded">RMB</kbd> Pan
+                    <kbd className="px-1 bg-muted rounded">RMB</kbd> {t("mpr.shortcuts.pan")}
                   </p>
                   <p>
-                    <kbd className="px-1 bg-muted rounded">Scroll</kbd> Zoom
+                    <kbd className="px-1 bg-muted rounded">Scroll</kbd> {t("mpr.shortcuts.zoom")}
                   </p>
                   <p>
-                    <kbd className="px-1 bg-muted rounded">Shift+LMB</kbd> W/L
+                    <kbd className="px-1 bg-muted rounded">Shift+LMB</kbd>{" "}
+                    {t("mpr.shortcuts.windowLevel")}
                   </p>
                   <div className="border-t border-border mt-2 pt-2">
                     <p>
-                      <kbd className="px-1 bg-muted rounded">1/2/3</kbd> Maximieren
+                      <kbd className="px-1 bg-muted rounded">1/2/3</kbd>{" "}
+                      {t("mpr.shortcuts.maximize")}
                     </p>
                     <p>
-                      <kbd className="px-1 bg-muted rounded">M</kbd> MIP Toggle
+                      <kbd className="px-1 bg-muted rounded">M</kbd> {t("mpr.shortcuts.mipToggle")}
                     </p>
                     <p>
-                      <kbd className="px-1 bg-muted rounded">Esc</kbd> Reset
+                      <kbd className="px-1 bg-muted rounded">Esc</kbd> {t("mpr.shortcuts.reset")}
                     </p>
                   </div>
                 </div>
@@ -306,7 +309,10 @@ export function MPRViewer({ series, className }: MPRViewerProps) {
                       {series.seriesDescription}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {series.modality} • {imageIds.length} Bilder
+                      {t("mpr.seriesSummary", {
+                        modality: series.modality,
+                        count: imageIds.length,
+                      })}
                     </p>
                   </div>
                 )}

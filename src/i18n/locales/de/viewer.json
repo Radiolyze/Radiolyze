@@ -164,7 +164,10 @@
       "other": "Sonstiges"
     },
     "verifiedCount": "Verifiziert: {{verified}}/{{total}}",
-    "frame": "Frame: {{frame}}"
+    "frame": "Frame: {{frame}}",
+    "empty": "Keine Annotations vorhanden.",
+    "emptyHint": "Verwenden Sie die Annotation-Tools, um Bereiche zu markieren.",
+    "otherFrames": "Andere Frames"
   },
   "vrt": {
     "title": "3D Volume Rendering",
@@ -202,7 +205,9 @@
       "rotate": "Rotieren",
       "pan": "Verschieben",
       "zoom": "Zoom"
-    }
+    },
+    "seriesSummary_one": "{{modality}} • {{count}} Bild",
+    "seriesSummary_other": "{{modality}} • {{count}} Bilder"
   },
   "mpr": {
     "title": "MPR-Viewer",
@@ -232,7 +237,28 @@
         "minip": "Minimum Intensity Projection (Lunge, Atemwege)",
         "average": "Mittlere Intensität (Rauschreduktion)"
       }
-    }
+    },
+    "navigation": "MPR Navigation",
+    "legend": {
+      "axial": "Axial (Transversal)",
+      "sagittal": "Sagittal",
+      "coronal": "Coronal (Frontal)"
+    },
+    "loadingData": "Lade DICOM-Daten...",
+    "buildingVolume": "Erstelle 3D-Volumen...",
+    "loadError": "Fehler beim Laden",
+    "limitedSupportError": "{{modality}}-Bilder sind für MPR nicht optimal geeignet, da oft räumliche Metadaten (PixelSpacing, ImageOrientation) fehlen.",
+    "shortcuts": {
+      "crosshairs": "Crosshairs",
+      "pan": "Verschieben",
+      "zoom": "Zoom",
+      "windowLevel": "W/L",
+      "maximize": "Maximieren",
+      "mipToggle": "MIP umschalten",
+      "reset": "Zurücksetzen"
+    },
+    "seriesSummary_one": "{{modality}} • {{count}} Bild",
+    "seriesSummary_other": "{{modality}} • {{count}} Bilder"
   },
   "states": {
     "loading": "Lade DICOM-Bilder...",

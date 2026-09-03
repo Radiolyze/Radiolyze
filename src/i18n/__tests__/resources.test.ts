@@ -117,6 +117,21 @@ describe("viewer label tables", () => {
     });
   }
 
+  it("counts images rather than spelling one plural out", async () => {
+    // Both keys carry {{count}}, so i18next selects a plural form; a resource
+    // written without the _one/_other pair renders "1 Bilder".
+    await i18n.changeLanguage("de");
+    expect(i18n.t("viewer:vrt.imageCount", { count: 1 })).toBe("1 Bild");
+    expect(i18n.t("viewer:vrt.imageCount", { count: 12 })).toBe("12 Bilder");
+    expect(i18n.t("viewer:mpr.seriesSummary", { modality: "CT", count: 1 })).toBe("CT • 1 Bild");
+
+    await i18n.changeLanguage("en");
+    expect(i18n.t("viewer:vrt.imageCount", { count: 1 })).toBe("1 image");
+    expect(i18n.t("viewer:mpr.seriesSummary", { modality: "CT", count: 12 })).toBe(
+      "CT • 12 images",
+    );
+  });
+
   it("carries the slab thickness as an interpolated value", () => {
     // SLAB_THICKNESS_PRESETS is millimetres only; the labels used to spell the
     // same numbers out a second time and could drift from the values.

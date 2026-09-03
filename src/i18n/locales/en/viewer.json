@@ -164,7 +164,10 @@
       "other": "Other"
     },
     "verifiedCount": "Verified: {{verified}}/{{total}}",
-    "frame": "Frame: {{frame}}"
+    "frame": "Frame: {{frame}}",
+    "empty": "No annotations yet.",
+    "emptyHint": "Use the annotation tools to mark regions.",
+    "otherFrames": "Other frames"
   },
   "vrt": {
     "title": "3D volume rendering",
@@ -202,7 +205,9 @@
       "rotate": "Rotate",
       "pan": "Pan",
       "zoom": "Zoom"
-    }
+    },
+    "seriesSummary_one": "{{modality}} • {{count}} image",
+    "seriesSummary_other": "{{modality}} • {{count}} images"
   },
   "mpr": {
     "title": "MPR viewer",
@@ -232,7 +237,28 @@
         "minip": "Minimum intensity projection (lung, airways)",
         "average": "Mean intensity (noise reduction)"
       }
-    }
+    },
+    "navigation": "MPR navigation",
+    "legend": {
+      "axial": "Axial (transverse)",
+      "sagittal": "Sagittal",
+      "coronal": "Coronal (frontal)"
+    },
+    "loadingData": "Loading DICOM data...",
+    "buildingVolume": "Building 3D volume...",
+    "loadError": "Loading failed",
+    "limitedSupportError": "{{modality}} images are not well suited to MPR, as spatial metadata (PixelSpacing, ImageOrientation) is often missing.",
+    "shortcuts": {
+      "crosshairs": "Crosshairs",
+      "pan": "Pan",
+      "zoom": "Zoom",
+      "windowLevel": "W/L",
+      "maximize": "Maximise",
+      "mipToggle": "Toggle MIP",
+      "reset": "Reset"
+    },
+    "seriesSummary_one": "{{modality}} • {{count}} image",
+    "seriesSummary_other": "{{modality}} • {{count}} images"
   },
   "states": {
     "loading": "Loading DICOM images...",

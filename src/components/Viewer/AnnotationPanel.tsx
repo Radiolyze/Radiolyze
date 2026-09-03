@@ -152,9 +152,9 @@ export function AnnotationPanel({
           </div>
         ) : annotations.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
-            Keine Annotations vorhanden.
+            {t("annotations.empty")}
             <br />
-            Verwenden Sie die Annotation-Tools, um Bereiche zu markieren.
+            {t("annotations.emptyHint")}
           </div>
         ) : (
           <div className="p-2 space-y-2">
@@ -190,7 +190,9 @@ export function AnnotationPanel({
             {/* Other frames */}
             {otherAnnotations.length > 0 && (
               <div className="space-y-1">
-                <div className="text-xs text-muted-foreground px-2 py-1">Andere Frames</div>
+                <div className="text-xs text-muted-foreground px-2 py-1">
+                  {t("annotations.otherFrames")}
+                </div>
                 {otherAnnotations.map((ann) => (
                   <AnnotationItem
                     key={ann.id}
