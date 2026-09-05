@@ -150,20 +150,6 @@ for the full history.
   `torch.bfloat16` without importing `torch`. The "Data Capture" note appended
   when `includeImages` is set was three near-copies; it is one constant, so the
   COCO variant loses the word "bereits" and matches the other two.
-- `anonymize=True` does less than its name on all three export formats — a
-  pre-existing defect the split surfaced, pinned by tests rather than fixed,
-  because a fix changes what an export contains and wants its own PR. COCO's
-  branch strips `created_by`/`verified_by` from an
-  `attributes` map that never contains either, so a COCO export is not
-  anonymized at all and carries the DICOM identifiers as they are. HuggingFace
-  and Radiolyze do pseudonymize their identifier fields, but the sample key
-  (`id` / `image_id`) is the raw `study_series_instance_frame` string and
-  travels out intact. On Radiolyze the identifiers live under `metadata` rather
-  than at the top level, so `anonymize_annotation` rebuilds `image_path` and
-  `wado_url` from empty strings — `images/___0.png` — and stamps every sample
-  with frame 1: an anonymized Radiolyze export cannot resolve its own images.
-  `backend/tests/test_training_export.py` states each of these so the fix has
-  to change a test deliberately.
 - `services/segmenter` is linted in CI (#311). The job ran `pytest` only, and
   the two ruff pre-commit hooks were scoped `^backend/`, so nothing checked the
   service from either side — 25 findings against ruff's defaults had
@@ -466,6 +452,34 @@ for the full history.
 
 ### Fixed
 
+- `anonymize=True` on `POST /api/v1/training/export` now removes the DICOM
+  identifiers on all three formats (#329). It did less than its name says on
+  each of them, in a different place: COCO's branch stripped
+  `created_by`/`verified_by` from an `attributes` map its own builder never
+  writes, so a COCO export was not anonymized at all; HuggingFace and Radiolyze
+  pseudonymized the fields `anonymize_annotation` knew by name, but the sample
+  key (`id` / `image_id`) is the raw `study_series_instance_frame` string and
+  carried the identifiers out beside the pseudonyms that hid them; and under
+  `metadata`, where Radiolyze keeps its identifiers, only `study_id` was
+  reached — via the `StudyID` DICOM tag — leaving series and instance raw.
+  The identifiers now become pseudonyms in one place, `frame_ids()` in
+  `app/services/training_export/images.py`, and every key, path and URL
+  downstream is built from what it returns, so a key cannot disagree with the
+  fields beside it. `app/anonymize.py` pseudonymizes values only; it no longer
+  reassembles paths it cannot see the shape of.
+  A new test exports each format with `anonymize=True` and asserts that no raw
+  study, series or instance identifier appears anywhere in the archive — the
+  assurance that was missing, and the one scan that finds all three defects.
+- An anonymized Radiolyze export resolves its own images again (#329). Because
+  `anonymize_annotation` rebuilt `image_path` and `wado_url` from top-level
+  identifiers that this format keeps under `metadata`, it built them from empty
+  strings — `images/___0.png`,
+  `/wado-rs/studies//series//instances//frames/1/rendered` — and stamped every
+  sample with frame 1, so no sample pointed at its image and the dataset was
+  not trainable. Frame numbers are 1-based in one place now
+  (`images._frame_path`), and with `includeImages` the archive stores each
+  frame under the pseudonymized member name the dataset points at, while still
+  fetching it from the PACS under its real identifiers.
 - Approving a report now changes something on screen (#297). The
   `report_status` WebSocket payload carried `asrStatus`, `aiStatus` and
   `qaStatus` but never the status of the report itself, and

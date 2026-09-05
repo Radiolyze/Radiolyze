@@ -8,7 +8,9 @@ alongside four route handlers.
   each owning its dataset shape *and* the README that documents it, so the
   archive's on-disk contract is readable in one place.
 - ``images`` -- how a rendered frame is addressed, listed in the manifest and
-  fetched over DICOMweb. Shared by the export and the manifest preview.
+  fetched over DICOMweb. Shared by the export and the manifest preview, and the
+  one place an anonymized export turns DICOM identifiers into pseudonyms (#329):
+  the formats build every key, path and URL from what ``frame_ids`` hands them.
 - ``archive`` -- the split, the ZIP and the parts every format has in common.
 
 ``app.api.training`` keeps the HTTP surface only: the request/response schemas,
@@ -23,9 +25,13 @@ from .images import (
     build_manifest,
     collect_image_entries,
     fetch_manifest_images,
+    fetch_urls,
+    frame_ids,
+    frame_key,
     group_by_image,
     image_key,
     rendered_frame_url,
+    wado_rs_path,
 )
 
 __all__ = [
@@ -34,7 +40,11 @@ __all__ = [
     "build_manifest",
     "collect_image_entries",
     "fetch_manifest_images",
+    "fetch_urls",
+    "frame_ids",
+    "frame_key",
     "group_by_image",
     "image_key",
     "rendered_frame_url",
+    "wado_rs_path",
 ]

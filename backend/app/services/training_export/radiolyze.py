@@ -6,10 +6,10 @@ import json
 import zipfile
 from typing import Any
 
-from ...anonymize import anonymize_annotation
+from ...anonymize import anonymize_metadata
 from ...models import Annotation
 from ._common import DATA_CAPTURE_NOTE
-from .images import group_by_image
+from .images import frame_ids, frame_key, group_by_image, wado_rs_path
 
 LORA_CONFIG = {
     "r": 16,
@@ -66,12 +66,14 @@ Use the WADO-RS URLs to fetch rendered PNG images before training.
 """
 
 
-def build_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
+def build_dataset(annotations: list[Annotation], anonymize: bool = False) -> list[dict[str, Any]]:
     """Build Radiolyze multimodal fine-tuning format."""
     samples = []
 
-    for image_key, anns in group_by_image(annotations).items():
+    for anns in group_by_image(annotations).values():
         first_ann = anns[0]
+        study_id, series_id, instance_id, frame_index = frame_ids(first_ann, anonymize=anonymize)
+        key = frame_key(study_id, series_id, instance_id, frame_index)
 
         # Build findings description from annotations
         findings_parts = []
@@ -105,25 +107,26 @@ def build_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
                 }
             )
 
+        # The ids are already pseudonymized by `frame_ids`; what is appended
+        # here is the rest of the DICOM metadata, swept for PHI tags instead.
+        dicom_metadata: dict[str, Any] = {"modality": "CT"}  # Should come from DICOM metadata
+        metadata: dict[str, Any] = {
+            "study_id": study_id,
+            "series_id": series_id,
+            "instance_id": instance_id,
+            "frame_index": frame_index,
+        }
+        metadata.update(anonymize_metadata(dicom_metadata) if anonymize else dicom_metadata)
+
         samples.append(
             {
-                "id": image_key,
-                "image_path": f"images/{image_key}.png",
-                "wado_url": (
-                    f"/wado-rs/studies/{first_ann.study_id}/series/{first_ann.series_id}"
-                    f"/instances/{first_ann.instance_id}"
-                    f"/frames/{first_ann.frame_index + 1}/rendered"
-                ),
+                "id": key,
+                "image_path": f"images/{key}.png",
+                "wado_url": wado_rs_path(study_id, series_id, instance_id, frame_index),
                 "prompt": PROMPT,
                 "response": findings_text,
                 "annotations": annotation_list,
-                "metadata": {
-                    "study_id": first_ann.study_id,
-                    "series_id": first_ann.series_id,
-                    "instance_id": first_ann.instance_id,
-                    "frame_index": first_ann.frame_index,
-                    "modality": "CT",  # Should come from DICOM metadata
-                },
+                "metadata": metadata,
             }
         )
 
@@ -136,11 +139,8 @@ def write_dataset(
     val_annotations: list[Annotation],
     anonymize: bool,
 ) -> None:
-    train_data = build_dataset(train_annotations)
-    val_data = build_dataset(val_annotations)
-    if anonymize:
-        train_data = [anonymize_annotation(s) for s in train_data]
-        val_data = [anonymize_annotation(s) for s in val_data]
+    train_data = build_dataset(train_annotations, anonymize)
+    val_data = build_dataset(val_annotations, anonymize)
 
     zf.writestr("train.json", json.dumps(train_data, indent=2))
     zf.writestr("val.json", json.dumps(val_data, indent=2))
