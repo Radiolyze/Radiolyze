@@ -6,6 +6,7 @@ import uuid
 from typing import Any
 
 from rq import get_current_job
+from sqlalchemy.orm import Session
 
 from .audit import add_audit_event
 from .db import SessionLocal
@@ -27,6 +28,22 @@ logger = logging.getLogger(__name__)
 DEAD_LETTER_TTL = int(os.getenv("DEAD_LETTER_TTL", str(7 * 24 * 3600)))
 
 
+def _required_str(payload: dict[str, Any], key: str) -> str:
+    """Read a payload key the job cannot run without.
+
+    The API schemas that enqueue these jobs declare the DICOM UIDs as required with
+    ``min_length=1``, but the payload arrives here as a plain dict, so a job replayed or
+    enqueued by hand can carry ``None``. That used to travel several layers down into
+    ``preprocess_for_medgemma``, where the segmenter call fails and the broad ``except``
+    turns it into a mock summary recorded as a successful inference. Fail here instead,
+    naming the key.
+    """
+    value = payload.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Job payload is missing a usable {key!r}")
+    return value
+
+
 def _idle_payload(report_status: str | None = None) -> dict[str, Any]:
     """The end-of-job status payload, carrying the report status when it is known."""
     payload: dict[str, Any] = {"aiStatus": "idle"}
@@ -36,7 +53,7 @@ def _idle_payload(report_status: str | None = None) -> dict[str, Any]:
 
 
 def _get_or_create_inference_job(
-    db,
+    db: Session,
     *,
     job_id: str | None,
     report_id: str | None,
@@ -544,8 +561,8 @@ def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     """Drive a volume-based inference job (P0.B): segmenter preprocess + vLLM."""
     report_id = payload.get("report_id")
     study_id = payload.get("study_id")
-    study_uid = payload.get("study_uid")
-    series_uid = payload.get("series_uid")
+    study_uid = _required_str(payload, "study_uid")
+    series_uid = _required_str(payload, "series_uid")
     findings_text = payload.get("findings_text")
     max_slices = payload.get("max_slices")
     window_preset = payload.get("window_preset")
@@ -694,10 +711,10 @@ def run_comparison_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
     """Drive a longitudinal comparison job (P1.A)."""
     report_id = payload.get("report_id")
     study_id = payload.get("study_id")
-    study_uid = payload.get("study_uid")
-    series_uid = payload.get("series_uid")
-    prior_study_uid = payload.get("prior_study_uid")
-    prior_series_uid = payload.get("prior_series_uid")
+    study_uid = _required_str(payload, "study_uid")
+    series_uid = _required_str(payload, "series_uid")
+    prior_study_uid = _required_str(payload, "prior_study_uid")
+    prior_series_uid = _required_str(payload, "prior_series_uid")
     time_delta_days = payload.get("time_delta_days")
     findings_text = payload.get("findings_text")
     max_slices = payload.get("max_slices")
