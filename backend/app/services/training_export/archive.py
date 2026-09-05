@@ -10,7 +10,7 @@ from typing import Any, Protocol
 from ...models import Annotation
 from . import coco, huggingface, radiolyze
 from ._common import ExportFormat
-from .images import build_manifest, collect_image_entries, fetch_manifest_images
+from .images import build_manifest, collect_image_entries, fetch_manifest_images, fetch_urls
 
 
 class _WriteDataset(Protocol):
@@ -60,7 +60,7 @@ def build_export_zip(
         zf.writestr("README.md", readme(include_images))
 
         if include_images:
-            _write_images(zf, train_anns, val_anns)
+            _write_images(zf, train_anns, val_anns, anonymize)
 
     buffer.seek(0)
     return buffer.read()
@@ -70,16 +70,22 @@ def _write_images(
     zf: zipfile.ZipFile,
     train_annotations: list[Annotation],
     val_annotations: list[Annotation],
+    anonymize: bool,
 ) -> None:
-    """Fetch every annotated frame into the archive, next to its manifest."""
+    """Fetch every annotated frame into the archive, next to its manifest.
+
+    The member names have to match the paths the dataset files point at, so
+    they carry the same pseudonyms; the frames are still fetched from the real
+    PACS URLs, which the manifest does not publish.
+    """
     entries: dict[str, dict[str, Any]] = {}
-    collect_image_entries(train_annotations, "train", entries)
-    collect_image_entries(val_annotations, "val", entries)
+    collect_image_entries(train_annotations, "train", entries, anonymize=anonymize)
+    collect_image_entries(val_annotations, "val", entries, anonymize=anonymize)
     if not entries:
         return
 
     manifest = build_manifest(entries)
-    status_counts = fetch_manifest_images(manifest, zf.writestr)
+    status_counts = fetch_manifest_images(manifest, zf.writestr, fetch_urls(entries))
     zf.writestr(
         "images/manifest.json",
         json.dumps({"images": manifest, "status": status_counts}, indent=2),

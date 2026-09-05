@@ -5,6 +5,12 @@ places at once -- the ZIP member name, the COCO ``file_name``, the HuggingFace
 ``image_id`` and the manifest ``id`` -- so the key is built here and nowhere
 else. Two annotations on the same frame are one image, which is what makes the
 key a key rather than a formatting detail.
+
+Because the key *is* the identifier, this is also where an anonymized export
+stops carrying DICOM identifiers: :func:`frame_ids` pseudonymizes the triple
+once, and every key, path and URL downstream is built from what it returns
+(#329). A format never pseudonymizes on its own, so the key and the ``study_id``
+field beside it cannot drift apart.
 """
 
 from __future__ import annotations
@@ -17,6 +23,7 @@ from typing import Any
 
 import httpx
 
+from ...anonymize import pseudonymize
 from ...models import Annotation
 
 #: Called with the manifest path and the fetched bytes for every frame that
@@ -24,9 +31,29 @@ from ...models import Annotation
 ImageSink = Callable[[str, bytes], None]
 
 
-def image_key(ann: Annotation) -> str:
+def frame_ids(ann: Annotation, *, anonymize: bool = False) -> tuple[str, str, str, int]:
+    """The study/series/instance/frame an annotation sits on, optionally pseudonymized.
+
+    The one place raw DICOM identifiers turn into pseudonyms for an export.
+    """
+    if anonymize:
+        return (
+            pseudonymize(ann.study_id),
+            pseudonymize(ann.series_id),
+            pseudonymize(ann.instance_id),
+            ann.frame_index,
+        )
+    return (ann.study_id, ann.series_id, ann.instance_id, ann.frame_index)
+
+
+def frame_key(study_id: str, series_id: str, instance_id: str, frame_index: int) -> str:
+    """The key a frame is filed under, from whichever ids it is exported with."""
+    return f"{study_id}_{series_id}_{instance_id}_{frame_index}"
+
+
+def image_key(ann: Annotation, *, anonymize: bool = False) -> str:
     """Identify the rendered frame an annotation sits on."""
-    return f"{ann.study_id}_{ann.series_id}_{ann.instance_id}_{ann.frame_index}"
+    return frame_key(*frame_ids(ann, anonymize=anonymize))
 
 
 def group_by_image(annotations: list[Annotation]) -> dict[str, list[Annotation]]:
@@ -50,45 +77,75 @@ def dicom_auth_headers() -> dict[str, str]:
     return {"Authorization": f"Basic {token}"}
 
 
-def rendered_frame_url(ann: Annotation) -> str:
-    frame_number = ann.frame_index + 1
+def _frame_path(study_id: str, series_id: str, instance_id: str, frame_index: int) -> str:
+    """The DICOMweb path of a rendered frame, without a host or a prefix.
+
+    Frame numbers are 1-based, frame indices are not; the ``+ 1`` lives here so
+    that no caller has to remember it.
+    """
     return (
-        f"{dicom_web_base_url()}/studies/{ann.study_id}/series/{ann.series_id}/instances/"
-        f"{ann.instance_id}/frames/{frame_number}/rendered"
+        f"studies/{study_id}/series/{series_id}/instances/{instance_id}"
+        f"/frames/{frame_index + 1}/rendered"
     )
+
+
+def rendered_frame_url(study_id: str, series_id: str, instance_id: str, frame_index: int) -> str:
+    """The absolute DICOMweb URL a frame is fetched from."""
+    return f"{dicom_web_base_url()}/{_frame_path(study_id, series_id, instance_id, frame_index)}"
+
+
+def wado_rs_path(study_id: str, series_id: str, instance_id: str, frame_index: int) -> str:
+    """The relative WADO-RS reference an exported dataset hands to its consumer."""
+    return f"/wado-rs/{_frame_path(study_id, series_id, instance_id, frame_index)}"
 
 
 def collect_image_entries(
     annotations: list[Annotation],
     split: str,
     entries: dict[str, dict[str, Any]],
+    *,
+    anonymize: bool = False,
 ) -> None:
     """Add the frames these annotations sit on to ``entries``, tagged with ``split``.
 
     ``entries`` is accumulated across calls: a frame annotated in both halves of
     the split appears once, carrying both split names.
+
+    Under ``anonymize`` every published field carries pseudonyms, so the entry
+    can no longer be fetched from. The real URL is kept alongside as
+    ``source_url``, which :func:`build_manifest` does not publish and
+    :func:`fetch_manifest_images` reads via :func:`fetch_urls`.
     """
     for ann in annotations:
-        key = image_key(ann)
+        key = image_key(ann, anonymize=anonymize)
         if key not in entries:
+            study_id, series_id, instance_id, frame_index = frame_ids(ann, anonymize=anonymize)
             entries[key] = {
                 "id": key,
                 "image_path": f"images/{key}.png",
-                "wado_url": rendered_frame_url(ann),
-                "study_id": ann.study_id,
-                "series_id": ann.series_id,
-                "instance_id": ann.instance_id,
-                "frame_index": ann.frame_index,
-                "frame_number": ann.frame_index + 1,
+                "wado_url": rendered_frame_url(study_id, series_id, instance_id, frame_index),
+                "source_url": rendered_frame_url(*frame_ids(ann)),
+                "study_id": study_id,
+                "series_id": series_id,
+                "instance_id": instance_id,
+                "frame_index": frame_index,
+                "frame_number": frame_index + 1,
                 "splits": set(),
             }
         entries[key]["splits"].add(split)
 
 
+def fetch_urls(entries: dict[str, dict[str, Any]]) -> dict[str, str]:
+    """Map each entry id to the URL its frame is actually fetched from."""
+    return {entry["id"]: entry["source_url"] for entry in entries.values()}
+
+
 def build_manifest(entries: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     """Turn the accumulator into the JSON-serialisable manifest.
 
-    The only real work is the ``splits`` set, which JSON cannot hold.
+    The fields are listed rather than copied: ``splits`` is a set, which JSON
+    cannot hold, and ``source_url`` is the un-anonymized URL, which the manifest
+    must not carry into the archive.
     """
     manifest: list[dict[str, Any]] = []
     for entry in entries.values():
@@ -112,6 +169,7 @@ def build_manifest(entries: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
 def fetch_manifest_images(
     manifest: list[dict[str, Any]],
     sink: ImageSink | None = None,
+    source_urls: dict[str, str] | None = None,
 ) -> dict[str, int]:
     """Fetch every frame in ``manifest``, annotating each entry in place.
 
@@ -121,13 +179,18 @@ def fetch_manifest_images(
     The two callers differ only in what they do with the bytes: the manifest
     preview drops them, the export writes them into the archive. That is the
     ``sink`` -- a frame is never fetched twice to be both counted and stored.
+
+    ``source_urls`` (see :func:`fetch_urls`) says where an entry is really
+    fetched from. An anonymized manifest publishes a URL built from pseudonyms,
+    which no PACS can answer; without the map the entry's own URL is used.
     """
     counts = {"ok": 0, "error": 0}
     headers = dicom_auth_headers()
+    urls = source_urls or {}
     with httpx.Client(timeout=20) as client:
         for entry in manifest:
             try:
-                response = client.get(entry["wado_url"], headers=headers)
+                response = client.get(urls.get(entry["id"], entry["wado_url"]), headers=headers)
                 response.raise_for_status()
                 content = response.content
                 if sink is not None:

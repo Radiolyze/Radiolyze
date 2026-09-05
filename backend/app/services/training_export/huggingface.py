@@ -6,10 +6,9 @@ import json
 import zipfile
 from typing import Any
 
-from ...anonymize import anonymize_annotation
 from ...models import Annotation
 from ._common import DATA_CAPTURE_NOTE
-from .images import group_by_image
+from .images import frame_ids, frame_key, group_by_image
 
 _README = """# HuggingFace Dataset for Radiolyze Fine-Tuning
 
@@ -33,12 +32,14 @@ model = AutoModelForObjectDetection.from_pretrained("google/medgemma-1.5-4b-it")
 """
 
 
-def build_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
+def build_dataset(annotations: list[Annotation], anonymize: bool = False) -> list[dict[str, Any]]:
     """Build HuggingFace datasets format."""
     samples = []
 
-    for image_key, anns in group_by_image(annotations).items():
+    for anns in group_by_image(annotations).values():
         first_ann = anns[0]
+        study_id, series_id, instance_id, frame_index = frame_ids(first_ann, anonymize=anonymize)
+        key = frame_key(study_id, series_id, instance_id, frame_index)
 
         # Build objects list
         objects = []
@@ -61,12 +62,12 @@ def build_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
 
         samples.append(
             {
-                "image_id": image_key,
-                "image_path": f"images/{image_key}.png",
-                "study_id": first_ann.study_id,
-                "series_id": first_ann.series_id,
-                "instance_id": first_ann.instance_id,
-                "frame_index": first_ann.frame_index,
+                "image_id": key,
+                "image_path": f"images/{key}.png",
+                "study_id": study_id,
+                "series_id": series_id,
+                "instance_id": instance_id,
+                "frame_index": frame_index,
                 "objects": objects,
                 "num_objects": len(objects),
             }
@@ -81,11 +82,8 @@ def write_dataset(
     val_annotations: list[Annotation],
     anonymize: bool,
 ) -> None:
-    train_data = build_dataset(train_annotations)
-    val_data = build_dataset(val_annotations)
-    if anonymize:
-        train_data = [anonymize_annotation(s) for s in train_data]
-        val_data = [anonymize_annotation(s) for s in val_data]
+    train_data = build_dataset(train_annotations, anonymize)
+    val_data = build_dataset(val_annotations, anonymize)
 
     zf.writestr("data/train.jsonl", "\n".join(json.dumps(s) for s in train_data))
     zf.writestr("data/val.jsonl", "\n".join(json.dumps(s) for s in val_data))
