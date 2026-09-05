@@ -3,4 +3,4 @@ pytest-cov==7.1.0
 # Keep this pinned to the same version as backend/requirements-dev.txt and the
 # ruff-pre-commit rev in .pre-commit-config.yaml -- scripts/check-ruff-pin-sync.sh
 # asserts all three match.
-ruff==0.16.4
+ruff==0.16.5
