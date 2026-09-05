@@ -15,13 +15,15 @@ expected LPS point.
 from __future__ import annotations
 
 import numpy as np
-import SimpleITK as sitk
 import pytest
+import SimpleITK as sitk
 
-from app.meshing import build_mesh, _voxels_to_world
+from app.meshing import _voxels_to_world, build_mesh
 
 
-def _sphere_mask(shape: tuple[int, int, int], center_zyx: tuple[int, int, int], radius: int) -> np.ndarray:
+def _sphere_mask(
+    shape: tuple[int, int, int], center_zyx: tuple[int, int, int], radius: int
+) -> np.ndarray:
     z_idx, y_idx, x_idx = np.indices(shape)
     cz, cy, cx = center_zyx
     return (z_idx - cz) ** 2 + (y_idx - cy) ** 2 + (x_idx - cx) ** 2 <= radius**2
@@ -59,19 +61,25 @@ def _make_image(
 
 def test_voxels_to_world_identity_orientation() -> None:
     """Identity direction + zero origin: voxel (z, y, x) maps to (x*sx, y*sy, z*sz)."""
-    image = _make_image((10, 12, 14), spacing=(0.5, 0.6, 0.7), origin=(0, 0, 0),
-                        direction=(1, 0, 0, 0, 1, 0, 0, 0, 1))
+    image = _make_image(
+        (10, 12, 14),
+        spacing=(0.5, 0.6, 0.7),
+        origin=(0, 0, 0),
+        direction=(1, 0, 0, 0, 1, 0, 0, 0, 1),
+    )
     verts = np.array([[2, 3, 4], [0, 0, 0], [9, 11, 13]], dtype=np.float64)  # (z, y, x)
     world = _voxels_to_world(verts, image)
-    expected = np.array(
-        [[4 * 0.5, 3 * 0.6, 2 * 0.7], [0, 0, 0], [13 * 0.5, 11 * 0.6, 9 * 0.7]]
-    )
+    expected = np.array([[4 * 0.5, 3 * 0.6, 2 * 0.7], [0, 0, 0], [13 * 0.5, 11 * 0.6, 9 * 0.7]])
     assert np.allclose(world, expected, atol=1e-6)
 
 
 def test_voxels_to_world_with_origin() -> None:
-    image = _make_image((8, 8, 8), spacing=(1.0, 1.0, 1.0), origin=(100.0, -50.0, 25.0),
-                        direction=(1, 0, 0, 0, 1, 0, 0, 0, 1))
+    image = _make_image(
+        (8, 8, 8),
+        spacing=(1.0, 1.0, 1.0),
+        origin=(100.0, -50.0, 25.0),
+        direction=(1, 0, 0, 0, 1, 0, 0, 0, 1),
+    )
     verts = np.array([[3, 2, 1]], dtype=np.float64)
     world = _voxels_to_world(verts, image)
     assert np.allclose(world, np.array([[101.0, -48.0, 28.0]]))
@@ -80,8 +88,9 @@ def test_voxels_to_world_with_origin() -> None:
 def test_voxels_to_world_with_negative_xy_orientation() -> None:
     """LPS direction with both x- and y-axes flipped (common for axial CT)."""
     direction = (-1, 0, 0, 0, -1, 0, 0, 0, 1)
-    image = _make_image((4, 4, 4), spacing=(1.0, 1.0, 1.0), origin=(10.0, 20.0, 30.0),
-                        direction=direction)
+    image = _make_image(
+        (4, 4, 4), spacing=(1.0, 1.0, 1.0), origin=(10.0, 20.0, 30.0), direction=direction
+    )
     # Voxel (z=1, y=1, x=1) -> ijk_mm = (1, 1, 1) -> direction @ (1,1,1) = (-1, -1, 1)
     # plus origin (10, 20, 30) = (9, 19, 31)
     verts = np.array([[1, 1, 1]], dtype=np.float64)

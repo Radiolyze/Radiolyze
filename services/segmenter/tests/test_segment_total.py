@@ -14,14 +14,14 @@ import numpy as np
 import pytest
 import SimpleITK as sitk
 
-from app import segment_total
 from app.colors import color_for_label
-from app.labels import LabeledMask
 from app.segment_total import (
     TotalSegmentatorUnavailable,
     _collect_labels,
     _resolve_runner,
     _set_runner_for_testing,
+)
+from app.segment_total import (
     segment_total as run_segment_total,
 )
 
@@ -58,6 +58,7 @@ def test_resolve_runner_raises_when_totalsegmentator_missing(monkeypatch):
     _set_runner_for_testing(None)
 
     import builtins
+
     real_import = builtins.__import__
 
     def _block(name, globals=None, locals=None, fromlist=(), level=0):
