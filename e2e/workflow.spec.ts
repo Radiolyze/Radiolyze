@@ -1,6 +1,15 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { STUDY_CR, STUDY_CT, reportIdForStudy } from "./support/fixtures";
 import { mockWorkflowBackend, pinEnglishLocale } from "./support/mockBackend";
+import {
+  AI_TIMEOUT,
+  queueItem,
+  reportPanel,
+  seriesItem,
+  sidebar,
+  viewer,
+  waitForWorkspace,
+} from "./support/workspace";
 
 /**
  * Core clinical workflow E2E: select study -> AI findings -> QA -> finalize.
@@ -14,30 +23,6 @@ import { mockWorkflowBackend, pinEnglishLocale } from "./support/mockBackend";
  * connected, so `awaitInferenceResult` falls through to its HTTP polling
  * fallback — the same path a real deployment takes when the socket is down.
  */
-
-/** Inference plus its QA round trip; generous because polling is the slow path. */
-const AI_TIMEOUT = 30_000;
-
-const viewer = (page: Page) => page.getByRole("main");
-const sidebar = (page: Page) => page.getByRole("complementary").first();
-const reportPanel = (page: Page) => page.getByRole("complementary").nth(1);
-
-const queueItem = (page: Page, patientName: string) =>
-  sidebar(page).getByRole("button", { name: new RegExp(patientName) });
-
-const seriesItem = (page: Page, description: string) =>
-  sidebar(page).getByRole("button", { name: new RegExp(description) });
-
-/**
- * Waits for the workspace to finish loading the queue and mount the viewer.
- * Generous, because on a cold run this is the request that makes Vite compile
- * the Cornerstone-heavy route for the first time.
- */
-const waitForWorkspace = async (page: Page) => {
-  await expect(viewer(page).getByText(STUDY_CT.series[0].description)).toBeVisible({
-    timeout: 30_000,
-  });
-};
 
 test.beforeEach(async ({ page }) => {
   await pinEnglishLocale(page);
@@ -174,6 +159,38 @@ test.describe("core report workflow", () => {
     await expect(
       reportPanel(page).getByRole("button", { name: "Approve & Finalize" }),
     ).toBeEnabled();
+  });
+
+  test("a failed QA check blocks approval", async ({ page }) => {
+    const failure = "Impression contradicts the findings.";
+    const backend = await mockWorkflowBackend(page, {
+      inference: { summary: "Small left pleural effusion." },
+      qa: { passes: false, failures: [failure] },
+    });
+    await page.goto("/");
+    await waitForWorkspace(page);
+
+    await reportPanel(page).getByRole("button", { name: "AI Analysis" }).click();
+
+    // A failure is a blocker, unlike the warning case above.
+    await expect(reportPanel(page).getByText("Failed")).toBeVisible({ timeout: AI_TIMEOUT });
+    const approve = reportPanel(page).getByRole("button", { name: "Approve & Finalize" });
+    await expect(approve).toBeDisabled();
+
+    // The radiologist is told what failed, not just that something did.
+    await reportPanel(page)
+      .getByRole("button", { name: /QA Checks/ })
+      .click();
+    // `buildChecksFromService` uses the failure text as both the check's name
+    // and its message, so it renders twice.
+    await expect(reportPanel(page).getByText(failure).first()).toBeVisible();
+
+    // The gate is the report state, not just the button: clicking through the
+    // disabled trigger opens no dialog and produces no finalize request.
+    await approve.click({ force: true });
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    expect(backend.calls.finalize).toHaveLength(0);
+    expect(backend.reports.get(reportIdForStudy(STUDY_CT))?.status).not.toBe("finalized");
   });
 
   test("approving finalizes the report with the signature", async ({ page }) => {

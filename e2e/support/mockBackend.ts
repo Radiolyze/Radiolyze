@@ -46,12 +46,21 @@ export interface QaOptions {
   failures?: string[];
 }
 
+export interface AsrOptions {
+  /** Transcript the service returns for a dictation. */
+  text?: string;
+  confidence?: number;
+  /** HTTP status of the response; anything but 2xx exercises the failure path. */
+  status?: number;
+}
+
 export interface MockBackendOptions {
   studies?: StudyFixture[];
   /** Per-report-id overrides applied to the default payload. */
   reportOverrides?: Record<string, Partial<ReportPayload>>;
   inference?: InferenceOptions;
   qa?: QaOptions;
+  asr?: AsrOptions;
 }
 
 export interface RecordedCall {
@@ -68,6 +77,7 @@ export interface MockBackend {
     qaCheck: RecordedCall[];
     finalize: RecordedCall[];
     reportPatch: RecordedCall[];
+    asrTranscript: RecordedCall[];
   };
 }
 
@@ -79,6 +89,37 @@ const readBody = (route: Route): Record<string, unknown> | null => {
   } catch {
     return null;
   }
+};
+
+/**
+ * The dictation upload is `multipart/form-data`, not JSON, so `readBody` cannot
+ * see it. The audio itself is binary and of no interest to a spec; what matters
+ * is the metadata the UI attached to it and that a non-empty recording was sent
+ * at all, so the file part is recorded by name and the request by byte count.
+ */
+const readAsrForm = (route: Route): Record<string, unknown> => {
+  const request = route.request();
+  const boundary = /boundary=(.+)$/.exec(request.headers()["content-type"] ?? "")?.[1];
+  const raw = request.postData() ?? "";
+  const fields: Record<string, unknown> = {
+    filename: null,
+    audioBytes: request.postDataBuffer()?.length ?? 0,
+  };
+
+  if (!boundary) return fields;
+
+  for (const part of raw.split(`--${boundary}`)) {
+    const name = /name="([^"]+)"/.exec(part)?.[1];
+    if (!name) continue;
+    const filename = /filename="([^"]*)"/.exec(part)?.[1];
+    if (filename !== undefined) {
+      fields.filename = filename;
+      continue;
+    }
+    fields[name] = part.split("\r\n\r\n").slice(1).join("\r\n\r\n").trimEnd();
+  }
+
+  return fields;
 };
 
 const json = (route: Route, body: unknown, status = 200) =>
@@ -97,14 +138,21 @@ const dicomJson = (route: Route, body: unknown) =>
   });
 
 /**
+ * Seed `useUserPreferences` before any page script runs. Only the keys given
+ * here are pinned; the hook merges them over its own defaults, so a spec that
+ * cares about one preference does not silently fix the others.
+ */
+export const pinUserPreferences = (page: Page, preferences: Record<string, unknown>) =>
+  page.addInitScript((seed) => {
+    window.localStorage.setItem("radiolyze-user-preferences", JSON.stringify(seed));
+  }, preferences);
+
+/**
  * Pin the UI language before any page script runs. `useUserPreferences`
  * defaults `uiLanguage` to 'de' and applies it on mount, which would otherwise
  * override i18n's own 'en' default depending on navigation order.
  */
-export const pinEnglishLocale = (page: Page) =>
-  page.addInitScript(() => {
-    window.localStorage.setItem("radiolyze-user-preferences", JSON.stringify({ uiLanguage: "en" }));
-  });
+export const pinEnglishLocale = (page: Page) => pinUserPreferences(page, { uiLanguage: "en" });
 
 export async function mockWorkflowBackend(
   page: Page,
@@ -119,6 +167,12 @@ export async function mockWorkflowBackend(
     ...options.inference,
   };
   const qa: QaOptions = options.qa ?? { passes: true };
+  const asr: Required<AsrOptions> = {
+    text: "No focal consolidation.",
+    confidence: 0.94,
+    status: 200,
+    ...options.asr,
+  };
 
   const reports = new Map<string, ReportPayload>(
     studies.map((study) => {
@@ -132,6 +186,7 @@ export async function mockWorkflowBackend(
     qaCheck: [],
     finalize: [],
     reportPatch: [],
+    asrTranscript: [],
   };
 
   const studyByUid = new Map(studies.map((study) => [study.uid, study]));
@@ -142,11 +197,11 @@ export async function mockWorkflowBackend(
   /** Poll counter per job id, so a job can report `started` before `finished`. */
   const pollCounts = new Map<string, number>();
 
-  const record = (list: RecordedCall[], route: Route) =>
+  const record = (list: RecordedCall[], route: Route, body?: Record<string, unknown>) =>
     list.push({
       url: route.request().url(),
       method: route.request().method(),
-      body: readBody(route),
+      body: body ?? readBody(route),
     });
 
   // --- Fallbacks (registered first: later routes take precedence) -----------
@@ -241,6 +296,21 @@ export async function mockWorkflowBackend(
           });
         }
         return json(route, { passes: qa.passes ?? true, warnings, failures });
+      }
+
+      // Dictation upload. Shares the `/api/v1/reports` prefix with the report
+      // routes below, so it has to be handled here rather than in a route of
+      // its own — otherwise it falls through to the report lookup and 404s.
+      if (tail === "asr-transcript" && method === "POST") {
+        record(calls.asrTranscript, route, readAsrForm(route));
+        if (asr.status < 200 || asr.status >= 300) {
+          return json(route, { detail: "ASR service unavailable" }, asr.status);
+        }
+        return json(route, {
+          text: asr.text,
+          confidence: asr.confidence,
+          timestamp: "2026-07-21T10:20:00+00:00",
+        });
       }
 
       if (tail === "create" && method === "POST") {
