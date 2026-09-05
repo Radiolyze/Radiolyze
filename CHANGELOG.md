@@ -135,6 +135,23 @@ for the full history.
 
 ### Changed
 
+- `services/segmenter` is linted in CI (#311). The job ran `pytest` only, and
+  the two ruff pre-commit hooks were scoped `^backend/`, so nothing checked the
+  service from either side — 25 findings against ruff's defaults had
+  accumulated unnoticed while the backend's own gate was green. The service now
+  carries a `pyproject.toml` mirroring `backend/pyproject.toml` (line-length
+  100, `E,F,W,I,UP`, `ignore = ["E501"]`, double quotes) rather than running on
+  the defaults, so both Python services are held to one style; `ruff check .`
+  and `ruff format --check .` run in `segmenter-test`; the hooks match on
+  `^(backend|services/segmenter)/`. The 13 findings and 8 reformatted files
+  that the shared config produced are a separate, purely mechanical commit
+  ahead of the gate, so the first red run cannot be an unrelated PR's.
+- `scripts/check-ruff-pin-sync.sh` covers the third `ruff` pin, in
+  `services/segmenter/requirements-dev.txt`, and fails when any two of the
+  three disagree. Dependabot sees them through two ecosystems and two
+  directories, so the bumps arrive as separate PRs that have to be merged
+  together; the segmenter's pip entry gains the backend's `python-dev-tools`
+  group for the same reason.
 - `SCHEMA_VERSION` 1.2 → 1.3, for the finding category. The version is stamped
   into every stored job's metadata and is the only thing separating a finding
   with no category because the field did not exist from one the model declined

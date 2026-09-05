@@ -142,19 +142,27 @@ an der kein Check bemerken würde, dass sie veraltet:
 
 | Pin | Wo | Absicherung |
 |---|---|---|
-| `ruff`, zweimal | `backend/requirements-dev.txt` **und** `.pre-commit-config.yaml` | `scripts/check-ruff-pin-sync.sh`, läuft in CI |
+| `ruff`, dreimal | `backend/requirements-dev.txt`, `services/segmenter/requirements-dev.txt` **und** `.pre-commit-config.yaml` | `scripts/check-ruff-pin-sync.sh`, läuft in CI |
 | `@kitware/vtk.js` | `package.json` — **exakter** Peer von `@cornerstonejs/core` und `tools` | `npm ci` schlägt bei Abweichung fehl |
 | Cornerstone-Worker-Pfad | `scripts/bundle-cornerstone-worker.mjs` greift auf `node_modules/@cornerstonejs/dicom-image-loader/dist/esm/` zu | `npm run bundle:worker` in CI |
 | torch / totalsegmentator | `services/segmenter/requirements.txt` — nur Floors, Segmenter-Images sind über Rebuilds hinweg **nicht** reproduzierbar | keine |
 | `fast-simplification` | `services/segmenter/requirements.txt` — ein *optionales* trimesh-Extra, von dem `app/meshing.py` hart abhängt | `test_decimate_reaches_the_target_face_count` |
 
-Die `ruff`-Zeile ist die unangenehme. Dependabot sieht die beiden Pins über
-verschiedene Ökosysteme — `pip` für `requirements-dev.txt`, `pre-commit` für die
-Hook-Rev — und schlägt sie deshalb als zwei PRs vor, die Tage auseinander landen
-können. Dazwischen formatieren Hook und CI mit unterschiedlichen ruff-Versionen:
-Der Hook schreibt eine Datei um, die die Pipeline anschließend ablehnt. **Die
-beiden ruff-PRs gemeinsam mergen**; der CI-Guard lässt den Build so lange
-fehlschlagen, wie sie auseinanderliegen.
+Die `ruff`-Zeile ist die unangenehme. Dependabot sieht die drei Pins über zwei
+Ökosysteme und zwei Verzeichnisse — `pip` für jede `requirements-dev.txt`,
+`pre-commit` für die Hook-Rev — und schlägt sie deshalb als getrennte PRs vor,
+die Tage auseinander landen können. Dazwischen formatieren Hook und die beiden
+CI-Jobs mit unterschiedlichen ruff-Versionen: Der Hook schreibt eine Datei um,
+die die Pipeline anschließend ablehnt. **Die ruff-PRs gemeinsam mergen**; der
+CI-Guard lässt den Build so lange fehlschlagen, wie zwei von ihnen
+auseinanderliegen.
+
+Beide Python-Dienste werden gelintet, mit demselben Regelsatz:
+`backend/pyproject.toml` und `services/segmenter/pyproject.toml` tragen
+identische `[tool.ruff]`-Abschnitte (line-length 100, `E,F,W,I,UP`,
+`ignore = ["E501"]`, doppelte Anführungszeichen). Der Segmenter hatte bis #311
+keinen — er war weder konfiguriert noch geprüft, seine Formatierung war das,
+was das lokale ruff des jeweiligen Beitragenden produziert hat.
 
 ---
 

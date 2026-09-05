@@ -56,6 +56,14 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    groups:
+      # Same grouping as the backend: ruff is pinned in both requirements
+      # files and has to move in one step (#311), and there is no reason for
+      # the test tooling to arrive as three separate PRs either.
+      python-dev-tools:
+        patterns:
+          - "ruff"
+          - "pytest*"
 
   # Documentation toolchain (pip)
   - package-ecosystem: pip
@@ -77,11 +85,12 @@ updates:
 
   # Pre-commit hook revisions (.pre-commit-config.yaml)
   #
-  # ruff is pinned twice -- here and in backend/requirements-dev.txt (the pip
-  # entry above) -- and the two arrive as separate PRs that can land days
-  # apart. A formatter skew between the hook and CI means the hook writes a
-  # file the pipeline then rejects, so scripts/check-ruff-pin-sync.sh fails the
-  # build while they disagree. Merge the two ruff PRs together.
+  # ruff is pinned three times -- here, in backend/requirements-dev.txt and in
+  # services/segmenter/requirements-dev.txt (the two pip entries above) -- and
+  # they arrive as separate PRs that can land days apart. A formatter skew
+  # between the hook and CI means the hook writes a file the pipeline then
+  # rejects, so scripts/check-ruff-pin-sync.sh fails the build while any two
+  # of them disagree. Merge the ruff PRs together.
   - package-ecosystem: pre-commit
     directory: "/"
     schedule:
