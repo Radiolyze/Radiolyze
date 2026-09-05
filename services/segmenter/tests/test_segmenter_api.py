@@ -107,7 +107,8 @@ def test_bone_pipeline_e2e_smoke(segmenter_app):
 
 
 def test_bone_pipeline_rejects_non_ct(segmenter_app, monkeypatch):
-    from app import dicom_loader, main as segmenter_main
+    from app import dicom_loader
+    from app import main as segmenter_main
 
     def _mr_volume():
         arr = np.zeros((8, 16, 16), dtype=np.float32)
@@ -129,9 +130,7 @@ def test_bone_pipeline_rejects_non_ct(segmenter_app, monkeypatch):
         assert "CT" in (final["error"] or "")
 
 
-def test_total_preset_returns_503_when_totalsegmentator_missing(
-    segmenter_app, monkeypatch
-):
+def test_total_preset_returns_503_when_totalsegmentator_missing(segmenter_app, monkeypatch):
     from app import main as segmenter_main
 
     monkeypatch.setattr(segmenter_main, "_totalseg_version", lambda: None)
@@ -145,7 +144,8 @@ def test_total_preset_returns_503_when_totalsegmentator_missing(
 
 def test_total_preset_runs_with_mocked_runner(segmenter_app, monkeypatch):
     """Full /segment/total round-trip with a fake TotalSegmentator runner."""
-    from app import main as segmenter_main, segment_total
+    from app import main as segmenter_main
+    from app import segment_total
 
     monkeypatch.setattr(segmenter_main, "_totalseg_version", lambda: "fake-2.0.0")
 
@@ -162,9 +162,7 @@ def test_total_preset_runs_with_mocked_runner(segmenter_app, monkeypatch):
             arr[(zi - cz) ** 2 + (yi - cy) ** 2 + (xi - cx) ** 2 <= 9] = 1
             label_image = sitk.GetImageFromArray(arr)
             label_image.CopyInformation(ref)
-            sitk.WriteImage(
-                label_image, str(out / f"{name}.nii.gz"), useCompression=True
-            )
+            sitk.WriteImage(label_image, str(out / f"{name}.nii.gz"), useCompression=True)
 
     segment_total._set_runner_for_testing(_fake_runner)
 

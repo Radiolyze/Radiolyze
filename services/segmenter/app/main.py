@@ -19,14 +19,6 @@ from .config import (
     segmenter_api_key,
 )
 from .dicom_loader import LoadedVolume, fetch_series_volume
-from .medgemma_preprocess import (
-    MAX_MODEL_SLICES,
-    env_default_preset,
-    env_default_resize,
-    env_default_strategy,
-    env_max_slices,
-    preprocess_volume,
-)
 from .dicom_seg import (
     DicomSegArtifact,
     DicomSegUnavailable,
@@ -35,6 +27,14 @@ from .dicom_seg import (
 from .jobs import registry
 from .labels import LabeledMask
 from .manifest import build_manifest, write_manifest
+from .medgemma_preprocess import (
+    MAX_MODEL_SLICES,
+    env_default_preset,
+    env_default_resize,
+    env_default_strategy,
+    env_max_slices,
+    preprocess_volume,
+)
 from .meshing import build_mesh
 from .segment_bone import segment_bone
 from .segment_total import (
@@ -62,9 +62,7 @@ def require_api_key(
     """
     expected = segmenter_api_key()
     if not expected:
-        logger.warning(
-            "SEGMENTER_API_KEY is not set; accepting unauthenticated segmenter request."
-        )
+        logger.warning("SEGMENTER_API_KEY is not set; accepting unauthenticated segmenter request.")
         return
     if not x_segmenter_api_key or not secrets.compare_digest(x_segmenter_api_key, expected):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
@@ -172,9 +170,7 @@ async def _run_bone_pipeline(req: SegmentRequest) -> None:
     registry.update(req.job_id, progress=0.4)
 
     if loaded.modality not in {"CT", "CTA"}:
-        raise RuntimeError(
-            f"Bone preset requires a CT series; got modality={loaded.modality}"
-        )
+        raise RuntimeError(f"Bone preset requires a CT series; got modality={loaded.modality}")
 
     masks = segment_bone(loaded.image)
     registry.update(req.job_id, progress=0.6)
@@ -369,7 +365,9 @@ def job_manifest(job_id: str, _: None = Depends(require_api_key)) -> dict:
     return manifest
 
 
-def _safe_label_path(job_id: str, label_id: int, *, kind: Literal["mesh", "mask"], ext: str) -> Path:
+def _safe_label_path(
+    job_id: str, label_id: int, *, kind: Literal["mesh", "mask"], ext: str
+) -> Path:
     if kind == "mesh":
         sub = "meshes"
         filename = f"{label_id}.{ext}"
@@ -410,9 +408,7 @@ def mesh_file(
 
 
 @app.get("/jobs/{job_id}/mask/{label_id}")
-def mask_file(
-    job_id: str, label_id: int, _: None = Depends(require_api_key)
-) -> FileResponse:
+def mask_file(job_id: str, label_id: int, _: None = Depends(require_api_key)) -> FileResponse:
     path = _safe_label_path(job_id, label_id, kind="mask", ext="nii.gz")
     return FileResponse(path, media_type="application/octet-stream", filename=path.name)
 

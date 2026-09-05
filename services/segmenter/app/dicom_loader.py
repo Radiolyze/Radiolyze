@@ -81,9 +81,7 @@ def _instance_uid(entry: dict) -> str | None:
     return None
 
 
-async def fetch_series_volume(
-    base_url: str, study_uid: str, series_uid: str
-) -> LoadedVolume:
+async def fetch_series_volume(base_url: str, study_uid: str, series_uid: str) -> LoadedVolume:
     user, pw = dicom_web_credentials()
     auth = httpx.BasicAuth(user, pw) if user and pw else None
     timeout = httpx.Timeout(60.0, connect=15.0)
@@ -93,9 +91,7 @@ async def fetch_series_volume(
         entries = await _list_instances(client, base_url, study_uid, series_uid)
         uids = [uid for uid in (_instance_uid(e) for e in entries) if uid]
         if not uids:
-            raise RuntimeError(
-                f"No instances found for series {series_uid} at {base_url}"
-            )
+            raise RuntimeError(f"No instances found for series {series_uid} at {base_url}")
 
         async def _bound(uid: str) -> pydicom.Dataset:
             async with sem:
@@ -150,9 +146,15 @@ def _datasets_to_sitk(
     image.SetOrigin(tuple(origin))
     image.SetDirection(
         (
-            row_dir[0], col_dir[0], slice_dir[0],
-            row_dir[1], col_dir[1], slice_dir[1],
-            row_dir[2], col_dir[2], slice_dir[2],
+            row_dir[0],
+            col_dir[0],
+            slice_dir[0],
+            row_dir[1],
+            col_dir[1],
+            slice_dir[1],
+            row_dir[2],
+            col_dir[2],
+            slice_dir[2],
         )
     )
     return image, sorted_ds
