@@ -135,6 +135,35 @@ for the full history.
 
 ### Changed
 
+- `backend/app/api/training.py` (752 lines) is routes only (218), with the
+  dataset formats, the ZIP writer and the DICOMweb frame fetch moved to
+  `backend/app/services/training_export/` (#293). One module per export format
+  — COCO, HuggingFace, Radiolyze — each owning both its dataset shape and the
+  README that documents it, plus `images.py` for how a rendered frame is
+  addressed, listed and fetched, and `archive.py` for the split and the parts
+  all three share. Behaviour-preserving apart from two README corrections noted
+  below; the four endpoints, their filters, status codes and archive members
+  are unchanged and now covered by 20 tests where there were none.
+- The LoRA snippet in the Radiolyze export's README is runnable. It carried
+  `from ..utils.time import IsoDateTime` — a relative import of this repo,
+  inside a script handed to whoever unpacks the archive — and used
+  `torch.bfloat16` without importing `torch`. The "Data Capture" note appended
+  when `includeImages` is set was three near-copies; it is one constant, so the
+  COCO variant loses the word "bereits" and matches the other two.
+- `anonymize=True` does less than its name on all three export formats — a
+  pre-existing defect the split surfaced, pinned by tests rather than fixed,
+  because a fix changes what an export contains and wants its own PR. COCO's
+  branch strips `created_by`/`verified_by` from an
+  `attributes` map that never contains either, so a COCO export is not
+  anonymized at all and carries the DICOM identifiers as they are. HuggingFace
+  and Radiolyze do pseudonymize their identifier fields, but the sample key
+  (`id` / `image_id`) is the raw `study_series_instance_frame` string and
+  travels out intact. On Radiolyze the identifiers live under `metadata` rather
+  than at the top level, so `anonymize_annotation` rebuilds `image_path` and
+  `wado_url` from empty strings — `images/___0.png` — and stamps every sample
+  with frame 1: an anonymized Radiolyze export cannot resolve its own images.
+  `backend/tests/test_training_export.py` states each of these so the fix has
+  to change a test deliberately.
 - `services/segmenter` is linted in CI (#311). The job ran `pytest` only, and
   the two ruff pre-commit hooks were scoped `^backend/`, so nothing checked the
   service from either side — 25 findings against ruff's defaults had

@@ -9,7 +9,7 @@
 - Image sources and selection: `src/hooks/useDicomSeriesInstances.ts`, `src/hooks/reporting/inferenceHelpers.ts`, `src/hooks/useReport.ts`
 - Deployment: `docker-compose.yml`
 - Viewer and comparison: `docs/components/viewer.md`, `src/components/Viewer/*`, `src/hooks/usePriorStudies.ts`
-- Annotations/data collection: `backend/app/api/annotations.py`, `backend/app/api/training.py`, `src/types/annotations.ts`
+- Annotations/data collection: `backend/app/api/annotations.py`, `backend/app/api/training.py` (routes) with `backend/app/services/training_export/` (dataset formats, ZIP, frame fetch), `src/types/annotations.ts`
 - Audit/compliance: `docs/compliance/audit-logging.md`, `backend/app/audit.py`
 
 ## Summary
