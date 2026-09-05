@@ -9,6 +9,9 @@ alongside four route handlers.
   archive's on-disk contract is readable in one place.
 - ``images`` -- how a rendered frame is addressed, listed in the manifest and
   fetched over DICOMweb. Shared by the export and the manifest preview.
+- ``identifiers`` -- whether the archive carries the real study/series/instance
+  ids or pseudonyms. Threaded into the builders so that the key, the paths, the
+  URLs and each format's id fields are all mapped in one pass (#329).
 - ``archive`` -- the split, the ZIP and the parts every format has in common.
 
 ``app.api.training`` keeps the HTTP surface only: the request/response schemas,
@@ -19,6 +22,7 @@ from __future__ import annotations
 
 from ._common import ExportFormat
 from .archive import build_export_zip
+from .identifiers import IDENTIFIED, PSEUDONYMIZED, Identifiers, id_map
 from .images import (
     build_manifest,
     collect_image_entries,
@@ -29,12 +33,16 @@ from .images import (
 )
 
 __all__ = [
+    "IDENTIFIED",
+    "PSEUDONYMIZED",
     "ExportFormat",
+    "Identifiers",
     "build_export_zip",
     "build_manifest",
     "collect_image_entries",
     "fetch_manifest_images",
     "group_by_image",
+    "id_map",
     "image_key",
     "rendered_frame_url",
 ]

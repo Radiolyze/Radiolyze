@@ -10,6 +10,7 @@ from typing import Any
 from ...models import Annotation
 from ...utils.time import now_iso
 from ._common import DATA_CAPTURE_NOTE
+from .identifiers import IDENTIFIED, Identifiers
 from .images import image_key
 
 _README = """# COCO Format Dataset for Radiolyze Fine-Tuning
@@ -39,7 +40,10 @@ GET /wado-rs/studies/{study_id}/series/{series_id}/instances/{instance_id}/frame
 """
 
 
-def build_dataset(annotations: list[Annotation]) -> dict[str, Any]:
+def build_dataset(
+    annotations: list[Annotation],
+    ids: Identifiers = IDENTIFIED,
+) -> dict[str, Any]:
     """Build COCO format dataset from annotations."""
     # Collect unique categories
     category_set = set()
@@ -51,23 +55,23 @@ def build_dataset(annotations: list[Annotation]) -> dict[str, Any]:
     # Build images list (unique by instance)
     images_map: dict[str, dict] = {}
     for ann in annotations:
-        key = image_key(ann)
+        key = image_key(ann, ids)
         if key not in images_map:
             images_map[key] = {
                 "id": len(images_map) + 1,
                 "file_name": f"{key}.png",
                 "width": 512,  # Default, should be from DICOM metadata
                 "height": 512,
-                "study_id": ann.study_id,
-                "series_id": ann.series_id,
-                "instance_id": ann.instance_id,
+                "study_id": ids(ann.study_id),
+                "series_id": ids(ann.series_id),
+                "instance_id": ids(ann.instance_id),
                 "frame_index": ann.frame_index,
             }
 
     # Build annotations list
     coco_annotations = []
     for idx, ann in enumerate(annotations):
-        image_id = images_map[image_key(ann)]["id"]
+        image_id = images_map[image_key(ann, ids)]["id"]
 
         geometry = ann.geometry_json or {}
         bbox = geometry.get("bounding_box", {})
@@ -114,34 +118,22 @@ def build_dataset(annotations: list[Annotation]) -> dict[str, Any]:
     }
 
 
-def _strip_actor_attributes(dataset: dict[str, Any]) -> None:
-    # NOTE: this finds nothing today -- ``build_dataset`` never writes
-    # ``created_by``/``verified_by`` into ``attributes``, so COCO is the one
-    # format whose ``anonymize=True`` leaves the export untouched, DICOM UIDs
-    # included. Carried over unchanged rather than fixed here; see the PR that
-    # split this module out of ``app/api/training.py``.
-    for ann in dataset.get("annotations", []):
-        ann["attributes"] = {
-            k: v
-            for k, v in ann.get("attributes", {}).items()
-            if k not in ("created_by", "verified_by")
-        }
-
-
 def write_dataset(
     zf: zipfile.ZipFile,
     train_annotations: list[Annotation],
     val_annotations: list[Annotation],
-    anonymize: bool,
+    ids: Identifiers = IDENTIFIED,
 ) -> None:
-    train_data = build_dataset(train_annotations)
-    val_data = build_dataset(val_annotations)
-    if anonymize:
-        _strip_actor_attributes(train_data)
-        _strip_actor_attributes(val_data)
-
-    zf.writestr("annotations/train.json", json.dumps(train_data, indent=2))
-    zf.writestr("annotations/val.json", json.dumps(val_data, indent=2))
+    # Nothing to scrub after the fact: COCO carries no DICOM metadata block and
+    # no actor names, so the identifiers `ids` maps while the dataset is built
+    # are the whole of this format's de-identification. What stood here instead
+    # was a filter removing `created_by`/`verified_by` from `attributes` --
+    # keys `build_dataset` never writes -- which is why COCO used to come out
+    # of an anonymized export completely untouched (#329).
+    zf.writestr(
+        "annotations/train.json", json.dumps(build_dataset(train_annotations, ids), indent=2)
+    )
+    zf.writestr("annotations/val.json", json.dumps(build_dataset(val_annotations, ids), indent=2))
 
 
 def readme(include_images: bool) -> str:

@@ -9,6 +9,7 @@ from typing import Any
 from ...anonymize import anonymize_annotation
 from ...models import Annotation
 from ._common import DATA_CAPTURE_NOTE
+from .identifiers import IDENTIFIED, Identifiers
 from .images import group_by_image
 
 LORA_CONFIG = {
@@ -66,11 +67,14 @@ Use the WADO-RS URLs to fetch rendered PNG images before training.
 """
 
 
-def build_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
+def build_dataset(
+    annotations: list[Annotation],
+    ids: Identifiers = IDENTIFIED,
+) -> list[dict[str, Any]]:
     """Build Radiolyze multimodal fine-tuning format."""
     samples = []
 
-    for image_key, anns in group_by_image(annotations).items():
+    for image_key, anns in group_by_image(annotations, ids).items():
         first_ann = anns[0]
 
         # Build findings description from annotations
@@ -110,17 +114,18 @@ def build_dataset(annotations: list[Annotation]) -> list[dict[str, Any]]:
                 "id": image_key,
                 "image_path": f"images/{image_key}.png",
                 "wado_url": (
-                    f"/wado-rs/studies/{first_ann.study_id}/series/{first_ann.series_id}"
-                    f"/instances/{first_ann.instance_id}"
+                    f"/wado-rs/studies/{ids(first_ann.study_id)}"
+                    f"/series/{ids(first_ann.series_id)}"
+                    f"/instances/{ids(first_ann.instance_id)}"
                     f"/frames/{first_ann.frame_index + 1}/rendered"
                 ),
                 "prompt": PROMPT,
                 "response": findings_text,
                 "annotations": annotation_list,
                 "metadata": {
-                    "study_id": first_ann.study_id,
-                    "series_id": first_ann.series_id,
-                    "instance_id": first_ann.instance_id,
+                    "study_id": ids(first_ann.study_id),
+                    "series_id": ids(first_ann.series_id),
+                    "instance_id": ids(first_ann.instance_id),
                     "frame_index": first_ann.frame_index,
                     "modality": "CT",  # Should come from DICOM metadata
                 },
@@ -134,11 +139,16 @@ def write_dataset(
     zf: zipfile.ZipFile,
     train_annotations: list[Annotation],
     val_annotations: list[Annotation],
-    anonymize: bool,
+    ids: Identifiers = IDENTIFIED,
 ) -> None:
-    train_data = build_dataset(train_annotations)
-    val_data = build_dataset(val_annotations)
-    if anonymize:
+    train_data = build_dataset(train_annotations, ids)
+    val_data = build_dataset(val_annotations, ids)
+    if ids.anonymize:
+        # The frame identifiers -- in the key, the image path, the WADO URL and
+        # under `metadata` -- are already mapped above, together, so that all
+        # four still agree. What is left for the scrub is the DICOM metadata
+        # around them; it used to rebuild the paths here instead, from top-level
+        # fields this format does not have, and emptied them (#329).
         train_data = [anonymize_annotation(s) for s in train_data]
         val_data = [anonymize_annotation(s) for s in val_data]
 

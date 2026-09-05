@@ -292,59 +292,139 @@ def test_anonymize_pseudonymizes_the_identifier_fields(client: Any, five_annotat
     assert anonymized[0]["metadata"]["study_id"] != "study-1"
 
 
-# The next three tests pin what `anonymize=True` does today, not what it should
-# do. Each assertion below is a defect found while splitting this module out of
-# `app/api/training.py`, left in place because fixing it is a behaviour change
-# and belongs in its own PR -- and pinned so that the fix has to come through a
-# deliberate edit here rather than by accident.
+#: The raw identifiers behind the `five_annotations` fixture. Each is a distinct
+#: string that has no business appearing in an anonymized archive.
+RAW_IDS = ("study-1", "series-1", "inst-1")
 
 
-def test_anonymize_still_leaks_the_raw_ids_through_the_sample_key(
-    client: Any, five_annotations: None
+@pytest.mark.parametrize("export_format", ["coco", "huggingface", "radiolyze"])
+def test_anonymize_keeps_every_raw_identifier_out_of_the_whole_archive(
+    client: Any, five_annotations: None, fake_dicomweb: Any, export_format: str
 ) -> None:
-    """`id` / `image_id` is the raw `study_series_instance_frame` key.
+    """The assurance the flag is named for, over every member of the archive.
 
-    `anonymize_annotation` pseudonymizes the fields it knows by name. The key
-    that identifies the frame is not one of them, so the identifiers the other
-    fields hide travel out in it anyway -- in both formats that anonymize.
+    Read once per file rather than per known field: the three defects this
+    replaces (#329) each hid in a *different* place -- an untouched format, the
+    sample key, the manifest -- and a test that checks the fields it already
+    thinks of would have missed all three the same way the old ones did.
+
+    `includeImages` is on so that the image members and `images/manifest.json`
+    are covered too; those carry the frame key in their own names.
     """
-    radiolyze = json.loads(_export(client, format="radiolyze", anonymize=True).read("train.json"))
-    huggingface = _export(client, format="huggingface", anonymize=True).read("data/train.jsonl")
+    archive = _export(client, format=export_format, anonymize=True, includeImages=True)
+    scanned = 0
 
-    assert radiolyze[0]["id"] == "study-1_series-1_inst-1_0"
-    assert "study-1_series-1_inst-1_0" in huggingface.decode()
+    for member in archive.namelist():
+        for raw in RAW_IDS:
+            assert raw not in member, f"{raw} leaks through the member name {member}"
+        if member.endswith(".png"):
+            # A rendered frame's body is whatever DICOMweb returned -- here the
+            # double's stand-in, which echoes the URL it was fetched over. Not
+            # something the export serializes, so not something it can anonymize;
+            # its member name, which the export does choose, is checked above.
+            continue
+        content = archive.read(member).decode("utf-8", errors="ignore")
+        for raw in RAW_IDS:
+            assert raw not in content, f"{raw} leaks through the contents of {member}"
+        scanned += 1
+
+    assert scanned >= 3, "expected the dataset files, the README and the manifest"
+
+    # ...and the fetch still went out over the real identifiers, or the archive
+    # would be anonymous and empty.
+    assert fake_dicomweb.requested
+    assert all("/studies/study-1/series/series-1/" in url for url in fake_dicomweb.requested)
 
 
-def test_anonymize_empties_the_radiolyze_image_paths(client: Any, five_annotations: None) -> None:
-    """The radiolyze sample keeps its ids under `metadata`, not at the top level.
+@pytest.mark.parametrize(
+    ("export_format", "member"),
+    [("coco", "annotations/train.json"), ("huggingface", "data/train.jsonl")],
+)
+def test_anonymize_maps_the_identifier_fields_of_every_format(
+    client: Any, five_annotations: None, export_format: str, member: str
+) -> None:
+    """Not merely absent: pseudonymized, and consistently so.
 
-    `anonymize_annotation` rebuilds `image_path` and `wado_url` from top-level
-    `study_id`/`series_id`/`instance_id`, which this format does not have, so
-    both come back pseudonymized from empty strings: an anonymized radiolyze
-    export cannot resolve its own images. The frame number is lost the same
-    way -- every sample claims frame 1, whichever frame it is on.
+    COCO had no anonymization path at all -- its `anonymize=True` branch filtered
+    two keys its builder never writes -- so it went out identified. Both formats
+    now map the ids the same way the frame key does.
     """
-    samples = json.loads(_export(client, format="radiolyze", anonymize=True).read("train.json"))
+    raw = _export(client, format=export_format, anonymize=False).read(member).decode()
+    anonymized = _export(client, format=export_format, anonymize=True).read(member).decode()
 
-    assert samples[0]["image_path"] == "images/___0.png"
-    assert samples[0]["wado_url"] == "/wado-rs/studies//series//instances//frames/1/rendered"
-    assert samples[1]["wado_url"].endswith("/frames/1/rendered")  # sits on frame 1, i.e. number 2
+    assert "study-1" in raw and "inst-1" in raw
+    assert "ANON-" in anonymized
 
 
-def test_coco_export_is_not_anonymized_at_all(client: Any, five_annotations: None) -> None:
-    """COCO's `anonymize=True` branch strips two keys that are never present.
+def test_anonymized_samples_still_point_at_their_own_images(
+    client: Any, five_annotations: None, fake_dicomweb: Any
+) -> None:
+    """An anonymized export has to remain a usable dataset.
 
-    `build_dataset` writes `label`, `severity`, `tool_type`, `verified` and
-    `notes` into `attributes` -- never `created_by` or `verified_by` -- so the
-    filter removes nothing and the DICOM identifiers on every image entry go
-    out as they are.
+    The radiolyze sample keeps its ids under `metadata`, and anonymization used
+    to rebuild `image_path` and `wado_url` from top-level fields this format does
+    not have -- so both came back built from empty strings (`images/___0.png`),
+    every sample claiming frame 1. The ids are now mapped once while the sample
+    is built, which is what makes the key, the path, the URL and the stored image
+    member agree.
     """
-    train = json.loads(
-        _export(client, format="coco", anonymize=True).read("annotations/train.json")
-    )
+    archive = _export(client, format="radiolyze", anonymize=True, includeImages=True)
+    samples = json.loads(archive.read("train.json"))
+    members = set(archive.namelist())
 
-    assert train["images"][0]["study_id"] == "study-1"
-    assert train["images"][0]["instance_id"] == "inst-1"
+    for sample in samples:
+        assert sample["image_path"] == f"images/{sample['id']}.png"
+        assert sample["image_path"] in members, "the sample points at an image the archive lacks"
+        assert sample["metadata"]["study_id"] in sample["id"]
+        assert sample["wado_url"].endswith(
+            f"/frames/{sample['metadata']['frame_index'] + 1}/rendered"
+        )
+
+    # Four frames, four distinct samples -- the frame number is part of the key
+    # rather than a constant, so no two collapse onto the same image.
+    assert len({s["image_path"] for s in samples}) == len(samples)
+    assert [s["metadata"]["frame_index"] for s in samples] == [0, 1, 2]
+
+
+def test_anonymized_manifest_and_image_members_agree_with_the_dataset(
+    client: Any, five_annotations: None, fake_dicomweb: Any
+) -> None:
+    """The manifest is part of the archive, so it is anonymized with it.
+
+    It is also the one record that has to hold both halves at once: the fetch
+    goes out over the real frame URL, while what lands in `images/manifest.json`
+    addresses the pseudonym -- and never the real URL it was fetched over.
+    """
+    archive = _export(client, format="coco", anonymize=True, includeImages=True)
+
+    manifest = json.loads(archive.read("images/manifest.json"))
+    assert manifest["status"] == {"ok": 4, "error": 0}
+
+    for entry in manifest["images"]:
+        assert entry["study_id"].startswith("ANON-")
+        assert entry["id"].startswith(entry["study_id"])
+        assert "fetch_url" not in entry, "the real frame URL must not travel with the manifest"
+        assert entry["wado_url"].startswith(
+            f"http://orthanc:8042/dicom-web/studies/{entry['study_id']}"
+        )
+        assert entry["image_path"] in archive.namelist()
+        assert entry["bytes"] == len(archive.read(entry["image_path"]))
+
+    coco_images = json.loads(archive.read("annotations/train.json"))["images"]
+    stored = {m[len("images/") : -len(".png")] for m in archive.namelist() if m.endswith(".png")}
+    assert {img["file_name"][: -len(".png")] for img in coco_images} <= stored
+
+
+def test_manifest_preview_keeps_the_real_identifiers(client: Any, five_annotations: None) -> None:
+    """The preview exists to be fetched against, so it is not anonymized.
+
+    `/api/v1/training/manifest` has no `anonymize` flag: it is the admin's data
+    capture list, and pseudonymized URLs would address nothing.
+    """
+    body = client.post("/api/v1/training/manifest", json={"verifiedOnly": False}).json()
+
+    assert body["images"][0]["study_id"] == "study-1"
+    assert body["images"][0]["id"] == "study-1_series-1_inst-1_0"
 
 
 # --- the manifest and the rendered frames -----------------------------------
@@ -393,7 +473,10 @@ def test_manifest_check_images_reports_per_entry_status(
 def test_export_with_images_fetches_each_frame_once(
     client: Any, five_annotations: None, fake_dicomweb: Any
 ) -> None:
-    archive = _export(client, format="coco", includeImages=True)
+    # `anonymize=False` so that the manifest's `wado_url` is still the URL the
+    # frame was fetched over, and the stored bytes can be tied back to it. The
+    # anonymized archive is covered separately, where the two deliberately differ.
+    archive = _export(client, format="coco", includeImages=True, anonymize=False)
 
     # Four frames behind five annotations, and the status pass and the archive
     # write share one fetch each rather than requesting the frame twice.
