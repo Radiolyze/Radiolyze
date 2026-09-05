@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Edit3, Save, AlertTriangle, Download, ChevronDown } from "lucide-react";
+import {
+  Sparkles,
+  Edit3,
+  Save,
+  AlertTriangle,
+  Download,
+  ChevronDown,
+  CheckCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/Common/StatusBadge";
-import type { ImageRef, QAStatus } from "@/types/radiology";
+import type { ImageRef, QAStatus, ReportStatus } from "@/types/radiology";
 import { ReportEditor } from "@/components/Forms/ReportEditor";
 import { ApprovalDialog } from "@/components/Forms/ApprovalDialog";
 import { Switch } from "@/components/ui/switch";
@@ -22,6 +30,10 @@ interface ImpressionPanelProps {
   findings: string;
   qaStatus: QAStatus;
   qaWarnings: string[];
+  /** Lifecycle status of the report; a finalized one can no longer be approved. */
+  reportStatus?: ReportStatus;
+  approvedBy?: string;
+  approvedAt?: string;
   inferenceStatus?: string;
   inferenceSummary?: string;
   inferenceConfidence?: number;
@@ -46,6 +58,9 @@ export function ImpressionPanel({
   findings,
   qaStatus,
   qaWarnings,
+  reportStatus,
+  approvedBy,
+  approvedAt,
   inferenceStatus,
   inferenceSummary,
   inferenceConfidence,
@@ -163,7 +178,23 @@ export function ImpressionPanel({
     onGenerateImpression();
   }, [onGenerateImpression]);
 
-  const canApprove = impression && qaStatus !== "fail" && !isGenerating;
+  const isFinalized = reportStatus === "finalized" || reportStatus === "approved";
+  const canApprove = Boolean(impression) && qaStatus !== "fail" && !isGenerating && !isFinalized;
+  const approvedTimestamp = approvedAt
+    ? `${formatDate(approvedAt)} ${formatTime(approvedAt)}`
+    : undefined;
+
+  let finalizedNotice = t("approval.finalized");
+  if (approvedBy && approvedTimestamp) {
+    finalizedNotice = t("approval.finalizedByAt", {
+      approver: approvedBy,
+      date: approvedTimestamp,
+    });
+  } else if (approvedBy) {
+    finalizedNotice = t("approval.finalizedBy", { approver: approvedBy });
+  } else if (approvedTimestamp) {
+    finalizedNotice = t("approval.finalizedAt", { date: approvedTimestamp });
+  }
 
   return (
     <div className="flex flex-col flex-1">
@@ -366,10 +397,19 @@ export function ImpressionPanel({
             disabled={!onUseAllFramesChange || isGenerating}
           />
         </div>
+        {isFinalized && (
+          <div
+            data-testid="impression-finalized-notice"
+            className="flex items-start gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-xs text-success"
+          >
+            <CheckCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>{finalizedNotice}</span>
+          </div>
+        )}
         <ApprovalDialog
           onConfirm={onApprove}
           disabled={!canApprove}
-          triggerLabel={t("approval.approve")}
+          triggerLabel={isFinalized ? t("approval.approved") : t("approval.approve")}
         />
 
         {onExportSr && (

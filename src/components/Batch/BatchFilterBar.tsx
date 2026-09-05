@@ -152,7 +152,7 @@ export function BatchFilterBar({
                   <AlertDialogHeader>
                     <AlertDialogTitle>{tCommon("actions.delete")}?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      {selectedCount} Reports werden dauerhaft gelöscht.
+                      {t("bulk.deleteConfirm", { count: selectedCount })}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

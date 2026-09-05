@@ -145,6 +145,12 @@ jobs:
           cache: pip
           cache-dependency-path: services/segmenter/requirements*.txt
       - run: pip install -r requirements.txt -r requirements-dev.txt
+      # Blocking as of #311. The service ran with pytest only, so its 25 ruff
+      # findings (against the defaults it had no configuration to override)
+      # sat in the tree unnoticed while the backend was gated. The cleanup is
+      # the commit before this one, so the gate starts green.
+      - run: ruff check .
+      - run: ruff format --check .
       - run: python -m pytest tests/ -v --tb=short
 
   docs-mkdocs:

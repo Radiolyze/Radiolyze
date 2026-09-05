@@ -156,18 +156,25 @@ notice going stale:
 
 | Pin | Where | Guard |
 |---|---|---|
-| `ruff`, twice | `backend/requirements-dev.txt` **and** `.pre-commit-config.yaml` | `scripts/check-ruff-pin-sync.sh`, run in CI |
+| `ruff`, three times | `backend/requirements-dev.txt`, `services/segmenter/requirements-dev.txt` **and** `.pre-commit-config.yaml` | `scripts/check-ruff-pin-sync.sh`, run in CI |
 | `@kitware/vtk.js` | `package.json` — pinned **exactly** (`36.4.1`, no caret) because `@cornerstonejs/core` and `tools` peer-depend on that one version | `npm ci` fails on mismatch |
 | Cornerstone worker path | `scripts/bundle-cornerstone-worker.mjs` reaches into `node_modules/@cornerstonejs/dicom-image-loader/dist/esm/` | `npm run bundle:worker` in CI, which now fails loudly if the entry point, the codec `.wasm` files or either `.wasm` path rewrite comes up empty |
 | torch / totalsegmentator | `services/segmenter/requirements.txt` — floors only, so segmenter images are **not** reproducible across rebuilds | none |
 | `fast-simplification` | `services/segmenter/requirements.txt` — an *optional* trimesh extra that `app/meshing.py` hard-depends on | `test_decimate_reaches_the_target_face_count` |
 
-The `ruff` row is the one that bites. Dependabot sees the two pins through
-different ecosystems — `pip` for `requirements-dev.txt`, `pre-commit` for the
-hook rev — so it proposes them as two PRs that can land days apart. In between,
-the hook and CI format with different ruff versions: the hook rewrites a file
-and the pipeline then rejects it. **Merge the two ruff PRs together**; the CI
-guard fails the build for as long as they disagree.
+The `ruff` row is the one that bites. Dependabot sees the three pins through
+two ecosystems and two directories — `pip` for each `requirements-dev.txt`,
+`pre-commit` for the hook rev — so it proposes them as separate PRs that can
+land days apart. In between, the hook and the two CI jobs format with different
+ruff versions: the hook rewrites a file and the pipeline then rejects it.
+**Merge the ruff PRs together**; the CI guard fails the build for as long as
+any two of them disagree.
+
+Both Python services are linted, with the same rule set: `backend/pyproject.toml`
+and `services/segmenter/pyproject.toml` carry identical `[tool.ruff]` sections
+(line-length 100, `E,F,W,I,UP`, `ignore = ["E501"]`, double quotes). The
+segmenter went without one until #311 — it was neither configured nor checked,
+so its formatting was whatever each contributor's local ruff produced.
 
 ---
 

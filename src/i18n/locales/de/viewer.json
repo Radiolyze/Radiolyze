@@ -52,7 +52,12 @@
       "checking": "QA prüft...",
       "passed": "QA bestanden",
       "warnings": "QA-Warnungen"
-    }
+    },
+    "loadingDicom": "Lade DICOM-Bilder...",
+    "loadFailed": "Fehler beim Laden",
+    "status": "Status",
+    "live": "Live",
+    "asrConfidence": "ASR-Konfidenz"
   },
   "series": {
     "title": "Serien",
@@ -76,11 +81,23 @@
     "showFindings": "KI-Befunde einblenden ({{count}})",
     "hideFindings": "KI-Befunde ausblenden ({{count}})"
   },
+  "findings": {
+    "overlayLabel_one": "{{count}} KI-Befund",
+    "overlayLabel_other": "{{count}} KI-Befunde",
+    "boxTitle": "{{label}} — {{category}}",
+    "categories": {
+      "pathological": "Pathologischer Befund",
+      "anatomical": "Anatomische Struktur",
+      "other": "Nicht klassifiziert"
+    }
+  },
   "emptyState": {
     "selectSeries": "Wählen Sie eine Serie aus",
     "selectSeriesFor3d": "Wählen Sie eine Serie für die 3D-Darstellung",
     "selectSeriesForMpr": "Wählen Sie eine Serie für die Multi-Planar-Rekonstruktion",
-    "unsupportedModality": "Modalität {{modality}} wird nicht unterstützt. Nur CT, MR und PT sind verfügbar."
+    "unsupportedModality": "Modalität {{modality}} wird nicht unterstützt. Nur CT, MR und PT sind verfügbar.",
+    "noImages": "Keine DICOM-Bilder geladen",
+    "noImagesHint": "Prüfen Sie DICOMweb-Verbindung und Serien-ID."
   },
   "mesh": {
     "title": "3D Modell",
@@ -144,6 +161,107 @@
   },
   "annotations": {
     "selectSeries": "Wählen Sie eine Serie aus",
-    "confirmDelete": "Annotation \"{{label}}\" löschen?"
+    "confirmDelete": "Annotation \"{{label}}\" löschen?",
+    "title": "Annotationen",
+    "empty": "Keine Annotationen vorhanden.",
+    "emptyHint": "Verwenden Sie die Annotation-Tools, um Bereiche zu markieren.",
+    "frame": "Frame {{number}}",
+    "otherFrames": "Andere Frames",
+    "verifiedCount": "Verifiziert: {{verified}}/{{total}}",
+    "labelPlaceholder": "Label",
+    "notesPlaceholder": "Notizen...",
+    "categories": {
+      "nodule": "Rundherd",
+      "mass": "Masse",
+      "infiltrate": "Infiltrat",
+      "effusion": "Erguss",
+      "fracture": "Fraktur",
+      "lesion": "Läsion",
+      "anatomical": "Anatomisch",
+      "other": "Sonstiges"
+    },
+    "dialog": {
+      "title": "Annotation beschriften",
+      "description": "Geben Sie ein Label und eine Kategorie für die Annotation ein.",
+      "label": "Label",
+      "labelPlaceholder": "z.B. Rundlicher Nodulus 1.2cm",
+      "category": "Kategorie",
+      "context": "Tool: {{tool}} • Frame: {{frame}}"
+    }
+  },
+  "vrt": {
+    "title": "3D VRT",
+    "viewerTitle": "3D Volume Rendering",
+    "presetPlaceholder": "Preset wählen",
+    "customPreset": "Eigene Einstellung",
+    "buildingVolume": "Erstelle 3D-Volumen...",
+    "tooFewSlices": "Nicht genügend Bilder für 3D-Rendering. Mindestens {{required}} erforderlich, {{available}} vorhanden.",
+    "limitedSupportHint": "Hinweis: {{modality}}-Bilder haben oft keine räumlichen Metadaten. Die 3D-Darstellung kann ungenau sein.",
+    "limitedSupportDetail": "{{modality}}-Bilder sind für 3D-Rendering nicht optimal geeignet, da oft räumliche Metadaten (PixelSpacing, ImageOrientation) fehlen.",
+    "resetCamera": "Kamera zurücksetzen",
+    "presets": {
+      "ct-bone": "Optimiert für Knochenstrukturen",
+      "ct-lung": "Optimiert für Lungenparenchym",
+      "ct-soft-tissue": "Weichteilgewebe und Organe",
+      "ct-angiography": "Kontrastmittelgefüllte Gefäße",
+      "ct-muscle-bone": "Muskel- und Knochenstrukturen"
+    },
+    "view": {
+      "anterior": "Anterior (A)",
+      "posterior": "Posterior (P)",
+      "left": "Links (L)",
+      "right": "Rechts (R)",
+      "superior": "Superior (S)",
+      "inferior": "Inferior (I)"
+    },
+    "lighting": {
+      "button": "Beleuchtung",
+      "title": "Rendering-Einstellungen",
+      "quality": "Renderqualität",
+      "qualityHigh": "Hoch",
+      "qualityMedium": "Mittel",
+      "qualityFast": "Schnell",
+      "ambient": "Umgebungslicht",
+      "diffuse": "Diffuse Reflexion",
+      "specular": "Spiegelreflexion",
+      "specularPower": "Glanzstärke"
+    }
+  },
+  "mpr": {
+    "viewerTitle": "Multi-Planar-Rekonstruktion",
+    "navigation": "MPR-Navigation",
+    "maximize": "Maximieren",
+    "showAll": "Alle Ansichten",
+    "windowLevelPreset": "W/L-Preset",
+    "orientation": {
+      "axial": "Axial (transversal)",
+      "sagittal": "Sagittal",
+      "coronal": "Koronar (frontal)"
+    },
+    "limitedSupportDetail": "{{modality}}-Bilder sind für MPR nicht optimal geeignet, da oft räumliche Metadaten (PixelSpacing, ImageOrientation) fehlen.",
+    "slab": {
+      "title": "Slab/MIP",
+      "projectionMode": "Projektionsmodus",
+      "thickness": "Schichtdicke",
+      "thin": "Dünn (0 mm)",
+      "mode": {
+        "composite": "Normal",
+        "mip": "MIP",
+        "minip": "MinIP",
+        "average": "Average"
+      },
+      "help": {
+        "mip": "Maximum Intensity Projection (Gefäße, Knochen)",
+        "minip": "Minimum Intensity Projection (Lunge, Atemwege)",
+        "average": "Mittlere Intensität (Rauschreduktion)"
+      }
+    }
+  },
+  "mode": {
+    "stack": "Stack-Ansicht"
+  },
+  "shortcuts": {
+    "rotate": "Rotieren",
+    "viewAngle": "Ansicht"
   }
 }

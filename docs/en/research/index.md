@@ -13,7 +13,7 @@ Radiolyze uses a **multimodal AI pipeline** to generate radiological report draf
 DICOM Frames (JPEG)
         │
         ▼
-  Inference Client          backend/app/inference_clients.py
+  Inference Client          backend/app/inference_clients/
   (OpenAI-compatible)
         │
         ▼
@@ -175,7 +175,7 @@ To contribute prompt improvements, model evaluations, or new inference backends:
 1. Read the [Contributing Guidelines](../development/contributing.md).
 2. Open a GitHub issue describing your proposed change.
 3. For prompt changes: edit `backend/app/prompts.py` and include before/after examples in the PR.
-4. For new inference backends: implement the client interface in `backend/app/inference_clients.py`.
+4. For new inference backends: implement the client interface in `backend/app/inference_clients/`.
 
 ---
 

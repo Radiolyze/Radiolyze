@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -94,7 +95,11 @@ def segment_total(
     device = os.getenv("TOTALSEG_DEVICE", "gpu" if _torch_has_cuda() else "cpu")
     logger.info(
         "Running TotalSegmentator: input=%s output=%s task=%s fast=%s device=%s",
-        raw_path, label_dir, task, fast, device,
+        raw_path,
+        label_dir,
+        task,
+        fast,
+        device,
     )
     runner(
         input=str(raw_path),

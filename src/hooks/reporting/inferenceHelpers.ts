@@ -1,4 +1,5 @@
-import type { AIStatus, FindingBox, ImageRef } from "@/types/radiology";
+import { FINDING_CATEGORY_VALUES } from "@/types/radiology";
+import type { AIStatus, FindingBox, FindingCategory, ImageRef } from "@/types/radiology";
 import { inferenceClient } from "@/services/inferenceClient";
 import { waitForReportStatus } from "@/hooks/useWebSocket";
 
@@ -263,6 +264,16 @@ export const extractInferenceImageRefs = (
     .filter((entry): entry is ImageRef => Boolean(entry));
 };
 
+/**
+ * A category the backend does not publish is dropped rather than kept as a
+ * string: the box still renders, and the overlay treats a missing category the
+ * same way it treats a finding stored before the field existed.
+ */
+const parseFindingCategory = (value: unknown): FindingCategory | undefined =>
+  typeof value === "string" && (FINDING_CATEGORY_VALUES as readonly string[]).includes(value)
+    ? (value as FindingCategory)
+    : undefined;
+
 export const extractInferenceFindings = (
   result?: Record<string, unknown> | null,
 ): FindingBox[] | undefined => {
@@ -282,6 +293,7 @@ export const extractInferenceFindings = (
       box_2d: box as [number, number, number, number],
       label: label.trim(),
       confidence: typeof confidence === "number" ? confidence : undefined,
+      category: parseFindingCategory(entry.category),
     });
   }
   return findings.length > 0 ? findings : undefined;

@@ -153,9 +153,7 @@ def _segment_descriptions(masks: list[LabeledMask]) -> list[Any]:
                 segment_number=index,
                 segment_label=labeled.name,
                 segmented_property_category=_DEFAULT_CATEGORY,
-                segmented_property_type=_TYPE_OVERRIDES.get(
-                    labeled.name.lower(), _DEFAULT_TYPE
-                ),
+                segmented_property_type=_TYPE_OVERRIDES.get(labeled.name.lower(), _DEFAULT_TYPE),
                 algorithm_type=parts["SegmentAlgorithmTypeValues"].SEMIAUTOMATIC,
                 algorithm_identification=algorithm_identification,
                 display_color=_display_color(labeled.color),
@@ -196,8 +194,7 @@ def _with_required_attributes(
         return source_datasets
 
     logger.info(
-        "Source series is missing type 2 attribute(s) %s; writing them empty "
-        "into the SEG.",
+        "Source series is missing type 2 attribute(s) %s; writing them empty into the SEG.",
         ", ".join(missing),
     )
     from copy import deepcopy
@@ -220,9 +217,7 @@ def _order_masks(masks: list[LabeledMask]) -> list[LabeledMask]:
     return sorted(masks, key=lambda m: int(m.array.sum()), reverse=True)
 
 
-def _stack_to_multiclass(
-    masks: list[LabeledMask], reference: sitk.Image
-) -> sitk.Image:
+def _stack_to_multiclass(masks: list[LabeledMask], reference: sitk.Image) -> sitk.Image:
     """Combine N binary masks into one uint16 SimpleITK image with values 1..N.
 
     Expects `masks` in the order `_order_masks` produces: later labels
@@ -237,8 +232,7 @@ def _stack_to_multiclass(
     for new_id, labeled in enumerate(masks, start=1):
         if labeled.array.shape != shape:
             raise ValueError(
-                f"Label {labeled.name} has shape {labeled.array.shape}, "
-                f"expected {shape}"
+                f"Label {labeled.name} has shape {labeled.array.shape}, expected {shape}"
             )
         out[labeled.array] = new_id
 

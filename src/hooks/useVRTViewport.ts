@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Enums, RenderingEngine, volumeLoader, cache, VolumeViewport3D } from "@cornerstonejs/core";
 import { ToolGroupManager, TrackballRotateTool } from "@cornerstonejs/tools";
@@ -346,7 +347,7 @@ export const useVRTViewport = ({
         logger.error("VRT initialization failed:", error);
         if (isActive) {
           onInitErrorRef.current?.(
-            getCornerstoneInitErrorMessage("3D-Viewer konnte nicht initialisiert werden.", error),
+            getCornerstoneInitErrorMessage(i18n.t("errors:viewer.initFailed3d"), error),
           );
         }
       } finally {

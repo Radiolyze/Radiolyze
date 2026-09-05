@@ -105,7 +105,8 @@
     "notifications": "Benachrichtigungen",
     "keyboardShortcuts": "Tastaturkürzel",
     "profile": "Profil",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "trainingExport": "Training-Export"
   },
   "queue": {
     "title": "Warteschlange",
@@ -285,5 +286,24 @@
       "passRate": "Pass-Rate",
       "warnings": "Warnungen"
     }
+  },
+  "autoSave": {
+    "saving": "Speichern…",
+    "saved": "Gespeichert",
+    "conflict": "Konflikt",
+    "error": "Fehler"
+  },
+  "history": {
+    "eventType": "Ereignistyp",
+    "allEvents": "Alle Ereignisse",
+    "user": "Benutzer",
+    "allUsers": "Alle Benutzer"
+  },
+  "dashboard": {
+    "serviceStatus": "Dienststatus",
+    "reports": "Befunde",
+    "qaStatus": "QA-Status",
+    "inferenceJobs": "Inferenz-Jobs",
+    "auditEvents": "Audit-Ereignisse"
   }
 }

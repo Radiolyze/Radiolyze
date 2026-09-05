@@ -15,6 +15,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# TypeScript incremental build state, written by `tsc --noEmit` on every
+# typecheck run. Landed in a PR once already because nothing ignored it.
+*.tsbuildinfo
 *.local
 bun.lockb
 

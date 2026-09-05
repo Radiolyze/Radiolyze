@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useEffect, useMemo, useState } from "react";
 import { orthancClient } from "@/services/orthancClient";
 import type { DicomJsonRecord } from "@/services/dicomWebMapping";
@@ -104,7 +105,7 @@ export function useStudyLookup(studyIds: string[]) {
       } catch (err) {
         logger.warn("Failed to load study lookup", err);
         if (isActive) {
-          setError("Studieninformationen konnten nicht geladen werden.");
+          setError(i18n.t("errors:dicomweb.studyLoadFailed"));
         }
       } finally {
         if (isActive) {

@@ -214,7 +214,7 @@ describe("useWorkspaceInference — impression from findings", () => {
 
     await act(async () => result.current.generateImpression());
 
-    expect(toast.error).toHaveBeenCalledWith("KI-Analyse fehlgeschlagen");
+    expect(toast.error).toHaveBeenCalledWith("AI generation failed");
     expect(runQAChecks).not.toHaveBeenCalled();
   });
 });
@@ -232,7 +232,7 @@ describe("useWorkspaceInference — full image read", () => {
       findingsText: "KI-Befund",
       impressionText: "KI-Beurteilung",
     });
-    expect(toast.success).toHaveBeenCalledWith("KI-Analyse abgeschlossen");
+    expect(toast.success).toHaveBeenCalledWith("AI analysis complete");
   });
 
   it("refuses when the viewer has loaded no images at all", async () => {
@@ -241,7 +241,7 @@ describe("useWorkspaceInference — full image read", () => {
     await act(async () => result.current.analyzeImages());
 
     expect(analyzeImages).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("Keine Bilder zum Analysieren vorhanden");
+    expect(toast.error).toHaveBeenCalledWith("No images available to analyse");
   });
 
   it("runs on priors alone when only they are loaded", async () => {
@@ -259,7 +259,7 @@ describe("useWorkspaceInference — full image read", () => {
     await act(async () => result.current.analyzeImages());
 
     await waitFor(() => expect(result.current.isAnalyzingImages).toBe(false));
-    expect(toast.error).toHaveBeenCalledWith("KI-Analyse fehlgeschlagen");
+    expect(toast.error).toHaveBeenCalledWith("AI generation failed");
   });
 });
 
@@ -298,7 +298,7 @@ describe("useWorkspaceInference — single frame", () => {
     await act(async () => result.current.analyzeFrame(imageRef));
 
     expect(queueLocalize).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("Kein Report ausgewählt");
+    expect(toast.error).toHaveBeenCalledWith("No report selected");
   });
 
   it("treats a queued job with no id as a failure", async () => {
@@ -308,7 +308,7 @@ describe("useWorkspaceInference — single frame", () => {
     await act(async () => result.current.analyzeFrame(imageRef));
 
     expect(poll).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("Frame-Analyse fehlgeschlagen");
+    expect(toast.error).toHaveBeenCalledWith("Frame analysis failed");
     expect(result.current.aiStatus).toBe("error");
   });
 

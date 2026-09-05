@@ -177,22 +177,25 @@ Always run this before merging documentation changes.
 
 End-to-end tests drive a real browser. Two styles live side by side in `e2e/`:
 
-- **Mocked-network flows** (`e2e/auth.spec.ts`, `e2e/workflow.spec.ts`) stub backend responses with `page.route(...)` instead of requiring a live stack. These are fast, deterministic, and run as a blocking CI job (`e2e-frontend`) on every push/PR.
-- **Full-stack flows** (planned — see the scenarios below) drive the real backend/DB/Orthanc via `docker compose`, for the workflows that need real pixel data (DICOM viewer scrolling and windowing, ASR).
+- **Mocked-network flows** (`e2e/auth.spec.ts`, `e2e/workflow.spec.ts`, `e2e/dictation.spec.ts`) stub backend responses with `page.route(...)` instead of requiring a live stack. These are fast, deterministic, and run as a blocking CI job (`e2e-frontend`) on every push/PR.
+- **Full-stack flows** (planned — see the scenarios below) drive the real backend/DB/Orthanc via `docker compose`, for the workflows that need real pixel data (DICOM viewer scrolling and windowing).
 
 ### Mocked-network specs
 
 `e2e/support/` holds the shared harness the mocked specs build on:
 
 - `fixtures.ts` — DICOM JSON study/series/instance records and report payloads. The record shapes mirror what Orthanc's DICOMweb endpoints and `/api/v1/reports` return, so the app's own `dicomWebMapping.ts` and `reportMapping.ts` run unmodified against them.
-- `mockBackend.ts` — `mockWorkflowBackend(page, options)` installs the routes for DICOMweb, reports, QA and inference. It keeps live report state (mutated by `PATCH` and finalize) and records the calls the app made, so a spec can assert on the request the UI produced as well as on what it rendered.
+- `mockBackend.ts` — `mockWorkflowBackend(page, options)` installs the routes for DICOMweb, reports, QA, inference and ASR. It keeps live report state (mutated by `PATCH` and finalize) and records the calls the app made, so a spec can assert on the request the UI produced as well as on what it rendered.
+- `workspace.ts` — the workspace landmarks (sidebar, viewer, report panel) and the wait that lets the queue and viewer mount, addressed by role rather than by class name.
 
 The report wire format is declared in `fixtures.ts` rather than imported from `src/services/reportClient.ts` on purpose: these specs are black-box clients of the HTTP contract and should fail when the *wire format* changes, not when an internal type is refactored.
 
-Two behaviours are worth knowing when reading the specs:
+Four behaviours are worth knowing when reading the specs:
 
 - **Inference takes a few seconds.** No WebSocket is connected under `page.route`, so `awaitInferenceResult` falls through to its HTTP polling fallback after ~4s — the same path a real deployment takes when the socket is down. That fallback is why `playwright.config.ts` raises the per-test timeout above Playwright's 30s default.
 - **Pixel data is not served.** WADO-RS frame requests return 404. The instance *list* is what the workflow needs (it builds the image references sent to inference), and Cornerstone tolerates the missing pixels.
+- **Audio is real, transcription is not.** `playwright.config.ts` launches Chromium with `--use-fake-device-for-media-stream`, so `useAudioInput`'s own `getUserMedia`/`MediaRecorder` path runs and produces a genuine WebM blob; only `POST /api/v1/reports/asr-transcript` is stubbed. That upload is `multipart/form-data`, so `mockBackend` records its fields and byte count rather than a parsed JSON body.
+- **`VITE_ALLOW_MOCK_FALLBACK` must stay off.** With it set, `useASR` and `useQaChecks` substitute canned results whenever the service fails — which would let the suite pass while the real path is broken. `e2e/dictation.spec.ts` asserts the stubbed transcript specifically, so the flag turns that spec red instead of hiding behind it.
 
 ### Setup
 
@@ -228,8 +231,11 @@ npx playwright test e2e/workflow.spec.ts
 | AI analysis fills findings and impression, then QA passes | `e2e/workflow.spec.ts` |
 | Edited findings are persisted and drive impression generation | `e2e/workflow.spec.ts` |
 | QA warnings surface without blocking approval | `e2e/workflow.spec.ts` |
+| A failed QA check blocks approval | `e2e/workflow.spec.ts` |
 | Approval finalizes the report with the signature | `e2e/workflow.spec.ts` |
 | A failed inference job leaves the report un-approvable | `e2e/workflow.spec.ts` |
+| Dictation transcribes the recording into the findings | `e2e/dictation.spec.ts` |
+| A failed transcription leaves the findings untouched | `e2e/dictation.spec.ts` |
 
 ### Still to Cover
 
@@ -238,8 +244,6 @@ These need real pixel data or services the mocked harness deliberately doesn't s
 | Test scenario | Why | What it needs |
 |---|---|---|
 | DICOM viewer: scroll a stack, window/level | Core viewing UX | Seeded Orthanc with real DICOM |
-| Trigger ASR → see transcript in findings | Core dictation workflow | ASR service |
-| QA *failure* blocks approval | Safety-critical | Backend QA rules that can fail |
 | Critical finding alert appears | Safety-critical | Inference output with a critical label |
 | Keyboard shortcut `Ctrl+Enter` opens approval dialog | Core UX | — |
 | Batch queue: approve → auto-advance to next study | Batch workflow | — |

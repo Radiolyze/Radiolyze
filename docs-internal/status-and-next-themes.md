@@ -220,8 +220,8 @@ Backend-Pendant wurde nie erfasst:
 | Datei | Zeilen |
 |---|---|
 | `backend/app/tasks.py` | 975 |
-| `backend/app/inference_clients.py` | 774 |
-| `backend/app/api/training.py` | 752 |
+| `backend/app/inference_clients.py` | 774 — erledigt, jetzt das Paket `backend/app/inference_clients/` |
+| `backend/app/api/training.py` | 752 — erledigt, Export-Logik jetzt `backend/app/services/training_export/`, Routen 218 |
 | `backend/app/api/inference.py` | 615 |
 
 `tasks.py` ist der lohnendste Einstieg: Worker-Jobs für Inference,

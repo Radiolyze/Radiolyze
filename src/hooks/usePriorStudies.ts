@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Series, Study } from "@/types/radiology";
@@ -122,6 +123,6 @@ export function usePriorStudies(
   return {
     priorStudies,
     isLoading,
-    error: isError ? "Voruntersuchungen konnten nicht geladen werden." : null,
+    error: isError ? i18n.t("errors:dicomweb.priorsLoadFailed") : null,
   };
 }

@@ -6,7 +6,7 @@ without a code deployment. At the same time, safe defaults should be
 available as templates.
 
 ## Current State (Reference)
-- `backend/app/inference_clients.py` uses:
+- `backend/app/prompts.py` reads the following overrides, rendered by the modules in `backend/app/inference_clients/`:
   - `VLLM_SYSTEM_PROMPT`
   - `VLLM_IMAGE_SUMMARY_PROMPT`
   - `VLLM_IMAGE_IMPRESSION_PROMPT`

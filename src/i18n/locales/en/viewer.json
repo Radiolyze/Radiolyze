@@ -52,7 +52,12 @@
       "checking": "QA checking...",
       "passed": "QA passed",
       "warnings": "QA warnings"
-    }
+    },
+    "loadingDicom": "Loading DICOM images…",
+    "loadFailed": "Loading failed",
+    "status": "Status",
+    "live": "Live",
+    "asrConfidence": "ASR confidence"
   },
   "series": {
     "title": "Series",
@@ -76,11 +81,23 @@
     "showFindings": "Show AI findings ({{count}})",
     "hideFindings": "Hide AI findings ({{count}})"
   },
+  "findings": {
+    "overlayLabel_one": "{{count}} AI finding",
+    "overlayLabel_other": "{{count}} AI findings",
+    "boxTitle": "{{label}} — {{category}}",
+    "categories": {
+      "pathological": "Pathological finding",
+      "anatomical": "Anatomical structure",
+      "other": "Not classified"
+    }
+  },
   "emptyState": {
     "selectSeries": "Select a series",
     "selectSeriesFor3d": "Select a series for 3D rendering",
     "selectSeriesForMpr": "Select a series for multi-planar reconstruction",
-    "unsupportedModality": "Modality {{modality}} is not supported. Only CT, MR and PT are available."
+    "unsupportedModality": "Modality {{modality}} is not supported. Only CT, MR and PT are available.",
+    "noImages": "No DICOM images loaded",
+    "noImagesHint": "Check the DICOMweb connection and the series ID."
   },
   "mesh": {
     "title": "3D Model",
@@ -144,6 +161,107 @@
   },
   "annotations": {
     "selectSeries": "Select a series",
-    "confirmDelete": "Delete annotation \"{{label}}\"?"
+    "confirmDelete": "Delete annotation \"{{label}}\"?",
+    "title": "Annotations",
+    "empty": "No annotations yet.",
+    "emptyHint": "Use the annotation tools to mark regions.",
+    "frame": "Frame {{number}}",
+    "otherFrames": "Other frames",
+    "verifiedCount": "Verified: {{verified}}/{{total}}",
+    "labelPlaceholder": "Label",
+    "notesPlaceholder": "Notes…",
+    "categories": {
+      "nodule": "Nodule",
+      "mass": "Mass",
+      "infiltrate": "Infiltrate",
+      "effusion": "Effusion",
+      "fracture": "Fracture",
+      "lesion": "Lesion",
+      "anatomical": "Anatomical",
+      "other": "Other"
+    },
+    "dialog": {
+      "title": "Label annotation",
+      "description": "Enter a label and a category for the annotation.",
+      "label": "Label",
+      "labelPlaceholder": "e.g. round nodule 1.2 cm",
+      "category": "Category",
+      "context": "Tool: {{tool}} • Frame: {{frame}}"
+    }
+  },
+  "vrt": {
+    "title": "3D VRT",
+    "viewerTitle": "3D volume rendering",
+    "presetPlaceholder": "Select preset",
+    "customPreset": "Custom",
+    "buildingVolume": "Building 3D volume…",
+    "tooFewSlices": "Not enough images for 3D rendering. At least {{required}} required, {{available}} available.",
+    "limitedSupportHint": "Note: {{modality}} images often carry no spatial metadata, so the 3D rendering can be inaccurate.",
+    "limitedSupportDetail": "{{modality}} images are a poor fit for 3D rendering: spatial metadata (PixelSpacing, ImageOrientation) is often missing.",
+    "resetCamera": "Reset camera",
+    "presets": {
+      "ct-bone": "Tuned for bone structures",
+      "ct-lung": "Tuned for lung parenchyma",
+      "ct-soft-tissue": "Soft tissue and organs",
+      "ct-angiography": "Contrast-filled vessels",
+      "ct-muscle-bone": "Muscle and bone structures"
+    },
+    "view": {
+      "anterior": "Anterior (A)",
+      "posterior": "Posterior (P)",
+      "left": "Left (L)",
+      "right": "Right (R)",
+      "superior": "Superior (S)",
+      "inferior": "Inferior (I)"
+    },
+    "lighting": {
+      "button": "Lighting",
+      "title": "Rendering settings",
+      "quality": "Render quality",
+      "qualityHigh": "High",
+      "qualityMedium": "Medium",
+      "qualityFast": "Fast",
+      "ambient": "Ambient light",
+      "diffuse": "Diffuse reflection",
+      "specular": "Specular reflection",
+      "specularPower": "Shininess"
+    }
+  },
+  "mpr": {
+    "viewerTitle": "Multi-planar reconstruction",
+    "navigation": "MPR navigation",
+    "maximize": "Maximise",
+    "showAll": "All views",
+    "windowLevelPreset": "W/L preset",
+    "orientation": {
+      "axial": "Axial (transverse)",
+      "sagittal": "Sagittal",
+      "coronal": "Coronal (frontal)"
+    },
+    "limitedSupportDetail": "{{modality}} images are a poor fit for MPR: spatial metadata (PixelSpacing, ImageOrientation) is often missing.",
+    "slab": {
+      "title": "Slab/MIP",
+      "projectionMode": "Projection mode",
+      "thickness": "Slab thickness",
+      "thin": "Thin (0 mm)",
+      "mode": {
+        "composite": "Normal",
+        "mip": "MIP",
+        "minip": "MinIP",
+        "average": "Average"
+      },
+      "help": {
+        "mip": "Maximum intensity projection (vessels, bone)",
+        "minip": "Minimum intensity projection (lung, airways)",
+        "average": "Mean intensity (noise reduction)"
+      }
+    }
+  },
+  "mode": {
+    "stack": "Stack view"
+  },
+  "shortcuts": {
+    "rotate": "Rotate",
+    "viewAngle": "View angle"
   }
 }

@@ -70,7 +70,9 @@ class PreprocessResult:
     slice_thickness: float | None
 
 
-def _resolve_preset(modality: str, requested: WindowPreset, series_description: str | None) -> WindowPreset:
+def _resolve_preset(
+    modality: str, requested: WindowPreset, series_description: str | None
+) -> WindowPreset:
     if requested != "auto":
         return requested
     mod = (modality or "").upper()

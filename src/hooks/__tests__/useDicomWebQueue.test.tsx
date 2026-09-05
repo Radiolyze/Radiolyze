@@ -84,9 +84,7 @@ describe("useDicomWebQueue", () => {
 
     const { result } = setup();
 
-    await waitFor(() =>
-      expect(result.current.error).toBe("DICOMweb-Studien konnten nicht geladen werden."),
-    );
+    await waitFor(() => expect(result.current.error).toBe("DICOMweb studies could not be loaded."));
     expect(result.current.items).toEqual([]);
     expect(result.current.isLoading).toBe(false);
   });

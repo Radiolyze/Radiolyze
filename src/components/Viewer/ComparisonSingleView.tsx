@@ -126,7 +126,7 @@ export function ComparisonSingleView({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {viewerMode === "mpr" ? "Stack-Ansicht" : "Multi-Planar Rekonstruktion"}
+              {viewerMode === "mpr" ? t("mode.stack") : t("mpr.viewerTitle")}
             </TooltipContent>
           </Tooltip>
         )}
@@ -146,7 +146,7 @@ export function ComparisonSingleView({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {viewerMode === "vrt" ? "Stack-Ansicht" : "3D Volume Rendering"}
+              {viewerMode === "vrt" ? t("mode.stack") : t("vrt.viewerTitle")}
             </TooltipContent>
           </Tooltip>
         )}

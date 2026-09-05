@@ -30,7 +30,12 @@
     "signaturePlaceholder": "Dr. Name",
     "approve": "Approve & Finalize",
     "cancel": "Cancel",
-    "confirmMessage": "Are you sure you want to approve this report?"
+    "confirmMessage": "Are you sure you want to approve this report?",
+    "approved": "Already approved",
+    "finalized": "Report is approved",
+    "finalizedBy": "Approved by {{approver}}",
+    "finalizedAt": "Approved on {{date}}",
+    "finalizedByAt": "Approved by {{approver}} on {{date}}"
   },
   "qa": {
     "title": "QA Checks",
@@ -112,14 +117,28 @@
     "cancel": "Cancel",
     "submit": "Request",
     "submitTitle": "Submit Review",
-    "reviewCommentPlaceholder": "Review comment..."
+    "reviewCommentPlaceholder": "Review comment...",
+    "pendingCount_one": "{{count}} open",
+    "pendingCount_other": "{{count}} open",
+    "reviewer": "Reviewer",
+    "unassigned": "Unassigned",
+    "pendingFor": "{{reviewer}}: pending",
+    "rate": "Review",
+    "submitReview": "Submit",
+    "decision": {
+      "agree": "Agree",
+      "disagree": "Disagree",
+      "revise": "Revision recommended"
+    }
   },
   "structuredForm": {
     "general": "General",
     "noSchema": "No structured template available",
     "structured": "Structured",
     "freetext": "Free text",
-    "toggleLabel": "Structured input"
+    "toggleLabel": "Structured input",
+    "yes": "Yes",
+    "no": "No"
   },
   "inference": {
     "title": "AI Analysis",
@@ -173,5 +192,11 @@
       "regressed": "Regressed",
       "resolved": "Resolved"
     }
+  },
+  "toast": {
+    "saved": "Findings saved"
+  },
+  "diff": {
+    "noChanges": "No changes"
   }
 }

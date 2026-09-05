@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import i18n, { resources } from "@/i18n";
 import type { ExportFormat } from "@/services/trainingClient";
+import { VRT_PRESETS } from "@/types/vrt";
+import { SLAB_BLEND_MODES, type MPROrientation } from "@/types/mpr";
+import { ANNOTATION_CATEGORY_VALUES } from "@/types/annotations";
+import { FINDING_CATEGORY_VALUES } from "@/types/radiology";
 
 type Resource = Record<string, unknown>;
 
@@ -69,6 +73,47 @@ describe("training export resources", () => {
     await i18n.changeLanguage(lng);
     for (const format of formats) {
       expect(i18n.t(`training:formats.${format}`, { defaultValue: "" })).not.toBe("");
+    }
+  });
+
+  // The label tables that used to live in src/types/*.ts now hold ids only and
+  // resolve their text through these keys (#117). A value added to one of the
+  // unions without a matching key renders the raw key to the user, so the lists
+  // below are the unions themselves -- extending one without the other fails
+  // here rather than in the viewer.
+  const vrtPresetIds = VRT_PRESETS.map((preset) => preset.id);
+  const orientations: MPROrientation[] = ["axial", "sagittal", "coronal"];
+
+  it.each(["de", "en"])("labels every VRT preset, plane and slab mode in %s", async (lng) => {
+    await i18n.changeLanguage(lng);
+    for (const id of vrtPresetIds) {
+      expect(i18n.t(`viewer:vrt.presets.${id}`, { defaultValue: "" })).not.toBe("");
+    }
+    for (const orientation of orientations) {
+      expect(i18n.t(`viewer:mpr.orientation.${orientation}`, { defaultValue: "" })).not.toBe("");
+    }
+    for (const mode of SLAB_BLEND_MODES) {
+      expect(i18n.t(`viewer:mpr.slab.mode.${mode}`, { defaultValue: "" })).not.toBe("");
+    }
+  });
+
+  it.each(["de", "en"])("labels every annotation category in %s", async (lng) => {
+    await i18n.changeLanguage(lng);
+    for (const category of ANNOTATION_CATEGORY_VALUES) {
+      expect(i18n.t(`viewer:annotations.categories.${category}`, { defaultValue: "" })).not.toBe(
+        "",
+      );
+    }
+  });
+
+  // AIFindingsOverlay names the category of every box in its <title> (#298).
+  // The union mirrors the backend's FindingCategory, so a category added there
+  // and mapped through to the type fails here rather than putting a raw key in
+  // front of a radiologist.
+  it.each(["de", "en"])("labels every finding category in %s", async (lng) => {
+    await i18n.changeLanguage(lng);
+    for (const category of FINDING_CATEGORY_VALUES) {
+      expect(i18n.t(`viewer:findings.categories.${category}`, { defaultValue: "" })).not.toBe("");
     }
   });
 

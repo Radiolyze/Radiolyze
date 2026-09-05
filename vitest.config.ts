@@ -39,14 +39,17 @@ export default defineConfig({
       //   functions  57.44% ( 243/ 423)   34.51% ( 459/1330)
       //   statements 33.53% (5093/15188)  34.07% (1814/5324)
       //
-      // Statements and lines are effectively unchanged, so their floors stay
-      // where they were (still low relative to actual — ratcheting them is
-      // #115's job, not this migration's).
+      // Statements and lines were left at 11 through that migration and never
+      // caught up with the suite, which meant two thirds of the coverage could
+      // have disappeared without the job noticing. Re-anchored 2026-09-03
+      // against the measured run (35.03 / 29.11 / 34.73 / 35.46) with roughly
+      // one point of slack, so an ordinary refactor does not trip the job but
+      // a real regression does. Re-anchor again when coverage moves up.
       thresholds: {
-        statements: 11,
-        branches: 26,
-        functions: 32,
-        lines: 11,
+        statements: 34,
+        branches: 28,
+        functions: 33,
+        lines: 34,
       },
     },
   },

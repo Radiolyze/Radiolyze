@@ -12,6 +12,36 @@ for the full history.
 
 ### Added
 
+- `category` (`pathological` / `anatomical` / `other`) on every localization
+  finding (#298): requested in both localize prompts, validated on
+  `FindingBoxOutput`, and carried through the job metadata into `FindingBox` in
+  the frontend. `AIFindingsOverlay` colours each box by it instead of by a
+  substring match over the label, and names it in the box's `<title>` so the
+  classification is not carried by colour alone. Anatomy mode defaults a box
+  the model left uncategorized to `anatomical`; a value outside the set drops
+  to "uncategorized" rather than taking the finding down with it.
+- `i18next/no-literal-string` as a lint guard over `src/components/**` and
+  `src/pages/**` (#117), plus `eslint-plugin-i18next` as a devDependency — the
+  rule the issue asks for. A warning, not an error: it also reports product
+  names, unit symbols and the shortcut hints in `<kbd>`, and a blocking rule
+  would have landed with a wall of suppressions. `jsx-only` mode, so the six
+  attributes a user reads (`placeholder`, `title`, `alt`, `aria-label`,
+  `label`, `subtitle`) are checked alongside JSX text; template literals count
+  as display copy; `<kbd>`, `<code>` and `<Trans>` children do not. 218
+  findings before, 100 after.
+- A contract test over the unions the new viewer keys are indexed by: a VRT
+  preset, MPR plane, slab mode or annotation category added without a matching
+  translation fails `src/i18n/__tests__/resources.test.ts` instead of rendering
+  a raw key to the user.
+- `docs/{en,de}/development/i18n.md` gains three sections: why a label table in
+  a type module cannot be translated in place, `i18n.t` versus
+  `useTranslation` for strings outside the render path, and what the guard
+  reports and how to answer a warning.
+- `AGENTS.md` gains a "Claiming Work" section. Nine of ten PRs opened on
+  2026-09-03 were duplicates — five runs split `inference_clients.py`, five ran
+  the same i18n sweep, all within six minutes — because there was no way to
+  claim an issue and every run found the same one unclaimed.
+
 - `src/lib/__tests__/utils.test.ts`: the first test to assert on merged class
   output (#197). Each case merges a pair whose winning class only exists in
   Tailwind 4 — `outline-hidden`, `w-(--sidebar-width)`, `backdrop-blur-xs` — so
@@ -104,6 +134,75 @@ for the full history.
   whose clients have migrated can reject it with `WS_ALLOW_QUERY_TOKEN=false`.
 
 ### Changed
+
+- `backend/app/api/training.py` (752 lines) is routes only (218), with the
+  dataset formats, the ZIP writer and the DICOMweb frame fetch moved to
+  `backend/app/services/training_export/` (#293). One module per export format
+  — COCO, HuggingFace, Radiolyze — each owning both its dataset shape and the
+  README that documents it, plus `images.py` for how a rendered frame is
+  addressed, listed and fetched, and `archive.py` for the split and the parts
+  all three share. Behaviour-preserving apart from two README corrections noted
+  below; the four endpoints, their filters, status codes and archive members
+  are unchanged and now covered by 20 tests where there were none.
+- The LoRA snippet in the Radiolyze export's README is runnable. It carried
+  `from ..utils.time import IsoDateTime` — a relative import of this repo,
+  inside a script handed to whoever unpacks the archive — and used
+  `torch.bfloat16` without importing `torch`. The "Data Capture" note appended
+  when `includeImages` is set was three near-copies; it is one constant, so the
+  COCO variant loses the word "bereits" and matches the other two.
+- `services/segmenter` is linted in CI (#311). The job ran `pytest` only, and
+  the two ruff pre-commit hooks were scoped `^backend/`, so nothing checked the
+  service from either side — 25 findings against ruff's defaults had
+  accumulated unnoticed while the backend's own gate was green. The service now
+  carries a `pyproject.toml` mirroring `backend/pyproject.toml` (line-length
+  100, `E,F,W,I,UP`, `ignore = ["E501"]`, double quotes) rather than running on
+  the defaults, so both Python services are held to one style; `ruff check .`
+  and `ruff format --check .` run in `segmenter-test`; the hooks match on
+  `^(backend|services/segmenter)/`. The 13 findings and 8 reformatted files
+  that the shared config produced are a separate, purely mechanical commit
+  ahead of the gate, so the first red run cannot be an unrelated PR's.
+- `scripts/check-ruff-pin-sync.sh` covers the third `ruff` pin, in
+  `services/segmenter/requirements-dev.txt`, and fails when any two of the
+  three disagree. Dependabot sees them through two ecosystems and two
+  directories, so the bumps arrive as separate PRs that have to be merged
+  together; the segmenter's pip entry gains the backend's `python-dev-tools`
+  group for the same reason.
+- `SCHEMA_VERSION` 1.2 → 1.3, for the finding category. The version is stamped
+  into every stored job's metadata and is the only thing separating a finding
+  with no category because the field did not exist from one the model declined
+  to classify.
+- The keyword lists in `AIFindingsOverlay` are demoted to a fallback for
+  findings stored before the category existed, and documented as closed while
+  the model's output is not: "Pneumothorax", "Kardiomegalie" and "Spiculae" are
+  in neither list and were coloured neutral without a word about it.
+- The remaining user-visible strings resolve through i18next (#117). Two parts
+  of the issue's scope turned out to be understated: `VRTToolbar` held twelve
+  German literals rather than the two listed (the earlier count came from an
+  umlaut search, which misses German words that have none), and the larger half
+  sat outside components entirely — the toasts and error strings in
+  `useWorkspaceInference`, `useReportActions`, `useQaChecks`,
+  `useReportStatusSync`, the four viewport hooks and `services/cornerstone.ts`.
+  Those are what an English-speaking user actually hit, and they resolve through
+  `i18n.t` now, mostly against keys `errors.json` already had. Measured across
+  `src/` excluding locales, tests and `mockData.ts`: 56 German literals before,
+  14 after, and those 14 are `t(key, fallback)` call sites plus the keyword list
+  tracked as #298.
+- `src/types/{vrt,mpr,annotations}.ts` carry ids instead of display text; the
+  words are resolved at the render site (#117). A module-level table is
+  evaluated once at import, so a string there is fixed in whatever language it
+  was written in and does not follow a language switch. Two duplications fell
+  out with it: `SLAB_BLEND_MODE_LABELS` and an independently maintained
+  `blendModes` list in `MPRToolbar` collapse into one `SLAB_BLEND_MODES`, and
+  `SLAB_THICKNESS_PRESETS` no longer spells its millimetre values out twice.
+- `ruff` 0.16.1 → 0.16.4 and `mypy` 2.3.0 → 2.3.1, both pins in one commit.
+  `ruff` is pinned in `backend/requirements-dev.txt` and in
+  `.pre-commit-config.yaml`, Dependabot proposes them from two ecosystems, and
+  `scripts/check-ruff-pin-sync.sh` fails on each of the two PRs individually —
+  so neither could ever go green alone (#287, #270).
+- The coverage thresholds in `vitest.config.ts` are re-anchored from 11/26/32/11
+  to 34/28/33/34, roughly a point below the measured 35.03/29.11/34.73/35.46. A
+  floor two thirds below actual is not the ratchet #115 describes: two thirds of
+  the coverage could have disappeared without the job noticing.
 
 - `tailwindcss` 3.4 → 4.3 and `tailwind-merge` 2.6 → 3.6, in one commit
   (#197). They share a version line in one direction only: tailwind-merge v3
@@ -317,6 +416,13 @@ for the full history.
 
 ### Removed
 
+- `ANNOTATION_SEVERITIES` and `ANNOTATION_LATERALITIES` from
+  `src/types/annotations.ts` (#117). The first was imported into
+  `AnnotationPanel` and never used, the second read by nothing at all.
+  Translating them would have left two unused vocabularies in the resources;
+  the `AnnotationSeverity`/`AnnotationLaterality` types stay, and whatever
+  panel renders them later brings its own list and keys.
+
 - `tailwind.config.ts` and the `autoprefixer` dependency (#197). The theme now
   lives in `src/index.css`; Tailwind 4 does its own vendor prefixing through
   Lightning CSS, which also raises the browser floor to the baseline v4
@@ -346,6 +452,47 @@ for the full history.
 
 ### Fixed
 
+- `anonymize=True` on `POST /api/v1/training/export` now removes the DICOM
+  identifiers on all three formats (#329). It did less than its name says on
+  each of them, in a different place: COCO's branch stripped
+  `created_by`/`verified_by` from an `attributes` map its own builder never
+  writes, so a COCO export was not anonymized at all; HuggingFace and Radiolyze
+  pseudonymized the fields `anonymize_annotation` knew by name, but the sample
+  key (`id` / `image_id`) is the raw `study_series_instance_frame` string and
+  carried the identifiers out beside the pseudonyms that hid them; and under
+  `metadata`, where Radiolyze keeps its identifiers, only `study_id` was
+  reached — via the `StudyID` DICOM tag — leaving series and instance raw.
+  The identifiers now become pseudonyms in one place, `frame_ids()` in
+  `app/services/training_export/images.py`, and every key, path and URL
+  downstream is built from what it returns, so a key cannot disagree with the
+  fields beside it. `app/anonymize.py` pseudonymizes values only; it no longer
+  reassembles paths it cannot see the shape of.
+  A new test exports each format with `anonymize=True` and asserts that no raw
+  study, series or instance identifier appears anywhere in the archive — the
+  assurance that was missing, and the one scan that finds all three defects.
+- An anonymized Radiolyze export resolves its own images again (#329). Because
+  `anonymize_annotation` rebuilt `image_path` and `wado_url` from top-level
+  identifiers that this format keeps under `metadata`, it built them from empty
+  strings — `images/___0.png`,
+  `/wado-rs/studies//series//instances//frames/1/rendered` — and stamped every
+  sample with frame 1, so no sample pointed at its image and the dataset was
+  not trainable. Frame numbers are 1-based in one place now
+  (`images._frame_path`), and with `includeImages` the archive stores each
+  frame under the pseudonymized member name the dataset points at, while still
+  fetching it from the PACS under its real identifiers.
+- Approving a report now changes something on screen (#297). The
+  `report_status` WebSocket payload carried `asrStatus`, `aiStatus` and
+  `qaStatus` but never the status of the report itself, and
+  `useReportStatusSync.getEnhancedItems()` overlaid only the first two — so the
+  queue badge kept showing the state from the last DICOMweb fetch, and
+  `ImpressionPanel`, which never received the report status at all, left
+  "Approve & Finalize" enabled on an already finalized report for the backend
+  to reject with a 409. `POST /reports/{id}/finalize`, `PATCH /reports/{id}`
+  and the inference worker's transition to `draft` now all publish `status`;
+  the queue merges it like the other two, and the panel disables approval on a
+  finalized report and names the approver and the approval time instead. The
+  queue badge also falls back to the pending style for a status outside its
+  table rather than throwing, now that the value can arrive over the socket.
 - Concurrent writes no longer collide on the audit chain. `add_audit_event()`
   derived `seq`/`prev_hash` from the tail of `audit_events` and inserted
   without holding anything, so overlapping requests read the same tail and all

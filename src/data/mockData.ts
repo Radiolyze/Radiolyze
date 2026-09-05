@@ -1,3 +1,9 @@
+/**
+ * German-language demo fixtures. Deliberately not translated: these are sample
+ * patients and reports for a local walkthrough, not UI copy, and running them
+ * through i18n would add a namespace of throwaway keys. Analyses looking for
+ * untranslated German strings should skip this file (#117).
+ */
 import type {
   Patient,
   Study,

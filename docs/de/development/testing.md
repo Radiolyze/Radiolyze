@@ -141,22 +141,25 @@ python3 -m mkdocs build --strict
 
 End-to-End-Tests steuern einen echten Browser. Zwei Stile leben nebeneinander in `e2e/`:
 
-- **Gemockte Flows** (`e2e/auth.spec.ts`, `e2e/workflow.spec.ts`) täuschen Backend-Antworten per `page.route(...)` vor, statt einen laufenden Stack vorauszusetzen. Schnell, deterministisch, laufen als blockierender CI-Job (`e2e-frontend`) bei jedem Push/PR.
-- **Full-Stack-Flows** (geplant — siehe Szenarien unten) steuern das echte Backend/DB/Orthanc über `docker compose`, für Workflows, die echte Pixeldaten brauchen (DICOM-Viewer-Scrolling und -Windowing, ASR).
+- **Gemockte Flows** (`e2e/auth.spec.ts`, `e2e/workflow.spec.ts`, `e2e/dictation.spec.ts`) täuschen Backend-Antworten per `page.route(...)` vor, statt einen laufenden Stack vorauszusetzen. Schnell, deterministisch, laufen als blockierender CI-Job (`e2e-frontend`) bei jedem Push/PR.
+- **Full-Stack-Flows** (geplant — siehe Szenarien unten) steuern das echte Backend/DB/Orthanc über `docker compose`, für Workflows, die echte Pixeldaten brauchen (DICOM-Viewer-Scrolling und -Windowing).
 
 ### Gemockte Specs
 
 `e2e/support/` enthält die gemeinsame Basis der gemockten Specs:
 
 - `fixtures.ts` — DICOM-JSON-Datensätze für Studien/Serien/Instanzen sowie Report-Payloads. Die Formen bilden ab, was Orthancs DICOMweb-Endpunkte und `/api/v1/reports` liefern, sodass `dicomWebMapping.ts` und `reportMapping.ts` unverändert darauf laufen.
-- `mockBackend.ts` — `mockWorkflowBackend(page, options)` installiert die Routen für DICOMweb, Reports, QA und Inferenz. Der Mock hält lebenden Report-Zustand (verändert durch `PATCH` und Finalize) und protokolliert die abgesetzten Requests, sodass eine Spec sowohl auf das Gerenderte als auch auf den erzeugten Request prüfen kann.
+- `mockBackend.ts` — `mockWorkflowBackend(page, options)` installiert die Routen für DICOMweb, Reports, QA, Inferenz und ASR. Der Mock hält lebenden Report-Zustand (verändert durch `PATCH` und Finalize) und protokolliert die abgesetzten Requests, sodass eine Spec sowohl auf das Gerenderte als auch auf den erzeugten Request prüfen kann.
+- `workspace.ts` — die Landmarks des Workspace (Sidebar, Viewer, Report-Panel) und das Warten, bis Queue und Viewer stehen — über Rollen adressiert statt über Klassennamen.
 
 Das Report-Wire-Format ist bewusst in `fixtures.ts` deklariert und nicht aus `src/services/reportClient.ts` importiert: Diese Specs sind Black-Box-Clients des HTTP-Vertrags und sollen fehlschlagen, wenn sich das *Wire-Format* ändert — nicht, wenn ein interner Typ umbenannt wird.
 
-Zwei Verhaltensweisen sind beim Lesen der Specs wichtig:
+Vier Verhaltensweisen sind beim Lesen der Specs wichtig:
 
 - **Inferenz dauert einige Sekunden.** Unter `page.route` ist kein WebSocket verbunden, daher fällt `awaitInferenceResult` nach ~4 s auf HTTP-Polling zurück — derselbe Pfad, den ein echtes Deployment bei ausgefallenem Socket nimmt. Wegen dieses Fallbacks hebt `playwright.config.ts` das Test-Timeout über Playwrights 30-s-Default.
 - **Pixeldaten werden nicht ausgeliefert.** WADO-RS-Frame-Requests antworten mit 404. Der Workflow braucht die Instanz*liste* (daraus entstehen die an die Inferenz gesendeten Image-Referenzen), und Cornerstone toleriert die fehlenden Pixel.
+- **Das Audio ist echt, die Transkription nicht.** `playwright.config.ts` startet Chromium mit `--use-fake-device-for-media-stream`; damit läuft der echte `getUserMedia`/`MediaRecorder`-Pfad aus `useAudioInput` und erzeugt einen tatsächlichen WebM-Blob. Gestubbt ist nur `POST /api/v1/reports/asr-transcript`. Dieser Upload ist `multipart/form-data`, deshalb protokolliert `mockBackend` seine Felder und die Byte-Anzahl statt eines geparsten JSON-Bodys.
+- **`VITE_ALLOW_MOCK_FALLBACK` muss aus bleiben.** Gesetzt ersetzen `useASR` und `useQaChecks` fehlgeschlagene Dienstaufrufe durch Beispieldaten — die Suite würde grün bleiben, während der echte Pfad kaputt ist. `e2e/dictation.spec.ts` prüft gezielt auf das gestubbte Transkript, wird mit gesetztem Flag also rot, statt sich dahinter zu verstecken.
 
 ### Einrichtung
 
@@ -192,8 +195,11 @@ npx playwright test e2e/workflow.spec.ts
 | KI-Analyse füllt Befund und Impression, danach QA | `e2e/workflow.spec.ts` |
 | Bearbeitete Befunde werden persistiert und speisen die Impression | `e2e/workflow.spec.ts` |
 | QA-Warnungen erscheinen, ohne die Freigabe zu blockieren | `e2e/workflow.spec.ts` |
+| Fehlgeschlagener QA-Check blockiert die Freigabe | `e2e/workflow.spec.ts` |
 | Freigabe finalisiert den Report mit Unterschrift | `e2e/workflow.spec.ts` |
 | Fehlgeschlagener Inferenz-Job lässt den Report nicht freigebbar | `e2e/workflow.spec.ts` |
+| Diktat überträgt das Transkript in den Befund | `e2e/dictation.spec.ts` |
+| Fehlgeschlagene Transkription lässt den Befund unverändert | `e2e/dictation.spec.ts` |
 
 ### Noch offen
 
@@ -202,8 +208,6 @@ Diese Szenarien brauchen echte Pixeldaten oder Dienste, für die der gemockte Au
 | Testszenario | Warum | Voraussetzung |
 |---|---|---|
 | DICOM-Viewer: Stack scrollen, Window/Level | Kern-Viewing-UX | Orthanc mit echten DICOM-Daten |
-| ASR auslösen → Transkript in Befund sehen | Kern-Diktat-Workflow | ASR-Dienst |
-| QA-*Fehler* blockiert Freigabe | Sicherheitskritisch | Backend-QA-Regeln, die fehlschlagen können |
 | Kritischer-Befund-Alarm erscheint | Sicherheitskritisch | Inferenz-Ausgabe mit kritischem Label |
 | Tastaturkürzel `Ctrl+Enter` öffnet Freigabe-Dialog | Kern-UX | — |
 | Batch-Warteschlange: Freigabe → automatisch nächste Studie | Batch-Workflow | — |

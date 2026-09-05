@@ -36,13 +36,21 @@
     "notFound": "DICOMweb endpoint not found. Please check URL.",
     "invalidResponse": "Invalid response from server",
     "corsError": "CORS error. The server does not allow requests from this address.",
-    "timeout": "Connection timed out"
+    "timeout": "Connection timed out",
+    "studyLoadFailed": "Study information could not be loaded.",
+    "queueLoadFailed": "DICOMweb studies could not be loaded.",
+    "priorsLoadFailed": "Prior studies could not be loaded.",
+    "instancesLoadFailed": "DICOM data could not be loaded."
   },
   "report": {
     "saveFailed": "Failed to save report",
     "approveFailed": "Approval failed",
     "exportFailed": "Export failed",
-    "generateFailed": "AI generation failed"
+    "generateFailed": "AI generation failed",
+    "noneSelected": "No report selected",
+    "noImagesToAnalyze": "No images available to analyse",
+    "frameAnalysisFailed": "Frame analysis failed",
+    "signatureRequired": "Please enter a name/signature"
   },
   "notifications": {
     "loadFailed": "Notifications could not be loaded."
@@ -69,5 +77,19 @@
     "title": "Viewer failed to load",
     "message": "An error occurred in this viewer pane. Your report text is unaffected.",
     "reload": "Reload viewer"
+  },
+  "qa": {
+    "checkFailed": "QA check failed",
+    "unnamedCheck": "QA error",
+    "failedTitle": "QA check failed",
+    "failedDescription": "Report {{report}}… did not pass QA.",
+    "passedTitle": "QA check passed",
+    "passedDescription": "Report {{report}}… is ready for approval."
+  },
+  "viewer": {
+    "initFailed": "The viewer could not be initialised.",
+    "initFailed3d": "The 3D viewer could not be initialised.",
+    "initFailedMpr": "The MPR viewer could not be initialised.",
+    "codecDecodeFailed": "DICOM decoding failed (codec/WASM). Clear the browser cache and check the worker assets under /workers."
   }
 }

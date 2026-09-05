@@ -190,7 +190,12 @@ async def update_report(
     if should_broadcast:
         await broadcast_status(
             report_id,
-            {"qaStatus": qa_status, "aiStatus": "idle", "asrStatus": "idle"},
+            {
+                "qaStatus": qa_status,
+                "aiStatus": "idle",
+                "asrStatus": "idle",
+                "status": response.status,
+            },
         )
 
     return response
@@ -213,9 +218,16 @@ async def finalize_report(
 
     inference_job = _get_latest_inference_job(db, report.id)
 
+    # `status` is what tells every other client that the report is off the
+    # queue — without it the badge and the approve button stay as they were.
     await broadcast_status(
         report_id,
-        {"qaStatus": report.qa_status, "aiStatus": "idle", "asrStatus": "idle"},
+        {
+            "qaStatus": report.qa_status,
+            "aiStatus": "idle",
+            "asrStatus": "idle",
+            "status": report.status,
+        },
     )
     return _serialize_report(report, inference_job)
 

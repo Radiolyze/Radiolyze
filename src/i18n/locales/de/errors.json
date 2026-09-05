@@ -36,13 +36,21 @@
     "notFound": "DICOMweb-Endpunkt nicht gefunden. Bitte URL prüfen.",
     "invalidResponse": "Ungültige Antwort vom Server",
     "corsError": "CORS-Fehler. Der Server erlaubt keine Anfragen von dieser Adresse.",
-    "timeout": "Zeitüberschreitung bei der Verbindung"
+    "timeout": "Zeitüberschreitung bei der Verbindung",
+    "studyLoadFailed": "Studieninformationen konnten nicht geladen werden.",
+    "queueLoadFailed": "DICOMweb-Studien konnten nicht geladen werden.",
+    "priorsLoadFailed": "Voruntersuchungen konnten nicht geladen werden.",
+    "instancesLoadFailed": "DICOM-Daten konnten nicht geladen werden."
   },
   "report": {
     "saveFailed": "Befund konnte nicht gespeichert werden",
     "approveFailed": "Freigabe fehlgeschlagen",
     "exportFailed": "Export fehlgeschlagen",
-    "generateFailed": "KI-Generierung fehlgeschlagen"
+    "generateFailed": "KI-Generierung fehlgeschlagen",
+    "noneSelected": "Kein Report ausgewählt",
+    "noImagesToAnalyze": "Keine Bilder zum Analysieren vorhanden",
+    "frameAnalysisFailed": "Frame-Analyse fehlgeschlagen",
+    "signatureRequired": "Bitte Name/Unterschrift eingeben"
   },
   "notifications": {
     "loadFailed": "Benachrichtigungen konnten nicht geladen werden."
@@ -69,5 +77,19 @@
     "title": "Viewer konnte nicht geladen werden",
     "message": "In diesem Ansichtsbereich ist ein Fehler aufgetreten. Ihr Befundtext bleibt erhalten.",
     "reload": "Viewer neu laden"
+  },
+  "qa": {
+    "checkFailed": "QA-Prüfung fehlgeschlagen",
+    "unnamedCheck": "QA-Fehler",
+    "failedTitle": "QA-Prüfung fehlgeschlagen",
+    "failedDescription": "Report {{report}}... hat die QA nicht bestanden.",
+    "passedTitle": "QA-Prüfung bestanden",
+    "passedDescription": "Report {{report}}... ist bereit zur Freigabe."
+  },
+  "viewer": {
+    "initFailed": "Viewer konnte nicht initialisiert werden.",
+    "initFailed3d": "3D-Viewer konnte nicht initialisiert werden.",
+    "initFailedMpr": "MPR-Viewer konnte nicht initialisiert werden.",
+    "codecDecodeFailed": "DICOM-Decodierung fehlgeschlagen (Codec/WASM). Bitte Browser-Cache leeren und Worker-Assets unter /workers prüfen."
   }
 }
