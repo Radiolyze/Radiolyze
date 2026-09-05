@@ -4,6 +4,7 @@ import type { ExportFormat } from "@/services/trainingClient";
 import { VRT_PRESETS } from "@/types/vrt";
 import { SLAB_BLEND_MODES, type MPROrientation } from "@/types/mpr";
 import { ANNOTATION_CATEGORY_VALUES } from "@/types/annotations";
+import { FINDING_CATEGORY_VALUES } from "@/types/radiology";
 
 type Resource = Record<string, unknown>;
 
@@ -102,6 +103,17 @@ describe("training export resources", () => {
       expect(i18n.t(`viewer:annotations.categories.${category}`, { defaultValue: "" })).not.toBe(
         "",
       );
+    }
+  });
+
+  // AIFindingsOverlay names the category of every box in its <title> (#298).
+  // The union mirrors the backend's FindingCategory, so a category added there
+  // and mapped through to the type fails here rather than putting a raw key in
+  // front of a radiologist.
+  it.each(["de", "en"])("labels every finding category in %s", async (lng) => {
+    await i18n.changeLanguage(lng);
+    for (const category of FINDING_CATEGORY_VALUES) {
+      expect(i18n.t(`viewer:findings.categories.${category}`, { defaultValue: "" })).not.toBe("");
     }
   });
 

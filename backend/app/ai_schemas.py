@@ -12,7 +12,11 @@ from pydantic import (
     model_validator,
 )
 
-SCHEMA_VERSION = "1.2"
+# 1.3 adds the optional `category` to FindingBoxOutput (#298). Bumped rather
+# than left alone because the version is stamped into every stored job's
+# metadata, and it is the only thing that separates a finding with no category
+# because the field did not exist yet from one the model declined to classify.
+SCHEMA_VERSION = "1.3"
 
 
 def _normalize_indices(value: Any) -> list[int] | None:
@@ -45,6 +49,25 @@ def _normalize_text(value: Any) -> str | None:
         return None
     normalized = value.strip()
     return normalized or None
+
+
+FindingCategory = Literal["pathological", "anatomical", "other"]
+
+FINDING_CATEGORIES: tuple[str, ...] = ("pathological", "anatomical", "other")
+
+
+def normalize_finding_category(value: Any) -> str | None:
+    """Map a model-supplied finding category onto the known set; unknown -> ``None``.
+
+    Deliberately lenient. The category is an extra hint on a finding that
+    already carries a box and a label, and ``LocalizeOutput`` drops a finding
+    whose validation fails -- so a value outside the set costs the hint, not the
+    box. The consumer treats ``None`` as "unclassified" and falls back.
+    """
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().lower()
+    return normalized if normalized in FINDING_CATEGORIES else None
 
 
 class BaseAIOutput(BaseModel):
@@ -100,6 +123,10 @@ class FindingBoxOutput(BaseAIOutput):
     box_2d: list[float]
     label: str
     confidence: float | None = None
+    #: What the model says the finding *is* -- read by the viewer overlay to
+    #: colour the box. Optional: findings stored before this field existed carry
+    #: no category, and the overlay falls back to matching on the label there.
+    category: FindingCategory | None = None
     slice_index: int | None = Field(
         default=None,
         validation_alias=AliasChoices("slice_index", "sliceIndex"),
@@ -111,6 +138,11 @@ class FindingBoxOutput(BaseAIOutput):
         if not isinstance(value, list) or len(value) != 4:
             raise ValueError("box_2d must be a list of 4 numbers")
         return [float(v) for v in value]
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def _coerce_category(cls, value: Any) -> str | None:
+        return normalize_finding_category(value)
 
 
 class ChangeItem(BaseAIOutput):

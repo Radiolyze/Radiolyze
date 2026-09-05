@@ -29,7 +29,7 @@ audit trails, but incomplete for 3D and longitudinal analyses.
 | Multi-frame/series input | in use | Frontend frame selection (legacy) + segmenter-side volume preprocessor | `src/hooks/reporting/inferenceHelpers.ts`, `services/segmenter/app/medgemma_preprocess.py` |
 | Longitudinal (current + prior) | in use | Dedicated `/api/v1/inference/comparison` endpoint with structured diff schema | `backend/app/inference_clients/comparison.py:generate_comparison_text`, `src/components/RightPanel/ComparisonPanel.tsx` |
 | 3D volume analysis | in use | Segmenter `/preprocess/medgemma` renders DICOM CT/MR to ≤85 windowed 896×896 axial slices | `services/segmenter/app/medgemma_preprocess.py`, `backend/app/inference_clients/volume.py:generate_volume_inference_summary` |
-| Anatomical localization/detection | in use (CXR) | Modality-locked endpoint with `cxr_finding` and `cxr_anatomy` modes | `backend/app/inference_clients/localize.py:generate_localize_findings`, `backend/app/api/inference.py` |
+| Anatomical localization/detection | in use (CXR) | Modality-locked endpoint with `cxr_finding` and `cxr_anatomy` modes; each box carries a `category` (`pathological`/`anatomical`/`other`) the viewer colours by | `backend/app/inference_clients/localize.py:generate_localize_findings`, `backend/app/api/inference.py` |
 | Evidence/provenance | in use | Evidence indices extracted from model response and referenced in UI | `backend/app/inference_clients/`, `src/components/RightPanel/ImpressionPanel.tsx` |
 | WSI/pathology | not used | No WSI pipeline, no tile processing | - |
 | Clinical documents/EHR | not used | No EHR imports; only report text in the system | - |

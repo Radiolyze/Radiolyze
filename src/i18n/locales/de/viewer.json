@@ -81,6 +81,16 @@
     "showFindings": "KI-Befunde einblenden ({{count}})",
     "hideFindings": "KI-Befunde ausblenden ({{count}})"
   },
+  "findings": {
+    "overlayLabel_one": "{{count}} KI-Befund",
+    "overlayLabel_other": "{{count}} KI-Befunde",
+    "boxTitle": "{{label}} — {{category}}",
+    "categories": {
+      "pathological": "Pathologischer Befund",
+      "anatomical": "Anatomische Struktur",
+      "other": "Nicht klassifiziert"
+    }
+  },
   "emptyState": {
     "selectSeries": "Wählen Sie eine Serie aus",
     "selectSeriesFor3d": "Wählen Sie eine Serie für die 3D-Darstellung",
