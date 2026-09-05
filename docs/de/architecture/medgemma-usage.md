@@ -9,7 +9,7 @@
 - Bildquellen und Auswahl: `src/hooks/useDicomSeriesInstances.ts`, `src/hooks/reporting/inferenceHelpers.ts`, `src/hooks/useReport.ts`
 - Deployment: `docker-compose.yml`
 - Viewer und Vergleich: `docs/components/viewer.md`, `src/components/Viewer/*`, `src/hooks/usePriorStudies.ts`
-- Annotationen/Datenerhebung: `backend/app/api/annotations.py`, `backend/app/api/training.py`, `src/types/annotations.ts`
+- Annotationen/Datenerhebung: `backend/app/api/annotations.py`, `backend/app/api/training.py` (Routen) mit `backend/app/services/training_export/` (Datensatzformate, ZIP, Frame-Abruf), `src/types/annotations.ts`
 - Audit/Compliance: `docs/compliance/audit-logging.md`, `backend/app/audit.py`
 
 ## Kurzfazit
@@ -30,7 +30,7 @@ unvollstaendig fuer 3D- und Longitudinal-Analysen.
 | Multi-Frame/Serien-Input | teilweise | Auswahl von Frames pro Serie (Sampling/Limit) | `src/hooks/reporting/inferenceHelpers.ts` |
 | Longitudinal (Current + Prior) | teilweise | Prior-Studien + `role=current|prior` in ImageRefs; Vergleichsviewer | `src/hooks/usePriorStudies.ts`, `src/pages/ReportWorkspace.tsx` |
 | 3D Volumenanalyse | teilweise (UI only) | MPR/VRT Viewer vorhanden, aber Inferenz nutzt 2D Frames | `docs/components/viewer.md`, `src/hooks/useDicomSeriesInstances.ts` |
-| Anatomische Lokalisierung/Detektion | teilweise (Datensammlung) | 2D Bounding-Boxes + Labels erfasst; nicht im Inferenz-Output genutzt | `backend/app/api/annotations.py`, `backend/app/api/training.py` |
+| Anatomische Lokalisierung/Detektion | teilweise (Datensammlung) | 2D Bounding-Boxes + Labels erfasst; nicht im Inferenz-Output genutzt | `backend/app/api/annotations.py`, `backend/app/api/training.py`, `backend/app/services/training_export/` |
 | Evidence/Provenienz | genutzt | Evidence-Indices werden aus Modellantwort extrahiert und im UI referenziert | `backend/app/inference_clients/`, `src/components/RightPanel/ImpressionPanel.tsx` |
 | WSI/Pathologie | nicht | Keine WSI-Pipeline, keine Tile-Verarbeitung | - |
 | Klinische Dokumente/EHR | nicht | Keine EHR-Importe; nur Report-Text im System | - |
