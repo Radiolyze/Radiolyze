@@ -27,6 +27,14 @@ logger = logging.getLogger(__name__)
 DEAD_LETTER_TTL = int(os.getenv("DEAD_LETTER_TTL", str(7 * 24 * 3600)))
 
 
+def _idle_payload(report_status: str | None = None) -> dict[str, Any]:
+    """The end-of-job status payload, carrying the report status when it is known."""
+    payload: dict[str, Any] = {"aiStatus": "idle"}
+    if report_status:
+        payload["status"] = report_status
+    return payload
+
+
 def _get_or_create_inference_job(
     db,
     *,
@@ -362,6 +370,7 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         )
         db.commit()
 
+        report_status: str | None = None
         if report_id:
             report = db.get(Report, report_id)
             if report:
@@ -370,8 +379,11 @@ def run_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 if report.status in {"pending", "in_progress"}:
                     report.status = "draft"
                 db.commit()
+                report_status = report.status
 
-        publish_report_status(report_id, {"aiStatus": "idle"})
+        # The worker is what flips a report to "draft"; without the status in
+        # the payload the queue badge would keep showing the pre-inference one.
+        publish_report_status(report_id, _idle_payload(report_status))
 
         return {
             "summary": summary,
@@ -634,6 +646,7 @@ def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
         )
         db.commit()
 
+        report_status: str | None = None
         if report_id:
             report = db.get(Report, report_id)
             if report:
@@ -642,8 +655,11 @@ def run_volume_inference_job(payload: dict[str, Any]) -> dict[str, Any]:
                 if report.status in {"pending", "in_progress"}:
                     report.status = "draft"
                 db.commit()
+                report_status = report.status
 
-        publish_report_status(report_id, {"aiStatus": "idle"})
+        # The worker is what flips a report to "draft"; without the status in
+        # the payload the queue badge would keep showing the pre-inference one.
+        publish_report_status(report_id, _idle_payload(report_status))
 
         return {
             "summary": summary,

@@ -206,6 +206,15 @@ test.describe("core report workflow", () => {
     // The finalize response is folded back into the report without clobbering
     // the QA verdict that gated the approval.
     await expect(reportPanel(page).getByText("Passed")).toBeVisible();
+
+    // The approval is visible in the UI, not only in the request that was sent:
+    // the button is spent and the panel names who approved and when.
+    await expect(
+      reportPanel(page).getByRole("button", { name: "Already approved" }),
+    ).toBeDisabled();
+    await expect(reportPanel(page).getByTestId("impression-finalized-notice")).toContainText(
+      "Dr. Jane Doe",
+    );
   });
 
   test("a failed inference job leaves the report un-approvable", async ({ page }) => {

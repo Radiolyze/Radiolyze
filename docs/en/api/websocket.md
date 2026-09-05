@@ -63,11 +63,21 @@ Status update for an individual report:
   "payload": {
     "asrStatus": "processing",
     "aiStatus": "processing",
-    "qaStatus": "checking"
+    "qaStatus": "checking",
+    "status": "draft"
   },
   "timestamp": "2026-01-20T10:40:12Z"
 }
 ```
+
+Every field is optional; a payload only carries what changed.
+
+`status` is the lifecycle status of the report itself (`pending`, `in_progress`,
+`draft`, `finalized`), as opposed to the status of a single sub-task. It is sent
+by `POST /api/v1/reports/{id}/finalize`, by `PATCH /api/v1/reports/{id}`, and by
+the inference worker on the transition to `draft`. Clients that render a report
+status — the queue badge, the approve button — need it to follow a change made
+in another session; without it they keep showing the state from their last fetch.
 
 ## Client Integration
 

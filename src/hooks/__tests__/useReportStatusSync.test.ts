@@ -93,6 +93,33 @@ describe("useReportStatusSync", () => {
     expect(enhanced[0].report).toMatchObject({ aiStatus: "idle", qaStatus: "pass" });
   });
 
+  it("getEnhancedItems overlays the report status so the queue badge follows a finalize", () => {
+    const { result } = renderHook(() => useReportStatusSync());
+
+    act(() => fireWsMessage("rep-6", { status: "finalized", qaStatus: "pass" }));
+
+    const items = [
+      { report: { id: "rep-6", status: "draft", aiStatus: "idle", qaStatus: "pass" } },
+    ] as Parameters<typeof result.current.getEnhancedItems>[0];
+
+    const enhanced = result.current.getEnhancedItems(items);
+    expect(enhanced[0].report.status).toBe("finalized");
+  });
+
+  it("getEnhancedItems keeps the fetched status when the live payload has none", () => {
+    const { result } = renderHook(() => useReportStatusSync());
+
+    act(() => fireWsMessage("rep-7", { aiStatus: "processing" }));
+
+    const items = [{ report: { id: "rep-7", status: "draft", aiStatus: "queued" } }] as Parameters<
+      typeof result.current.getEnhancedItems
+    >[0];
+
+    const enhanced = result.current.getEnhancedItems(items);
+    expect(enhanced[0].report.status).toBe("draft");
+    expect(enhanced[0].report.aiStatus).toBe("processing");
+  });
+
   it("getEnhancedItems is a no-op for reports without live status", () => {
     const { result } = renderHook(() => useReportStatusSync());
 

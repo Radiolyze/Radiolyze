@@ -98,6 +98,9 @@ export function RightPanel({
           findings={findings}
           qaStatus={report.qaStatus}
           qaWarnings={report.qaWarnings}
+          reportStatus={report.status}
+          approvedBy={report.approvedBy}
+          approvedAt={report.approvedAt}
           inferenceStatus={report.inferenceStatus}
           inferenceSummary={report.inferenceSummary}
           inferenceConfidence={report.inferenceConfidence}

@@ -420,6 +420,19 @@ for the full history.
 
 ### Fixed
 
+- Approving a report now changes something on screen (#297). The
+  `report_status` WebSocket payload carried `asrStatus`, `aiStatus` and
+  `qaStatus` but never the status of the report itself, and
+  `useReportStatusSync.getEnhancedItems()` overlaid only the first two — so the
+  queue badge kept showing the state from the last DICOMweb fetch, and
+  `ImpressionPanel`, which never received the report status at all, left
+  "Approve & Finalize" enabled on an already finalized report for the backend
+  to reject with a 409. `POST /reports/{id}/finalize`, `PATCH /reports/{id}`
+  and the inference worker's transition to `draft` now all publish `status`;
+  the queue merges it like the other two, and the panel disables approval on a
+  finalized report and names the approver and the approval time instead. The
+  queue badge also falls back to the pending style for a status outside its
+  table rather than throwing, now that the value can arrive over the socket.
 - Concurrent writes no longer collide on the audit chain. `add_audit_event()`
   derived `seq`/`prev_hash` from the tail of `audit_events` and inserted
   without holding anything, so overlapping requests read the same tail and all
