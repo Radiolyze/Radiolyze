@@ -222,7 +222,7 @@ Backend-Pendant wurde nie erfasst:
 | `backend/app/tasks.py` | 975 |
 | `backend/app/inference_clients.py` | 774 — erledigt, jetzt das Paket `backend/app/inference_clients/` |
 | `backend/app/api/training.py` | 752 — erledigt, Export-Logik jetzt `backend/app/services/training_export/`, Routen 218 |
-| `backend/app/api/inference.py` | 615 |
+| `backend/app/api/inference.py` | 615 — erledigt, Queue-Logik jetzt `backend/app/services/inference_queue/`, Routen 97 |
 
 `tasks.py` ist der lohnendste Einstieg: Worker-Jobs für Inference,
 Localize, Segmentierung, Embedding und Drift liegen in einer Datei, und

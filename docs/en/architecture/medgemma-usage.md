@@ -5,7 +5,7 @@
 - No fine-tuning: this covers only current runtime usage and data collection for future evaluation.
 
 ## Methods and Sources in the Repo
-- Runtime inference: `backend/app/inference_clients/`, `backend/app/api/inference.py`, `backend/app/tasks.py`
+- Runtime inference: `backend/app/inference_clients/`, `backend/app/api/inference.py` (routes) with `backend/app/services/inference_queue/` (queueing, job payloads, status), `backend/app/tasks.py`
 - Image sources and selection: `src/hooks/useDicomSeriesInstances.ts`, `src/hooks/reporting/inferenceHelpers.ts`, `src/hooks/useReport.ts`
 - Deployment: `docker-compose.yml`
 - Viewer and comparison: `docs/components/viewer.md`, `src/components/Viewer/*`, `src/hooks/usePriorStudies.ts`

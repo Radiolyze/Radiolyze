@@ -5,7 +5,7 @@
 - Kein Fine-Tuning: Es geht nur um aktuelle Laufzeitnutzung und um Datenerhebung fuer spaetere Auswertungen.
 
 ## Methodik und Quellen im Repo
-- Laufzeit-Inferenz: `backend/app/inference_clients/`, `backend/app/api/inference.py`, `backend/app/tasks.py`
+- Laufzeit-Inferenz: `backend/app/inference_clients/`, `backend/app/api/inference.py` (Routen) mit `backend/app/services/inference_queue/` (Enqueuing, Job-Payloads, Status), `backend/app/tasks.py`
 - Bildquellen und Auswahl: `src/hooks/useDicomSeriesInstances.ts`, `src/hooks/reporting/inferenceHelpers.ts`, `src/hooks/useReport.ts`
 - Deployment: `docker-compose.yml`
 - Viewer und Vergleich: `docs/components/viewer.md`, `src/components/Viewer/*`, `src/hooks/usePriorStudies.ts`
