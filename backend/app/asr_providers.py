@@ -43,6 +43,22 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _first_env(*names: str, default: str) -> str:
+    """First non-empty value among ``names``, else ``default``.
+
+    The provider settings all read as "the ASR_OPENAI_* override if set, otherwise the
+    MEDASR_* one, otherwise a literal". Spelling that as ``os.getenv(a) or os.getenv(b, d)``
+    makes an empty ``b`` win over ``d``, unlike ``_env_int``/``_env_float`` above, which
+    treat empty as unset -- and it types as ``str | None`` because mypy pushes the outer
+    context into the second ``getenv``'s default.
+    """
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default
+
+
 def _compact_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in metadata.items() if value is not None}
 
@@ -75,20 +91,22 @@ def _openai_audio_config(
     mode: Literal["medasr", "openai_audio"],
 ) -> tuple[str, str, str, float, str | None]:
     if mode == "medasr":
-        base_url = os.getenv("MEDASR_BASE_URL", "http://medasr:8001").rstrip("/")
-        path = os.getenv("MEDASR_TRANSCRIBE_PATH", "/v1/audio/transcriptions")
-        model_name = os.getenv("MEDASR_MODEL", "google/medasr")
+        base_url = _first_env("MEDASR_BASE_URL", default="http://medasr:8001").rstrip("/")
+        path = _first_env("MEDASR_TRANSCRIBE_PATH", default="/v1/audio/transcriptions")
+        model_name = _first_env("MEDASR_MODEL", default="google/medasr")
         timeout = float(_env_int("MEDASR_REQUEST_TIMEOUT", 60))
         api_key = os.getenv("MEDASR_API_KEY")
         return base_url, path, model_name, timeout, api_key
 
-    base_url = (
-        os.getenv("ASR_OPENAI_BASE_URL") or os.getenv("MEDASR_BASE_URL", "http://medasr:8001")
+    base_url = _first_env(
+        "ASR_OPENAI_BASE_URL", "MEDASR_BASE_URL", default="http://medasr:8001"
     ).rstrip("/")
-    path = os.getenv("ASR_OPENAI_TRANSCRIBE_PATH") or os.getenv(
-        "MEDASR_TRANSCRIBE_PATH", "/v1/audio/transcriptions"
+    path = _first_env(
+        "ASR_OPENAI_TRANSCRIBE_PATH",
+        "MEDASR_TRANSCRIBE_PATH",
+        default="/v1/audio/transcriptions",
     )
-    model_name = os.getenv("ASR_OPENAI_MODEL") or os.getenv("MEDASR_MODEL", "google/medasr")
+    model_name = _first_env("ASR_OPENAI_MODEL", "MEDASR_MODEL", default="google/medasr")
     timeout = float(
         _env_int(
             "ASR_OPENAI_REQUEST_TIMEOUT",

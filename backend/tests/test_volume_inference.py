@@ -220,6 +220,43 @@ def test_schema_endpoint_includes_comparison(client) -> None:
     assert "comparison_output" in payload["schemas"]
 
 
+@pytest.mark.parametrize("missing", ["study_uid", "series_uid"])
+def test_volume_job_rejects_a_payload_without_uids(missing: str) -> None:
+    """A UID the job cannot run without fails here, not four layers down.
+
+    ``VolumeInferenceRequest`` declares both UIDs required, but the worker receives a
+    plain dict. A ``None`` used to reach ``preprocess_for_medgemma``, whose broad
+    ``except`` turned the segmenter error into a mock summary stored as a successful
+    inference.
+    """
+    from app.tasks import run_volume_inference_job
+
+    payload = {"study_uid": "1.2.3", "series_uid": "1.2.3.4"}
+    del payload[missing]
+
+    with pytest.raises(ValueError, match=missing):
+        run_volume_inference_job(payload)
+
+
+@pytest.mark.parametrize(
+    "missing",
+    ["study_uid", "series_uid", "prior_study_uid", "prior_series_uid"],
+)
+def test_comparison_job_rejects_a_payload_without_uids(missing: str) -> None:
+    from app.tasks import run_comparison_inference_job
+
+    payload = {
+        "study_uid": "1.2.3",
+        "series_uid": "1.2.3.4",
+        "prior_study_uid": "1.2.2",
+        "prior_series_uid": "1.2.2.4",
+    }
+    del payload[missing]
+
+    with pytest.raises(ValueError, match=missing):
+        run_comparison_inference_job(payload)
+
+
 # --- Finding categories (#298) -------------------------------------------------
 #
 # The overlay used to derive the colour of a box from a keyword list over the

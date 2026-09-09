@@ -9,6 +9,7 @@ from typing import Any
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import RequestResponseEndpoint
 
 from .api import annotations as annotations_api
 from .api import (
@@ -66,7 +67,9 @@ instrument_fastapi(app)
 # Security Headers Middleware
 # ---------------------------------------------------------------------------
 @app.middleware("http")
-async def security_headers_middleware(request: Request, call_next) -> Response:
+async def security_headers_middleware(
+    request: Request, call_next: RequestResponseEndpoint
+) -> Response:
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -105,7 +108,7 @@ request_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("request_id
 
 
 @app.middleware("http")
-async def request_id_middleware(request: Request, call_next) -> Response:
+async def request_id_middleware(request: Request, call_next: RequestResponseEndpoint) -> Response:
     rid = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     request_id_ctx.set(rid)
     request.state.request_id = rid
@@ -154,7 +157,7 @@ def _get_client_ip(request: Request) -> str:
 
 
 @app.middleware("http")
-async def rate_limit_middleware(request: Request, call_next) -> Response:
+async def rate_limit_middleware(request: Request, call_next: RequestResponseEndpoint) -> Response:
     if request.url.path.startswith("/api/v1/health") or request.url.path.startswith("/api/v1/ws"):
         return await call_next(request)
 
@@ -331,8 +334,8 @@ async def _run_startup(app: FastAPI) -> None:
             )
         else:
             # Fail fast (or warn) if the default admin still has the default password
-            admin = db.query(User).filter(User.username == "admin").first()
-            if admin and verify_password("admin", admin.password_hash):
+            existing_admin = db.query(User).filter(User.username == "admin").first()
+            if existing_admin and verify_password("admin", existing_admin.password_hash):
                 if is_production_env():
                     raise RuntimeError(
                         "FATAL: Admin user still has the default password 'admin'. "
