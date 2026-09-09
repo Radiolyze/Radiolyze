@@ -26,9 +26,9 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "@cornerstonejs/core": "^5.7.0",
-    "@cornerstonejs/dicom-image-loader": "^5.7.0",
-    "@cornerstonejs/tools": "^5.7.0",
+    "@cornerstonejs/core": "^5.7.3",
+    "@cornerstonejs/dicom-image-loader": "^5.7.3",
+    "@cornerstonejs/tools": "^5.7.3",
     "@hookform/resolvers": "^5.5.7",
     "@kitware/vtk.js": "36.4.1",
     "@radix-ui/react-accordion": "^1.2.20",
