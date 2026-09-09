@@ -139,7 +139,9 @@ function AlertCard({ alert }: { alert: { metric: string; delta: number; threshol
   );
 }
 
-function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
+// Exported for tests. This is the only recharts consumer in the codebase, so
+// it is where a chart library upgrade shows up first.
+export function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
   const { t } = useTranslation("common");
   const { formatShortDate } = useDateFormat();
   const data = [...snapshots].reverse().map((s) => ({
@@ -173,8 +175,12 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
               tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
             />
             <Tooltip
-              formatter={(v: number) => [
-                `${(v * 100).toFixed(1)}%`,
+              // recharts 3 fixes Tooltip's formatter to ValueType | undefined
+              // (string | number | array) and the component is no longer
+              // generic, so the value cannot be annotated as number any more.
+              // This series is numeric, so Number() is identity for it.
+              formatter={(v) => [
+                `${(Number(v) * 100).toFixed(1)}%`,
                 t("monitoring.metrics.confidenceAvg"),
               ]}
             />
@@ -200,7 +206,8 @@ function SnapshotChart({ snapshots }: { snapshots: DriftSnapshot[] }) {
             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
             <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
             <Tooltip
-              formatter={(v: number) => [`${v.toFixed(1)}%`, t("monitoring.metrics.passRate")]}
+              // See the confidence chart above: ValueType, not number.
+              formatter={(v) => [`${Number(v).toFixed(1)}%`, t("monitoring.metrics.passRate")]}
             />
             <ReferenceLine y={80} stroke="hsl(var(--warning))" strokeDasharray="4 4" />
             <Line

@@ -92,9 +92,15 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
+// recharts 3 separates the props the <Tooltip> element itself accepts from
+// the props its content renderer receives. `payload`, `label`, `active` and
+// `coordinate` are read from chart context and are Omit'd from TooltipProps,
+// so reading them off it no longer type-checks -- TooltipContentProps is the
+// type that carries them. Partial, because recharts injects them when it
+// clones the element: the call site renders <ChartTooltipContent /> bare.
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
+  Partial<RechartsPrimitive.TooltipContentProps> &
     React.ComponentProps<"div"> & {
       hideLabel?: boolean;
       hideIndicator?: boolean;
@@ -172,7 +178,10 @@ const ChartTooltipContent = React.forwardRef<
 
             return (
               <div
-                key={item.dataKey}
+                // recharts 3 widens DataKey to include a function accessor,
+                // which is not a valid React key. Every chart here keys off a
+                // string dataKey, so String() is identity for those.
+                key={String(item.dataKey)}
                 className={cn(
                   "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
                   indicator === "dot" && "items-center",
@@ -241,7 +250,11 @@ const ChartLegend = RechartsPrimitive.Legend;
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+    // Same split as the tooltip above: recharts 3 Omits `payload`,
+    // `verticalAlign` and `layout` from LegendProps because the <Legend>
+    // element does not take them -- its content renderer is handed them.
+    // DefaultLegendContentProps is where they live now.
+    Pick<RechartsPrimitive.DefaultLegendContentProps, "payload" | "verticalAlign"> & {
       hideIcon?: boolean;
       nameKey?: string;
     }
