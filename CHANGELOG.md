@@ -135,6 +135,47 @@ for the full history.
 
 ### Changed
 
+- `recharts` 2.15.4 → 3.10.1. Recharts 3 splits the props a `<Tooltip>` or
+  `<Legend>` element accepts from the props their content renderers receive:
+  `payload`, `label`, `active` and `coordinate` are read from chart context and
+  `Omit`'d from `TooltipProps`, and `LegendProps` drops `payload`,
+  `verticalAlign` and `layout` the same way. `src/components/ui/chart.tsx` read
+  all of them off the element props, so it now uses `TooltipContentProps` and
+  `DefaultLegendContentProps` instead. `Tooltip` also stopped being generic, so
+  its `formatter` receives `ValueType | undefined` rather than a `number` the
+  call site can annotate — the two formatters in `src/pages/Monitoring.tsx`
+  narrow with `Number()`, which is identity for the numeric series they plot.
+  `DataKey` gained a function form that is not a valid React key, hence the
+  `String()` around it in the tooltip item list.
+
+  The bump also rewrites what recharts brings with it: `lodash`, `prop-types`,
+  `react-smooth`, `react-transition-group`, `recharts-scale`, `dom-helpers`,
+  `fast-equals`, `loose-envify` and `object-assign` leave the tree, and
+  `@reduxjs/toolkit`, `react-redux`, `redux`, `redux-thunk`, `reselect`,
+  `immer` and `es-toolkit` arrive — recharts 3 keeps its chart state in a Redux
+  store. That is a change of dependency surface rather than of API, and it is
+  the whole of the lockfile diff. The built `recharts` chunk is 347.84 kB
+  (98.77 kB gzipped).
+- `src/pages/Monitoring.tsx` exports `SnapshotChart`, and
+  `src/pages/__tests__/SnapshotChart.test.tsx` covers it. It was the only
+  recharts consumer in the tree and had no test of any kind, so the upgrade
+  above could have changed what the monitoring page draws without an assertion
+  noticing — which is precisely the "silent behaviour change" row of the
+  dependency policy's table. Four of the six tests were written against
+  recharts 2 and confirmed green there before the bump, so they pin behaviour
+  that survived the migration rather than the shape recharts 3 produces; they
+  assert on `<text>` contents and `.recharts-line-curve` because recharts 3
+  renamed the axis classes and, under jsdom, renders dot elements recharts 2
+  did not. The remaining two open a tooltip with `defaultIndex` to exercise the
+  formatters the migration changed, and are necessarily recharts-3-only.
+  `ResponsiveContainer` is stubbed with fixed dimensions throughout: jsdom
+  reports zero for every measurement, so the real one renders an empty div.
+- `src/components/ui/chart.tsx` is imported by nothing — it is vendored
+  shadcn-ui boilerplate, and `src/pages/Monitoring.tsx` uses recharts directly.
+  It is fixed rather than deleted because `npm run typecheck` covers it either
+  way, but that is why the eight type errors it produced had no runtime
+  counterpart.
+
 - `backend/app/api/training.py` (752 lines) is routes only (218), with the
   dataset formats, the ZIP writer and the DICOMweb frame fetch moved to
   `backend/app/services/training_export/` (#293). One module per export format
