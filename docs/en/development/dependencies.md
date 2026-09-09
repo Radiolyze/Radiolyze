@@ -45,6 +45,14 @@ single PR:
 - `ruff` / `mypy` / `pytest*` — backend dev tooling
 - All GitHub Actions
 
+A group keeps its members in **one PR**. It does not make them **agree**:
+Dependabot lifts every member to its own newest release, and an exact peer
+*between* two members is not a constraint it models. [#284](https://github.com/Radiolyze/Radiolyze/pull/284)
+proposed Cornerstone 5.8.2 alongside vtk.js 36.11.0 while `@cornerstonejs/tools@5.8.2`
+still pinned the peer at 36.4.1, and the PR was an `ERESOLVE`. What actually
+rejects a mismatched set is `npm ci` — loudly, before any test runs, which is
+the first row of the table above. See [#339](https://github.com/Radiolyze/Radiolyze/issues/339).
+
 **Ignores** — majors that are held back on purpose. Each one has a tracking
 issue, and the entry is removed when the migration lands. See the next section.
 
@@ -55,15 +63,25 @@ issue, and the entry is removed when the migration lands. See the next section.
 | Package | Held at | Blocked by | Issue |
 |---|---|---|---|
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` has no ESLint 10 support | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
+| `typescript` | `<7` | Upstream: `react-i18next` declares `typescript@^5` as a peer, so 7 needs `--legacy-peer-deps` | [#337](https://github.com/Radiolyze/Radiolyze/issues/337) |
+| `eslint-plugin-react-hooks` | `<7` | v7 turns on the React Compiler rules: 27 real render-correctness errors, a migration rather than a bump | [#338](https://github.com/Radiolyze/Radiolyze/issues/338) |
+| `@cornerstonejs/*` **and `@kitware/vtk.js`** | `<5.8` / `36.4.1` | 5.8 changes how the codecs reference their `.wasm`, so `scripts/bundle-cornerstone-worker.mjs` needs updating; vtk.js is held with it because the peer is exact | [#339](https://github.com/Radiolyze/Radiolyze/issues/339) |
 
 `@cornerstonejs/*` was held at `<5` until [#195](https://github.com/Radiolyze/Radiolyze/issues/195)
 migrated the three packages together. What made it a migration rather than a
 bump was the install graph, not the API: Cornerstone 5 declares `@kitware/vtk.js`
 as an exact peer, so the viewer's own vtk.js pin had to move with it, and the
 two new packages it splits out of core (`@cornerstonejs/metadata`,
-`@cornerstonejs/utils`) had to reach `optimizeDeps`. The ignore entry is gone;
-vtk.js now travels in the `cornerstone` group so the four cannot be proposed
-apart.
+`@cornerstonejs/utils`) had to reach `optimizeDeps`. vtk.js travels in the
+`cornerstone` group since, so the four arrive in one PR.
+
+The `<5` entry went away with that migration; the `<5.8` entry in the table is
+a *new* hold for a different reason (#339), not the old one left in place. 5.8
+changes how the codecs reference their `.wasm` files, which
+`scripts/bundle-cornerstone-worker.mjs` rewrites. That the same package family
+is held twice, three minors apart, for two unrelated causes is the point worth
+remembering: the imaging stack is where this repository's dependency risk
+actually lives.
 
 `tailwind-merge` was the instructive one, and is worth keeping in mind as a
 pattern even though the entry is gone. Its v3 release drops Tailwind 3 support,

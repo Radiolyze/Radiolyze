@@ -20,6 +20,13 @@ updates:
       # rides along because core and tools declare it as an *exact* peer
       # (36.4.1 as of Cornerstone 5.7.0), so a vtk.js bump on its own is an
       # ERESOLVE and a Cornerstone bump that leaves vtk.js behind is the same.
+      #
+      # What the group does NOT do is make the four *agree*. Dependabot lifts
+      # every member to its own newest release, and an exact peer between two
+      # members is not a constraint it models: #284 proposed Cornerstone 5.8.2
+      # together with vtk.js 36.11.0 while tools@5.8.2 still pins the peer at
+      # 36.4.1, and the PR was an ERESOLVE. Grouping keeps them in one PR;
+      # `npm ci` is what actually rejects a mismatched set. See #339.
       cornerstone:
         patterns:
           - "@cornerstonejs/*"
@@ -30,6 +37,31 @@ updates:
       - dependency-name: "eslint"
         # Blocked upstream: eslint-plugin-jsx-a11y has no ESLint 10 support yet.
         versions: [">=10"]
+      - dependency-name: "typescript"
+        # Blocked upstream: react-i18next declares typescript@^5 as a peer, so
+        # TypeScript 7 cannot be installed without --legacy-peer-deps, which
+        # would silence peer checks for the whole tree. See #337.
+        versions: [">=7"]
+      - dependency-name: "eslint-plugin-react-hooks"
+        # v7 turns on the React Compiler rules, which report 27 real render
+        # correctness errors across the codebase (setState cascades in effects,
+        # refs read during render). A migration, not a bump. See #338.
+        versions: [">=7"]
+      - dependency-name: "@cornerstonejs/*"
+        # 5.8 changes how the codecs reference their .wasm files, so
+        # scripts/bundle-cornerstone-worker.mjs stops finding the paths it has
+        # to rewrite and fails the build -- deliberately, because the worker
+        # would otherwise fetch .wasm from the wrong origin and silently fail
+        # to decode at runtime. Needs the bundler updated and a pass over real
+        # DICOM data. See #339.
+        versions: [">=5.8"]
+      - dependency-name: "@kitware/vtk.js"
+        # Held with the entry above rather than on its own merits. vtk.js is
+        # pinned exactly because Cornerstone peer-depends on that one version,
+        # so with @cornerstonejs/* held at <5.8 the group would otherwise
+        # propose a vtk.js-only bump every week -- and every one of them would
+        # be an ERESOLVE. Lift both entries together in the #339 migration.
+        versions: [">36.4.1"]
 
   # Backend (pip)
   - package-ecosystem: pip

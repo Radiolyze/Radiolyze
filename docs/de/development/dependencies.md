@@ -38,11 +38,24 @@ Zwei Mechanismen bestimmen, was ankommt:
 **Gruppen** — Pakete, die sich nur gemeinsam auflösen lassen, kommen als ein PR:
 
 - `@radix-ui/*` — 27 Pakete, die einander folgen
-- `@cornerstonejs/*` — core, tools und dicom-image-loader teilen eine Versionslinie
+- `@cornerstonejs/*` **und `@kitware/vtk.js`** — core, tools und
+  dicom-image-loader teilen eine Versionslinie, und core wie tools deklarieren
+  vtk.js als *exakten* Peer; alle vier bewegen sich als ein PR oder keiner
+  davon installiert
 - `opentelemetry-*` — SDK (1.4x) und Instrumentation (0.6xb0) sind aneinander
   gepinnt; einzeln aufgeteilt ist jedes davon ein pip-Konflikt
 - `ruff` / `mypy` / `pytest*` — Backend-Dev-Tooling
 - Alle GitHub Actions
+
+Eine Gruppe hält ihre Mitglieder in **einem PR**. Sie sorgt nicht dafür, dass
+sie **zueinander passen**: Dependabot hebt jedes Mitglied auf sein eigenes
+Neuestes, und ein exakter Peer *zwischen* zwei Mitgliedern ist keine Bedingung,
+die der Mechanismus kennt. [#284](https://github.com/Radiolyze/Radiolyze/pull/284)
+schlug Cornerstone 5.8.2 zusammen mit vtk.js 36.11.0 vor, während
+`@cornerstonejs/tools@5.8.2` den Peer weiterhin auf 36.4.1 pinnte — der PR war
+ein `ERESOLVE`. Was einen unpassenden Satz tatsächlich zurückweist, ist
+`npm ci`: laut und bevor irgendein Test läuft, also die erste Zeile der Tabelle
+oben. Siehe [#339](https://github.com/Radiolyze/Radiolyze/issues/339).
 
 **Ignores** — bewusst zurückgehaltene Majors. Zu jedem existiert ein
 Tracking-Issue; der Eintrag wird entfernt, wenn die Migration landet. Siehe
@@ -55,7 +68,16 @@ nächster Abschnitt.
 | Paket | Gehalten auf | Blockiert durch | Issue |
 |---|---|---|---|
 | `eslint` | `<10` | Upstream: `eslint-plugin-jsx-a11y` unterstützt ESLint 10 nicht | [#196](https://github.com/Radiolyze/Radiolyze/issues/196) |
-| `@cornerstonejs/*` | `<5` | Braucht Änderungen an `vite.config.ts` und `scripts/bundle-cornerstone-worker.mjs` | [#195](https://github.com/Radiolyze/Radiolyze/issues/195) |
+| `typescript` | `<7` | Upstream: `react-i18next` deklariert `typescript@^5` als Peer, 7 bräuchte `--legacy-peer-deps` | [#337](https://github.com/Radiolyze/Radiolyze/issues/337) |
+| `eslint-plugin-react-hooks` | `<7` | v7 schaltet die React-Compiler-Regeln scharf: 27 reale Render-Korrektheitsfehler, eine Migration statt eines Bumps | [#338](https://github.com/Radiolyze/Radiolyze/issues/338) |
+| `@cornerstonejs/*` **und `@kitware/vtk.js`** | `<5.8` / `36.4.1` | 5.8 ändert, wie die Codecs ihre `.wasm` referenzieren, `scripts/bundle-cornerstone-worker.mjs` muss nachgezogen werden; vtk.js wird mitgehalten, weil der Peer exakt ist | [#339](https://github.com/Radiolyze/Radiolyze/issues/339) |
+
+Die `<5`-Zeile für `@cornerstonejs/*` ist entfallen: [#195](https://github.com/Radiolyze/Radiolyze/issues/195)
+hat die drei Pakete gemeinsam migriert. Der `<5.8`-Eintrag oben ist ein
+*neuer* Halt aus einem anderen Grund, nicht der alte, der stehen geblieben
+wäre. Dass dieselbe Paketfamilie drei Minors später erneut gehalten wird, aus
+einer unabhängigen Ursache, ist der erinnerungswürdige Teil: der Imaging-Stack
+ist die Stelle, an der das Dependency-Risiko dieses Repos tatsächlich sitzt.
 
 `tailwind-merge` war der lehrreiche Fall und bleibt als Muster erwähnenswert,
 auch wenn der Eintrag weg ist. Das v3-Release lässt den Tailwind-3-Support

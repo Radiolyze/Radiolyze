@@ -135,6 +135,29 @@ for the full history.
 
 ### Changed
 
+- Four `ignore` entries in `.github/dependabot.yml`, closing out the bumps that
+  cannot land: `typescript >=7` (#337), `eslint-plugin-react-hooks >=7` (#338),
+  and `@cornerstonejs/* >=5.8` together with `@kitware/vtk.js >36.4.1` (#339).
+  `docs/en/development/dependencies.md` prescribes exactly this — an ignore
+  entry, a tracking issue and a table row — and the three PRs had been closed
+  without it, so Dependabot would have re-proposed all of them the following
+  week. vtk.js is held only because Cornerstone is: with `@cornerstonejs/*`
+  pinned below 5.8, the group would otherwise offer a vtk.js-only bump every
+  week, and each one would be an `ERESOLVE` against the exact peer.
+- The dependency policy's claim that grouping `@cornerstonejs/*` with
+  `@kitware/vtk.js` means "the four cannot be proposed apart" is corrected, in
+  both language versions, along with the same assurance in the group's comment
+  in `.github/dependabot.yml`. They were not proposed apart in #284 — they were
+  proposed *together at mutually incompatible versions*, because Dependabot
+  lifts each group member to its own newest release and an exact peer between
+  two members is not a constraint it models. What rejects a mismatched set is
+  `npm ci`, not the grouping. The distinction matters to whoever reviews the
+  next imaging bump believing the group has already ruled it out.
+- `docs/de/development/dependencies.md` had drifted from the English original
+  beyond the passage above: it still listed `@cornerstonejs/* <5` as actively
+  held back, though #195 resolved and removed it, and its group list omitted
+  `@kitware/vtk.js` entirely.
+
 - `recharts` 2.15.4 → 3.10.1. Recharts 3 splits the props a `<Tooltip>` or
   `<Legend>` element accepts from the props their content renderers receive:
   `payload`, `label`, `active` and `coordinate` are read from chart context and
