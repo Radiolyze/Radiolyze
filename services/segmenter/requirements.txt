@@ -6,7 +6,7 @@ pydicom>=3.0.2,<4
 numpy<3
 SimpleITK>=2.5.6
 scikit-image>=0.26.0
-Pillow>=12.3.0
+Pillow>=13.0.0
 trimesh>=5.1.0
 # Quadric decimation backend for trimesh. NOT optional here despite being an
 # optional trimesh extra: `Trimesh.simplify_quadric_decimation` is a thin
